@@ -42,4 +42,4 @@ This sample demonstrates how to process a set of input blobs in parallel on mult
 #Python
 
 ##[blobxfer.py](./Python/Storage)
-AzCopy-like helper script to perform large/mass ingress into or egress out of XStore. View the file for details on how to use and customize.
+AzCopy-like helper script to perform large/mass ingress into or egress out of Azure storage. View the file for details on how to use and customize.
