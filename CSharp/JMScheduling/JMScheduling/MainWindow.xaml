@@ -1,0 +1,32 @@
+﻿<Window x:Class="Azure.Batch.SDK.Samples.JobScheduling.JMScheduling.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="JM Scheduling" Height="399" Width="841">
+    <Grid>
+        <Rectangle Fill="#FFF4F4F5" HorizontalAlignment="Left" Height="110" Margin="386,199,0,0" Stroke="Black" VerticalAlignment="Top" Width="198"/>
+        <Rectangle Fill="#FFF4F4F5" HorizontalAlignment="Left" Height="110" Margin="165,199,0,0" Stroke="Black" VerticalAlignment="Top" Width="188"/>
+        <TextBox x:Name="txtBAccountName" HorizontalAlignment="Left" Height="23" Margin="163,18,0,0" VerticalAlignment="Top" Width="643"/>
+        <Label Content="Batch Account Name" HorizontalAlignment="Left" Margin="17,15,0,0" VerticalAlignment="Top" Height="26" Width="141"/>
+        <Label Content="Batch Account Key" HorizontalAlignment="Left" Margin="17,43,0,0" VerticalAlignment="Top" RenderTransformOrigin="0.684,3.654" Height="26" Width="141"/>
+        <TextBox x:Name="txtBAccountKey" HorizontalAlignment="Left" Height="23" Margin="163,46,0,0" VerticalAlignment="Top" Width="643"/>
+        <DatePicker x:Name="dpkDate" HorizontalAlignment="Left" Margin="449,237,0,0" VerticalAlignment="Top" SelectedDateFormat="Short" Height="24" Width="105"/>
+        <Label Content="Date" HorizontalAlignment="Left" Margin="409,236,0,0" VerticalAlignment="Top"/>
+        <Label Content="Time" HorizontalAlignment="Left" Margin="408,262,0,0" VerticalAlignment="Top"/>
+        <ComboBox x:Name="cbxHourO" HorizontalAlignment="Left" Margin="449,266,0,0" VerticalAlignment="Top" Width="50"/>
+        <ComboBox x:Name="cbxMinuteO" HorizontalAlignment="Left" Margin="504,266,0,0" VerticalAlignment="Top" Width="50"/>
+        <Label Content="hh:mm" HorizontalAlignment="Left" Margin="176,236,0,0" VerticalAlignment="Top" Width="53" RenderTransformOrigin="0.642,0.462"/>
+        <ComboBox x:Name="cbxHourR" HorizontalAlignment="Left" Margin="234,240,0,0" VerticalAlignment="Top" Width="50"/>
+        <ComboBox x:Name="cbxMinuteR" HorizontalAlignment="Left" Margin="289,240,0,0" VerticalAlignment="Top" Width="50"/>
+        <RadioButton x:Name="rdoRecur" Content="Run Every" HorizontalAlignment="Left" Margin="182,215,0,0" VerticalAlignment="Top" GroupName="Timing" IsChecked="True"/>
+        <RadioButton x:Name="rdoOnce" Content="Run Once" HorizontalAlignment="Left" Margin="410,215,0,0" VerticalAlignment="Top" GroupName="Timing"/>
+        <Button x:Name="btnStart" Content="Run" HorizontalAlignment="Left" Margin="670,312,0,0" VerticalAlignment="Top" Width="75" Click="btnStart_Click" RenderTransformOrigin="-1.227,0.6"/>
+        <TextBox x:Name="txtSAccountName" HorizontalAlignment="Left" Height="23" Margin="163,74,0,0" VerticalAlignment="Top" Width="643"/>
+        <Label Content="Storage Account Name" HorizontalAlignment="Left" Margin="17,71,0,0" VerticalAlignment="Top" Height="26" Width="141"/>
+        <Label Content="Storage Account Key" HorizontalAlignment="Left" Margin="17,99,0,0" VerticalAlignment="Top" RenderTransformOrigin="0.684,3.654" Height="26" Width="141"/>
+        <TextBox x:Name="txtSAccountKey" HorizontalAlignment="Left" Height="23" Margin="163,102,0,0" VerticalAlignment="Top" Width="643"/>
+        <Label Content="Storage Container Name" HorizontalAlignment="Left" Margin="17,127,0,0" VerticalAlignment="Top" RenderTransformOrigin="0.684,3.654" Height="26" Width="141"/>
+        <TextBox x:Name="txtSContainerName" HorizontalAlignment="Left" Height="23" Margin="163,130,0,0" VerticalAlignment="Top" Width="643"/>
+        <Label Content="Pool Name" HorizontalAlignment="Left" Margin="17,155,0,0" VerticalAlignment="Top" RenderTransformOrigin="0.684,3.654" Height="26" Width="141"/>
+        <TextBox x:Name="txtPoolName" HorizontalAlignment="Left" Height="23" Margin="163,158,0,0" VerticalAlignment="Top" Width="643"/>
+    </Grid>
+</Window>

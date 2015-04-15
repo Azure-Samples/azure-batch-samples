@@ -1,0 +1,136 @@
+﻿<UserControl x:Class="Microsoft.Azure.BatchExplorer.Views.CreateControls.AddTaskControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d">
+    <Grid Background="WhiteSmoke" 
+          Height="Auto"
+          Width="Auto">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="140"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock 
+            Grid.ColumnSpan="2"
+            FontSize="16"
+            Text="Add Task"/>
+
+        <StackPanel 
+            Orientation="Horizontal"
+            Grid.Row="1"
+            Grid.Column="0">
+
+            <TextBlock 
+                VerticalAlignment="Center"
+                Margin="4,0,0,0"
+                Foreground="Red"
+                Text="*" />
+            <TextBlock
+                Margin="8,4"
+                VerticalAlignment="Center"
+                FontSize="12"
+                Text="Work Item Name"/>
+        </StackPanel>
+
+        <TextBox
+            Grid.Row="1"
+            Grid.Column="1"
+            Text="{Binding WorkItemName, Mode=OneWay}"
+            IsReadOnly="True"
+            Background="Transparent"/>
+
+        <StackPanel 
+            Orientation="Horizontal"
+            Grid.Row="2" 
+            Grid.Column="0">
+
+            <TextBlock 
+                VerticalAlignment="Center"
+                Margin="4,0,0,0"
+                Foreground="Red"
+                Text="*" />
+            <TextBlock
+                Margin="8,4"
+                VerticalAlignment="Center"
+                FontSize="12"
+                Text="Job Name"/>
+        </StackPanel>
+
+        <TextBox
+            Grid.Row="2"
+            Grid.Column="1"
+            Text="{Binding JobName, Mode=OneWay}"
+            IsReadOnly="True"
+            Background="Transparent"/>
+        <StackPanel 
+            Orientation="Horizontal"
+            Grid.Row="3" 
+            Grid.Column="0">
+
+            <TextBlock 
+                VerticalAlignment="Center"
+                Margin="4,0,0,0"
+                Foreground="Red"
+                Text="*" />
+            <TextBlock
+                Margin="8,4"
+                VerticalAlignment="Center"
+                FontSize="12"
+                Text="Task Name"/>
+        </StackPanel>
+        
+        <TextBox
+            Grid.Row="3"
+            Grid.Column="1"
+            Text="{Binding TaskName}"/>
+
+        <StackPanel 
+            Orientation="Horizontal"
+            Grid.Row="4" 
+            Grid.Column="0">
+
+            <TextBlock 
+                VerticalAlignment="Center"
+                Margin="4,0,0,0"
+                Foreground="Red"
+                Text="*" />
+            <TextBlock
+                Margin="8,4"
+                VerticalAlignment="Center"
+                FontSize="12"
+                Text="Command Line"/>
+        </StackPanel>
+        <TextBox
+            Grid.Row="4"
+            Grid.Column="1"
+            Text="{Binding CommandLine}"/>
+        
+        <!-- Buttons -->
+        <StackPanel
+            Grid.Row="5"
+            Orientation="Horizontal"
+            HorizontalAlignment="Right">
+            <Button
+                Margin="0,12,0,4"
+                VerticalAlignment="Bottom" 
+                HorizontalAlignment="Right"
+                Width="100" 
+                Height="24"
+                Command="{Binding AddTask}"
+                Content="Add"/>
+        </StackPanel>
+    </Grid>
+</UserControl>
