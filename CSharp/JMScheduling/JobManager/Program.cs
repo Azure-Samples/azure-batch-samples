@@ -7,7 +7,7 @@ using Microsoft.Azure.Batch.Common;
 using Microsoft.Azure.Batch.Protocol;
 using System.IO;
 
-namespace Azure.Batch.SDK.Samples.JobScheduling.JobManager
+namespace Azure.Batch.SDK.Samples.JobScheduling.JobMgr
 {
     class Program
     {
