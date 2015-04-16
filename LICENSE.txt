@@ -1,1 +1,1 @@
-see the individual directory's LICENSE file for the license associated with each sample.
+See the individual directory's LICENSE file for the license associated with each sample.
