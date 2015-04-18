@@ -1,0 +1,8 @@
+language: python
+python:
+  - "2.7"
+env:
+  - TEST_DIR=Python/Storage
+script:
+  - PYTHONPATH=. py.test -s test/test_blobxfer.py
+
