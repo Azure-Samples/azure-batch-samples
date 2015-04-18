@@ -1,4 +1,8 @@
-#Python
+##Python Samples
 
-##[blobxfer.py](./Python/Storage)
-AzCopy-like helper script to perform large/mass ingress into or egress out of Azure Storage.
+[![Build Status](https://travis-ci.org/alfpark/azure-batch-samples.svg?branch=master)](https://travis-ci.org/alfpark/azure-batch-samples)
+
+###[blobxfer.py](./Storage)
+Tool to help perform large/mass ingress into or egress out of Azure Block
+Blob Storage.
+

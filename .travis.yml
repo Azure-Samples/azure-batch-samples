@@ -4,5 +4,5 @@ python:
 env:
   - TEST_DIR=Python/Storage
 script:
-  - PYTHONPATH=. py.test -s test/test_blobxfer.py
+  - cd $TEST_DIR && PYTHONPATH=. py.test -s test/test_blobxfer.py
 
