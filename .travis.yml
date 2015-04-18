@@ -1,8 +1,14 @@
 language: python
 python:
   - "2.7"
+install:
+  - pip install coveralls
+  - pip install azure
+  - pip install requests
 env:
   - TEST_DIR=Python/Storage
 script:
-  - cd $TEST_DIR && PYTHONPATH=. py.test -s test/test_blobxfer.py
+  - cd $TEST_DIR && PYTHONPATH=. py.test --cov-config ../.coveragerc --cov-report term-missing --cov blobxfer test/test_blobxfer.py
+after_success:
+  - coveralls --rcfile=../.coveragerc --verbose
 
