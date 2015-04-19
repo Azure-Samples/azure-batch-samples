@@ -37,7 +37,7 @@ blobxfer.py mystorageacct container0 mylocalfile.txt
 If mylocalfile.txt exists locally, then the script will attempt to upload the
 file to container0 on mystorageacct. If the file does not exist, then it will
 attempt to download the resource. If the desired behavior is to download the
-file from Azure even if the local file exists, once can override the detection
+file from Azure even if the local file exists, one can override the detection
 mechanism with --forcedownload. --forceupload is available to force the
 transfer to Azure storage. Note that you may use the --remoteresource flag to
 rename the local file as the blob name on Azure storage if uploading.
