@@ -1,4 +1,4 @@
-##[blobxfer.py](./)
+###blobxfer.py
 Please refer to this blog post for more information:
 http://blogs.technet.com/b/windowshpc/archive/2015/04/16/linux-blob-transfer-python-code-sample.aspx
 

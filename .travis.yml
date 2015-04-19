@@ -1,11 +1,19 @@
 language: python
+cache: pip
 python:
-  - "2.7"
+  - 2.6
+  - 2.7
+  - pypy
+  - 3.2
+  - 3.3
+  - 3.4
+  - pypy3
 install:
+  - pip install azure
   - pip install coveralls
   - pip install pytest-cov
-  - pip install azure
   - pip install requests
+  - pip install requests_mock
 env:
   - TEST_DIR=Python/Storage
 script:
