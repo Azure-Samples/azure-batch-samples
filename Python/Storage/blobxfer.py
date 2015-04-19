@@ -74,16 +74,20 @@ import azure.servicemanagement
 import azure.storage
 import requests
 
-# remap xrange for Python3
+# remap keywords for Python3
 # pylint: disable=W0622,C0103
 try:
     xrange
-except NameError:
+except NameError: # pragma: no cover
     xrange = range
+try:
+    long
+except NameError: # pragma: no cover
+    long = int
 # pylint: enable=W0622,C0103
 
 # global defines
-_SCRIPT_VERSION = '0.8'
+_SCRIPT_VERSION = '0.8.1'
 _DEFAULT_MAX_STORAGEACCOUNT_WORKERS = 96
 _MAX_BLOB_CHUNK_SIZE_BYTES = 4194304
 _MAX_LISTBLOBS_RESULTS = 1000
@@ -109,7 +113,6 @@ def compute_md5_for_file_asbase64(filename, blocksize=4194304):
                 break
             hasher.update(buf)
         return base64.b64encode(hasher.digest())
-    return None
 
 # compute md5 for bit bucket
 def compute_md5_for_data_asbase64(data):
@@ -152,12 +155,9 @@ def azure_request(req, timeout=None, wait=5, *args, **kwargs):
                     exc.errno != errno.ENETRESET:
                 raise
         except Exception as exc:
-            try:
-                if 'TooManyRequests' not in exc.message and \
-                        'InternalError' not in exc.message:
-                    raise
-            except AttributeError:
-                raise exc
+            if 'TooManyRequests' not in exc.message and \
+                    'InternalError' not in exc.message:
+                raise
         if timeout is not None and time.clock() - start > timeout:
             raise IOError('waited for {} for request {}, exceeded timeout of {}'.format(
                 time.clock() - start, req.__name__, timeout))
@@ -221,7 +221,8 @@ class SasBlobService(object):
         self.saskey = saskey
         self.timeout = timeout
 
-    def list_blobs(self, container_name, marker=None, maxresults=_MAX_LISTBLOBS_RESULTS):
+    def list_blobs(self, container_name, marker=None,
+            maxresults=_MAX_LISTBLOBS_RESULTS):
         """List blobs in container
         Parameters:
             container_name - container name
@@ -314,7 +315,8 @@ class SasBlobService(object):
         response = http_request_wrapper(requests.put, url=url, params=reqparams,
                 headers=reqheaders, data=block, timeout=self.timeout)
         if response.status_code != 201:
-            raise IOError('incorrect status code returned for put_block: {}'.format(response.status_code))
+            raise IOError('incorrect status code returned for put_block: {}'.format(
+                response.status_code))
 
     def put_block_list(self, container_name, blob_name, block_list, x_ms_blob_content_md5):
         """Put block list for blob
@@ -340,7 +342,8 @@ class SasBlobService(object):
         response = http_request_wrapper(requests.put, url=url, params=reqparams,
                 headers=reqheaders, data=''.join(body), timeout=self.timeout)
         if response.status_code != 201:
-            raise IOError('incorrect status code returned for put_block_list: {}'.format(response.status_code))
+            raise IOError('incorrect status code returned for put_block_list: {}'.format(
+                response.status_code))
 
 class BlobChunkWorker(threading.Thread):
     """Chunk worker for a Blob"""
@@ -374,26 +377,30 @@ class BlobChunkWorker(threading.Thread):
             Nothing
         """
         while True:
-            xfertoazure, localresource, storageaccount, storageaccountkey, container, \
-                    remoteresource, blockid, offset, bytestoxfer, flock, filedesc = self._in_queue.get()
             try:
+                xfertoazure, localresource, storageaccount, storageaccountkey, \
+                        container, remoteresource, blockid, offset, bytestoxfer, \
+                        flock, filedesc = self._in_queue.get_nowait()
                 if xfertoazure:
                     # upload block
-                    self.putblock(localresource, container, remoteresource, blockid,
-                                  offset, bytestoxfer, flock, filedesc)
+                    self.putblock(localresource, container, remoteresource,
+                            blockid, offset, bytestoxfer, flock, filedesc)
                 else:
                     # download range
-                    self.getblobrange(localresource, container, remoteresource, offset,
-                                      bytestoxfer, flock, filedesc)
+                    self.getblobrange(localresource, container, remoteresource,
+                            offset, bytestoxfer, flock, filedesc)
+            except queue.Empty:
+                break
                 # pylint: disable=W0703
             except Exception as exc:
                 # pylint: enable=W0703
                 self._exc.append(exc)
-            self._out_queue.put([xfertoazure, localresource, storageaccount, storageaccountkey,
-                                 container, remoteresource, blockid, offset, bytestoxfer, flock])
+            self._out_queue.put([xfertoazure, localresource, storageaccount,
+                storageaccountkey, container, remoteresource, blockid, offset,
+                bytestoxfer, flock])
 
-    def putblock(self, localresource, container, remoteresource, blockid, offset,
-                 bytestoxfer, flock, filedesc):
+    def putblock(self, localresource, container, remoteresource, blockid,
+            offset, bytestoxfer, flock, filedesc):
         """Puts a block into Azure storage
         Parameters:
             localresource - name of local resource
@@ -420,8 +427,9 @@ class BlobChunkWorker(threading.Thread):
             blockdata = filedesc.read(bytestoxfer)
             if closefd:
                 filedesc.close()
-        if not blockdata:
-            raise IOError('could not read {}: {} -> {}'.format(localresource, offset, offset+bytestoxfer))
+        if not blockdata: # pragma: no cover
+            raise IOError('could not read {}: {} -> {}'.format(
+                localresource, offset, offset+bytestoxfer))
         # compute block md5
         blockmd5 = compute_md5_for_data_asbase64(blockdata)
         # issue REST put
@@ -474,7 +482,8 @@ def generate_xferspec_download(blob_service, args, storage_in_queue, localfile,
     Returns:
         xferspec containing instructions
     Raises:
-        ValueError if get_blob_properties returns an invalid result or contentlength is invalid
+        ValueError if get_blob_properties returns an invalid result or
+            contentlength is invalid
     """
     # get the file metadata
     if contentlength is None or contentmd5 is None:
@@ -486,9 +495,10 @@ def generate_xferspec_download(blob_service, args, storage_in_queue, localfile,
         if 'content-md5' in result:
             contentmd5 = result['content-md5']
         contentlength = long(result['content-length'])
-    if contentlength is None:
+    if contentlength < 0:
         raise ValueError('contentlength is invalid for {}'.format(remoteresource))
-    print('remote file {} length: {} bytes, md5: {}'.format(remoteresource, contentlength, contentmd5))
+    print('remote file {} length: {} bytes, md5: {}'.format(remoteresource,
+        contentlength, contentmd5))
     tmpfilename = localfile + '.blobtmp'
     nchunks = contentlength // args.chunksizebytes
     currfileoffset = 0
@@ -510,9 +520,10 @@ def generate_xferspec_download(blob_service, args, storage_in_queue, localfile,
         chunktoadd = min(args.chunksizebytes, contentlength)
         if chunktoadd + currfileoffset > contentlength:
             chunktoadd = contentlength - currfileoffset
-        # on download, chunktoadd must be offset by 1 as the x-ms-range header expects it that way
-        # x -> y bytes means first bits of the (x+1)th byte to the last bits of the (y+1)th byte.
-        # for example, 0 -> 511 means byte 1 to byte 512
+        # on download, chunktoadd must be offset by 1 as the x-ms-range
+        # header expects it that way. x -> y bytes means first bits of the
+        # (x+1)th byte to the last bits of the (y+1)th byte. for example,
+        # 0 -> 511 means byte 1 to byte 512
         xferspec = [False, tmpfilename, args.storageaccount,
                 args.storageaccountkey, args.container, remoteresource,
                 None, currfileoffset, chunktoadd - 1, flock, filedesc]
@@ -586,9 +597,10 @@ def create_dir_ifnotexists(dirname):
         print('created local directory: {}'.format(dirname))
     except OSError as exc:
         if exc.errno != errno.EEXIST:
-            raise
+            raise # pragma: no cover
 
-def progress_bar(display, sprefix, rtext, value, qsize, start):
+def progress_bar(display, sprefix, rtext, value, qsize,
+        start):
     """Display a progress bar
     Parameters:
         display - display bar
@@ -623,26 +635,29 @@ def main():
     args = parseargs()
 
     # check some parameters
-    if len(args.localresource) < 1 or len(args.storageaccount) < 1 or len(args.container) < 1:
+    if len(args.localresource) < 1 or len(args.storageaccount) < 1 or \
+            len(args.container) < 1:
         raise ValueError('invalid positional arguments')
     if len(args.blobep) < 1:
         raise ValueError('blob endpoint is invalid')
     if args.forceupload and args.forcedownload:
         raise ValueError('cannot force download and upload in the same command')
-    if args.storageaccountkey and args.saskey:
+    if args.storageaccountkey is not None and args.saskey is not None:
         raise ValueError('cannot use both a sas key and storage account key')
     if args.timeout is not None and args.timeout <= 0:
         args.timeout = None
 
     # get key if we don't have a handle on one
     sms = None
-    if args.saskey:
+    if args.saskey is not None:
         if len(args.saskey) < 1:
             raise ValueError('invalid sas key specified')
     elif args.storageaccountkey is None:
-        if args.managementcert is not None and args.subscriptionid is not None:
+        if args.managementcert is not None and \
+                args.subscriptionid is not None:
             # check to ensure management cert is valid
-            if len(args.managementcert) == 0 or args.managementcert.split('.')[-1].lower() != 'pem':
+            if len(args.managementcert) == 0 or \
+                    args.managementcert.split('.')[-1].lower() != 'pem':
                 raise ValueError('management cert appears to be invalid')
             if args.managementep is None or len(args.managementep) == 0:
                 raise ValueError('management endpoint is invalid')
@@ -658,13 +673,15 @@ def main():
                     timeout=args.timeout, service_name=args.storageaccount)
             args.storageaccountkey = service_keys.storage_service_keys.primary
         else:
-            raise Exception('management cert or subscription id not specified without storage account key')
+            raise ValueError('management cert/subscription id not specified without storage account key')
 
     # check storage account key validity
-    if args.storageaccountkey is not None and len(args.storageaccountkey) < 1:
+    if args.storageaccountkey is not None and \
+            len(args.storageaccountkey) < 1: # pragma: no cover
         raise ValueError('storage account key is invalid')
 
-    if args.storageaccountkey is None and args.saskey is None:
+    if args.storageaccountkey is None and \
+            args.saskey is None: # pragma: no cover
         raise ValueError('could not get reference to storage account key or sas key')
 
     # expand any paths
@@ -686,6 +703,8 @@ def main():
         blobep = storage_acct.storage_service_properties.endpoints[0]
     else:
         blobep = 'https://{}.{}/'.format(args.storageaccount, args.blobep)
+    if blobep is None or len(blobep) < 1:
+        raise ValueError('invalid blob endpoint')
 
     # create master blob service
     blob_service = None
@@ -701,7 +720,8 @@ def main():
 
     # check which way we're transfering
     xfertoazure = False
-    if args.forceupload or (not args.forcedownload and os.path.exists(args.localresource)):
+    if args.forceupload or (not args.forcedownload and \
+            os.path.exists(args.localresource)):
         xfertoazure = True
     else:
         if args.remoteresource is None:
@@ -782,7 +802,8 @@ def main():
                 args.remoteresource = args.localresource
             filesize, nstorageops, md5digest, filedesc = \
                     generate_xferspec_upload(args, storage_in_queue,
-                            blockids, args.localresource, args.remoteresource, True)
+                            blockids, args.localresource,
+                            args.remoteresource, True)
             completed_blockids[args.localresource] = 0
             md5map[args.localresource] = md5digest
             filemap[args.localresource] = args.remoteresource
@@ -798,19 +819,20 @@ def main():
     else:
         bloblist = []
         if args.remoteresource == '.':
-            print('attempting to copy entire container: {} to {}'.format(args.container, args.localresource))
+            print('attempting to copy entire container: {} to {}'.format(
+                args.container, args.localresource))
             marker = None
             while True:
                 result = azure_request(blob_service.list_blobs,
                         timeout=args.timeout, container_name=args.container,
                         marker=marker, maxresults=_MAX_LISTBLOBS_RESULTS)
-                if not result:
+                if not result: # pragma: no cover
                     break
                 for blob in result:
                     blobprop = [blob.name, blob.properties.content_length]
                     try:
                         blobprop.append(blob.properties.content_md5)
-                    except AttributeError:
+                    except AttributeError: # pragma: no cover
                         blobprop.append(None)
                     bloblist.append(blobprop)
                 marker = result.next_marker
@@ -842,7 +864,7 @@ def main():
             allfilesize = allfilesize + filesize
             nstorageops = nstorageops + ops
 
-    if nstorageops == 0:
+    if nstorageops == 0: # pragma: no cover
         print('detected no actions needed to be taken, exiting...')
         sys.exit(1)
 
@@ -857,12 +879,12 @@ def main():
     for _ in xrange(maxworkers):
         thr = BlobChunkWorker(exc_list, storage_in_queue, storage_out_queue,
                 blob_service, args.timeout)
-        thr.setDaemon(True)
         thr.start()
 
     done_ops = 0
     storage_start = time.time()
-    progress_bar(args.progressbar, 'xfer', 'blocks' if xfertoazure else 'range-gets',
+    progress_bar(args.progressbar, 'xfer',
+            'blocks' if xfertoazure else 'range-gets',
             nstorageops, done_ops, storage_start)
     while True:
         if len(exc_list) > 0:
@@ -880,15 +902,17 @@ def main():
                         block_list=blockids[localresource],
                         x_ms_blob_content_md5=md5map[localresource])
         done_ops = done_ops + 1
-        progress_bar(args.progressbar, 'xfer', 'blocks' if xfertoazure else 'range-gets',
+        progress_bar(args.progressbar, 'xfer',
+                'blocks' if xfertoazure else 'range-gets',
                 nstorageops, done_ops, storage_start)
         if done_ops == nstorageops:
             break
-        time.sleep(0.01)
+        time.sleep(0.01) # pragma: no cover
     endtime = time.time()
     if filedesc:
         filedesc.close()
-    progress_bar(args.progressbar, 'xfer', 'blocks' if xfertoazure else 'range-gets',
+    progress_bar(args.progressbar, 'xfer',
+            'blocks' if xfertoazure else 'range-gets',
             nstorageops, done_ops, storage_start)
     print('\n\n{} MiB transfered, elapsed {} sec. Throughput = {} Mbit/sec'.format(
         allfilesize / 1048576.0, endtime - storage_start,
@@ -921,7 +945,7 @@ def main():
     print('\nscript elapsed time: {} sec'.format(time.time() - start))
     print('script end time: {}'.format(time.strftime("%Y-%m-%d %H:%M:%S")))
 
-def parseargs():
+def parseargs(): # pragma: no cover
     """Sets up command-line arguments and parser
     Parameters:
         Nothing
@@ -944,7 +968,8 @@ def parseargs():
     parser.add_argument('--blobep',
             help='blob storage endpoint [{}]'.format(_DEFAULT_BLOB_ENDPOINT))
     parser.add_argument('--chunksizebytes', type=int,
-            help='maximum chunk size to transfer in bytes [{}]'.format(_MAX_BLOB_CHUNK_SIZE_BYTES))
+            help='maximum chunk size to transfer in bytes [{}]'.format(
+                _MAX_BLOB_CHUNK_SIZE_BYTES))
     parser.add_argument('--forcedownload', action='store_true',
             help='force download from Azure')
     parser.add_argument('--forceupload', action='store_true',
@@ -965,8 +990,10 @@ def parseargs():
             help='disable progress bar')
     parser.add_argument('--no-recursive', dest='recursive', action='store_false',
             help='do not mirror local directory recursively')
-    parser.add_argument('--numworkers', default=_DEFAULT_MAX_STORAGEACCOUNT_WORKERS, type=int,
-            help='max number of workers [{}]'.format(_DEFAULT_MAX_STORAGEACCOUNT_WORKERS))
+    parser.add_argument('--numworkers', type=int,
+            default=_DEFAULT_MAX_STORAGEACCOUNT_WORKERS,
+            help='max number of workers [{}]'.format(
+                _DEFAULT_MAX_STORAGEACCOUNT_WORKERS))
     parser.add_argument('--remoteresource',
             help='name of remote resource on Azure storage. "."=container copy recursive implied')
     parser.add_argument('--saskey',
