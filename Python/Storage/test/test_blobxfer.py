@@ -29,7 +29,7 @@ def test_compute_md5(tmpdir):
     with open(lpath, 'wt') as f:
         f.write(testdata)
     md5_file = blobxfer.compute_md5_for_file_asbase64(lpath)
-    md5_data = blobxfer.compute_md5_for_data_asbase64(testdata)
+    md5_data = blobxfer.compute_md5_for_data_asbase64(testdata.encode('utf8'))
     assert md5_file == md5_data
 
     # test non-existent file

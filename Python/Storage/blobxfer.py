@@ -74,12 +74,16 @@ import azure.servicemanagement
 import azure.storage
 import requests
 
-# remap xrange for Python3
+# remap keywords for Python3
 # pylint: disable=W0622,C0103
 try:
     xrange
 except NameError: # pragma: no cover
     xrange = range
+try:
+    long
+except NameError: # pragma: no cover
+    long = int
 # pylint: enable=W0622,C0103
 
 # global defines
