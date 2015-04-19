@@ -385,10 +385,6 @@ def test_main(patched_parseargs, tmpdir):
                 status_code=201)
         m.put('https://blobep.blobep/container/' + lpath + 'saskey?comp=blocklist',
                 status_code=201)
-        m.put('https://blobep.blobep/container' + lpath + 'saskey?comp=block&blockid=00000000',
-                status_code=201)
-        m.put('https://blobep.blobep/container' + lpath + 'saskey?comp=blocklist',
-                status_code=201)
         args.progressbar = False
         args.keeprootdir = False
         blobxfer.main()
