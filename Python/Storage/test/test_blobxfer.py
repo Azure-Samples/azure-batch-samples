@@ -26,7 +26,7 @@ import blobxfer
 def test_compute_md5(tmpdir):
     lpath = str(tmpdir.join('test.tmp'))
     testdata = str(uuid.uuid4())
-    with open(lpath, 'wb') as f:
+    with open(lpath, 'wt') as f:
         f.write(testdata)
     md5_file = blobxfer.compute_md5_for_file_asbase64(lpath)
     md5_data = blobxfer.compute_md5_for_data_asbase64(testdata)
@@ -186,7 +186,7 @@ def test_sasblobservice_putblocklist():
 
 def test_blobchunkworker_run(tmpdir):
     lpath = str(tmpdir.join('test.tmp'))
-    with open(lpath, 'wb') as f:
+    with open(lpath, 'wt') as f:
         f.write(str(uuid.uuid4()))
     exc_list = []
     sa_in_queue = queue.Queue()
@@ -274,7 +274,7 @@ def test_generate_xferspec_download(tmpdir):
 
 def test_generate_xferspec_upload(tmpdir):
     lpath = str(tmpdir.join('test.tmp'))
-    with open(lpath, 'wb') as f:
+    with open(lpath, 'wt') as f:
         f.write(str(uuid.uuid4()))
     args = MagicMock()
     args.storageaccount = 'sa'
@@ -374,7 +374,7 @@ def test_main(patched_parseargs, tmpdir):
     args.forcedownload = False
     args.forceupload = True
     args.remoteresource = None
-    with open(lpath, 'wb') as f:
+    with open(lpath, 'wt') as f:
         f.write(str(uuid.uuid4()))
 
     session = requests.Session()
