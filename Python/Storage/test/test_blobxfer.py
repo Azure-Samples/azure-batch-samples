@@ -24,7 +24,7 @@ sys.path.append('..')
 import blobxfer
 
 def test_compute_md5(tmpdir):
-    lpath = unicode(tmpdir.join('test.tmp'))
+    lpath = str(tmpdir.join('test.tmp'))
     testdata = str(uuid.uuid4())
     with open(lpath, 'wb') as f:
         f.write(testdata)
@@ -185,7 +185,7 @@ def test_sasblobservice_putblocklist():
             sbs.put_block_list('container', 'blob', ['1', '2'], 'md5')
 
 def test_blobchunkworker_run(tmpdir):
-    lpath = unicode(tmpdir.join('test.tmp'))
+    lpath = str(tmpdir.join('test.tmp'))
     with open(lpath, 'wb') as f:
         f.write(str(uuid.uuid4()))
     exc_list = []
@@ -239,7 +239,7 @@ def test_generate_xferspec_download_invalid(patched_azure_request):
                     args, sa_in_queue, 'tmppath', 'blob', None, None, True)
 
 def test_generate_xferspec_download(tmpdir):
-    lpath = unicode(tmpdir.join('test.tmp'))
+    lpath = str(tmpdir.join('test.tmp'))
     args = MagicMock()
     args.storageaccount = 'blobep'
     args.container = 'container'
@@ -273,7 +273,7 @@ def test_generate_xferspec_download(tmpdir):
         assert None == fd
 
 def test_generate_xferspec_upload(tmpdir):
-    lpath = unicode(tmpdir.join('test.tmp'))
+    lpath = str(tmpdir.join('test.tmp'))
     with open(lpath, 'wb') as f:
         f.write(str(uuid.uuid4()))
     args = MagicMock()
@@ -306,7 +306,7 @@ def _mock_blobservice_create_container(timeout=None,
 
 @patch('blobxfer.parseargs')
 def test_main(patched_parseargs, tmpdir):
-    lpath = unicode(tmpdir.join('test.tmp'))
+    lpath = str(tmpdir.join('test.tmp'))
     args = MagicMock()
     args.localresource = ''
     args.storageaccount = 'blobep'
@@ -397,7 +397,7 @@ def test_main(patched_parseargs, tmpdir):
         args.forcedownload = True
         args.forceupload = False
         args.remoteresource = 'blob'
-        args.localresource = unicode(tmpdir)
+        args.localresource = str(tmpdir)
         m.head('https://blobep.blobep/container/blobsaskey', headers={
             'content-length': '6', 'content-md5': '1qmpM8iq/FHlWsBmK25NSg=='})
         m.get('https://blobep.blobep/container/blobsaskey', content='012345')
@@ -411,22 +411,28 @@ def test_main(patched_parseargs, tmpdir):
         blobxfer.main()
 
     with requests_mock.mock() as m:
+        notmp_lpath = '/'.join(lpath.strip('/').split('/')[1:])
         args.forcedownload = False
         args.forceupload = True
         args.remoteresource = None
-        m.put('https://blobep.blobep/container' + lpath + 'saskey?comp=block&blockid=00000000',
+        m.put('https://blobep.blobep/container/test.tmpsaskey?comp=block&blockid=00000000',
+                status_code=200)
+        m.put('https://blobep.blobep/container/test.tmpsaskey?comp=blocklist',
                 status_code=201)
+        m.put('https://blobep.blobep/container' + lpath + 'saskey?comp=block&blockid=00000000',
+                status_code=200)
         m.put('https://blobep.blobep/container' + lpath + 'saskey?comp=blocklist',
+                status_code=201)
+        m.put('https://blobep.blobep/container/' + notmp_lpath + \
+                'saskey?comp=block&blockid=00000000',
+                status_code=200)
+        m.put('https://blobep.blobep/container/' + notmp_lpath + \
+                'saskey?comp=blocklist',
                 status_code=201)
         with pytest.raises(SystemExit):
             blobxfer.main()
 
-    with requests_mock.mock() as m:
         args.recursive = False
-        m.put('https://blobep.blobep/container/test.tmpsaskey?comp=block&blockid=00000000',
-                status_code=201)
-        m.put('https://blobep.blobep/container/test.tmpsaskey?comp=blocklist',
-                status_code=201)
         with pytest.raises(SystemExit):
             blobxfer.main()
 
