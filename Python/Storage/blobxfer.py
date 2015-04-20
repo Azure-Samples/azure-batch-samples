@@ -87,19 +87,19 @@ except NameError: # pragma: no cover
 # pylint: enable=W0622,C0103
 
 # global defines
-_SCRIPT_VERSION = '0.8.1'
-_DEFAULT_MAX_STORAGEACCOUNT_WORKERS = 96
+_SCRIPT_VERSION = '0.8.2'
+_DEFAULT_MAX_STORAGEACCOUNT_WORKERS = 64
 _MAX_BLOB_CHUNK_SIZE_BYTES = 4194304
 _MAX_LISTBLOBS_RESULTS = 1000
 _DEFAULT_BLOB_ENDPOINT = 'blob.core.windows.net'
 _DEFAULT_MANAGEMENT_ENDPOINT = 'management.core.windows.net'
 
 # compute md5 for file for azure storage
-def compute_md5_for_file_asbase64(filename, blocksize=4194304):
+def compute_md5_for_file_asbase64(filename, blocksize=16777216):
     """Compute MD5 hash for file and encode as Base64
     Parameters:
         filename - filename to compute md5
-        blocksize - block size
+        blocksize - block size in bytes
     Returns:
         MD5 for file encoded as Base64
     Raises:
@@ -118,7 +118,7 @@ def compute_md5_for_file_asbase64(filename, blocksize=4194304):
 def compute_md5_for_data_asbase64(data):
     """Compute MD5 hash for bits and encode as Base64
     Parameters:
-        data - data
+        data - data to compute MD5 hash over
     Returns:
         MD5 for data encoded as Base64
     Raises:
@@ -200,7 +200,7 @@ def http_request_wrapper(func, timeout=None, *args, **kwargs):
         if timeout is not None and time.clock() - start > timeout:
             raise IOError('waited for {}, exceeded timeout of {}'.format(
                 time.clock() - start, timeout))
-        time.sleep(random.randint(2, 10))
+        time.sleep(random.randint(2, 5))
 
 class SasBlobService(object):
     """BlobService supporting SAS for functions used in the Python SDK.
@@ -377,10 +377,10 @@ class BlobChunkWorker(threading.Thread):
             Nothing
         """
         while True:
+            xfertoazure, localresource, storageaccount, storageaccountkey, \
+                    container, remoteresource, blockid, offset, bytestoxfer, \
+                    flock, filedesc = self._in_queue.get()
             try:
-                xfertoazure, localresource, storageaccount, storageaccountkey, \
-                        container, remoteresource, blockid, offset, bytestoxfer, \
-                        flock, filedesc = self._in_queue.get_nowait()
                 if xfertoazure:
                     # upload block
                     self.putblock(localresource, container, remoteresource,
@@ -389,8 +389,6 @@ class BlobChunkWorker(threading.Thread):
                     # download range
                     self.getblobrange(localresource, container, remoteresource,
                             offset, bytestoxfer, flock, filedesc)
-            except queue.Empty:
-                break
                 # pylint: disable=W0703
             except Exception as exc:
                 # pylint: enable=W0703
@@ -398,6 +396,8 @@ class BlobChunkWorker(threading.Thread):
             self._out_queue.put([xfertoazure, localresource, storageaccount,
                 storageaccountkey, container, remoteresource, blockid, offset,
                 bytestoxfer, flock])
+            if len(self._exc) > 0:
+                break
 
     def putblock(self, localresource, container, remoteresource, blockid,
             offset, bytestoxfer, flock, filedesc):
@@ -879,6 +879,7 @@ def main():
     for _ in xrange(maxworkers):
         thr = BlobChunkWorker(exc_list, storage_in_queue, storage_out_queue,
                 blob_service, args.timeout)
+        thr.setDaemon(True)
         thr.start()
 
     done_ops = 0
