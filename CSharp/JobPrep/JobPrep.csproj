@@ -7,8 +7,8 @@
     <ProjectGuid>{63AABF29-A1A2-4B12-89CB-BFB5E7D90D6D}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>JobPrep</RootNamespace>
-    <AssemblyName>JobPrep</AssemblyName>
+    <RootNamespace>Microsoft.Azure.Batch.Sample.JobPrep</RootNamespace>
+    <AssemblyName>Microsoft.Azure.Batch.Sample.JobPrep</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
