@@ -1040,10 +1040,10 @@ def parseargs(): # pragma: no cover
             help='do not create container if it does not exist')
     parser.add_argument('--no-progressbar', dest='progressbar', action='store_false',
             help='disable progress bar')
-    parser.add_argument('--no-skiponmatch', dest='skiponmatch', action='store_false',
-            help='do not skip upload/download on MD5 match')
     parser.add_argument('--no-recursive', dest='recursive', action='store_false',
             help='do not mirror local directory recursively')
+    parser.add_argument('--no-skiponmatch', dest='skiponmatch', action='store_false',
+            help='do not skip upload/download on MD5 match')
     parser.add_argument('--numworkers', type=int,
             help='max number of workers [{}]'.format(
                 _DEFAULT_MAX_STORAGEACCOUNT_WORKERS))

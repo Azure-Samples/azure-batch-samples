@@ -65,6 +65,14 @@ with --forcedownload. When downloading an entire container, the script will
 attempt to pre-allocate file space and recreate the sub-directory structure
 as needed.
 
+As of version 0.9.0, the script will automatically default to skipping files
+where if the MD5 checksum of either the local file or the stored MD5 of the
+remote resource respectively matches the remote resource or local file, then
+the upload or download for the file will be skipped. This capability will
+allow one to perform rsync-like operations where only files that have changed
+will be transferred. This behavior can be forcefully disabled by specifying
+--no-skiponmatch.
+
 Please remember when using SAS keys that only container-level SAS keys will
 allow for entire directory uploading or container downloading. The container
 must also have been created beforehand, as containers cannot be created
