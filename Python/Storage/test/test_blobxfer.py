@@ -271,6 +271,13 @@ def test_generate_xferspec_download(tmpdir):
         cl, nsops, md5, fd = blobxfer.generate_xferspec_download(sbs,
                 args, sa_in_queue, lpath, 'blob', None, None, False)
         assert None == fd
+        with open(lpath, 'wt') as f:
+            f.write('012345')
+        m.head('mock://blobepcontainer/blobsaskey', headers={
+            'content-length': '6', 'content-md5': '1qmpM8iq/FHlWsBmK25NSg=='})
+        cl, nsops, md5, fd = blobxfer.generate_xferspec_download(sbs,
+                args, sa_in_queue, lpath, 'blob', None, None, True)
+        assert cl == None
 
 def test_generate_xferspec_upload(tmpdir):
     lpath = str(tmpdir.join('test.tmp'))
@@ -281,14 +288,23 @@ def test_generate_xferspec_upload(tmpdir):
     args.container = 'container'
     args.storageaccountkey = 'key'
     args.chunksizebytes = 5
+    args.skiponmatch = False
     sa_in_queue = queue.Queue()
     fs, nsops, md5, fd = blobxfer.generate_xferspec_upload(args,
-            sa_in_queue, {}, lpath, 'rr', True)
+            sa_in_queue, {}, {}, lpath, 'rr', True)
     stat = os.stat(lpath)
     assert stat.st_size == fs
     assert math.ceil(stat.st_size / 5.0) == nsops
     assert None != fd
     fd.close()
+    args.skiponmatch = True
+    with open(lpath, 'wt') as f:
+        f.write('012345')
+    sd = {}
+    sd['rr'] = [6, '1qmpM8iq/FHlWsBmK25NSg==']
+    fs, nsops, md5, fd = blobxfer.generate_xferspec_upload(args,
+            sa_in_queue, sd, {}, lpath, 'rr', False)
+    assert fs == None
 
 def _mock_get_storage_account_keys(timeout=None, service_name=None):
     ret = MagicMock()
@@ -385,8 +401,11 @@ def test_main(patched_parseargs, tmpdir):
                 status_code=201)
         m.put('https://blobep.blobep/container/' + lpath + 'saskey?comp=blocklist',
                 status_code=201)
+        m.get('https://blobep.blobep/containersaskey?comp=list&restype=container&maxresults=1000',
+                text='<?xml version="1.0" encoding="utf-8"?><EnumerationResults ContainerName="https://blobep.blobep/container"><Blobs><Blob><Name>' + lpath + '</Name><Properties><Content-Length>6</Content-Length><Content-MD5>md5</Content-MD5></Properties></Blob></Blobs></EnumerationResults>')
         args.progressbar = False
         args.keeprootdir = False
+        args.skiponmatch = True
         blobxfer.main()
 
         args.progressbar = True
@@ -411,6 +430,7 @@ def test_main(patched_parseargs, tmpdir):
         args.forcedownload = False
         args.forceupload = True
         args.remoteresource = None
+        args.skiponmatch = False
         m.put('https://blobep.blobep/container/test.tmpsaskey?comp=block&blockid=00000000',
                 status_code=200)
         m.put('https://blobep.blobep/container/test.tmpsaskey?comp=blocklist',
@@ -429,6 +449,8 @@ def test_main(patched_parseargs, tmpdir):
             blobxfer.main()
 
         args.recursive = False
+        m.put('https://blobep.blobep/container/blob.blobtmpsaskey?comp=blocklist', status_code=201)
+        m.put('https://blobep.blobep/container/test.tmp.blobtmpsaskey?comp=blocklist', status_code=201)
         with pytest.raises(SystemExit):
             blobxfer.main()
 
