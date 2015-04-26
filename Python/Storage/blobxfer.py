@@ -42,6 +42,8 @@ Notes:
   will force disable container creation if a SAS key is specified.
 - For non-SAS requests, timeouts may not be properly honored due to
   limitations of the Azure Python SDK.
+- In order to skip download/upload matching files via MD5, the
+  computemd5file flag must be enabled (it is enabled by default).
 
 TODO list:
 - convert from synchronous multithreading to asyncio/trollius
@@ -87,7 +89,7 @@ except NameError: # pragma: no cover
 # pylint: enable=W0622,C0103
 
 # global defines
-_SCRIPT_VERSION = '0.8.2'
+_SCRIPT_VERSION = '0.9.0'
 _DEFAULT_MAX_STORAGEACCOUNT_WORKERS = 64
 _MAX_BLOB_CHUNK_SIZE_BYTES = 4194304
 _MAX_LISTBLOBS_RESULTS = 1000
@@ -95,7 +97,7 @@ _DEFAULT_BLOB_ENDPOINT = 'blob.core.windows.net'
 _DEFAULT_MANAGEMENT_ENDPOINT = 'management.core.windows.net'
 
 # compute md5 for file for azure storage
-def compute_md5_for_file_asbase64(filename, blocksize=16777216):
+def compute_md5_for_file_asbase64(filename, blocksize=65536):
     """Compute MD5 hash for file and encode as Base64
     Parameters:
         filename - filename to compute md5
@@ -499,6 +501,17 @@ def generate_xferspec_download(blob_service, args, storage_in_queue, localfile,
         raise ValueError('contentlength is invalid for {}'.format(remoteresource))
     print('remote file {} length: {} bytes, md5: {}'.format(remoteresource,
         contentlength, contentmd5))
+    # check if download is needed
+    if args.skiponmatch and contentmd5 is not None and \
+            os.path.exists(localfile):
+        lmd5 = compute_md5_for_file_asbase64(localfile)
+        print('{}: local {} remote {} ->'.format(
+            localfile, lmd5, contentmd5), end='')
+        if lmd5 != contentmd5:
+            print('MISMATCH, re-downloading')
+        else:
+            print('match, skipping download')
+            return None, None, None, None
     tmpfilename = localfile + '.blobtmp'
     nchunks = contentlength // args.chunksizebytes
     currfileoffset = 0
@@ -534,12 +547,13 @@ def generate_xferspec_download(blob_service, args, storage_in_queue, localfile,
             break
     return contentlength, nstorageops, contentmd5, filedesc
 
-def generate_xferspec_upload(args, storage_in_queue, blockids, localfile,
-        remoteresource, addfd):
+def generate_xferspec_upload(args, storage_in_queue, blobskipdict, blockids,
+        localfile, remoteresource, addfd):
     """Generate an xferspec for upload
     Parameters:
         args - program arguments
         storage_in_queue - storage input queue
+        blobskipdict - blob skip dictionary
         blockids - block id dictionary
         localfile - name of local resource
         remoteresource - name of remote resource
@@ -554,6 +568,16 @@ def generate_xferspec_upload(args, storage_in_queue, blockids, localfile,
     if args.computefilemd5:
         md5digest = compute_md5_for_file_asbase64(localfile)
         print('{} md5: {}'.format(localfile, md5digest))
+        # check if upload is needed
+        if args.skiponmatch and remoteresource in blobskipdict:
+            print('{}->{}: local {} remote {} ->'.format(
+                localfile, remoteresource, md5digest,
+                blobskipdict[remoteresource][1]), end='')
+            if md5digest != blobskipdict[remoteresource][1]:
+                print('MISMATCH, re-uploading')
+            else:
+                print('match, skipping upload')
+                return None, None, None, None
     # create blockids entry
     if localfile not in blockids:
         blockids[localfile] = []
@@ -743,6 +767,7 @@ def main():
     print('           container: {}'.format(args.container))
     print('  blob container URI: {}'.format(blobep + args.container))
     print('    compute file MD5: {}'.format(args.computefilemd5))
+    print('   skip on MD5 match: {}'.format(args.skiponmatch))
     print('  chunk size (bytes): {}'.format(args.chunksizebytes))
     print('    create container: {}'.format(args.createcontainer))
     print(' keep mismatched MD5: {}'.format(args.keepmismatchedmd5files))
@@ -764,6 +789,25 @@ def main():
     md5map = {}
     filedesc = None
     if xfertoazure:
+        # if skiponmatch is enabled, list blobs first and check
+        marker = None
+        blobskipdict = {}
+        if args.skiponmatch:
+            while True:
+                result = azure_request(blob_service.list_blobs,
+                        timeout=args.timeout, container_name=args.container,
+                        marker=marker, maxresults=_MAX_LISTBLOBS_RESULTS)
+                if not result: # pragma: no cover
+                    break
+                for blob in result:
+                    blobskipdict[blob.name] = [blob.properties.content_length]
+                    try:
+                        blobskipdict[blob.name].append(blob.properties.content_md5)
+                    except AttributeError: # pragma: no cover
+                        blobskipdict[blob.name].append(None)
+                marker = result.next_marker
+                if marker is None or len(marker) < 1:
+                    break
         if os.path.isdir(args.localresource):
             # mirror directory
             if args.recursive:
@@ -775,12 +819,14 @@ def main():
                             remotefname = os.path.sep.join(remotefname.split(os.path.sep)[1:])
                         filesize, ops, md5digest, filedesc = \
                                 generate_xferspec_upload(args, storage_in_queue,
-                                        blockids, fname, remotefname, False)
-                        completed_blockids[fname] = 0
-                        md5map[fname] = md5digest
-                        filemap[fname] = remotefname
-                        allfilesize = allfilesize + filesize
-                        nstorageops = nstorageops + ops
+                                        blobskipdict, blockids, fname,
+                                        remotefname, False)
+                        if filesize is not None:
+                            completed_blockids[fname] = 0
+                            md5map[fname] = md5digest
+                            filemap[fname] = remotefname
+                            allfilesize = allfilesize + filesize
+                            nstorageops = nstorageops + ops
             else:
                 for lfile in os.listdir(args.localresource):
                     fname = os.path.join(args.localresource, lfile)
@@ -790,24 +836,27 @@ def main():
                     remotefname = remotefname.strip(os.path.sep)
                     filesize, ops, md5digest, filedesc = \
                             generate_xferspec_upload(args, storage_in_queue,
-                                    blockids, fname, remotefname, False)
-                    completed_blockids[fname] = 0
-                    md5map[fname] = md5digest
-                    filemap[fname] = remotefname
-                    allfilesize = allfilesize + filesize
-                    nstorageops = nstorageops + ops
+                                    blobskipdict, blockids, fname,
+                                    remotefname, False)
+                    if filesize is not None:
+                        completed_blockids[fname] = 0
+                        md5map[fname] = md5digest
+                        filemap[fname] = remotefname
+                        allfilesize = allfilesize + filesize
+                        nstorageops = nstorageops + ops
         else:
             # upload single file
             if not args.remoteresource:
                 args.remoteresource = args.localresource
             filesize, nstorageops, md5digest, filedesc = \
                     generate_xferspec_upload(args, storage_in_queue,
-                            blockids, args.localresource,
+                            blobskipdict, blockids, args.localresource,
                             args.remoteresource, True)
-            completed_blockids[args.localresource] = 0
-            md5map[args.localresource] = md5digest
-            filemap[args.localresource] = args.remoteresource
-            allfilesize = allfilesize + filesize
+            if filesize is not None:
+                completed_blockids[args.localresource] = 0
+                md5map[args.localresource] = md5digest
+                filemap[args.localresource] = args.remoteresource
+                allfilesize = allfilesize + filesize
         # create container if needed
         if args.createcontainer:
             try:
@@ -859,10 +908,11 @@ def main():
                     generate_xferspec_download(blob_service, args,
                             storage_in_queue, localfile, blob, contentlength,
                             contentmd5, False)
-            md5map[localfile] = md5digest
-            filemap[localfile] = localfile + '.blobtmp'
-            allfilesize = allfilesize + filesize
-            nstorageops = nstorageops + ops
+            if filesize is not None:
+                md5map[localfile] = md5digest
+                filemap[localfile] = localfile + '.blobtmp'
+                allfilesize = allfilesize + filesize
+                nstorageops = nstorageops + ops
 
     if nstorageops == 0: # pragma: no cover
         print('detected no actions needed to be taken, exiting...')
@@ -959,7 +1009,8 @@ def parseargs(): # pragma: no cover
     parser.set_defaults(blobep=_DEFAULT_BLOB_ENDPOINT,
             chunksizebytes=_MAX_BLOB_CHUNK_SIZE_BYTES, computefilemd5=True,
             createcontainer=True, managementep=_DEFAULT_MANAGEMENT_ENDPOINT,
-            progressbar=True, recursive=True, timeout=None)
+            numworkers=_DEFAULT_MAX_STORAGEACCOUNT_WORKERS,
+            progressbar=True, recursive=True, skiponmatch=True, timeout=None)
     parser.add_argument('storageaccount',
             help='name of storage account')
     parser.add_argument('container',
@@ -989,10 +1040,11 @@ def parseargs(): # pragma: no cover
             help='do not create container if it does not exist')
     parser.add_argument('--no-progressbar', dest='progressbar', action='store_false',
             help='disable progress bar')
+    parser.add_argument('--no-skiponmatch', dest='skiponmatch', action='store_false',
+            help='do not skip upload/download on MD5 match')
     parser.add_argument('--no-recursive', dest='recursive', action='store_false',
             help='do not mirror local directory recursively')
     parser.add_argument('--numworkers', type=int,
-            default=_DEFAULT_MAX_STORAGEACCOUNT_WORKERS,
             help='max number of workers [{}]'.format(
                 _DEFAULT_MAX_STORAGEACCOUNT_WORKERS))
     parser.add_argument('--remoteresource',
