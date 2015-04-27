@@ -200,7 +200,7 @@ namespace Microsoft.Azure.Batch.Sample.JobPrep
                         // list all vms and enqueue
                         // pool manager currently does nothing in Dispose()
                         // ReSharper disable once AccessToDisposedClosure
-                        var p = pm.GetPool(PoolName); 
+                        var p = pm.GetPool(PoolName);
                         var en = p.ListVMs(new ODATADetailLevel(selectClause: "name")).GetAsyncEnumerator();
                         while (await en.MoveNextAsync())
                         {
@@ -208,7 +208,7 @@ namespace Microsoft.Azure.Batch.Sample.JobPrep
 
                             // If vms is disposed, exception will be thrown and the thread is aborted
                             // ReSharper disable once AccessToDisposedClosure
-                            vms.Add(en.Current.Name, ct); 
+                            vms.Add(en.Current.Name, ct);
                             if (ct.IsCancellationRequested)
                                 break;
                         }
@@ -244,15 +244,22 @@ namespace Microsoft.Azure.Batch.Sample.JobPrep
                                     var state = pm.GetJobPreparationTaskStatus(pool, vm, workitem, job);
                                     Log("got vm state", vm);
                                     if (state.State == JobPreparationTaskState.Completed)
-                                        // job prep task completed on the thread
+                                    // job prep task completed on the thread
                                     {
                                         if (state.ExitCode == 0)
+                                        {
                                             Interlocked.Increment(ref succeededJobPrepTasks);
+                                        }
                                         else
+                                        {
                                             Interlocked.Increment(ref failedJobPrepTasks);
+                                        }
                                         Log("==== job prep done ====", vm);
                                         if (stop(succeededJobPrepTasks, failedJobPrepTasks))
+                                        {
+                                            Log("==== polling done, cancel all threads. ====");
                                             cts.Cancel();
+                                        }
                                     }
                                     else // job prep still running
                                     {
@@ -288,12 +295,12 @@ namespace Microsoft.Azure.Batch.Sample.JobPrep
                                         Task.Run(() =>
                                         {
                                             Task.Delay(freq, ct);
-                                                // if we hit  TaskCanceledException here, abort the thread
+                                            // if we hit  TaskCanceledException here, abort the thread
                                             if (!ct.IsCancellationRequested)
                                             {
                                                 Log("Add vm back to query queue", vm);
                                                 vms.Add(vm, ct);
-                                                    // if we hit OperationCanceledException here, abort the thread
+                                                // if we hit OperationCanceledException here, abort the thread
                                             }
                                         }, ct);
                                         return true;
@@ -323,11 +330,14 @@ namespace Microsoft.Azure.Batch.Sample.JobPrep
                                    DateTime.Now.ToString("yyyyMMdd-HHmmss");
                 Console.WriteLine("Creating work item {0}", workItemName);
                 var cloudWorkItem = wm.CreateWorkItem(workItemName);
-                cloudWorkItem.JobExecutionEnvironment = new JobExecutionEnvironment {PoolName = PoolName};
-                cloudWorkItem.JobSpecification.JobPreparationTask = new JobPreparationTask()
+                cloudWorkItem.JobExecutionEnvironment = new JobExecutionEnvironment { PoolName = PoolName };
+                cloudWorkItem.JobSpecification = new JobSpecification()
                 {
-                    Name = "jobprep",
-                    CommandLine = "cmd /c ping 127.0.0.1"
+                    JobPreparationTask = new JobPreparationTask()
+                    {
+                        Name = "jobprep",
+                        CommandLine = "cmd /c ping 127.0.0.1"
+                    }
                 };
                 cloudWorkItem.Commit();
 
@@ -361,7 +371,7 @@ namespace Microsoft.Azure.Batch.Sample.JobPrep
                     PoolName,
                     workItemName,
                     jobName,
-                    (succ, fail) => succ >= 2 || fail > 0 , // stop indicator
+                    (succ, fail) => succ >= 2 || fail > 0, // stop indicator
                     (succ, fail) => succ >= 2, // success indicator
                     TimeSpan.FromMinutes(5), TimeSpan.FromSeconds(5), 10
                     );
