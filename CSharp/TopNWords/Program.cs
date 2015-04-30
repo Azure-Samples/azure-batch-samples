@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
+﻿namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
 {
     public class Program
     {

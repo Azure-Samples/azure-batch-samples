@@ -15,11 +15,10 @@
 // </copyright>
 // -----------------------------------------------------------------------------------------
 
-using System.Text;
-
 namespace Microsoft.Azure.Batch.Samples.ImgProcSample
 {
     using System;
+    using System.Text;
 
     /// <summary>
     /// The ImgProc.exe main program.
@@ -42,11 +41,11 @@ namespace Microsoft.Azure.Batch.Samples.ImgProcSample
             {
                 //We share the same EXE for both the client program and the task
                 //Decide which one to start based on the command line parameters
-                if (args != null && args.Length > 0 && args[0] == "--Pool")
+                if (args.Length > 0 && args[0] == "--Pool")
                 {
                     MainProgram.MainProgramPool(args);
                 }
-                else if (args != null && args.Length > 0 && args[0] == "--Task")
+                else if (args.Length > 0 && args[0] == "--Task")
                 {
                     ImgProcTask.TaskMain(args);
                 }
@@ -57,7 +56,7 @@ namespace Microsoft.Azure.Batch.Samples.ImgProcSample
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception thrown: " + e.ToString());
+                Console.WriteLine("Exception thrown: " + e);
             }
         }
 

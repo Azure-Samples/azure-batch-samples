@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
 namespace Microsoft.Azure.Batch.Samples.TextSearch
 {
@@ -24,13 +20,13 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
 
         public readonly static IReadOnlyList<string> RequiredExecutableFiles = new List<string>
                                                                 {
-                                                                    Constants.TextSearchExe,
-                                                                    Constants.TextSearchExeConfiguration,
-                                                                    Constants.BatchClientDll,
-                                                                    Constants.EdmDll,
-                                                                    Constants.ODataDll,
-                                                                    Constants.SpatialDll,
-                                                                    Constants.StorageClientDll
+                                                                    TextSearchExe,
+                                                                    TextSearchExeConfiguration,
+                                                                    BatchClientDll,
+                                                                    EdmDll,
+                                                                    ODataDll,
+                                                                    SpatialDll,
+                                                                    StorageClientDll
                                                                 };
     }
 }

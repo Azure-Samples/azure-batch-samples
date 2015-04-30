@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Azure.Batch.SDK.Samples.JobScheduling
+﻿namespace Azure.Batch.SDK.Samples.JobScheduling
 {
     class SampleConstants
     {

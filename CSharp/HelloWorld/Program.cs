@@ -44,7 +44,7 @@ namespace HelloWorld
                 ListPools(client);
                 ListWorkItems(client);
 
-                CreatePoolIfNotExist(client, Program.PoolName);
+                CreatePoolIfNotExist(client, PoolName);
                 AddWork(client);
 
                 ListPools(client);
@@ -77,7 +77,7 @@ namespace HelloWorld
                         Console.WriteLine("Using existing pool {0}", poolName);
                         found = true;
 
-                        if (!p.ListVMs().Any<IVM>())
+                        if (!p.ListVMs().Any())
                         {
                             Console.WriteLine("There are no VMs in this pool. No tasks will be run until at least one VM has been added via resizing.");
                             Console.WriteLine("Resizing pool to add 3 VMs. This might take a while...");
@@ -138,7 +138,7 @@ namespace HelloWorld
                 IToolbox toolbox = client.OpenToolbox();
 
                 // to submit a batch of tasks, the TaskSubmissionHelper is useful.
-                ITaskSubmissionHelper taskSubmissionHelper = toolbox.CreateTaskSubmissionHelper(wm, Program.PoolName);
+                ITaskSubmissionHelper taskSubmissionHelper = toolbox.CreateTaskSubmissionHelper(wm, PoolName);
 
                 // workitem is uniquely identified by its name so we will use a timestamp as suffix
                 taskSubmissionHelper.WorkItemName = Environment.GetEnvironmentVariable("USERNAME") + DateTime.Now.ToString("yyyyMMdd-HHmmss");
@@ -153,30 +153,36 @@ namespace HelloWorld
                 IJobCommitUnboundArtifacts artifacts = taskSubmissionHelper.Commit() as IJobCommitUnboundArtifacts; 
 
                 // TaskSubmissionHelper commit artifacts returns the workitem and job name
-                ICloudJob job = wm.GetJob(artifacts.WorkItemName, artifacts.JobName);
-                
-                Console.WriteLine("Waiting for all tasks to complete on work item: {0}, Job: {1} ...", artifacts.WorkItemName, artifacts.JobName);
-
-                //We use the task state monitor to monitor the state of our tasks -- in this case we will wait for them all to complete.
-                ITaskStateMonitor taskStateMonitor = toolbox.CreateTaskStateMonitor();
-
-                // blocking wait on the list of tasks until all tasks reach completed state
-                bool timedOut = taskStateMonitor.WaitAll(job.ListTasks(), TaskState.Completed, new TimeSpan(0, 20, 0));
-
-                if (timedOut)
+                if (artifacts != null)
                 {
-                    throw new TimeoutException("Timed out waiting for tasks");
-                }
+                    ICloudJob job = wm.GetJob(artifacts.WorkItemName, artifacts.JobName);
 
-                // dump task output
-                foreach (var t in job.ListTasks())
-                {
-                    Console.WriteLine("Task " + t.Name + " says:\n" + t.GetTaskFile(Constants.StandardOutFileName).ReadAsString());
+                    Console.WriteLine("Waiting for all tasks to complete on work item: {0}, Job: {1} ...",
+                        artifacts.WorkItemName, artifacts.JobName);
+
+                    //We use the task state monitor to monitor the state of our tasks -- in this case we will wait for them all to complete.
+                    ITaskStateMonitor taskStateMonitor = toolbox.CreateTaskStateMonitor();
+
+                    // blocking wait on the list of tasks until all tasks reach completed state
+                    bool timedOut = taskStateMonitor.WaitAll(job.ListTasks(), TaskState.Completed,
+                        new TimeSpan(0, 20, 0));
+
+                    if (timedOut)
+                    {
+                        throw new TimeoutException("Timed out waiting for tasks");
+                    }
+
+                    // dump task output
+                    foreach (var t in job.ListTasks())
+                    {
+                        Console.WriteLine("Task " + t.Name + " says:\n" +
+                                          t.GetTaskFile(Constants.StandardOutFileName).ReadAsString());
+                    }
+
+                    // remember to delete the workitem before exiting
+                    Console.WriteLine("Deleting work item: {0}", artifacts.WorkItemName);
+                    wm.DeleteWorkItem(artifacts.WorkItemName);
                 }
-                
-                // remember to delete the workitem before exiting
-                Console.WriteLine("Deleting work item: {0}", artifacts.WorkItemName);
-                wm.DeleteWorkItem(artifacts.WorkItemName);
             }
         }
 
@@ -191,7 +197,7 @@ namespace HelloWorld
             {
 
                 IToolbox toolbox = client.OpenToolbox();
-                ITaskSubmissionHelper taskSubmissionHelper = toolbox.CreateTaskSubmissionHelper(wm, Program.PoolName);
+                ITaskSubmissionHelper taskSubmissionHelper = toolbox.CreateTaskSubmissionHelper(wm, PoolName);
 
                 taskSubmissionHelper.WorkItemName = Environment.GetEnvironmentVariable("USERNAME") + DateTime.Now.ToString("yyyyMMdd-HHmmss");
 
@@ -207,12 +213,12 @@ namespace HelloWorld
 
                 // generate a local file in temp directory
                 Process cur = Process.GetCurrentProcess();
-                string path = Path.Combine(Environment.GetEnvironmentVariable("TEMP"), cur.Id.ToString() + ".txt");
-                System.IO.File.WriteAllText(path, "hello from " + cur.Id.ToString());
+                string path = Path.Combine(Environment.GetEnvironmentVariable("TEMP"), cur.Id + ".txt");
+                File.WriteAllText(path, "hello from " + cur.Id);
 
                 // add file as task dependency so it'll be uploaded to storage before task 
                 // is submitted and download onto the VM before task starts execution
-                FileToStage file = new FileToStage(path, new StagingStorageAccount(Program.StorageAccount, Program.StorageKey, Program.StorageBlobEndpoint));
+                FileToStage file = new FileToStage(path, new StagingStorageAccount(StorageAccount, StorageKey, StorageBlobEndpoint));
                 taskToAdd1.FilesToStage.Add(file);
                 taskToAdd2.FilesToStage.Add(file); // filetostage object can be reused
 
@@ -231,7 +237,7 @@ namespace HelloWorld
                 {
                     errors = true;
                     // Go through all exceptions and dump useful information
-                    ae.Handle((x) =>
+                    ae.Handle(x =>
                     {
                         if (x is BatchException)
                         {

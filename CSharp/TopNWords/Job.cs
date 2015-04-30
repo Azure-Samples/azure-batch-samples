@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Microsoft.Azure.Batch;
+using System.IO;
 using Microsoft.Azure.Batch.Auth;
 using Microsoft.Azure.Batch.Common;
 using Microsoft.Azure.Batch.FileStaging;
@@ -190,7 +190,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
 
             //Upload the blob.
             CloudBlockBlob blob = container.GetBlockBlobReference(fileName);
-            blob.UploadFromFile(fileName, System.IO.FileMode.Open);
+            blob.UploadFromFile(fileName, FileMode.Open);
             return blob.Uri.ToString();
         }
     }

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Microsoft.Azure.BatchExplorer.Models
+﻿namespace Microsoft.Azure.BatchExplorer.Models
 {
     public class AddTaskOptions
     {

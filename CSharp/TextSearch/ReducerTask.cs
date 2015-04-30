@@ -52,7 +52,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                             this.workItemName, 
                             this.jobName, 
                             mapperTaskName, 
-                            Microsoft.Azure.Batch.Constants.StandardOutFileName);
+                            Batch.Constants.StandardOutFileName);
 
                         string taskFileString = await taskFile.ReadAsStringAsync();
                         Console.WriteLine(taskFileString);

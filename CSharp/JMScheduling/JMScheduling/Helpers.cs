@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
 using Microsoft.Azure.Batch;
-using Microsoft.Azure.Batch.Common;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Auth;
 using Microsoft.WindowsAzure.Storage.Blob;
@@ -47,7 +44,7 @@ namespace Azure.Batch.SDK.Samples.JobScheduling.JMScheduling
             };
 
             string sasString = container.GetSharedAccessSignature(sasPolicy);
-            return string.Format("{0}{1}", container.Uri, sasString); ;
+            return string.Format("{0}{1}", container.Uri, sasString);
         }
 
         /// <summary>

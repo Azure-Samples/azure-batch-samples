@@ -1,8 +1,9 @@
-﻿using GalaSoft.MvvmLight.Messaging;
+﻿using System.Windows;
+using GalaSoft.MvvmLight.Messaging;
 using Microsoft.Azure.BatchExplorer.Messages;
 using Microsoft.Azure.BatchExplorer.Models;
 using Microsoft.Azure.BatchExplorer.ViewModels;
-using System.Windows;
+using Microsoft.Azure.BatchExplorer.Views.CreateControls;
 using Xceed.Wpf.DataGrid;
 
 namespace Microsoft.Azure.BatchExplorer.Views

@@ -1,16 +1,32 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
-using System.Drawing.Text;
-using System.IO;
-using Microsoft.Azure.Batch;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
+﻿// -----------------------------------------------------------------------------------------
+// <copyright file="ImgProcUtil.cs" company="Microsoft">
+//    Copyright Microsoft Corporation
+// 
+//    Licensed under the Apache License, Version 2.0 (the "License");
+//    you may not use this file except in compliance with the License.
+//    You may obtain a copy of the License at
+//      http://www.apache.org/licenses/LICENSE-2.0
+// 
+//    Unless required by applicable law or agreed to in writing, software
+//    distributed under the License is distributed on an "AS IS" BASIS,
+//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//    See the License for the specific language governing permissions and
+//    limitations under the License.
+// </copyright>
+// -----------------------------------------------------------------------------------------
 
 namespace Microsoft.Azure.Batch.Samples.ImgProcSample
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Drawing;
+    using System.Drawing.Drawing2D;
+    using System.Drawing.Imaging;
+    using System.Drawing.Text;
+    using System.IO;
+    using Microsoft.WindowsAzure.Storage;
+    using Microsoft.WindowsAzure.Storage.Blob;
+
     public class ImgProcUtils
     {
         public static List<IResourceFile> GetResourceFiles(string resourceContainerPrefix)
@@ -60,7 +76,7 @@ namespace Microsoft.Azure.Batch.Samples.ImgProcSample
         public static string CreateContainerWithPolicySASIfNotExist(string account, string key, string container, string policy, DateTime start, DateTime end, SharedAccessBlobPermissions permissions)
         {
             // 1. form the credentail and initial client
-            CloudStorageAccount storageaccount = new CloudStorageAccount(new Microsoft.WindowsAzure.Storage.Auth.StorageCredentials(account, key), false);
+            CloudStorageAccount storageaccount = new CloudStorageAccount(new WindowsAzure.Storage.Auth.StorageCredentials(account, key), false);
             CloudBlobClient client = storageaccount.CreateCloudBlobClient();
 
             // 2. create container if it doesn't exist
@@ -114,18 +130,15 @@ namespace Microsoft.Azure.Batch.Samples.ImgProcSample
         {
             Bitmap objBmpImage = new Bitmap(1, 1);
 
-            int intWidth = 0;
-            int intHeight = 0;
-
             // Create the Font object for the image text drawing.
-            Font objFont = new Font("Arial", 20, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Pixel);
+            Font objFont = new Font("Arial", 20, FontStyle.Bold, GraphicsUnit.Pixel);
 
             // Create a graphics object to measure the text's width and height.
             Graphics objGraphics = Graphics.FromImage(objBmpImage);
 
             // This is where the bitmap size is determined.
-            intWidth = (int)objGraphics.MeasureString(text, objFont).Width;
-            intHeight = (int)objGraphics.MeasureString(text, objFont).Height;
+            var intWidth = (int)objGraphics.MeasureString(text, objFont).Width;
+            var intHeight = (int)objGraphics.MeasureString(text, objFont).Height;
 
             // Create the bmpImage again with the correct size for the text and font.
             objBmpImage = new Bitmap(objBmpImage, new Size(intWidth, intHeight));

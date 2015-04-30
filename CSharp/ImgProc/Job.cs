@@ -15,13 +15,13 @@
 // </copyright>
 // -----------------------------------------------------------------------------------------
 
-using System;
-using System.Collections.Generic;
-using Microsoft.Azure.Batch.Common;
-using Microsoft.Azure.Batch.FileStaging;
-
 namespace Microsoft.Azure.Batch.Samples.ImgProcSample
 {
+    using System;
+    using System.Collections.Generic;
+    using Microsoft.Azure.Batch.Common;
+    using Microsoft.Azure.Batch.FileStaging;
+
     /// <summary>
     /// In this sample, we have a set of input blobs and we use Task Service to process
     /// these blobs in parallel on multiple VMs. Each Task creates a thumbnail image
@@ -174,7 +174,7 @@ namespace Microsoft.Azure.Batch.Samples.ImgProcSample
                     catch (AggregateException ae)
                     {
                         // Go through all exceptions and dump useful information
-                        ae.Handle((x) =>
+                        ae.Handle(x =>
                         {
                             if (x is BatchException)
                             {

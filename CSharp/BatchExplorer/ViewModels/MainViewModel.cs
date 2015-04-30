@@ -6,7 +6,6 @@ using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
@@ -16,7 +15,6 @@ using Microsoft.Azure.BatchExplorer.Helpers;
 using Microsoft.Azure.BatchExplorer.Messages;
 using Microsoft.Azure.BatchExplorer.Models;
 using Microsoft.Azure.BatchExplorer.PluginInterfaces.AccountPlugin;
-using AccountOperation = Microsoft.Azure.BatchExplorer.Helpers.AccountOperation;
 
 namespace Microsoft.Azure.BatchExplorer.ViewModels
 {
