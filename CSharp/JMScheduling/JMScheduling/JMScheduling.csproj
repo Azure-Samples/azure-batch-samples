@@ -7,7 +7,7 @@
     <ProjectGuid>{DDF71234-65D8-4784-8AF9-93D6743DB6A0}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>JMScheduling</RootNamespace>
+    <RootNamespace>Azure.Batch.SDK.Samples.JobScheduling.JMScheduling</RootNamespace>
     <AssemblyName>JMScheduling</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>

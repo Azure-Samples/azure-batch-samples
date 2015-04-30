@@ -1,18 +1,16 @@
 ﻿using System.Reflection;
-using System.Resources;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Windows;
 
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("BatchExplorer")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("Azure Batch Explorer")]
+[assembly: AssemblyDescription("A sample UI tool for simple navagation of Azure Batch objects")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Microsoft IT")]
-[assembly: AssemblyProduct("BatchExplorer")]
-[assembly: AssemblyCopyright("Copyright © Microsoft IT 2014")]
+[assembly: AssemblyCompany("Microsoft Corporation")]
+[assembly: AssemblyProduct("Azure Batch Explorer")]
+[assembly: AssemblyCopyright("Copyright © Microsoft")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

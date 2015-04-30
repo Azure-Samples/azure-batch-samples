@@ -8,7 +8,7 @@
     <ProjectGuid>{97A08BC5-5A5C-4946-9816-3FC34CB47DA8}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>ImgProc</RootNamespace>
+    <RootNamespace>Microsoft.Azure.Batch.Samples.ImgProcSample</RootNamespace>
     <AssemblyName>ImgProc</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <TargetFrameworkProfile>

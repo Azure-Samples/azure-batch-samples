@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Windows;
-using System.Windows.Controls;
+﻿using System.Windows.Controls;
 using Microsoft.Azure.BatchExplorer.ViewModels;
 
 namespace Microsoft.Azure.BatchExplorer.Views

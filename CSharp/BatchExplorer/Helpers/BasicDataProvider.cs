@@ -1,13 +1,13 @@
-﻿using Microsoft.Azure.Batch;
-using Microsoft.Azure.Batch.Auth;
-using Microsoft.Azure.Batch.Common;
-using Microsoft.Azure.BatchExplorer.Models;
-using Microsoft.Azure.BatchExplorer.Service;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.Batch;
+using Microsoft.Azure.Batch.Auth;
+using Microsoft.Azure.Batch.Common;
+using Microsoft.Azure.BatchExplorer.Models;
+using Microsoft.Azure.BatchExplorer.Service;
 
 namespace Microsoft.Azure.BatchExplorer.Helpers
 {

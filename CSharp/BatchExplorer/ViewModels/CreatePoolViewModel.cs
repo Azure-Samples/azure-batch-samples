@@ -1,14 +1,10 @@
-﻿using GalaSoft.MvvmLight.Messaging;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using GalaSoft.MvvmLight.Messaging;
 using Microsoft.Azure.BatchExplorer.Helpers;
 using Microsoft.Azure.BatchExplorer.Messages;
 using Microsoft.Azure.BatchExplorer.Models;
-using Microsoft.Azure.BatchExplorer.Service;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.Azure.Batch;
 
 namespace Microsoft.Azure.BatchExplorer.ViewModels
 {
