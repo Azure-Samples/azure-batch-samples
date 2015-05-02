@@ -351,6 +351,8 @@ def test_generate_xferspec_upload(tmpdir):
     args.storageaccountkey = 'key'
     args.chunksizebytes = 5
     args.skiponmatch = False
+    args.pageblob = False
+    args.autovhd = False
     sa_in_queue = queue.Queue()
     fs, nsops, md5, fd = blobxfer.generate_xferspec_upload(args,
             sa_in_queue, {}, {}, lpath, 'rr', True)
@@ -383,7 +385,7 @@ def _mock_blobservice_create_container(timeout=None,
     raise azure.WindowsAzureConflictError('msg')
 
 @patch('blobxfer.parseargs')
-def test_main(patched_parseargs, tmpdir):
+def test_main1(patched_parseargs, tmpdir):
     lpath = str(tmpdir.join('test.tmp'))
     args = MagicMock()
     args.localresource = ''
@@ -495,8 +497,9 @@ def test_main(patched_parseargs, tmpdir):
         m.get('https://blobep.blobep/container/saskey')
         blobxfer.main()
 
+    notmp_lpath = '/'.join(lpath.strip('/').split('/')[1:])
+
     with requests_mock.mock() as m:
-        notmp_lpath = '/'.join(lpath.strip('/').split('/')[1:])
         args.forcedownload = False
         args.forceupload = True
         args.remoteresource = None
@@ -523,32 +526,71 @@ def test_main(patched_parseargs, tmpdir):
                 status_code=201)
         m.put('https://blobep.blobep/container/blob.blobtmpsaskey?comp=block&blockid=00000000',
                 status_code=200)
+        m.put('https://blobep.blobep/container/blobsaskey?comp=blocklist',
+                status_code=201)
         with pytest.raises(SystemExit):
             blobxfer.main()
 
+        args.pageblob = True
+        args.forceupload = True
+        args.forcedownload = False
         m.put('https://blobep.blobep/container/blob.blobtmpsaskey', status_code=201)
         m.put('https://blobep.blobep/container/test.tmpsaskey', status_code=201)
         m.put('https://blobep.blobep/container/blob.blobtmpsaskey?comp=properties', status_code=200)
         m.put('https://blobep.blobep/container/test.tmpsaskey?comp=properties', status_code=200)
-        args.pageblob = True
-        args.forceupload = True
-        args.forcedownload = False
-        blobxfer.main()
+        m.put('https://blobep.blobep/container/blobsaskey', status_code=201)
+        with pytest.raises(IOError):
+            blobxfer.main()
+        m.put('https://blobep.blobep/container/blobsaskey', status_code=200)
+        with pytest.raises(IOError):
+            blobxfer.main()
+
         m.put('https://blobep.blobep/container/' + notmp_lpath + \
                 'saskey?comp=blocklist', status_code=201)
+        m.put('https://blobep.blobep/container/blobsaskey', status_code=201)
         args.pageblob = False
         blobxfer.main()
         args.pageblob = False
         args.autovhd = True
         blobxfer.main()
 
+@patch('blobxfer.parseargs')
+def test_main2(patched_parseargs, tmpdir):
+    lpath = str(tmpdir.join('test.tmp'))
+    args = MagicMock()
+    patched_parseargs.return_value = args
+    args.storageaccount = 'blobep'
+    args.container = 'container'
+    args.chunksizebytes = 5
+    args.localresource = lpath
+    args.blobep = 'blobep'
+    args.timeout = -1
+    args.pageblob = False
+    args.autovhd = False
+    args.managementep = None
+    args.managementcert = None
+    args.subscriptionid = None
+    args.chunksizebytes = None
+    args.forcedownload = False
+    args.forceupload = True
+    args.remoteresource = None
     args.saskey = None
     args.storageaccountkey = 'key'
-    args.createcontainer = True
+    with open(lpath, 'wt') as f:
+        f.write(str(uuid.uuid4()))
+
+    session = requests.Session()
+    adapter = requests_mock.Adapter()
+    session.mount('mock', adapter)
+
     with patch('azure.storage.BlobService') as mock:
+        args.createcontainer = True
+        args.pageblob = False
+        args.autovhd = False
         mock.return_value = MagicMock()
         mock.return_value.create_container = _mock_blobservice_create_container
         blobxfer.main()
+
         args.createcontainer = False
         args.pageblob = True
         args.autovhd = False

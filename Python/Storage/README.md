@@ -86,7 +86,7 @@ script in a virtualenv environment without the ndg-httpsclient package.
 Python versions >= 2.7.9 are not affected by this issue.
 
 ###Change Log
-* 0.9.1: the script supports page blob uploading. To specify local files to
+* 0.9.2: the script supports page blob uploading. To specify local files to
 upload as page blobs, specify the `--pageblob` parameter. The script also has
 a feature to detect files ending in the `.vhd` extension and will
 automatically upload just these files as page blobs while uploading other

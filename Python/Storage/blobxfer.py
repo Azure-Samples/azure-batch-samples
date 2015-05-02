@@ -48,10 +48,10 @@ Notes:
 - In order to skip download/upload matching files via MD5, the
   computemd5file flag must be enabled (it is enabled by default).
 - When uploading files as page blobs, the content is page boundary
-  byte-aligned. However, the MD5 for the blob is computed using the actual
-  local file source without the byte-alignment. This enables these page blobs
-  or files to be skipped during subsequent download/upload if the skiponmatch
-  parameter is allowed.
+  byte-aligned. The MD5 for the blob is computed using the final aligned
+  data if the source is not page boundary byte-aligned. This enables these
+  page blobs or files to be skipped during subsequent download or upload,
+  respectively, if the skiponmatch parameter is enabled.
 
 TODO list:
 - convert from synchronous multithreading to asyncio/trollius
@@ -97,7 +97,7 @@ except NameError: # pragma: no cover
 # pylint: enable=W0622,C0103
 
 # global defines
-_SCRIPT_VERSION = '0.9.1'
+_SCRIPT_VERSION = '0.9.2'
 _DEFAULT_MAX_STORAGEACCOUNT_WORKERS = 64
 _MAX_BLOB_CHUNK_SIZE_BYTES = 4194304
 _MAX_LISTBLOBS_RESULTS = 1000
@@ -106,10 +106,11 @@ _DEFAULT_BLOB_ENDPOINT = 'blob.core.windows.net'
 _DEFAULT_MANAGEMENT_ENDPOINT = 'management.core.windows.net'
 
 # compute md5 for file for azure storage
-def compute_md5_for_file_asbase64(filename, blocksize=65536):
+def compute_md5_for_file_asbase64(filename, pagealign=False, blocksize=65536):
     """Compute MD5 hash for file and encode as Base64
     Parameters:
         filename - filename to compute md5
+        pagealign - align bytes for page boundary
         blocksize - block size in bytes
     Returns:
         MD5 for file encoded as Base64
@@ -122,6 +123,10 @@ def compute_md5_for_file_asbase64(filename, blocksize=65536):
             buf = filedesc.read(blocksize)
             if not buf:
                 break
+            if pagealign and len(buf) < blocksize:
+                aligned = page_align_content_length(len(buf))
+                if aligned != len(buf):
+                    buf = buf.ljust(aligned, b'0')
             hasher.update(buf)
         return base64.b64encode(hasher.digest())
 
@@ -703,7 +708,8 @@ def generate_xferspec_upload(args, storage_in_queue, blobskipdict, blockids,
     # compute md5 hash
     md5digest = None
     if args.computefilemd5:
-        md5digest = compute_md5_for_file_asbase64(localfile)
+        md5digest = compute_md5_for_file_asbase64(localfile,
+                as_page_blob(args.pageblob, args.autovhd, localfile))
         print('{} md5: {}'.format(localfile, md5digest))
         # check if upload is needed
         if args.skiponmatch and remoteresource in blobskipdict:
@@ -1175,7 +1181,7 @@ def main():
                 # move tmp file to real file
                 os.rename(tmpfilename, localfile)
             else:
-                os.remove(localfile)
+                os.remove(tmpfilename)
 
     print('\nscript elapsed time: {} sec'.format(time.time() - start))
     print('script end time: {}'.format(time.strftime("%Y-%m-%d %H:%M:%S")))
