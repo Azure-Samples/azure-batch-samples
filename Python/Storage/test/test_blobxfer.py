@@ -42,6 +42,29 @@ def test_page_align_content_length():
     assert 512 == blobxfer.page_align_content_length(512)
     assert 1024 == blobxfer.page_align_content_length(513)
 
+def _func_successful_requests_call(timeout=None):
+    response = MagicMock()
+    response.raise_for_status = lambda: None
+    return response
+
+def _func_raise_requests_exception_once(val, timeout=None):
+    if len(val) > 0:
+        response = MagicMock()
+        response.raise_for_status = lambda: None
+        return response
+    val.append(0)
+    ex = requests.Timeout()
+    raise ex
+
+def _func_raise_azure_exception_once(val, timeout=None):
+    if len(val) > 0:
+        response = MagicMock()
+        return response
+    val.append(0)
+    ex = Exception()
+    ex.message = 'TooManyRequests'
+    raise ex
+
 @patch('time.sleep', return_value=None)
 def test_azure_request(patched_time_sleep):
     socket_error = socket.error()
@@ -59,49 +82,27 @@ def test_azure_request(patched_time_sleep):
     with pytest.raises(Exception):
         blobxfer.azure_request(Mock(side_effect=Exception('Uncaught')))
 
-def _func_successful_requests_call(timeout=None):
-    response = MagicMock()
-    response.raise_for_status = lambda: None
-    return response
-
-def _func_raise_requests_exception_once(val, timeout=None):
-    if len(val) > 0:
-        response = MagicMock()
-        response.raise_for_status = lambda: None
-        return response
-    val.append(0)
-    ex = requests.Timeout()
-    raise ex
-
-@patch('time.sleep', return_value=None)
-def test_http_request_wrapper(patched_time_sleep):
-    socket_error = socket.error()
-    socket_error.errno = errno.E2BIG
-
-    with pytest.raises(socket.error):
-        blobxfer.http_request_wrapper(Mock(side_effect=socket_error))
-
-    socket_error.errno = errno.ETIMEDOUT
-    with pytest.raises(IOError):
-        mock = Mock(side_effect=socket_error)
-        mock.__name__ = 'name'
-        blobxfer.http_request_wrapper(mock, timeout=0.001)
+    try:
+        blobxfer.azure_request(
+                _func_raise_azure_exception_once, val=[], timeout=1)
+    except:
+        pytest.fail('unexpected Exception raised')
 
     with pytest.raises(requests.HTTPError):
         exc = requests.HTTPError()
         exc.response = MagicMock()
         exc.response.status_code = 404
         mock = Mock(side_effect=exc)
-        blobxfer.http_request_wrapper(mock)
+        blobxfer.azure_request(mock)
 
     try:
-        blobxfer.http_request_wrapper(
+        blobxfer.azure_request(
                 _func_raise_requests_exception_once, val=[], timeout=1)
     except:
         pytest.fail('unexpected Exception raised')
 
     try:
-        blobxfer.http_request_wrapper(_func_successful_requests_call)
+        blobxfer.azure_request(_func_successful_requests_call)
     except:
         pytest.fail('unexpected Exception raised')
 
@@ -199,14 +200,14 @@ def test_sasblobservice_setblobproperties():
         m.put('mock://blobepcontainer/blobsaskey', status_code=200)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         try:
-            sbs.set_blob_properties('container', 'blob', ['1', '2'], 'md5')
+            sbs.set_blob_properties('container', 'blob', 'md5')
         except:
             pytest.fail('unexpected Exception raised')
 
         m.put('mock://blobepcontainer/blobsaskey', text='', status_code=201)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         with pytest.raises(IOError):
-            sbs.set_blob_properties('container', 'blob', ['1', '2'], 'md5')
+            sbs.set_blob_properties('container', 'blob', 'md5')
 
 def test_sasblobservice_putblob():
     session = requests.Session()
