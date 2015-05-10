@@ -4,5 +4,5 @@
 [![Coverage Status](https://coveralls.io/repos/alfpark/azure-batch-samples/badge.svg?branch=master)](https://coveralls.io/r/alfpark/azure-batch-samples?branch=master)
 
 ###[blobxfer.py](./Storage)
-Code sample to perform data transfer to/from Azure Blob (block) Storage.
+Code sample to perform AzCopy-like data transfer to/from Azure Blob Storage.
 

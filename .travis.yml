@@ -2,7 +2,10 @@ language: python
 cache: pip
 python:
   - 2.7
+  - 3.3
+  - 3.4
   - pypy
+  - pypy3
 install:
   - pip install azure
   - pip install coveralls
