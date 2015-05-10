@@ -12,7 +12,7 @@ with various transfer optimizations, built-in retries, and user-specified
 timeouts.
 
 The blobxfer script is a python script that can be used on any platform where
-a modern Python interpreter can be installed. The script requires two
+Python 2.7, 3.3 or 3.4 can be installed. The script requires two
 prerequisite packages to be installed: (1) azure and (2) requests. The azure
 package is required for the script to utilize the Azure Python SDK to interact
 with Azure using a management certificate or a shared key. The requests package

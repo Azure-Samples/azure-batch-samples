@@ -55,7 +55,6 @@ Notes:
 
 TODO list:
 - convert from synchronous multithreading to asyncio/trollius
-- complete Python3 support (blocking on Azure Python SDK issues)
 """
 
 # pylint: disable=C0301,R0913,R0914
@@ -70,7 +69,7 @@ import os
 # pylint: disable=F0401
 try:
     import queue
-except ImportError:
+except ImportError: # pragma: no cover
     import Queue as queue
 # pylint: enable=F0401
 import random
@@ -97,13 +96,14 @@ except NameError: # pragma: no cover
 # pylint: enable=W0622,C0103
 
 # global defines
-_SCRIPT_VERSION = '0.9.3'
+_SCRIPT_VERSION = '0.9.4'
 _DEFAULT_MAX_STORAGEACCOUNT_WORKERS = 64
 _MAX_BLOB_CHUNK_SIZE_BYTES = 4194304
 _MAX_LISTBLOBS_RESULTS = 1000
 _PAGEBLOB_BOUNDARY = 512
 _DEFAULT_BLOB_ENDPOINT = 'blob.core.windows.net'
 _DEFAULT_MANAGEMENT_ENDPOINT = 'management.core.windows.net'
+_PY2 = sys.version_info.major == 2
 
 class SasBlobService(object):
     """BlobService supporting SAS for functions used in the Python SDK.
@@ -150,7 +150,7 @@ class SasBlobService(object):
         if response.status_code != 200:
             raise IOError('incorrect status code returned for list_blobs: {}'.format(
                 response.status_code))
-        response.body = response.text
+        response.body = response.content
         # pylint: disable=W0212
         return azure.storage._parse_blob_enum_results_list(response)
         # pylint: enable=W0212
@@ -495,19 +495,19 @@ def azure_request(req, timeout=None, *args, **kwargs):
     while True:
         try:
             return req(*args, **kwargs)
-        except socket.error as exc:
-            if exc.errno != errno.ETIMEDOUT and \
-                    exc.errno != errno.ECONNRESET and \
-                    exc.errno != errno.ECONNREFUSED and \
-                    exc.errno != errno.ECONNABORTED and \
-                    exc.errno != errno.ENETRESET:
-                raise
         except requests.Timeout as exc:
             pass
         except requests.HTTPError as exc:
             if exc.response.status_code < 500 or \
                     exc.response.status_code == 501 or \
                     exc.response.status_code == 505:
+                raise
+        except socket.error as exc:
+            if exc.errno != errno.ETIMEDOUT and \
+                    exc.errno != errno.ECONNRESET and \
+                    exc.errno != errno.ECONNREFUSED and \
+                    exc.errno != errno.ECONNABORTED and \
+                    exc.errno != errno.ENETRESET:
                 raise
         except Exception as exc:
             try:
@@ -559,7 +559,10 @@ def compute_md5_for_file_asbase64(filename, pagealign=False, blocksize=65536):
                 if aligned != len(buf):
                     buf = buf.ljust(aligned, b'0')
             hasher.update(buf)
-        return base64.b64encode(hasher.digest())
+        if _PY2: # pragma: no cover
+            return base64.b64encode(hasher.digest())
+        else: # pragma: no cover
+            return str(base64.b64encode(hasher.digest()), 'ascii')
 
 def compute_md5_for_data_asbase64(data):
     """Compute MD5 hash for bits and encode as Base64
@@ -572,7 +575,10 @@ def compute_md5_for_data_asbase64(data):
     """
     hasher = hashlib.md5()
     hasher.update(data)
-    return base64.b64encode(hasher.digest())
+    if _PY2: # pragma: no cover
+        return base64.b64encode(hasher.digest())
+    else: # pragma: no cover
+        return str(base64.b64encode(hasher.digest()), 'ascii')
 
 def page_align_content_length(length):
     """Compute page boundary alignment
@@ -683,7 +689,7 @@ def generate_xferspec_download(blob_service, args, storage_in_queue, localfile,
     with flock:
         filedesc = open(tmpfilename, 'wb')
         filedesc.seek(contentlength - 1)
-        filedesc.write('\0')
+        filedesc.write(b'\0')
         filedesc.close()
         if addfd:
             # reopen under r+b mode
@@ -832,6 +838,10 @@ def main():
     if args.storageaccountkey is None and \
             args.saskey is None: # pragma: no cover
         raise ValueError('could not get reference to storage account key or sas key')
+
+    # set valid num workers
+    if args.numworkers < 1:
+        args.numworkers = 1
 
     # expand any paths
     args.localresource = os.path.expanduser(args.localresource)
