@@ -15,11 +15,13 @@ The blobxfer script is a python script that can be used on any platform where
 Python 2.7, 3.3 or 3.4 can be installed. The script requires two
 prerequisite packages to be installed: (1) azure and (2) requests. The azure
 package is required for the script to utilize the Azure Python SDK to interact
-with Azure using a management certificate or a shared key. The requests package
-is required for SAS support. If SAS is not needed, one can remove all of the
-requests references from the script to reduce the prerequisite footprint. You
-can install these packages using pip, easy_install or through standard
-setup.py procedures.
+with Azure using a management certificate or a shared key. Please refer to
+[this page](http://azure.microsoft.com/en-us/documentation/articles/python-how-to-install/)
+for more information regarding the Azure Python SDK package and other
+installation notes. The requests package is required for SAS support. If SAS
+is not needed, one can remove all of the requests references from the script
+to reduce the prerequisite footprint. You can install these packages using
+pip, easy_install or through standard setup.py procedures.
 
 Program parameters and command-line options can be listed via the -h switch. At
 the minimum, three positional arguments are required: storage account name,
