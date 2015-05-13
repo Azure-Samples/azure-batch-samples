@@ -80,7 +80,9 @@ def test_azure_request(patched_time_sleep):
         blobxfer.azure_request(mock, timeout=0.001)
 
     with pytest.raises(Exception):
-        blobxfer.azure_request(Mock(side_effect=Exception('Uncaught')))
+        ex = Exception()
+        ex.message = 'Uncaught'
+        blobxfer.azure_request(Mock(side_effect=ex))
 
     try:
         blobxfer.azure_request(
@@ -129,12 +131,12 @@ def test_sasblobservice_getblob():
     session.mount('mock', adapter)
 
     with requests_mock.mock() as m:
-        m.get('mock://blobepcontainer/blobsaskey', content='data')
+        m.get('mock://blobepcontainer/blobsaskey', content=b'data')
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         results = sbs.get_blob('container', 'blob', 'range')
-        assert results == 'data'
+        assert results == b'data'
 
-        m.get('mock://blobepcontainer/blobsaskey', text='', status_code=201)
+        m.get('mock://blobepcontainer/blobsaskey', status_code=201)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         with pytest.raises(IOError):
             sbs.get_blob('container', 'blob', 'range')
@@ -222,7 +224,7 @@ def test_sasblobservice_putblob():
         except:
             pytest.fail('unexpected Exception raised')
 
-        m.put('mock://blobepcontainer/blobsaskey', content='', status_code=200)
+        m.put('mock://blobepcontainer/blobsaskey', content=b'', status_code=200)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         with pytest.raises(IOError):
             sbs.put_blob('container', 'blob', None, 'PageBlob', 'md5', 4)
@@ -389,6 +391,7 @@ def _mock_blobservice_create_container(timeout=None,
 def test_main1(patched_parseargs, tmpdir):
     lpath = str(tmpdir.join('test.tmp'))
     args = MagicMock()
+    args.numworkers = 0
     args.localresource = ''
     args.storageaccount = 'blobep'
     args.container = 'container'
@@ -488,7 +491,7 @@ def test_main1(patched_parseargs, tmpdir):
         args.localresource = str(tmpdir)
         m.head('https://blobep.blobep/container/blobsaskey', headers={
             'content-length': '6', 'content-md5': '1qmpM8iq/FHlWsBmK25NSg=='})
-        m.get('https://blobep.blobep/container/blobsaskey', content='012345')
+        m.get('https://blobep.blobep/container/blobsaskey', content=b'012345')
         blobxfer.main()
 
         args.remoteresource = '.'
@@ -560,6 +563,7 @@ def test_main2(patched_parseargs, tmpdir):
     lpath = str(tmpdir.join('test.tmp'))
     args = MagicMock()
     patched_parseargs.return_value = args
+    args.numworkers = 64
     args.storageaccount = 'blobep'
     args.container = 'container'
     args.chunksizebytes = 5
