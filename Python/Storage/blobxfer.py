@@ -512,7 +512,8 @@ def azure_request(req, timeout=None, *args, **kwargs):
         except Exception as exc:
             try:
                 if not ('TooManyRequests' in exc.message or \
-                        'InternalError' in exc.message):
+                        'InternalError' in exc.message or \
+                        'OperationTimedOut' in exc.message):
                     raise
             except AttributeError:
                 raise exc
