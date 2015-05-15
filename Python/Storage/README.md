@@ -46,8 +46,10 @@ If mylocalfile.txt exists locally, then the script will attempt to upload the
 file to container0 on mystorageacct. If the file does not exist, then it will
 attempt to download the resource. If the desired behavior is to download the
 file from Azure even if the local file exists, one can override the detection
-mechanism with `--forcedownload`. `--forceupload` is available to force the
-transfer to Azure storage. Note that you may use the --remoteresource flag to
+mechanism with `--download`. `--upload` is available to force the transfer to
+Azure storage. Note that specifying a particular direction does not force the
+actual operation to occur as that depends on other options specified such as
+skipping on MD5 matches. Note that you may use the --remoteresource flag to
 rename the local file as the blob name on Azure storage if uploading.
 
 If the local resource is a directory that exists, the script will attempt to
@@ -68,10 +70,10 @@ download all of the contents in container0 because “.” is set with
 `--remoteresource` flag. To download individual blobs, one would specify the
 blob name instead of “.” with the `--remoteresource` flag. If mylocaldir
 directory exists, the script will attempt to upload the directory instead of
-downloading it. In this case, if you want to force the download, indicate that
-with `--forcedownload`. When downloading an entire container, the script will
-attempt to pre-allocate file space and recreate the sub-directory structure
-as needed.
+downloading it. In this case, if you want to force the download direction,
+indicate that with `--download`. When downloading an entire container, the
+script will attempt to pre-allocate file space and recreate the sub-directory
+structure as needed.
 
 ###Notes
 A note on performance with Python versions < 2.7.9 (i.e., interpreter found

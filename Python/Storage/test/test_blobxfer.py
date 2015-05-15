@@ -407,12 +407,12 @@ def test_main1(patched_parseargs, tmpdir):
     with pytest.raises(ValueError):
         blobxfer.main()
     args.blobep = 'blobep'
-    args.forceupload = True
-    args.forcedownload = True
+    args.upload = True
+    args.download = True
     with pytest.raises(ValueError):
         blobxfer.main()
-    args.forceupload = None
-    args.forcedownload = None
+    args.upload = None
+    args.download = None
     with pytest.raises(ValueError):
         blobxfer.main()
     args.storageaccountkey = None
@@ -459,12 +459,12 @@ def test_main1(patched_parseargs, tmpdir):
     args.storageaccountkey = None
     args.saskey = 'saskey'
     args.remoteresource = None
-    args.forcedownload = True
+    args.download = True
     with pytest.raises(ValueError):
         blobxfer.main()
 
-    args.forcedownload = False
-    args.forceupload = True
+    args.download = False
+    args.upload = True
     args.remoteresource = None
     with open(lpath, 'wt') as f:
         f.write(str(uuid.uuid4()))
@@ -485,8 +485,8 @@ def test_main1(patched_parseargs, tmpdir):
         blobxfer.main()
 
         args.progressbar = True
-        args.forcedownload = True
-        args.forceupload = False
+        args.download = True
+        args.upload = False
         args.remoteresource = 'blob'
         args.localresource = str(tmpdir)
         m.head('https://blobep.blobep/container/blobsaskey', headers={
@@ -501,11 +501,17 @@ def test_main1(patched_parseargs, tmpdir):
         m.get('https://blobep.blobep/container/saskey')
         blobxfer.main()
 
+        tmplpath = str(tmpdir.join('test', 'test2', 'test3'))
+        print(tmplpath)
+        args.localresource = tmplpath
+        blobxfer.main()
+
+    args.localresource = str(tmpdir)
     notmp_lpath = '/'.join(lpath.strip('/').split('/')[1:])
 
     with requests_mock.mock() as m:
-        args.forcedownload = False
-        args.forceupload = True
+        args.download = False
+        args.upload = True
         args.remoteresource = None
         args.skiponmatch = False
         m.put('https://blobep.blobep/container/test.tmpsaskey?comp=block&blockid=00000000',
@@ -536,8 +542,8 @@ def test_main1(patched_parseargs, tmpdir):
             blobxfer.main()
 
         args.pageblob = True
-        args.forceupload = True
-        args.forcedownload = False
+        args.upload = True
+        args.download = False
         m.put('https://blobep.blobep/container/blob.blobtmpsaskey', status_code=201)
         m.put('https://blobep.blobep/container/test.tmpsaskey', status_code=201)
         m.put('https://blobep.blobep/container/blob.blobtmpsaskey?comp=properties', status_code=200)
@@ -576,8 +582,8 @@ def test_main2(patched_parseargs, tmpdir):
     args.managementcert = None
     args.subscriptionid = None
     args.chunksizebytes = None
-    args.forcedownload = False
-    args.forceupload = True
+    args.download = False
+    args.upload = True
     args.remoteresource = None
     args.saskey = None
     args.storageaccountkey = 'key'
