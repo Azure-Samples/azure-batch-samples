@@ -46,7 +46,7 @@ Notes:
 - For non-SAS requests, timeouts may not be properly honored due to
   limitations of the Azure Python SDK.
 - In order to skip download/upload matching files via MD5, the
-  computemd5file flag must be enabled (it is enabled by default).
+  computefilemd5 flag must be enabled (it is enabled by default).
 - When uploading files as page blobs, the content is page boundary
   byte-aligned. The MD5 for the blob is computed using the final aligned
   data if the source is not page boundary byte-aligned. This enables these
@@ -96,7 +96,7 @@ except NameError: # pragma: no cover
 # pylint: enable=W0622,C0103
 
 # global defines
-_SCRIPT_VERSION = '0.9.4'
+_SCRIPT_VERSION = '0.9.5'
 _DEFAULT_MAX_STORAGEACCOUNT_WORKERS = 64
 _MAX_BLOB_CHUNK_SIZE_BYTES = 4194304
 _MAX_LISTBLOBS_RESULTS = 1000
@@ -422,7 +422,7 @@ class BlobChunkWorker(threading.Thread):
             data = filedesc.read(bytestoxfer)
             if closefd:
                 filedesc.close()
-        if not data: # pragma: no cover
+        if not data:
             raise IOError('could not read {}: {} -> {}'.format(
                 localresource, offset, offset+bytestoxfer))
         # issue REST put
@@ -512,10 +512,11 @@ def azure_request(req, timeout=None, *args, **kwargs):
         except Exception as exc:
             try:
                 if not ('TooManyRequests' in exc.message or \
-                        'InternalError' in exc.message):
+                        'InternalError' in exc.message or \
+                        'OperationTimedOut' in exc.message):
                     raise
             except AttributeError:
-                raise exc # pragma: no cover
+                raise exc
         if timeout is not None and time.clock() - start > timeout:
             raise IOError('waited for {} for request {}, exceeded timeout of {}'.format(
                 time.clock() - start, req.__name__, timeout))
@@ -535,7 +536,7 @@ def create_dir_ifnotexists(dirname):
         print('created local directory: {}'.format(dirname))
     except OSError as exc:
         if exc.errno != errno.EEXIST:
-            raise # pragma: no cover
+            raise
 
 def compute_md5_for_file_asbase64(filename, pagealign=False, blocksize=65536):
     """Compute MD5 hash for file and encode as Base64
@@ -559,9 +560,9 @@ def compute_md5_for_file_asbase64(filename, pagealign=False, blocksize=65536):
                 if aligned != len(buf):
                     buf = buf.ljust(aligned, b'0')
             hasher.update(buf)
-        if _PY2: # pragma: no cover
+        if _PY2:
             return base64.b64encode(hasher.digest())
-        else: # pragma: no cover
+        else:
             return str(base64.b64encode(hasher.digest()), 'ascii')
 
 def compute_md5_for_data_asbase64(data):
@@ -575,9 +576,9 @@ def compute_md5_for_data_asbase64(data):
     """
     hasher = hashlib.md5()
     hasher.update(data)
-    if _PY2: # pragma: no cover
+    if _PY2:
         return base64.b64encode(hasher.digest())
-    else: # pragma: no cover
+    else:
         return str(base64.b64encode(hasher.digest()), 'ascii')
 
 def page_align_content_length(length):
@@ -629,7 +630,7 @@ def get_blob_listing(blob_service, args):
             blobdict[blob.name] = [blob.properties.content_length]
             try:
                 blobdict[blob.name].append(blob.properties.content_md5)
-            except AttributeError: # pragma: no cover
+            except AttributeError:
                 blobdict[blob.name].append(None)
         marker = result.next_marker
         if marker is None or len(marker) < 1:
@@ -793,8 +794,8 @@ def main():
         raise ValueError('invalid positional arguments')
     if len(args.blobep) < 1:
         raise ValueError('blob endpoint is invalid')
-    if args.forceupload and args.forcedownload:
-        raise ValueError('cannot force download and upload in the same command')
+    if args.upload and args.download:
+        raise ValueError('cannot force transfer direction of download and upload in the same command')
     if args.storageaccountkey is not None and args.saskey is not None:
         raise ValueError('cannot use both a sas key and storage account key')
     if args.pageblob and args.autovhd:
@@ -817,8 +818,7 @@ def main():
             if args.managementep is None or len(args.managementep) == 0:
                 raise ValueError('management endpoint is invalid')
             # expand management cert path out if contains ~
-            args.managementcert = os.path.abspath(
-                    os.path.expanduser(args.managementcert))
+            args.managementcert = os.path.abspath(args.managementcert)
             # get sms reference
             sms = azure.servicemanagement.ServiceManagementService(
                     args.subscriptionid, args.managementcert,
@@ -832,11 +832,11 @@ def main():
 
     # check storage account key validity
     if args.storageaccountkey is not None and \
-            len(args.storageaccountkey) < 1: # pragma: no cover
+            len(args.storageaccountkey) < 1:
         raise ValueError('storage account key is invalid')
 
     if args.storageaccountkey is None and \
-            args.saskey is None: # pragma: no cover
+            args.saskey is None:
         raise ValueError('could not get reference to storage account key or sas key')
 
     # set valid num workers
@@ -844,7 +844,7 @@ def main():
         args.numworkers = 1
 
     # expand any paths
-    args.localresource = os.path.expanduser(args.localresource)
+    args.localresource = os.path.abspath(args.localresource)
 
     # sanitize remote file name
     if args.remoteresource:
@@ -879,7 +879,7 @@ def main():
 
     # check which way we're transfering
     xfertoazure = False
-    if args.forceupload or (not args.forcedownload and \
+    if args.upload or (not args.download and \
             os.path.exists(args.localresource)):
         xfertoazure = True
     else:
@@ -1012,16 +1012,15 @@ def main():
         # make the localresource directory
         created_dirs = set()
         create_dir_ifnotexists(args.localresource)
+        created_dirs.add(args.localresource)
         # generate xferspec for all blobs
         for blob in blobdict:
             localfile = os.path.join(args.localresource, blob)
             # create any subdirectories if required
-            prevdir = args.localresource
-            subdirs = localfile.split(os.path.sep)[1:-1]
-            for dirname in subdirs:
-                prevdir = os.path.join(prevdir, dirname)
-                if not prevdir in created_dirs:
-                    create_dir_ifnotexists(prevdir)
+            localdir = os.path.dirname(localfile)
+            if not localdir in created_dirs:
+                create_dir_ifnotexists(localdir)
+                created_dirs.add(localdir)
             # add instructions
             filesize, ops, md5digest, filedesc = \
                     generate_xferspec_download(blob_service, args,
@@ -1033,9 +1032,9 @@ def main():
                 allfilesize = allfilesize + filesize
                 nstorageops = nstorageops + ops
 
-    if nstorageops == 0: # pragma: no cover
+    if nstorageops == 0:
         print('detected no actions needed to be taken, exiting...')
-        sys.exit(1)
+        sys.exit(0)
 
     if xfertoazure:
         if args.pageblob:
@@ -1181,10 +1180,8 @@ def parseargs(): # pragma: no cover
     parser.add_argument('--chunksizebytes', type=int,
             help='maximum chunk size to transfer in bytes [{}]'.format(
                 _MAX_BLOB_CHUNK_SIZE_BYTES))
-    parser.add_argument('--forcedownload', action='store_true',
-            help='force download from Azure')
-    parser.add_argument('--forceupload', action='store_true',
-            help='force upload to Azure')
+    parser.add_argument('--download', action='store_true',
+            help='force transfer direction to download from Azure')
     parser.add_argument('--keepmismatchedmd5files', action='store_true',
             help='keep files with MD5 mismatches')
     parser.add_argument('--keeprootdir', action='store_true',
@@ -1218,6 +1215,8 @@ def parseargs(): # pragma: no cover
             help='subscription id')
     parser.add_argument('--timeout', type=float,
             help='timeout in seconds for any operation to complete')
+    parser.add_argument('--upload', action='store_true',
+            help='force transfer direction to upload to Azure')
     parser.add_argument('--version', action='version', version=_SCRIPT_VERSION)
     return parser.parse_args()
 
