@@ -89,6 +89,12 @@ script in a virtualenv environment without the ndg-httpsclient package.
 Python versions >= 2.7.9 are not affected by this issue.
 
 ###Change Log
+* 0.9.6: revert local resource path expansion, PEP8 fixes
+
+* 0.9.5: fix directory creation issue
+
+* 0.9.4: fix Python3 compatibility issues
+
 * 0.9.3: the script supports page blob uploading. To specify local files to
 upload as page blobs, specify the `--pageblob` parameter. The script also has
 a feature to detect files ending in the `.vhd` extension and will
