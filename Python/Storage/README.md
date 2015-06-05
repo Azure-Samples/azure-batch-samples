@@ -89,19 +89,16 @@ script in a virtualenv environment without the ndg-httpsclient package.
 Python versions >= 2.7.9 are not affected by this issue.
 
 ###Change Log
+* 0.9.7: normalize SAS keys (accept keys with or without ? char prefix)
 * 0.9.6: revert local resource path expansion, PEP8 fixes
-
 * 0.9.5: fix directory creation issue
-
 * 0.9.4: fix Python3 compatibility issues
-
 * 0.9.3: the script supports page blob uploading. To specify local files to
 upload as page blobs, specify the `--pageblob` parameter. The script also has
 a feature to detect files ending in the `.vhd` extension and will
 automatically upload just these files as page blobs while uploading other
 files as block blobs. Specify the `--autovhd` parameter (without the
 `--pageblob` parameter) to enable this behavior.
-
 * 0.9.0: the script will automatically default to skipping files where if the
 MD5 checksum of either the local file or the stored MD5 of the remote resource
 respectively matches the remote resource or local file, then the upload or
@@ -109,6 +106,4 @@ download for the file will be skipped. This capability will allow one to
 perform rsync-like operations where only files that have changed will be
 transferred. This behavior can be forcefully disabled by specifying
 `--no-skiponmatch`.
-
 * 0.8.2: performance regression fixes
-
