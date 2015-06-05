@@ -96,7 +96,7 @@ except NameError:  # pragma: no cover
 # pylint: enable=W0622,C0103
 
 # global defines
-_SCRIPT_VERSION = '0.9.6'
+_SCRIPT_VERSION = '0.9.7'
 _DEFAULT_MAX_STORAGEACCOUNT_WORKERS = 64
 _MAX_BLOB_CHUNK_SIZE_BYTES = 4194304
 _MAX_LISTBLOBS_RESULTS = 1000
@@ -122,7 +122,11 @@ class SasBlobService(object):
             Nothing
         """
         self.blobep = blobep
-        self.saskey = saskey
+        # normalize sas key
+        if saskey[0] != '?':
+            self.saskey = '?' + saskey
+        else:
+            self.saskey = saskey
         self.timeout = timeout
 
     def list_blobs(self, container_name, marker=None,
