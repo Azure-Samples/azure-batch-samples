@@ -914,9 +914,20 @@ def main():
     # create master blob service
     blob_service = None
     if args.storageaccountkey:
-        blob_service = azure.storage.BlobService(
-            account_name=args.storageaccount,
-            account_key=args.storageaccountkey)
+        if args.blobep[0] == '.':
+            host_base = args.blobep
+        else:
+            host_base = '.' + args.blobep
+        if args.timeout is None:
+            blob_service = azure.storage.BlobService(
+                account_name=args.storageaccount,
+                account_key=args.storageaccountkey,
+                host_base=host_base)
+        else:
+            blob_service = azure.storage.BlobService(
+                account_name=args.storageaccount,
+                account_key=args.storageaccountkey,
+                host_base=host_base, timeout=args.timeout)
     elif args.saskey:
         blob_service = SasBlobService(blobep, args.saskey, args.timeout)
         # disable container creation (not possible with SAS)
