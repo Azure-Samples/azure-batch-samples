@@ -73,7 +73,7 @@ namespace HelloWorld
 
             // use an OData based select clause to limit the amount of data returned. This will result in incomplete
             // client objects but reduces the amount of data on the wire leading to faster completion when there are
-            // alot of objects for a given query. No spaces are allowed in the string and property names are case-sensitive.
+            // a lot of objects for a given query. No spaces are allowed in the string and property names are case-sensitive.
             foreach (CloudPool p in client.PoolOperations.ListPools(new ODATADetailLevel(selectClause: "id,currentDedicated")))
             {
                 // pools are uniquely identified by their ID
@@ -163,7 +163,7 @@ namespace HelloWorld
             Console.WriteLine("Creating job: " + jobId);
             CloudJob boundJob = CreateBoundJob(client.JobOperations, sharedPoolId, jobId);
 
-            // add 2 quick tasks. Tasks within a job must have unique names
+            // add 2 quick tasks. Each tasks within a job must have a unique ID
             List<CloudTask> tasksToRun = new List<CloudTask>(2);
             tasksToRun.Add(new CloudTask("task1", "hostname"));
             tasksToRun.Add(new CloudTask("task2", "cmd /c dir /s"));
@@ -178,14 +178,15 @@ namespace HelloWorld
             // blocking wait on the list of tasks until all tasks reach completed state or the timeout is reached.
             // If the pool is being resized then enough time is needed for the VMs to reach the idle state in order
             // for tasks to run on them.
-            bool timedOut = taskStateMonitor.WaitAll(boundJob.ListTasks(), TaskState.Completed, new TimeSpan(0, 10, 0));
+            IPagedEnumerable<CloudTask> ourTasks = boundJob.ListTasks();
+            bool timedOut = taskStateMonitor.WaitAll(ourTasks, TaskState.Completed, new TimeSpan(0, 10, 0));
             if (timedOut)
             {
                 throw new TimeoutException("Timed out waiting for tasks");
             }
 
             // dump task output
-            foreach (CloudTask t in boundJob.ListTasks())
+            foreach (CloudTask t in ourTasks)
             {
                 Console.WriteLine("Task " + t.Id);
                 Console.WriteLine("stdout:\n" + t.GetNodeFile(Constants.StandardOutFileName).ReadAsString());
@@ -275,10 +276,10 @@ namespace HelloWorld
             {
                 Console.WriteLine("Waiting for all tasks to complete on job: {0}...", boundJob.Id);
 
-                List<CloudTask> tasksToMonitorForCompletion = boundJob.ListTasks().ToList();
-                client.Utilities.CreateTaskStateMonitor().WaitAll(tasksToMonitorForCompletion, TaskState.Completed, TimeSpan.FromMinutes(30));
+                IPagedEnumerable<CloudTask> ourTasks = boundJob.ListTasks();
+                client.Utilities.CreateTaskStateMonitor().WaitAll(ourTasks, TaskState.Completed, TimeSpan.FromMinutes(30));
 
-                foreach (CloudTask task in boundJob.ListTasks())
+                foreach (CloudTask task in ourTasks)
                 {
                     Console.WriteLine("Task " + task.Id);
                     Console.WriteLine("stdout:\n" + task.GetNodeFile(Constants.StandardOutFileName).ReadAsString());
