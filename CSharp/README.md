@@ -12,13 +12,20 @@ Download the samples and open the solution file for each one using Visual Studio
 
 Some of the samples require a pre-created pool with deployed VMs. If your tasks are not being scheduled, it is likely that there are no VMs to host their tasks. You can use Batch Explorer to monitor this situation as well as create the pool and resize it to have some number of VMs. You can then supply this pool name to some of the samples so you don't have to wait for VMs to become available.
 
+###Updating to Batch Client 2.0
+
+We're in the process of updating the samples to use the new Batch Client library. BatchExplorer is the most complicated due to changes in the UI itself. It is being worked but will take more time than the other samples. Stay tuned...
+
 ##Sample Descriptions
 
 ###[BatchExplorer](./BatchExplorer)
 Azure Batch Explorer is a GUI application to view and manage Azure Batch Service. View this [blog post](http://blogs.technet.com/b/windowshpc/archive/2015/01/20/azure-batch-explorer-sample-walkthrough.aspx) for more detail.
 
-###[Helloworld](./HelloWorld)
-The Helloworld sample is an introduction to the framework required to communicate with the Batch service. It performs some basic list functions as well as creating a pool and a workitem. It also utilizes the task submission helper and task state monitor which, together, provides a simple way of submitting tasks to the service and monitoring their completion. It also demonstrates the use of the FileStaging interface for uploading and downloading files associated with the task. Finally, bulk submission of tasks is demonstrated.
+###[HelloWorld](./HelloWorld)
+
+Updated to Batch Client 2.0
+
+The HelloWorld sample is an introduction to the framework required to communicate with the Batch service. It performs some basic list functions as well as creating a pool and a set of example jobs. It also demonstrates submitting collections of tasks and the task state monitor which, together, provides a simple way of submitting a set of tasks to the service and monitoring their completion. It also demonstrates the use of the FileStaging interface that moves files from your client machine to the compute nodes in the pool prior to running the task on that node.
 
 ###[ImgProc](./ImgProc)
 ImgProc demonstrates how to use a single binary that acts both as a client submitting work to the service and as the executable that runs as a task. This particular sample utilizes ImageMagick to convert image files into their associated thumbprint images.
