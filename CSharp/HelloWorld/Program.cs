@@ -13,21 +13,21 @@ namespace HelloWorld
 {
     public class Program
     {
-        // Specify your batch account name, region and key along with the name of a pool to use.
+        // Specify your batch account name, region and key along with the ID of a pool to use.
         // If the pool is new or has no VMs, 3 small VMs will be added to the pool to run the tasks.
-        
+
         private const string BatchAccount = "<batch_account>";
         private const string BatchKey = "<batch_key>";
         private const string BatchRegion = "<batch_region>"; // e.g., westus
-        
-        private const string Url = "https://" + BatchAccount + "." + BatchRegion + ".batch.azure.com";
+
+        private const string BatchUrl = "https://" + BatchAccount + "." + BatchRegion + ".batch.azure.com";
 
         private const string PoolId = "HelloWorld-Pool";
 
         // similarly, you need a storage account for the file staging example
         private const string StorageAccount = "<storage_account>";
         private const string StorageKey = "<storage_key>";
- 
+        
         private const string StorageBlobEndpoint = "https://" + StorageAccount + ".blob.core.windows.net";
 
         public static void Main(string[] args)
@@ -37,7 +37,7 @@ namespace HelloWorld
             System.Net.ServicePointManager.DefaultConnectionLimit = 20;
 
             // Get an instance of the BatchClient for a given Azure Batch account.
-            BatchSharedKeyCredentials cred = new BatchSharedKeyCredentials(Url, BatchAccount, BatchKey);
+            BatchSharedKeyCredentials cred = new BatchSharedKeyCredentials(BatchUrl, BatchAccount, BatchKey);
             using (BatchClient client = BatchClient.Open(cred))
             {
                 // add a retry policy. The built-in policies are No Retry (default), Linear Retry, and Exponential Retry
@@ -46,17 +46,17 @@ namespace HelloWorld
                 ListPools(client);
                 ListJobs(client);
 
-                CloudPool pool = CreatePoolIfNeeded(client, PoolId);
-                AddJobTwoTasks(client, pool.Id);
+                CreatePoolIfNeeded(client, PoolId);
+                AddJobTwoTasks(client, PoolId);
 
                 ListPools(client);
                 ListJobs(client);
-                AddTasksWithFileStaging(client, pool.Id);
+                AddTasksWithFileStaging(client, PoolId);
 
                 ListPools(client);
                 ListJobs(client);
 
-                SubmitLargeNumberOfTasks(client, pool.Id);
+                SubmitLargeNumberOfTasks(client, PoolId);
 
                 ListPools(client);
                 ListJobs(client);
@@ -66,27 +66,29 @@ namespace HelloWorld
             Console.ReadLine();
         }
 
-        private static CloudPool CreatePoolIfNeeded(BatchClient client, string poolId)
+        private static void CreatePoolIfNeeded(BatchClient client, string poolId)
         {
-            // go through all the pools and see if the named pool already exists
+            // go through all the pools and see if the specified pool already exists
             bool found = false;
-            CloudPool pool = null;
-            foreach (CloudPool p in client.PoolOperations.ListPools())
+
+            // use an OData based select clause to limit the amount of data returned. This will result in incomplete
+            // client objects but reduces the amount of data on the wire leading to faster completion when there are
+            // alot of objects for a given query. No spaces are allowed in the string and property names are case-sensitive.
+            foreach (CloudPool p in client.PoolOperations.ListPools(new ODATADetailLevel(selectClause: "id,currentDedicated")))
             {
-                // pools are uniquely identified by their name
+                // pools are uniquely identified by their ID
                 if (string.Equals(p.Id, poolId))
                 {
                     Console.WriteLine("Using existing pool {0}", poolId);
                     found = true;
 
-                    if (!p.ListComputeNodes().Any())
+                    if (p.CurrentDedicated == 0)
                     {
                         Console.WriteLine("There are no compute nodes in this pool. No tasks will be run until at least one node has been added via resizing.");
                         Console.WriteLine("Resizing pool to add 3 nodes. This might take a while...");
                         p.Resize(3);
                     }
 
-                    pool = p;
                     break;
                 }
             }
@@ -94,24 +96,21 @@ namespace HelloWorld
             if (!found)
             {
                 Console.WriteLine("Creating pool: {0}", poolId);
-                // if pool not found, call CreatePool
-                // You can learn more about os families and versions at:
+                // if pool not found, call CreatePool. You can learn more about os families and versions at:
                 // https://azure.microsoft.com/en-us/documentation/articles/cloud-services-guestos-update-matrix/
-                pool = client.PoolOperations.CreatePool(poolId, targetDedicated: 3, virtualMachineSize: "small", osFamily: "3");
-                //pool.Commit();
+                CloudPool pool = client.PoolOperations.CreatePool(poolId, targetDedicated: 3, virtualMachineSize: "small", osFamily: "3");
+                pool.Commit();
             }
-
-            return pool;
         }
 
         private static void ListPools(BatchClient client)
         {
-            Console.WriteLine("Listing Pools\n=============");
-            // Using optional select clause to return only the ID and state. Makes query faster and reduces package size impact
-            var pools = client.PoolOperations.ListPools(new ODATADetailLevel(selectClause: "id,state"));
+            Console.WriteLine("\nListing Pools\n=============");
+            // Using optional select clause to return only the ID and state. Makes query faster and reduces HTTP packet size impact
+            IPagedEnumerable<CloudPool> pools = client.PoolOperations.ListPools(new ODATADetailLevel(selectClause: "id,state,currentDedicated,vmSize"));
             foreach (var p in pools)
             {
-                Console.WriteLine("State of pool " + p.Id + " is " + p.State);
+                Console.WriteLine("State of pool {0} is {1} and it has {2} nodes of size {3}", p.Id, p.State, p.CurrentDedicated, p.VirtualMachineSize);
             }
             Console.WriteLine("=============\n");
         }
@@ -120,7 +119,7 @@ namespace HelloWorld
         {
             Console.WriteLine("Listing Jobs\n============");
                                
-            var jobs = client.JobOperations.ListJobs(new ODATADetailLevel(selectClause: "id,state"));
+            IPagedEnumerable<CloudJob> jobs = client.JobOperations.ListJobs(new ODATADetailLevel(selectClause: "id,state"));
             foreach (var j in jobs)
             {
                 Console.WriteLine("State of job " + j.Id + " is " + j.State);
@@ -129,26 +128,27 @@ namespace HelloWorld
             Console.WriteLine("============\n");
         }
 
-        private static string CreateJobName(string prefix)
+        private static string CreateJobId(string prefix)
         {
+            // a job is uniquely identified by its ID so your account name along with a timestamp is added as suffix
             return String.Format("{0}-{1}-{2}", prefix, Environment.GetEnvironmentVariable("USERNAME"), DateTime.Now.ToString("yyyyMMdd-HHmmss"));
         }
 
         /// <summary>
-        /// Create a job associated with the specific pool, giving it the specified name
+        /// Create a job associated with the specific pool, giving it the specified ID
         /// </summary>
-        private static CloudJob CreateBoundJob(JobOperations jobOps, string poolId, string jobName)
+        private static CloudJob CreateBoundJob(JobOperations jobOps, string poolId, string jobId)
         {
             // get an empty unbound Job
-            var quickJob = jobOps.CreateJob();
-            quickJob.Id = jobName;
-            quickJob.PoolInformation = new PoolInformation() { PoolId = poolId };
+            var unboundJob = jobOps.CreateJob();
+            unboundJob.Id = jobId;
+            unboundJob.PoolInformation = new PoolInformation() { PoolId = poolId };
 
             // Commit Job to create it in the service
-            quickJob.Commit();
+            unboundJob.Commit();
 
-            // Open the new Job as bound.
-            CloudJob boundJob = jobOps.GetJob(jobName);
+            // Get a new version of the object with all its properties filled in
+            CloudJob boundJob = jobOps.GetJob(jobId);
 
             return boundJob;
         }
@@ -158,11 +158,10 @@ namespace HelloWorld
         /// </summary>
         private static void AddJobTwoTasks(BatchClient client, string sharedPoolId)
         {
-            // a job is uniquely identified by its name so we will use a timestamp as suffix
-            string jobName = CreateJobName("HelloWorldTwoTaskJob");
+            string jobId = CreateJobId("HelloWorldTwoTaskJob");
 
-            Console.WriteLine("Creating job: " + jobName);
-            CloudJob boundJob = CreateBoundJob(client.JobOperations, sharedPoolId, jobName);
+            Console.WriteLine("Creating job: " + jobId);
+            CloudJob boundJob = CreateBoundJob(client.JobOperations, sharedPoolId, jobId);
 
             // add 2 quick tasks. Tasks within a job must have unique names
             List<CloudTask> tasksToRun = new List<CloudTask>(2);
@@ -176,9 +175,10 @@ namespace HelloWorld
             //We use the task state monitor to monitor the state of our tasks -- in this case we will wait for them all to complete.
             TaskStateMonitor taskStateMonitor = client.Utilities.CreateTaskStateMonitor();
 
-            // blocking wait on the list of tasks until all tasks reach completed state
-            bool timedOut = taskStateMonitor.WaitAll(boundJob.ListTasks(), TaskState.Completed, new TimeSpan(0, 20, 0));
-
+            // blocking wait on the list of tasks until all tasks reach completed state or the timeout is reached.
+            // If the pool is being resized then enough time is needed for the VMs to reach the idle state in order
+            // for tasks to run on them.
+            bool timedOut = taskStateMonitor.WaitAll(boundJob.ListTasks(), TaskState.Completed, new TimeSpan(0, 10, 0));
             if (timedOut)
             {
                 throw new TimeoutException("Timed out waiting for tasks");
@@ -187,7 +187,9 @@ namespace HelloWorld
             // dump task output
             foreach (CloudTask t in boundJob.ListTasks())
             {
-                Console.WriteLine("Task " + t.Id + " says:\n" + t.GetNodeFile(Constants.StandardOutFileName).ReadAsString());
+                Console.WriteLine("Task " + t.Id);
+                Console.WriteLine("stdout:\n" + t.GetNodeFile(Constants.StandardOutFileName).ReadAsString());
+                Console.WriteLine("\nstderr:\n" + t.GetNodeFile(Constants.StandardErrorFileName).ReadAsString());
             }
 
             //Delete the job to ensure the tasks are cleaned up
@@ -199,14 +201,12 @@ namespace HelloWorld
         /// Submit tasks which have dependant files.
         /// The files are automatically uploaded to Azure Storage using the FileStaging feature of the Azure.Batch client library.
         /// </summary>
-        /// <param name="client"></param>
         private static void AddTasksWithFileStaging(BatchClient client, string sharedPoolId)
         {
-            // create a uniquely named bound job
-            string jobName = CreateJobName("HelloWorldFileStagingJob");
+            string jobId = CreateJobId("HelloWorldFileStagingJob");
 
-            Console.WriteLine("Creating job: " + jobName);
-            CloudJob boundJob = CreateBoundJob(client.JobOperations, sharedPoolId, jobName);
+            Console.WriteLine("Creating job: " + jobId);
+            CloudJob boundJob = CreateBoundJob(client.JobOperations, sharedPoolId, jobId);
 
             CloudTask taskToAdd1 = new CloudTask("task_with_file1", "cmd /c type *.txt");
             CloudTask taskToAdd2 = new CloudTask("task_with_file2", "cmd /c dir /s");
@@ -221,20 +221,18 @@ namespace HelloWorld
             string path = Path.Combine(Environment.GetEnvironmentVariable("TEMP"), cur.Id + ".txt");
             File.WriteAllText(path, "hello from " + cur.Id);
 
-            // add file as task dependency so it'll be uploaded to storage before task 
-            // is submitted and download onto the VM before task starts execution
+            // add the files as a task dependency so they will be uploaded to storage before the task 
+            // is submitted and downloaded to the VM before the task starts execution on the node
             FileToStage file = new FileToStage(path, new StagingStorageAccount(StorageAccount, StorageKey, StorageBlobEndpoint));
             taskToAdd1.FilesToStage.Add(file);
             taskToAdd2.FilesToStage.Add(file); // filetostage object can be reused
 
             // create a list of the tasks to add.
             List<CloudTask> tasksToRun = new List<CloudTask> {taskToAdd1, taskToAdd2};
-
             bool errors = false;
 
             try
             {
-                //Stage the files to Azure Storage and add the tasks to Azure Batch.
                 client.JobOperations.AddTask(boundJob.Id, tasksToRun);
             }
             catch (AggregateException ae)
@@ -243,21 +241,24 @@ namespace HelloWorld
                 // Go through all exceptions and dump useful information
                 ae.Handle(x =>
                 {
+                    Console.Error.WriteLine("Adding tasks for job {0} failed", boundJob.Id);
                     if (x is BatchException)
                     {
                         BatchException be = x as BatchException;
                         if (null != be.RequestInformation && null != be.RequestInformation.AzureError)
                         {
                             // Write the server side error information
-                            Console.Error.WriteLine(be.RequestInformation.AzureError.Code);
-                            Console.Error.WriteLine(be.RequestInformation.AzureError.Message.Value);
+                            Console.Error.WriteLine("    AzureError.Code: " + be.RequestInformation.AzureError.Code);
+                            Console.Error.WriteLine("    AzureError.Message.Value: " + be.RequestInformation.AzureError.Message.Value);
                             if (null != be.RequestInformation.AzureError.Values)
                             {
+                                Console.Error.WriteLine("    AzureError.Values");
                                 foreach (var v in be.RequestInformation.AzureError.Values)
                                 {
-                                    Console.Error.WriteLine(v.Key + " : " + v.Value);
+                                    Console.Error.WriteLine("        {0} : {1}", v.Key, v.Value);
                                 }
                             }
+                            Console.Error.WriteLine();
                         }
                     }
                     else
@@ -279,8 +280,9 @@ namespace HelloWorld
 
                 foreach (CloudTask task in boundJob.ListTasks())
                 {
-                    Console.WriteLine("Task " + task.Id + " says:\n" + task.GetNodeFile(Constants.StandardOutFileName).ReadAsString());
-                    Console.WriteLine(task.GetNodeFile(Constants.StandardErrorFileName).ReadAsString());
+                    Console.WriteLine("Task " + task.Id);
+                    Console.WriteLine("stdout:\n" + task.GetNodeFile(Constants.StandardOutFileName).ReadAsString());
+                    Console.WriteLine("\nstderr:\n" + task.GetNodeFile(Constants.StandardErrorFileName).ReadAsString());
                 }
             }
 
@@ -308,13 +310,11 @@ namespace HelloWorld
 
             string envStr = new string(env);
             
-            // create a uniquely named bound job
-            string jobName = CreateJobName("HelloWorldLargeTaskCountJob");
+            string jobId = CreateJobId("HelloWorldLargeTaskCountJob");
+            Console.WriteLine("Creating job: " + jobId);
+            CloudJob boundJob = CreateBoundJob(client.JobOperations, sharedPoolId, jobId);
 
-            Console.WriteLine("Creating job: " + jobName);
-            CloudJob boundJob = CreateBoundJob(client.JobOperations, sharedPoolId, jobName);
-
-                //Generate a large number of tasks to submit
+            //Generate a large number of tasks to submit
             List<CloudTask> tasksToSubmit = new List<CloudTask>(taskCountToCreate);
             for (int i = 0; i < taskCountToCreate; i++)
             {
@@ -341,8 +341,8 @@ namespace HelloWorld
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            //Use the AddTask overload which supports a list of tasks for best AddTask performence - internally this method performs an
-            //intelligent submission of tasks in batches in order to limit the number of REST API calls made to the Batch Service.
+            // Use the AddTask overload which supports a list of tasks for best AddTask performence - internally this method performs a
+            // submission of multiple tasks in one REST API request in order to limit the number of calls made to the Batch Service.
             client.JobOperations.AddTask(boundJob.Id, tasksToSubmit, parallelOptions);
 
             stopwatch.Stop();
