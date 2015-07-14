@@ -163,7 +163,7 @@ namespace HelloWorld
             Console.WriteLine("Creating job: " + jobId);
             CloudJob boundJob = CreateBoundJob(client.JobOperations, sharedPoolId, jobId);
 
-            // add 2 quick tasks. Each tasks within a job must have a unique ID
+            // add 2 quick tasks. Each task within a job must have a unique ID
             List<CloudTask> tasksToRun = new List<CloudTask>(2);
             tasksToRun.Add(new CloudTask("task1", "hostname"));
             tasksToRun.Add(new CloudTask("task2", "cmd /c dir /s"));

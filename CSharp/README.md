@@ -14,7 +14,7 @@ Some of the samples require a pre-created pool with deployed VMs. If your tasks 
 
 ###Updating to Batch Client 2.0
 
-We're in the process of updating the samples to use the just released 2.0 version of the Batch Client library. BatchExplorer is being worked on but it the most complicated due to changes in the UI and will take more time than the other samples. Stay tuned...
+We're in the process of updating the samples to use the just released 2.0 version of the Batch Client library. BatchExplorer is being worked on but it is the most complicated due to changes in the UI and will take more time than the other samples. Stay tuned...
 
 ##Sample Descriptions
 
