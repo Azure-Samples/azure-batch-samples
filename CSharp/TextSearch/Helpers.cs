@@ -152,7 +152,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                         {
                             //Dump the standard out file of the task.
                             ITaskFile taskStandardOut = await boundTask.GetTaskFileAsync(
-                                Microsoft.Azure.Batch.Constants.StandardOutFileName);
+                                Batch.Constants.StandardOutFileName);
 
                             Console.WriteLine("Task {0} StdOut:", boundTask.Name);
                             Console.WriteLine("----------------------------------------");
@@ -164,7 +164,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                         if (boundTask.ExecutionInformation.ExitCode.Value != 0)
                         {
                             ITaskFile taskErrorFile = await boundTask.GetTaskFileAsync(
-                                Microsoft.Azure.Batch.Constants.StandardErrorFileName);
+                                Batch.Constants.StandardErrorFileName);
 
                             Console.WriteLine("Task {0} StdErr:", boundTask.Name);
                             Console.WriteLine("----------------------------------------");

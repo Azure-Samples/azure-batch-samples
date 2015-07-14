@@ -1,21 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.IO;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.Azure.Batch;
 using Microsoft.Azure.Batch.Auth;
 using Microsoft.Azure.Batch.Protocol;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Azure.Batch.SDK.Samples.JobScheduling.JMScheduling
 {
@@ -30,7 +21,7 @@ namespace Azure.Batch.SDK.Samples.JobScheduling.JMScheduling
     /// 
     /// The UI is provided as it gives an easier way to set up the time the task will run or its recurrence interval.
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class MainWindow
     {
         // The following are provided for convenience - you can fill them out here, or in the interface.
         // The Pool with Idle VMs and the Storage Container must be pre-created.
@@ -87,7 +78,7 @@ namespace Azure.Batch.SDK.Samples.JobScheduling.JMScheduling
             foreach (string file in SampleConstants.JobManagerFiles)
             {
                 CloudBlockBlob blockBlob = container.GetBlockBlobReference(file);
-                using (var fileStream = System.IO.File.OpenRead(@"..\..\..\FilesToUpload\" + file))
+                using (var fileStream = File.OpenRead(@"..\..\..\FilesToUpload\" + file))
                 {
                     blockBlob.UploadFromStream(fileStream);
                 }
@@ -162,10 +153,13 @@ namespace Azure.Batch.SDK.Samples.JobScheduling.JMScheduling
             if (rdoOnce.IsChecked == true)
             {
                 // Set information if the task is to be run once.
-                DateTime runOnce = (DateTime)(dpkDate.SelectedDate);
-                runOnce = runOnce.AddHours(cbxHourO.SelectedIndex);
-                runOnce = runOnce.AddMinutes(cbxMinuteO.SelectedIndex);
-                wiSchedule.DoNotRunUntil = runOnce;
+                if (dpkDate.SelectedDate != null)
+                {
+                    DateTime runOnce = (DateTime)(dpkDate.SelectedDate);
+                    runOnce = runOnce.AddHours(cbxHourO.SelectedIndex);
+                    runOnce = runOnce.AddMinutes(cbxMinuteO.SelectedIndex);
+                    wiSchedule.DoNotRunUntil = runOnce;
+                }
             }
             else
             {

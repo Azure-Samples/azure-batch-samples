@@ -1,7 +1,8 @@
-﻿using System.Windows.Media;
-using Microsoft.Azure.Batch.Common;
-using System;
+﻿using System;
+using System.Globalization;
 using System.Windows.Data;
+using System.Windows.Media;
+using Microsoft.Azure.Batch.Common;
 
 namespace Microsoft.Azure.BatchExplorer.Converters
 {
@@ -10,7 +11,7 @@ namespace Microsoft.Azure.BatchExplorer.Converters
     /// </summary>
     public class TaskStatusColorConverter : IValueConverter
     {
-        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
             TaskState state = (TaskState)value;
             switch (state)
@@ -30,7 +31,7 @@ namespace Microsoft.Azure.BatchExplorer.Converters
             }
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
             throw new NotImplementedException();
         }

@@ -1,14 +1,12 @@
-﻿﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Windows.Data;
 using GalaSoft.MvvmLight.Messaging;
 using Microsoft.Azure.Batch;
 using Microsoft.Azure.Batch.Common;
 using Microsoft.Azure.BatchExplorer.Helpers;
 using Microsoft.Azure.BatchExplorer.Messages;
-using Microsoft.Azure.BatchExplorer.ViewModels;
 
 namespace Microsoft.Azure.BatchExplorer.Models
 {

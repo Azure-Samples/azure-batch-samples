@@ -15,13 +15,12 @@
 // </copyright>
 // -----------------------------------------------------------------------------------------
 
-using Microsoft.WindowsAzure.Storage.Blob;
-using System;
-using System.Diagnostics;
-using System.IO;
-
 namespace Microsoft.Azure.Batch.Samples.ImgProcSample
 {
+    using System;
+    using System.Diagnostics;
+    using System.IO;
+
     public class ImgProcTask
     {
         // This is the part that is executed by Azure Batch VMs in the cloud. 

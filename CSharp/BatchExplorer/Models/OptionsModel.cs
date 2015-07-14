@@ -96,7 +96,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// </summary>
         public void WriteOptions()
         {
-            string filePath = OptionsModel.GetOptionsFilePath();
+            string filePath = GetOptionsFilePath();
             using (FileStream fileStream = new FileStream(filePath, FileMode.Create))
             {
                 DataContractSerializer serializer = new DataContractSerializer(typeof(OptionsModel));
@@ -114,7 +114,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// <returns>An OptionsModel instance with the loaded options.</returns>
         private static OptionsModel LoadOptions()
         {
-            string filePath = OptionsModel.GetOptionsFilePath();
+            string filePath = GetOptionsFilePath();
 
             OptionsModel result;
             if (File.Exists(filePath))
@@ -151,7 +151,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
             string fullDirectoryPath = Path.Combine(Common.LocalAppDataDirectory, Common.LocalAppDataSubfolder);
             Directory.CreateDirectory(fullDirectoryPath);
 
-            string path = Path.Combine(fullDirectoryPath, OptionsModel.OptionsFileName);
+            string path = Path.Combine(fullDirectoryPath, OptionsFileName);
 
             return path;
         }

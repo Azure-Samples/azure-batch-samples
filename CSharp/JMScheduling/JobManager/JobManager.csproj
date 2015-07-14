@@ -7,7 +7,7 @@
     <ProjectGuid>{432A21C1-9A30-4E36-B1F2-38337358965B}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>JobManager</RootNamespace>
+    <RootNamespace>Azure.Batch.SDK.Samples.JobScheduling.JobMgr</RootNamespace>
     <AssemblyName>JobManager</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>

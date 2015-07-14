@@ -1,11 +1,12 @@
 ﻿using System;
-using System.Linq;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
 using Microsoft.Azure.Batch;
 using Microsoft.Azure.Batch.Auth;
 using Microsoft.Azure.Batch.Common;
 using Microsoft.Azure.Batch.Protocol;
-using System.IO;
 
 namespace Azure.Batch.SDK.Samples.JobScheduling.JobMgr
 {
@@ -21,7 +22,7 @@ namespace Azure.Batch.SDK.Samples.JobScheduling.JobMgr
             try
             {
                 // pick up hints from the environment as populated by the program run on the client machine
-                var workItemName = System.Environment.GetEnvironmentVariable(SampleConstants.EnvWorkItemName);
+                var workItemName = Environment.GetEnvironmentVariable(SampleConstants.EnvWorkItemName);
                 if (workItemName == null)
                 {
                     traceWriter.WriteLine("Failed to get work item name from environment");
@@ -33,8 +34,8 @@ namespace Azure.Batch.SDK.Samples.JobScheduling.JobMgr
                 }
 
                 BatchCredentials credentials = new BatchCredentials(
-                    System.Environment.GetEnvironmentVariable(SampleConstants.EnvWataskAccountName), // Some basic useful elements are preset as environment variables.
-                    System.Environment.GetEnvironmentVariable(SampleConstants.EnvBatchAccountKeyName)
+                    Environment.GetEnvironmentVariable(SampleConstants.EnvWataskAccountName), // Some basic useful elements are preset as environment variables.
+                    Environment.GetEnvironmentVariable(SampleConstants.EnvBatchAccountKeyName)
                     );
 
                 var bClient = BatchClient.Connect(SampleConstants.BatchSvcEndpoint, credentials);
@@ -46,7 +47,7 @@ namespace Azure.Batch.SDK.Samples.JobScheduling.JobMgr
 
                     // Since is this a job manager task, its current job will be the most recent job. This is not
                     // true for non-JM tasks since the most recent job could have run a while ago.
-                    string jobName = null;
+                    string jobName;
                     if (ourWorkItem.ExecutionInformation != null && ourWorkItem.ExecutionInformation.RecentJob != null)
                     {
                         jobName = ourWorkItem.ExecutionInformation.RecentJob.Name;
@@ -87,7 +88,7 @@ namespace Azure.Batch.SDK.Samples.JobScheduling.JobMgr
                         if (tasksStillRunning > 1)
                         {
                             traceWriter.WriteLine("{0} tasks still running", tasksStillRunning);
-                            System.Threading.Thread.Sleep(TimeSpan.FromSeconds(5));
+                            Thread.Sleep(TimeSpan.FromSeconds(5));
                         }
                         else
                         {

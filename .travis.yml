@@ -1,0 +1,21 @@
+language: python
+cache: pip
+python:
+  - 2.7
+  - 3.3
+  - 3.4
+  - pypy
+  - pypy3
+install:
+  - pip install azure
+  - pip install coveralls
+  - pip install pytest-cov
+  - pip install requests
+  - pip install requests_mock
+env:
+  - TEST_DIR=Python/Storage
+script:
+  - cd $TEST_DIR && PYTHONPATH=. py.test --cov-config ../.coveragerc --cov-report term-missing --cov blobxfer test/test_blobxfer.py
+after_success:
+  - coveralls --rcfile=../.coveragerc --verbose
+
