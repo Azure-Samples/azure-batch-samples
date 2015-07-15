@@ -2,7 +2,7 @@
 
 namespace Microsoft.Azure.BatchExplorer.Models
 {
-    public class TvmFile
+    public class ComputeNodeFile
     {
         /// <summary>
         /// Name of the file or directory

@@ -1,32 +1,35 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using GalaSoft.MvvmLight.Messaging;
-using Microsoft.Azure.BatchExplorer.Helpers;
-using Microsoft.Azure.BatchExplorer.Messages;
-using Microsoft.Azure.BatchExplorer.Models;
-
-namespace Microsoft.Azure.BatchExplorer.ViewModels
+﻿namespace Microsoft.Azure.BatchExplorer.ViewModels
 {
-    public class CreateWorkItemViewModel : EntityBase
+    using System;
+    using System.Collections.Generic;
+    using System.Threading.Tasks;
+    using GalaSoft.MvvmLight.Messaging;
+    using Microsoft.Azure.BatchExplorer.Helpers;
+    using Microsoft.Azure.BatchExplorer.Messages;
+    using Microsoft.Azure.BatchExplorer.Models;
+    using Common = Helpers.Common;
+
+    public class CreateJobViewModel : EntityBase
     {
         #region Services
         private readonly IDataProvider batchService;
         #endregion
 
         #region Public UI Properties
-        // Basic Work Item Details
-        private string workItemName;
-        public string WorkItemName
+        // Basic job schedule details
+
+        private string jobId;
+        public string JobId
         {
             get
             {
-                return this.workItemName;
+                return this.jobId;
             }
             set
             {
-                this.workItemName = value;
-                this.FirePropertyChangedEvent("WorkItemName");
+                this.jobId = value;
+                this.FirePropertyChangedEvent("JobId");
+                this.FirePropertyChangedEvent("IsCreateJobButtonEnabled");
             }
         }
 
@@ -57,21 +60,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 this.FirePropertyChangedEvent("MaxRetryCount");
             }
         }
-
-        private bool isCreateScheduleSelected;
-        public bool IsCreateScheduleSelected
-        {
-            get
-            {
-                return this.isCreateScheduleSelected;
-            }
-            set
-            {
-                this.isCreateScheduleSelected = value;
-                this.FirePropertyChangedEvent("IsCreateScheduleSelected");
-            }
-        }
-
+        
         private bool isCreateJobManagerSelected;
         public bool IsCreateJobManagerSelected
         {
@@ -100,75 +89,18 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
-        // Schedule
-        private DateTime? doNotRunUntil;
-        public DateTime? DoNotRunUntil
-        {
-            get
-            {
-                return this.doNotRunUntil;
-            }
-            set
-            {
-                this.doNotRunUntil = value;
-                this.FirePropertyChangedEvent("DoNotRunUntil");
-            }
-        }
-
-        private DateTime? doNotRunAfter;
-        public DateTime? DoNotRunAfter
-        {
-            get
-            {
-                return this.doNotRunAfter;
-            }
-            set
-            {
-                this.doNotRunAfter = value;
-                this.FirePropertyChangedEvent("DoNotRunAfter");
-            }
-        }
-
-        private TimeSpan? startWindow;
-        public TimeSpan? StartWindow
-        {
-            get
-            {
-                return this.startWindow;
-            }
-            set
-            {
-                this.startWindow = value;
-                this.FirePropertyChangedEvent("StartWindow");
-            }
-        }
-
-        private TimeSpan? recurrenceInterval;
-        public TimeSpan? RecurrenceInterval
-        {
-            get
-            {
-                return this.recurrenceInterval;
-            }
-            set
-            {
-                this.recurrenceInterval = value;
-                this.FirePropertyChangedEvent("RecurrenceInterval");
-            }
-        }
-
         // Job Manager
-        private string jobManagerName;
-        public string JobManagerName
+        private string jobManagerId;
+        public string JobManagerId
         {
             get
             {
-                return this.jobManagerName;
+                return this.jobManagerId;
             }
             set
             {
-                this.jobManagerName = value;
-                this.FirePropertyChangedEvent("JobManagerName");
+                this.jobManagerId = value;
+                this.FirePropertyChangedEvent("JobManagerId");
             }
         }
 
@@ -271,17 +203,17 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
-        private string poolName;
-        public string PoolName
+        private string poolId;
+        public string PoolId
         {
             get
             {
-                return this.poolName;
+                return this.poolId;
             }
             set
             {
-                this.poolName = value;
-                this.FirePropertyChangedEvent("PoolName");
+                this.poolId = value;
+                this.FirePropertyChangedEvent("PoolId");
             }
         }
 
@@ -356,17 +288,87 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
-        public bool IsCreateWorkItemButtonEnabled
+        private string selectedOSFamily;
+        public string SelectedOSFamily
         {
             get
             {
-                return (!string.IsNullOrEmpty(this.WorkItemName));
+                return this.selectedOSFamily;
+            }
+            set
+            {
+                this.selectedOSFamily = value;
+                this.FirePropertyChangedEvent("SelectedOSFamily");
+            }
+        }
+
+        private int targetDedicated;
+        public int TargetDedicated
+        {
+            get
+            {
+                return this.targetDedicated;
+            }
+            set
+            {
+                this.targetDedicated = value;
+                this.FirePropertyChangedEvent("TargetDedicated");
+            }
+        }
+
+        private string selectedVirtualMachineSize;
+        public string SelectedVirtualMachineSize
+        {
+            get
+            {
+                return this.selectedVirtualMachineSize;
+            }
+            set
+            {
+                this.selectedVirtualMachineSize = value;
+                this.FirePropertyChangedEvent("selectedVirtualMachineSize");
+            }
+        }
+
+        private IReadOnlyList<string> availableVirtualMachineSizes;
+        public IReadOnlyList<string> AvailableVirtualMachineSizes
+        {
+            get
+            {
+                return this.availableVirtualMachineSizes;
+            }
+            set
+            {
+                this.availableVirtualMachineSizes = value;
+                this.FirePropertyChangedEvent("availableVirtualMachineSizes");
+            }
+        }
+        
+        private List<string> availableOSFamilies;
+        public List<string> AvailableOSFamilies
+        {
+            get
+            {
+                return this.availableOSFamilies;
+            }
+            set
+            {
+                this.availableOSFamilies = value;
+                this.FirePropertyChangedEvent("AvailableOSFamilies");
+            }
+        }
+
+        public bool IsCreateJobButtonEnabled
+        {
+            get
+            {
+                return (!string.IsNullOrEmpty(this.JobId));
             }
         }
         #endregion
 
         #region Commands
-        public CommandBase CreateWorkItem
+        public CommandBase CreateJobSchedule
         {
             get
             {
@@ -376,7 +378,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         try
                         {
                             this.IsBusy = true;
-                            await this.CreateWorkItemAsync();
+                            await this.CreateJobScheduleAsync();
                         }
                         finally
                         {
@@ -387,7 +389,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
-        public CommandBase CancelCreateWorkItem
+        public CommandBase CancelCreateJobSchedule
         {
             get
             {
@@ -401,59 +403,76 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         }
         #endregion
 
-        public CreateWorkItemViewModel(IDataProvider batchService)
+        public CreateJobViewModel(IDataProvider batchService)
         {
             this.batchService = batchService;
             this.IsBusy = false;
 
             // pre-populate values
-            this.AvailableKeepAliveOptions = new List<bool> { true, false };
-            this.AvailableLifeTimeOptions = new List<string> { "Job", "WorkItem" };
+            this.AvailableKeepAliveOptions = new List<bool> { false, true };
+            this.AvailableLifeTimeOptions = new List<string> { "Job" };
             this.AvailableKillOnCompletionOptions = new List<bool> { true, false };
 
             this.SelectedKeepAliveItem = this.AvailableKeepAliveOptions[0];
             this.SelectedLifetimeOption = this.AvailableLifeTimeOptions[0];
             this.KillOnCompletionSelectedItem = this.AvailableKillOnCompletionOptions[0];
+
+            this.AvailableVirtualMachineSizes = Common.SupportedVirtualMachineSizesList;
+            this.AvailableOSFamilies = new List<string>(Common.SupportedOSFamilyDictionary.Keys);
         }
 
-        private async Task CreateWorkItemAsync()
+        private async Task CreateJobScheduleAsync()
         {
             try
             {
                 if (this.IsInputValid())
                 {
-                    CreateWorkItemOptions options = new CreateWorkItemOptions()
+                    string osFamilyString;
+                    if (Common.SupportedOSFamilyDictionary.ContainsKey(this.SelectedOSFamily))
                     {
-                        AutoPoolPrefix = this.AutoPoolPrefix,
-                        LifeTimeOption = this.SelectedLifetimeOption,
-                        CommandLine = this.CommandLine,
-                        DoNotRunAfter = this.DoNotRunAfter,
-                        DoNotRunUntil = this.DoNotRunUntil,
+                        osFamilyString = Common.SupportedOSFamilyDictionary[this.SelectedOSFamily];
+                    }
+                    else
+                    {
+                        osFamilyString = this.SelectedOSFamily;
+                    }
+
+                    CreateJobOptions options = new CreateJobOptions()
+                    {
                         CreateJobManager = this.IsCreateJobManagerSelected,
-                        CreateSchedule = this.IsCreateScheduleSelected,
-                        JobManagerName = this.JobManagerName,
-                        KillOnCompletion = this.KillOnCompletionSelectedItem,
-                        MaxRetryCount = this.GetNullableIntValue(this.MaxRetryCount),
-                        MaxTaskRetryCount = this.GetNullableIntValue(this.MaxTaskRetryCount),
-                        MaxTaskWallClockTime = this.MaxTaskWallClockTime,
+                        MaxRetryCount = Common.GetNullableIntValue(this.MaxRetryCount),
                         MaxWallClockTime = this.MaxWallClockTime,
-                        PoolName = this.PoolName,
-                        Priority = this.GetNullableIntValue(this.Priority),
-                        RecurrenceInterval = this.RecurrenceInterval,
-                        RetentionTime = this.RetentionTime,
-                        KeepAlive = this.SelectedKeepAliveItem,
-                        SelectedLifetimeOption = this.SelectedLifetimeOption,
-                        StartWindow = this.StartWindow,
-                        UseAutoPool = this.UseAutoPool,
-                        WorkItemName = this.WorkItemName
+                        Priority = Common.GetNullableIntValue(this.Priority),
+                        JobId = this.JobId,
+                        PoolId = this.PoolId,
+                        AutoPoolOptions = new CreateAutoPoolOptions()
+                        {
+                            AutoPoolPrefix = this.AutoPoolPrefix,
+                            LifeTimeOption = this.SelectedLifetimeOption,
+                            KeepAlive = this.SelectedKeepAliveItem,
+                            OSFamily = osFamilyString,
+                            SelectedLifetimeOption = this.SelectedLifetimeOption,
+                            TargetDedicated = this.TargetDedicated,
+                            UseAutoPool = this.UseAutoPool,
+                            VirutalMachineSize = this.SelectedVirtualMachineSize
+                        },
+                        JobManagerOptions = new CreateJobManagerOptions()
+                        {
+                            CommandLine = this.CommandLine,
+                            JobManagerId = this.JobManagerId,
+                            KillOnCompletion = this.KillOnCompletionSelectedItem,
+                            MaxTaskRetryCount = Common.GetNullableIntValue(this.MaxRetryCount),
+                            MaxTaskWallClockTime = this.MaxTaskWallClockTime,
+                            RetentionTime = this.RetentionTime
+                        }
                     };
 
-                    await this.batchService.CreateWorkItem(options);
+                    await this.batchService.CreateJobAsync(options);
 
-                    Messenger.Default.Send<RefreshMessage>(new RefreshMessage(RefreshTarget.WorkItems));
+                    Messenger.Default.Send<RefreshMessage>(new RefreshMessage(RefreshTarget.Jobs));
 
-                    Messenger.Default.Send(new GenericDialogMessage(string.Format("Successfully created work item {0}", this.WorkItemName)));
-                    this.WorkItemName = string.Empty; //So that the user cannot accidentally try to create the same work item twice
+                    Messenger.Default.Send(new GenericDialogMessage(string.Format("Successfully created job {0}", this.JobId)));
+                    this.JobId = string.Empty; //So that the user cannot accidentally try to create the same job schedule twice
                 }
             }
             catch (Exception e)
@@ -465,28 +484,23 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         private bool IsInputValid()
         {
             // TODO: Validate string to int inputs. e.g. Retry Count should be an int
-            if (string.IsNullOrEmpty(this.WorkItemName))
+            if (string.IsNullOrEmpty(this.JobId))
             {
-                Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Invalid values for Work Item Name"));
+                Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Invalid values for job Id"));
                 return false;
             }
-
-            if (this.IsCreateScheduleSelected)
+            
+            if (!this.UseAutoPool && string.IsNullOrEmpty(this.PoolId))
             {
-                // nothing to validate
-            }
-
-            if (!this.UseAutoPool && string.IsNullOrEmpty(this.PoolName))
-            {
-                Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Invalid values for Pool Name"));
+                Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Invalid values for Pool Id"));
                 return false;
             }
 
             if (this.IsCreateJobManagerSelected)
             {
-                if (string.IsNullOrEmpty(this.JobManagerName))
+                if (string.IsNullOrEmpty(this.JobManagerId))
                 {
-                    Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Invalid values for Job Manager Name"));
+                    Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Invalid values for Job Manager Id"));
                     return false;
                 }
                 if (string.IsNullOrEmpty(this.CommandLine))
@@ -497,18 +511,6 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
 
             return true;
-        }
-
-        private int? GetNullableIntValue(string content)
-        {
-            int value;
-            int? output = null;
-            if (Int32.TryParse(content, out value))
-            {
-                output = value;
-            }
-
-            return output;
         }
     }
 }

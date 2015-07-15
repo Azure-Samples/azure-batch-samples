@@ -24,7 +24,7 @@ namespace Microsoft.Azure.BatchExplorer.Views
         private readonly HeatMapViewModel viewModel;
         private Task pendingRefresh;
 
-        private enum VMUIStates
+        private enum ComputeNodeUIStates
         {
             Transitioning, 
             Idle, 
@@ -77,9 +77,9 @@ namespace Microsoft.Azure.BatchExplorer.Views
 
                     await this.viewModel.HeatMap.RefreshAsync();
 
-                    //Snapshot the VM list
-                    List<IVM> vms = new List<IVM>(this.viewModel.HeatMap.VMs);
-                    int maxTasksPerVM = this.viewModel.HeatMap.MaxTasksPerVM.Value;
+                    //Snapshot the compute node list
+                    List<ComputeNode> vms = new List<ComputeNode>(this.viewModel.HeatMap.ComputeNodes);
+                    int maxTasksPerVM = this.viewModel.HeatMap.MaxTasksPerComputeNode.Value;
 
                     await this.Dispatcher.InvokeAsync(() => this.DrawHeatMap(vms, maxTasksPerVM));
 
@@ -94,11 +94,11 @@ namespace Microsoft.Azure.BatchExplorer.Views
         }
 
         /// <summary>
-        /// Renders the heat map data grid view given the specified list of VMs and the maxTasksPerVM
+        /// Renders the heat map data grid view given the specified list of compute nodes and the maxTasksPerNode
         /// </summary>
-        /// <param name="vms"></param>
+        /// <param name="computeNodes"></param>
         /// <param name="maxTasksPerVM"></param>
-        private void DrawHeatMap(List<IVM> vms, int maxTasksPerVM)
+        private void DrawHeatMap(List<ComputeNode> computeNodes, int maxTasksPerVM)
         {
             try
             {
@@ -108,7 +108,7 @@ namespace Microsoft.Azure.BatchExplorer.Views
                 this.GridHeatmap.Children.Clear();
                 
                 // Get pool information required to draw heatmap
-                int numVMs = vms.Count;
+                int numVMs = computeNodes.Count;
 
                 // Work out number of rows & columns for overall heatmap - keep square
                 int numRows = (int)Math.Truncate(Math.Sqrt(numVMs));
@@ -134,7 +134,7 @@ namespace Microsoft.Azure.BatchExplorer.Views
                     GridHeatmap.ColumnDefinitions.Add(colDef);
                 }
 
-                // Fill in the grid cells for the pool vm's
+                // Fill in the grid cells for the pool compute nodes
                 for (int i = 0; i < numVMs; i++)
                 {
                     int row = i / numCols; 
@@ -142,7 +142,7 @@ namespace Microsoft.Azure.BatchExplorer.Views
 
                     if (i < numVMs)
                     {
-                        UIElement cell = this.DrawVMCell(maxTasksPerVM, vms.ElementAt(i));
+                        UIElement cell = this.DrawVMCell(maxTasksPerVM, computeNodes.ElementAt(i));
                         Grid.SetRow(cell, row);
                         Grid.SetColumn(cell, column);
                         GridHeatmap.Children.Add(cell);
@@ -156,92 +156,92 @@ namespace Microsoft.Azure.BatchExplorer.Views
         }
 
         /// <summary>
-        /// Draws an individual VM cell
+        /// Draws an individual compute node cell
         /// </summary>
         /// <param name="maxTasks"></param>
-        /// <param name="vmInfo"></param>
+        /// <param name="nodeInfo"></param>
         /// <returns></returns>
-        private UIElement DrawVMCell(int maxTasks, IVM vmInfo)
+        private UIElement DrawVMCell(int maxTasks, ComputeNode nodeInfo)
         {
             UIElement heatmapCell = null;
-            VMUIStates uiState;
+            ComputeNodeUIStates uiState;
 
-            // Map all the TVM states onto few UI states/colors
-            switch (vmInfo.State)
+            // Map all the node states onto few UI states/colors
+            switch (nodeInfo.State)
             {
-                case TVMState.Creating:
-                case TVMState.LeavingPool:
-                case TVMState.Rebooting:
-                case TVMState.Reimaging:
-                case TVMState.Starting:
-                case TVMState.WaitingForStartTask:
-                    uiState = VMUIStates.Transitioning;
+                case ComputeNodeState.Creating:
+                case ComputeNodeState.LeavingPool:
+                case ComputeNodeState.Rebooting:
+                case ComputeNodeState.Reimaging:
+                case ComputeNodeState.Starting:
+                case ComputeNodeState.WaitingForStartTask:
+                    uiState = ComputeNodeUIStates.Transitioning;
                     break;
-                case TVMState.Idle:
-                    uiState = VMUIStates.Idle;
+                case ComputeNodeState.Idle:
+                    uiState = ComputeNodeUIStates.Idle;
                     break;
-                case TVMState.Invalid:
-                case TVMState.StartTaskFailed:
-                case TVMState.Unknown:
-                case TVMState.Unmapped:
-                case TVMState.Unusable:
-                    uiState = VMUIStates.Error;
+                case ComputeNodeState.Invalid:
+                case ComputeNodeState.StartTaskFailed:
+                case ComputeNodeState.Unknown:
+                case ComputeNodeState.Unmapped:
+                case ComputeNodeState.Unusable:
+                    uiState = ComputeNodeUIStates.Error;
                     break;
-                case TVMState.Running:
-                    uiState = VMUIStates.Running;
+                case ComputeNodeState.Running:
+                    uiState = ComputeNodeUIStates.Running;
                     break;
                 default:
-                    uiState = VMUIStates.Unknown;
+                    uiState = ComputeNodeUIStates.Unknown;
                     break;
             }
 
-            // Use one rectangle for a TVM if MaxTasksPerVM is one or TVM can't be used
+            // Use one rectangle for a node if MaxTasksPerComputeNode is one or node can't be used
             if (maxTasks == 1 ||
-                uiState == VMUIStates.Transitioning ||
-                uiState == VMUIStates.Error ||
-                uiState == VMUIStates.Unknown)
+                uiState == ComputeNodeUIStates.Transitioning ||
+                uiState == ComputeNodeUIStates.Error ||
+                uiState == ComputeNodeUIStates.Unknown)
             {
-                Brush tvmColor;
-                Rectangle tvmRect = new Rectangle();
-                tvmRect.Margin = new Thickness(2);
+                Brush nodeColor;
+                Rectangle nodeRect = new Rectangle();
+                nodeRect.Margin = new Thickness(2);
 
                 switch (uiState)
                 {
-                    case VMUIStates.Error:
-                        tvmColor = Brushes.Red;
+                    case ComputeNodeUIStates.Error:
+                        nodeColor = Brushes.Red;
                         break;
-                    case VMUIStates.Idle:
-                        tvmColor = Brushes.White;
+                    case ComputeNodeUIStates.Idle:
+                        nodeColor = Brushes.White;
                         break;
-                    case VMUIStates.Running:
-                        tvmColor = Brushes.LightGreen;
+                    case ComputeNodeUIStates.Running:
+                        nodeColor = Brushes.LightGreen;
                         break;
-                    case VMUIStates.Transitioning:
-                        tvmColor = Brushes.Yellow;
+                    case ComputeNodeUIStates.Transitioning:
+                        nodeColor = Brushes.Yellow;
                         break;
-                    case VMUIStates.Unknown:
-                        tvmColor = Brushes.Orange;
+                    case ComputeNodeUIStates.Unknown:
+                        nodeColor = Brushes.Orange;
                         break;
                     default:
-                        tvmColor = Brushes.Orange;
+                        nodeColor = Brushes.Orange;
                         break;
                 }
 
-                tvmRect.Fill = tvmColor;
-                tvmRect.StrokeThickness = 0.5;
-                tvmRect.Stroke = Brushes.Gray;
-                tvmRect.ToolTip = vmInfo.State.ToString();
+                nodeRect.Fill = nodeColor;
+                nodeRect.StrokeThickness = 0.5;
+                nodeRect.Stroke = Brushes.Gray;
+                nodeRect.ToolTip = nodeInfo.State.ToString();
 
-                heatmapCell = tvmRect;
+                heatmapCell = nodeRect;
             }
             else
             {
-                // MaxTasksPerVM > 1 and VM in state where could have tasks running
-                // Have a grid to represent max number of tasks the VM can run at a time
+                // MaxTasksPerComputeNode > 1 and compute node in state where could have tasks running
+                // Have a grid to represent max number of tasks the compute node can run at a time
 
-                // Determine number of running tasks for the VM
+                // Determine number of running tasks for the compute node
                 int numRunningTasks = 0;
-                IEnumerable<TaskInformation> taskInfoList = vmInfo.RecentTasks;
+                IEnumerable<TaskInformation> taskInfoList = nodeInfo.RecentTasks;
                 if (taskInfoList != null)
                 {
                     foreach (TaskInformation ti in taskInfoList)
@@ -254,8 +254,8 @@ namespace Microsoft.Azure.BatchExplorer.Views
                 }
 
                 // Create the Grid control
-                Grid tvmGrid = new Grid();
-                tvmGrid.Margin = new Thickness(2);
+                Grid nodeGrid = new Grid();
+                nodeGrid.Margin = new Thickness(2);
 
                 // Calculate grid dimensions
                 int numRows = (int)Math.Sqrt(maxTasks);
@@ -265,12 +265,12 @@ namespace Microsoft.Azure.BatchExplorer.Views
                 for (int i = 0; i < numRows; i++)
                 {
                     RowDefinition rowDef = new RowDefinition();
-                    tvmGrid.RowDefinitions.Add(rowDef);
+                    nodeGrid.RowDefinitions.Add(rowDef);
                 }
                 for (int i = 0; i < numCols; i++)
                 {
                     ColumnDefinition colDef = new ColumnDefinition();
-                    tvmGrid.ColumnDefinitions.Add(colDef);
+                    nodeGrid.ColumnDefinitions.Add(colDef);
                 }
 
                 // Turn appropriate number of cells green according to running number of tasks
@@ -294,13 +294,13 @@ namespace Microsoft.Azure.BatchExplorer.Views
 
                         Grid.SetRow(task, row);
                         Grid.SetColumn(task, col);
-                        tvmGrid.Children.Add(task);
+                        nodeGrid.Children.Add(task);
 
                         cellCount++;
                     }
                 }
 
-                heatmapCell = tvmGrid;
+                heatmapCell = nodeGrid;
             }
 
             return heatmapCell;

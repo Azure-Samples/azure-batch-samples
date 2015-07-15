@@ -58,13 +58,13 @@
                 Margin="8,4"
                 VerticalAlignment="Center"
                 FontSize="12"
-                Text="Pool Name"/>
+                Text="Pool Id"/>
         </StackPanel>
 
         <TextBox 
             Grid.Row="2"
             Grid.Column="1"
-            Text="{Binding PoolName, Mode=OneWay}"
+            Text="{Binding PoolId, Mode=OneWay}"
             IsReadOnly="True"
             Background="Transparent"/>
 

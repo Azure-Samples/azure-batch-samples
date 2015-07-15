@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="Microsoft.Azure.BatchExplorer.Views.CreateControls.CreateWorkItemControl"
+﻿<UserControl x:Class="Microsoft.Azure.BatchExplorer.Views.CreateControls.CreateJobControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -38,7 +38,7 @@
                     <TextBlock 
                         Grid.ColumnSpan="2"
                         FontSize="16"
-                        Text="Create Work Item"/>
+                        Text="Create Job"/>
 
                     <StackPanel 
                         Orientation="Horizontal"
@@ -54,12 +54,12 @@
                             Margin="8,4"
                             VerticalAlignment="Center"
                             FontSize="12"
-                            Text="Work Item Name"/>
+                            Text="Job Id"/>
                     </StackPanel>
                     <TextBox 
                         Grid.Row="1"
                         Grid.Column="1"
-                        Text="{Binding WorkItemName}"/>
+                        Text="{Binding JobId}"/>
 
                     <TextBlock 
                         Grid.Row="3"
@@ -85,19 +85,6 @@
                         Grid.Row="4"
                         Grid.Column="1"
                         Text="{Binding MaxRetryCount}"/>
-
-                    <TextBlock 
-                        Grid.Row="5"
-                        Grid.Column="0"
-                        VerticalAlignment="Center"
-                        Margin="8,4"
-                        FontSize="12"
-                        Text="Create a Schedule" />
-                    <CheckBox
-                        Grid.Row="5"
-                        Grid.Column="1"
-                        Margin="4"
-                        IsChecked="{Binding IsCreateScheduleSelected}"/>
 
                     <TextBlock 
                         Grid.Row="6"
@@ -129,17 +116,27 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock
+                    <StackPanel 
+                        Orientation="Horizontal"
                         Grid.Row="0"
-                        Grid.ColumnSpan="2"
+                        Grid.ColumnSpan="2">
+                    <TextBlock 
+                        VerticalAlignment="Center"
+                        Margin="4,0,0,0"
+                        Foreground="Red"
+                        Text="*" />
+
+                    <TextBlock
                         Margin="4,4"
                         VerticalAlignment="Center"
                         FontSize="12"
                         FontWeight="Bold"
-                        Text="Work Item Pool Settings"/>
-
+                        Text="Job Pool Settings"/>
+                    </StackPanel>
                     <RadioButton
                         x:Name="numberTargetDedicatedRadioButton"
                         VerticalAlignment="Center"
@@ -154,7 +151,7 @@
                         Grid.Column="1"
                         MinHeight="24"
                         IsEnabled="{Binding IsChecked,ElementName=numberTargetDedicatedRadioButton}"
-                        Text="{Binding PoolName}">
+                        Text="{Binding PoolId}">
                     </TextBox>
 
                     <RadioButton 
@@ -224,102 +221,62 @@
                         SelectedIndex="0"
                         SelectedItem="{Binding SelectedKeepAliveItem}">
                     </ComboBox>
+
+                    <TextBlock
+                        Visibility="{Binding UseAutoPool, Converter={StaticResource BooleanToVisibilityConverter}}"
+                        Grid.Row="6"
+                        Grid.Column="0"
+                        Margin="8,4"
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        Text="VM Size"/>
+
+                    <ComboBox
+                        Visibility="{Binding UseAutoPool, Converter={StaticResource BooleanToVisibilityConverter}}"
+                        Grid.Row="6"
+                        Grid.Column="1"
+                        IsEditable="True"
+                        ItemsSource="{Binding AvailableVirtualMachineSizes}"
+                        SelectedIndex="0"
+                        SelectedItem="{Binding SelectedVirtualMachineSize}">
+                    </ComboBox>
+
+                    <TextBlock
+                        Visibility="{Binding UseAutoPool, Converter={StaticResource BooleanToVisibilityConverter}}"
+                        Grid.Row="7"
+                        Grid.Column="0"
+                        Margin="8,4"
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        Text="OS Family"/>
+
+                    <ComboBox
+                        Visibility="{Binding UseAutoPool, Converter={StaticResource BooleanToVisibilityConverter}}"
+                        Grid.Row="7"
+                        Grid.Column="1"
+                        IsEditable="True"
+                        ItemsSource="{Binding AvailableOSFamilies}"
+                        SelectedIndex="0"
+                        SelectedItem="{Binding SelectedOSFamily}">
+                    </ComboBox>
+
+                    <TextBlock
+                        Visibility="{Binding UseAutoPool, Converter={StaticResource BooleanToVisibilityConverter}}"
+                        VerticalAlignment="Center"
+                        Grid.Row="8"
+                        Grid.Column="0"
+                        Margin="8,4"
+                        FontSize="12"
+                        Text="Target Dedciated" />
+
+                    <TextBox 
+                        Visibility="{Binding UseAutoPool, Converter={StaticResource BooleanToVisibilityConverter}}"
+                        Grid.Row="8" 
+                        Grid.Column="1" 
+                        MinHeight="24"
+                        Text="{Binding TargetDedicated}"/>
                 </Grid>
-
-                <!-- Create Schedule Section -->
-                <Grid
-                    Visibility="{Binding IsCreateScheduleSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="140"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <TextBlock
-                        Grid.Row="0"
-                        Grid.ColumnSpan="2"
-                        Margin="4,4"
-                        VerticalAlignment="Center"
-                        FontSize="12"
-                        FontWeight="Bold"
-                        Text="Schedule"/>
-
-                    <TextBlock
-                        Grid.Row="1"
-                        Grid.Column="0"
-                        Margin="8,4"
-                        VerticalAlignment="Center"
-                        FontSize="12"
-                        Text="Do Not Run Until"/>
-
-                    <StackPanel
-                        Grid.Row="1"
-                        Grid.Column="1"
-                        Orientation="Vertical">
-                        <toolkit:DateTimePicker
-                            Format="Custom"
-                            FormatString="MM/dd/yyyy HH:mm:ss"
-                            Value="{Binding DoNotRunUntil}"/>
-                    </StackPanel>
-
-                    <TextBlock
-                        Grid.Row="2"
-                        Grid.Column="0"
-                        Margin="8,4"
-                        VerticalAlignment="Center"
-                        FontSize="12"
-                        Text="Do Not Run After"/>
-
-                    <StackPanel
-                        Grid.Row="2"
-                        Grid.Column="1"
-                        Orientation="Vertical">
-                        <toolkit:DateTimePicker
-                            Format="Custom"
-                            FormatString="MM/dd/yyyy HH:mm:ss"
-                            Value="{Binding DoNotRunAfter}"/>
-                    </StackPanel>
-
-                    <TextBlock
-                        Grid.Row="3"
-                        Grid.Column="0"
-                        Margin="8,4"
-                        VerticalAlignment="Center"
-                        FontSize="12"
-                        Text="Start Window"/>
-
-                    <StackPanel
-                        Grid.Row="3"
-                        Grid.Column="1"
-                        Orientation="Vertical">
-                        <toolkit:TimeSpanUpDown
-                            Value="{Binding StartWindow}"/>
-                    </StackPanel>
-
-                    <TextBlock
-                        Grid.Row="4"
-                        Grid.Column="0"
-                        Margin="8,4"
-                        VerticalAlignment="Center"
-                        FontSize="12"
-                        Text="Recurrence Interval"/>
-
-                    <StackPanel
-                        Grid.Row="4"
-                        Grid.Column="1"
-                        Orientation="Vertical">
-                        <toolkit:TimeSpanUpDown
-                            Value="{Binding RecurrenceInterval}"/>
-                    </StackPanel>
-                </Grid>
-
+                
                 <!-- Create Job Manager Section -->
                 <Grid
                     Visibility="{Binding IsCreateJobManagerSelected, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -361,13 +318,13 @@
                             Margin="8,4"
                             VerticalAlignment="Center"
                             FontSize="12"
-                            Text="Job Manager Name"/>
+                            Text="Job Manager Id"/>
                     </StackPanel>
 
                     <TextBox 
                         Grid.Row="1"
                         Grid.Column="1"
-                        Text="{Binding JobManagerName}"/>
+                        Text="{Binding JobManagerId}"/>
 
                     <StackPanel 
                         Orientation="Horizontal"
@@ -463,7 +420,8 @@
                         HorizontalAlignment="Right"
                         Width="100" 
                         Height="24"
-                        Command="{Binding CreateWorkItem}"
+                        IsEnabled="{Binding IsCreateJobButtonEnabled}"
+                        Command="{Binding CreateJobSchedule}"
                         Content="Create"/>
 
                     <!--<Button
@@ -472,7 +430,7 @@
                         HorizontalAlignment="Right"
                         Width="100" 
                         Height="24"
-                        Command="{Binding CancelCreateWorkItem}"
+                        Command="{Binding CancelCreateJobSchedule}"
                         Content="Cancel"/>-->
                 </StackPanel>
             </StackPanel>

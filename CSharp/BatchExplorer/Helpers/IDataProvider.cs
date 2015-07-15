@@ -19,61 +19,71 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
 
         /// <summary>
         /// The batch service associated with this data provider
-        /// TODO: Remove this once OM has full parity with protocol
         /// </summary>
         BatchService Service { get; }
-        
-        /// <summary>
-        /// Get a collection of WorkItems from the default source (if any)
-        /// </summary>
-        /// <returns>a collection of WorkItems, or null if no WorkItems are available</returns>
-        IList<WorkItemModel> GetWorkItemCollection();
 
         /// <summary>
-        /// Creates a Work Item
+        /// Get a collection of Job Schedules from the default source (if any)
         /// </summary>
-        Task CreateWorkItem(CreateWorkItemOptions options);
+        /// <returns>a collection of Job Schedules, or null if no JobSchedules are available</returns>
+        Task<IList<JobScheduleModel>> GetJobScheduleCollectionAsync();
+
+        /// <summary>
+        /// Creates a job schedule
+        /// </summary>
+        Task CreateJobScheduleAsync(CreateJobScheduleOptions options);
+
+        /// <summary>
+        /// Get a collection of Jobs from the default source (if any)
+        /// </summary>
+        /// <returns>A <see cref="Task"/> whose result is a collection of Jobs</returns>
+        Task<IList<JobModel>> GetJobCollectionAsync();
+
+        /// <summary>
+        /// Creates a job
+        /// </summary>
+        Task CreateJobAsync(CreateJobOptions options);
 
         /// <summary>
         /// Add a task
         /// </summary>
-        /// <param name="options">add task options - name, cli, etc.</param>
-        Task AddTask(AddTaskOptions options);
+        /// <param name="options">add task options - id, cli, etc.</param>
+        Task AddTaskAsync(AddTaskOptions options);
 
         /// <summary>
         /// Get a collection of Pools from the default source (if any)
         /// </summary>
-        /// <returns>a collection of Pools, or null if no Pools are available</returns>
-        IList<PoolModel> GetPoolCollection();
+        /// <returns>A <see cref="Task"/> whose result is a collection of Pools</returns>
+        Task<IList<PoolModel>> GetPoolCollectionAsync();
 
         /// <summary>
         /// Creates a Pool
         /// </summary>
         Task CreatePoolAsync(
-            string poolName, 
-            string vmSize, 
+            string poolId, 
+            string virtualMachineSize, 
             int? targetDedicated, 
             string autoScaleFormula, 
             bool communicationEnabled,
             string osFamily,
             string osVersion,
-            int maxTasksPerVM,
+            int maxTasksPerComputeNode,
             TimeSpan? timeout);
 
         /// <summary>
-        /// Creates a VM user
+        /// Creates a ComputeNode user.
         /// </summary>
         /// <returns></returns>
-        Task CreateVMUserAsync(string poolName, string vmName, string userName, string password, DateTime expiryTime, bool admin);
+        Task CreateComputeNodeUserAsync(string poolId, string nodeId, string userName, string password, DateTime expiryTime, bool admin);
 
         /// <summary>
         /// Resizes a pool
         /// </summary>
-        /// <param name="poolName"></param>
+        /// <param name="poolId"></param>
         /// <param name="targetDedicated"></param>
         /// <param name="timeout"></param>
-        /// <param name="deallocationOption"></param>
+        /// <param name="computeNodeDeallocationOption"></param>
         /// <returns></returns>
-        Task ResizePoolAsync(string poolName, int targetDedicated, TimeSpan? timeout, TVMDeallocationOption? deallocationOption);
+        Task ResizePoolAsync(string poolId, int targetDedicated, TimeSpan? timeout, ComputeNodeDeallocationOption? computeNodeDeallocationOption);
     }
 }

@@ -4,7 +4,7 @@ using Microsoft.Azure.BatchExplorer.ViewModels;
 namespace Microsoft.Azure.BatchExplorer.Views.CreateControls
 {
     /// <summary>
-    /// Interaction logic for CreateWorkItemControl.xaml
+    /// Interaction logic for CreateJobScheduleControl.xaml
     /// </summary>
     public partial class AddTaskControl : UserControl
     {

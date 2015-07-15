@@ -1,20 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel.Composition;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Xml.Serialization;
-using Microsoft.Azure.BatchExplorer.Helpers;
-using Microsoft.Azure.BatchExplorer.Models;
-using Microsoft.Azure.BatchExplorer.PluginInterfaces.AccountPlugin;
-using Microsoft.Azure.BatchExplorer.Plugins.LegacyAccountSupport;
-
-namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
+﻿namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Collections.ObjectModel;
+    using System.ComponentModel.Composition;
+    using System.Globalization;
+    using System.IO;
+    using System.Linq;
+    using System.Text.RegularExpressions;
+    using System.Threading.Tasks;
+    using System.Windows;
+    using System.Xml.Serialization;
+    using Microsoft.Azure.BatchExplorer.Helpers;
+    using Microsoft.Azure.BatchExplorer.Models;
+    using Microsoft.Azure.BatchExplorer.PluginInterfaces.AccountPlugin;
+    using Microsoft.Azure.BatchExplorer.Plugins.LegacyAccountSupport;
+
+
     /// <summary>
     /// See <see cref="IAccountManager"/>.
     /// </summary>
@@ -200,7 +202,7 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
             }
 
             //Try first to deserialize using the new account deserialization mechanism, if that fails, fall back to the old way
-            bool initialLoadFailed = false;
+            bool writeBackToFile = false;
             try
             {
                 XmlSerializer x = new XmlSerializer(typeof(DefaultAccountSerializationContainer));
@@ -210,12 +212,17 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
 
                     DefaultAccountSerializationContainer accountContainer = (DefaultAccountSerializationContainer)deserializedObject;
 
-                    this.Accounts = new ObservableCollection<Account>(accountContainer.GetAccountCollection(this));
+                    List<Account> accounts = accountContainer.GetAccountCollection(this);
+                    
+                    //Update accounts to the new URI format if required
+                    writeBackToFile = this.UpdateAccountsToNewUriFormat(accounts);
+
+                    this.Accounts = new ObservableCollection<Account>(accounts);
                 }
             }
             catch (InvalidOperationException)
             {
-                initialLoadFailed = true;
+                writeBackToFile = true;
                 XmlSerializer x = new XmlSerializer(typeof(LegacyAccountManager));
                 using (StreamReader reader = new StreamReader(accountFileName))
                 {
@@ -227,11 +234,55 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
             }
 
             //One time write back to change format of the file
-            if (initialLoadFailed)
+            if (writeBackToFile)
             {
                 await this.SaveAccountsAsync().ConfigureAwait(false);
             }
-            
+        }
+
+
+        private bool UpdateAccountsToNewUriFormat(IEnumerable<Account> accounts)
+        {
+            bool hasUpdatedAnAccount = false;
+
+            foreach (Account account in accounts)
+            {
+                //The new format requires the account name to be in the Url
+                if (!account.BatchServiceUrl.Contains(account.AccountName))
+                {
+                    int doubleSlashIndex = account.BatchServiceUrl.IndexOf(@"//", System.StringComparison.Ordinal);
+                    if (doubleSlashIndex != -1)
+                    {
+                        hasUpdatedAnAccount = true;
+
+                        string prefix = account.BatchServiceUrl.Substring(0, doubleSlashIndex + 2);
+                        string postfix = account.BatchServiceUrl.Substring(doubleSlashIndex + 2, account.BatchServiceUrl.Length - prefix.Length);
+
+                        //Remove trailing slashes from postfix
+                        postfix = postfix.Trim('/');
+
+                        //Regex to match an IP endpoint
+                        Regex ipMatchingRegex = new Regex(@"^(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?::[0-9]+)?$");
+
+                        //check if this is a path or a host style URL
+                        if (!ipMatchingRegex.Match(postfix).Success)
+                        {
+                            //Host style
+                            postfix = account.AccountName + "." + postfix;
+                        }
+                        else
+                        {
+                            //Path style
+                            postfix = postfix + "/" + account.AccountName;
+                        }
+
+                        string updatedUrl = prefix + postfix;
+                        account.BatchServiceUrl = updatedUrl;
+                    }
+                }
+            }
+
+            return hasUpdatedAnAccount;
         }
         
         /// <summary>
@@ -259,15 +310,17 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
         private static string GetAccountFileName()
         {
             const string fileName = "accounts.xml";
-            
-            if (String.IsNullOrEmpty(Common.LocalAppDataDirectory))
+
+            if (String.IsNullOrEmpty(Microsoft.Azure.BatchExplorer.Helpers.Common.LocalAppDataDirectory))
             {
                 MessageBox.Show("LocalAppData environment variable is not set", "Azure Batch Explorer", MessageBoxButton.OK);
                 throw new InvalidProgramException("LocalAppData not defined in environment");
             }
 
             // create the directory if necessary
-            string fullDirectoryPath = Path.Combine(Common.LocalAppDataDirectory, Common.LocalAppDataSubfolder);
+            string fullDirectoryPath = Path.Combine(
+                Microsoft.Azure.BatchExplorer.Helpers.Common.LocalAppDataDirectory, 
+                Microsoft.Azure.BatchExplorer.Helpers.Common.LocalAppDataSubfolder);
             Directory.CreateDirectory(fullDirectoryPath);
 
             return Path.Combine(fullDirectoryPath, fileName);

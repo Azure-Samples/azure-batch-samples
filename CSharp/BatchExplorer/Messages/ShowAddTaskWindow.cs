@@ -3,13 +3,11 @@ namespace Microsoft.Azure.BatchExplorer.Messages
 {
     public class ShowAddTaskWindow
     {
-        public string WorkItemName { get; private set; }
-        public string JobName { get; private set; }
+        public string JobId { get; private set; }
 
-        public ShowAddTaskWindow(string workItemName, string jobName)
+        public ShowAddTaskWindow(string jobId)
         {
-            this.WorkItemName = workItemName;
-            this.JobName = jobName;
+            this.JobId = jobId;
         }
     }
 }

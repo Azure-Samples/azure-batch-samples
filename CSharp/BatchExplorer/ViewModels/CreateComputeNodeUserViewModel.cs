@@ -8,38 +8,38 @@ using Microsoft.Azure.BatchExplorer.Models;
 
 namespace Microsoft.Azure.BatchExplorer.ViewModels
 {
-    public class CreateVMUserViewModel : EntityBase
+    public class CreateComputeNodeUserViewModel : EntityBase
     {
         #region Services
         private readonly IDataProvider batchService;
         #endregion
 
         #region Public UI Properties
-        private string poolName;
-        public string PoolName
+        private string poolId;
+        public string PoolId
         {
             get
             {
-                return this.poolName;
+                return this.poolId;
             }
             set
             {
-                this.poolName = value;
-                this.FirePropertyChangedEvent("PoolName");
+                this.poolId = value;
+                this.FirePropertyChangedEvent("PoolId");
             }
         }
 
-        private string vmName;
-        public string VMName
+        private string computeNodeId;
+        public string ComputeNodeId
         {
             get
             {
-                return this.vmName;
+                return this.computeNodeId;
             }
             private set
             {
-                this.vmName = value;
-                this.FirePropertyChangedEvent("VMName");
+                this.computeNodeId = value;
+                this.FirePropertyChangedEvent("ComputeNodeId");
             }
         }
 
@@ -86,12 +86,12 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         }
         #endregion
 
-        public CreateVMUserViewModel(IDataProvider batchService, string poolName, string vmName)
+        public CreateComputeNodeUserViewModel(IDataProvider batchService, string poolId, string computeNodeId)
         {
             this.batchService = batchService;
 
-            this.PoolName = poolName;
-            this.VMName = vmName;
+            this.PoolId = poolId;
+            this.ComputeNodeId = computeNodeId;
             this.IsAdmin = true;
             this.ExpiryTime = DateTime.UtcNow + TimeSpan.FromDays(1);
 
@@ -131,9 +131,9 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             {
                 if (this.IsInputValid(password))
                 {
-                    System.Threading.Tasks.Task asyncTask = this.batchService.CreateVMUserAsync(
-                        this.PoolName, 
-                        this.VMName, 
+                    Task asyncTask = this.batchService.CreateComputeNodeUserAsync(
+                        this.PoolId, 
+                        this.ComputeNodeId, 
                         this.UserName,
                         password, 
                         this.ExpiryTime, 
@@ -141,7 +141,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
 
                     AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                         asyncTask,
-                        new VMOperation(VMOperation.CreateUser, this.PoolName, this.VMName)));
+                        new ComputeNodeOperation(ComputeNodeOperation.CreateUser, this.PoolId, this.ComputeNodeId)));
                     await asyncTask;
 
                     Messenger.Default.Send(new CloseGenericPopup());
@@ -155,9 +155,9 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
 
         private bool IsInputValid(string password)
         {
-            if (string.IsNullOrEmpty(this.PoolName))
+            if (string.IsNullOrEmpty(this.PoolId))
             {
-                Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Invalid values for Pool Name"));
+                Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Invalid values for Pool Id"));
                 return false;
             }
             else if (string.IsNullOrEmpty(this.UserName))

@@ -112,7 +112,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// <summary>
         /// The client request ID associated with the request which failed
         /// </summary>
-        public string FaultClientRequestId
+        public Guid? FaultClientRequestId
         {
             get { return this.faultClientRequestId; }
             set 
@@ -149,7 +149,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         private DateTime startTimeUtc;
         private DateTime endTimeUtc;
         private DateTime startTimeLocal;
-        private string faultClientRequestId;
+        private Guid? faultClientRequestId;
         private string faultServerRequestId;
 
         public AsyncOperationModel(Task asyncTask, Operation asyncOperation)
@@ -184,8 +184,8 @@ namespace Microsoft.Azure.BatchExplorer.Models
                 if (this.FaultException is BatchException)
                 {
                     BatchException batchE = this.FaultException as BatchException;
-                    this.FaultClientRequestId = batchE.RequestInformation.ClientRequestID;
-                    this.FaultServerRequestId = batchE.RequestInformation.ServiceRequestID;
+                    this.FaultClientRequestId = batchE.RequestInformation.ClientRequestId;
+                    this.FaultServerRequestId = batchE.RequestInformation.ServiceRequestId;
                 }
                 else if (this.FaultException is AggregateException)
                 {
@@ -194,8 +194,8 @@ namespace Microsoft.Azure.BatchExplorer.Models
                     agg = agg.Flatten();
                     
                     BatchException batchE = agg.InnerExceptions.Where(e => e is BatchException).Cast<BatchException>().First();
-                    this.FaultClientRequestId = batchE.RequestInformation.ClientRequestID;
-                    this.FaultServerRequestId = batchE.RequestInformation.ServiceRequestID;
+                    this.FaultClientRequestId = batchE.RequestInformation.ClientRequestId;
+                    this.FaultServerRequestId = batchE.RequestInformation.ServiceRequestId;
 
                 }
             }

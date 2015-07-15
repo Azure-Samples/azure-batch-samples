@@ -12,33 +12,33 @@ using Microsoft.Azure.BatchExplorer.Messages;
 namespace Microsoft.Azure.BatchExplorer.Models
 {
     /// <summary>
-    /// The data model for the TVM object
+    /// The data model for the ComputeNode object
     /// </summary>
-    public class TvmModel : ModelBase
+    public class ComputeNodeModel : ModelBase
     {
         #region Public properties
         /// <summary>
-        /// The pool associated with this TVM
+        /// The pool associated with this ComputeNode.
         /// </summary>
         public PoolModel ParentPool { get; private set; }
 
         /// <summary>
-        /// The name of this TVM
+        /// The id of this ComputeNode
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public string Name { get { return this.VM.Name; } }
+        public string Id { get { return this.ComputeNode.Id; } }
 
         /// <summary>
-        /// The state of this TVM
+        /// The state of this ComputeNode
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public TVMState State { get { return this.VM.State; } }
+        public ComputeNodeState State { get { return this.ComputeNode.State; } }
 
         /// <summary>
-        /// The allocation time of the TVM
+        /// The allocation time of the ComputeNode.
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public DateTime CreationTime { get { return this.VM.VMAllocationTime; } }
+        public DateTime CreationTime { get { return this.ComputeNode.AllocationTime; } }
 
         /// <summary>
         /// True if there are files available, otherwise false
@@ -50,10 +50,10 @@ namespace Microsoft.Azure.BatchExplorer.Models
         }
         
         /// <summary>
-        /// The collection of files on this TVM
+        /// The collection of files on this ComputeNode.
         /// </summary>
         [ChangeTracked(ModelRefreshType.Children)]
-        public List<ITaskFile> Files 
+        public List<NodeFile> Files 
         { 
             get
             {
@@ -75,16 +75,16 @@ namespace Microsoft.Azure.BatchExplorer.Models
             get { return (this.RecentTasks != null && this.RecentTasks.Count > 0); }
         }
         /// <summary>
-        /// The collection of recent tasks for this TVM
+        /// The collection of recent tasks for this ComputeNode.
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
         public List<TaskInformation> RecentTasks
         {
             get
             {
-                if (this.VM.RecentTasks != null)
+                if (this.ComputeNode.RecentTasks != null)
                 {
-                    return this.VM.RecentTasks.ToList();
+                    return this.ComputeNode.RecentTasks.ToList();
                 }
                 else
                 {
@@ -94,7 +94,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         }
 
         /// <summary>
-        /// True if this TVM has start task info, false otherwise
+        /// True if this ComputeNode has start task info, false otherwise
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
         public bool HasStartTaskInfo
@@ -106,19 +106,19 @@ namespace Microsoft.Azure.BatchExplorer.Models
         }
 
         /// <summary>
-        /// The start task info associated with this TVM
+        /// The start task info associated with this ComputeNode
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public StartTaskInformation StartTaskInfo { get { return this.VM.StartTaskInformation; } }
+        public StartTaskInformation StartTaskInfo { get { return this.ComputeNode.StartTaskInformation; } }
 
         #endregion
 
-        private IVM VM { get; set; }
-        private List<ITaskFile> files;
+        private ComputeNode ComputeNode { get; set; }
+        private List<NodeFile> files;
  
-        public TvmModel(PoolModel parentPool, IVM vm)
+        public ComputeNodeModel(PoolModel parentPool, ComputeNode computeNode)
         {
-            this.VM = vm;
+            this.ComputeNode = computeNode;
             this.ParentPool = parentPool;
             this.LastUpdatedTime = DateTime.UtcNow;
         }
@@ -129,7 +129,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         {
             get
             {
-                SortedDictionary<string, object> results = ObjectToSortedDictionary(this.VM);
+                SortedDictionary<string, object> results = ObjectToSortedDictionary(this.ComputeNode);
                 results.Add(LastUpdateFromServerString, this.LastUpdatedTime);
                 return results;
             }
@@ -142,12 +142,12 @@ namespace Microsoft.Azure.BatchExplorer.Models
                 try
                 {
                     Messenger.Default.Send(new UpdateWaitSpinnerMessage(WaitSpinnerPanel.UpperRight, true));
-                    System.Threading.Tasks.Task asyncTask =  this.VM.RefreshAsync();
+                    Task asyncTask =  this.ComputeNode.RefreshAsync();
                     if (showTrackedOperation)
                     {
                         AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                             asyncTask,
-                            new VMOperation(VMOperation.Refresh, this.ParentPool.Name, this.VM.Name)));
+                            new ComputeNodeOperation(ComputeNodeOperation.Refresh, this.ParentPool.Id, this.ComputeNode.Id)));
                     }
                     else
                     {
@@ -183,17 +183,17 @@ namespace Microsoft.Azure.BatchExplorer.Models
                     
                     try
                     {
-                        System.Threading.Tasks.Task<List<ITaskFile>> asyncTask = this.ListFilesAsync();
+                        Task<List<NodeFile>> asyncTask = this.ListFilesAsync();
                         AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                             asyncTask,
-                            new VMOperation(VMOperation.ListVMFiles, this.ParentPool.Name, this.VM.Name)));
+                            new ComputeNodeOperation(ComputeNodeOperation.ListFiles, this.ParentPool.Id, this.ComputeNode.Id)));
 
                         this.Files = await asyncTask;
                     }
                     catch (Exception)
                     {
                         this.HasLoadedChildren = false; //On exception, we failed to load children so try again next time
-                        //Swallow the exception to stop popups from occuring for every bad VM
+                        //Swallow the exception to stop popups from occuring for every bad ComputeNode
                     }
 
                     this.FireChangesOnRefresh(ModelRefreshType.Children);
@@ -212,19 +212,19 @@ namespace Microsoft.Azure.BatchExplorer.Models
 
         #endregion
 
-        #region Operations on VMs
+        #region Operations on ComputeNodes
 
         /// <summary>
-        /// Reboots the TVM
+        /// Reboots the ComputeNode.
         /// </summary>
-        public async System.Threading.Tasks.Task RebootAsync()
+        public async Task RebootAsync()
         {
             try
             {
-                System.Threading.Tasks.Task asyncTask = this.VM.RebootAsync();
+                Task asyncTask = this.ComputeNode.RebootAsync();
                 AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                     asyncTask,
-                    new VMOperation(VMOperation.Reboot, this.ParentPool.Name, this.VM.Name)));
+                    new ComputeNodeOperation(ComputeNodeOperation.Reboot, this.ParentPool.Id, this.ComputeNode.Id)));
                 await asyncTask;
                 await this.RefreshAsync(ModelRefreshType.Basic, showTrackedOperation: false);
             }
@@ -235,16 +235,16 @@ namespace Microsoft.Azure.BatchExplorer.Models
         }
 
         /// <summary>
-        /// Reimages the TVM
+        /// Reimages the ComputeNode.
         /// </summary>
-        public async System.Threading.Tasks.Task ReimageAsync()
+        public async Task ReimageAsync()
         {
             try
             {
-                System.Threading.Tasks.Task asyncTask = this.VM.ReimageAsync();
+                Task asyncTask = this.ComputeNode.ReimageAsync();
                 AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                     asyncTask,
-                    new VMOperation(VMOperation.Reimage, this.ParentPool.Name, this.VM.Name)));
+                    new ComputeNodeOperation(ComputeNodeOperation.Reimage, this.ParentPool.Id, this.ComputeNode.Id)));
                 await asyncTask;
                 await this.RefreshAsync(ModelRefreshType.Basic, showTrackedOperation: false);
             }
@@ -255,17 +255,17 @@ namespace Microsoft.Azure.BatchExplorer.Models
         }
         
         /// <summary>
-        /// Downloads an RDP file associated with this TVM
+        /// Downloads an RDP file associated with this ComputeNode.
         /// </summary>
         /// <param name="destinationStream">The target stream to place the RDP file into</param>
-        public async System.Threading.Tasks.Task DownloadRDPAsync(Stream destinationStream)
+        public async Task DownloadRDPAsync(Stream destinationStream)
         {
             try
             {
-                System.Threading.Tasks.Task asyncTask = this.VM.GetRDPFileAsync(destinationStream);
+                Task asyncTask = this.ComputeNode.GetRDPFileAsync(destinationStream);
                 AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                     asyncTask,
-                    new VMOperation(VMOperation.GetRdp, this.ParentPool.Name, this.VM.Name)));
+                    new ComputeNodeOperation(ComputeNodeOperation.GetRdp, this.ParentPool.Id, this.ComputeNode.Id)));
                 await asyncTask;
             }
             catch (Exception e)
@@ -275,46 +275,41 @@ namespace Microsoft.Azure.BatchExplorer.Models
         }
 
         /// <summary>
-        /// Downloads a file on this TVM
+        /// Downloads a file on this compute node.
         /// </summary>
-        /// <param name="filePath">The path of the file on the tVM</param>
+        /// <param name="filePath">The path of the file on the node.</param>
         /// <param name="destinationStream">The target stream to place the file into</param>
-        public async System.Threading.Tasks.Task DownloadFileAsync(string filePath, Stream destinationStream)
+        public async Task DownloadFileAsync(string filePath, Stream destinationStream)
         {
-            System.Threading.Tasks.Task asyncTask = this.DownloadVMFile(filePath, destinationStream);
+            Task asyncTask = this.DownloadFile(filePath, destinationStream);
             AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                 asyncTask,
-                new VMOperation(VMOperation.GetVMFile, this.ParentPool.Name, this.VM.Name)));
+                new ComputeNodeOperation(ComputeNodeOperation.GetFile, this.ParentPool.Id, this.ComputeNode.Id)));
             await asyncTask;
         }
 
         /// <summary>
-        /// Lists the files on this TVM
+        /// Lists the files on this ComputeNode.
         /// </summary>
         /// <returns></returns>
-        private async System.Threading.Tasks.Task<List<ITaskFile>> ListFilesAsync()
+        private async Task<List<NodeFile>> ListFilesAsync()
         {
-            List<ITaskFile> results = new List<ITaskFile>();
-            IEnumerableAsyncExtended<ITaskFile> vmFiles = this.VM.ListVMFiles(recursive: true);
-            IAsyncEnumerator<ITaskFile> asyncEnumerator = vmFiles.GetAsyncEnumerator();
+            IPagedEnumerable<NodeFile> vmFiles = this.ComputeNode.ListNodeFiles(recursive: true);
 
-            while (await asyncEnumerator.MoveNextAsync())
-            {
-                results.Add(asyncEnumerator.Current);
-            }
+            List<NodeFile> results = await vmFiles.ToListAsync();
             
             return results;
         }
 
         /// <summary>
-        /// Downloads the contents of the specific file on the VM.
+        /// Downloads the contents of the specific file on the ComputeNode.
         /// </summary>
         /// <param name="filePath">The path to the file.</param>
         /// <param name="destinationStream">The destination stream.</param>
         /// <returns></returns>
-        private async System.Threading.Tasks.Task DownloadVMFile(string filePath, Stream destinationStream)
+        private async Task DownloadFile(string filePath, Stream destinationStream)
         {
-            ITaskFile file = await this.VM.GetVMFileAsync(filePath);
+            NodeFile file = await this.ComputeNode.GetNodeFileAsync(filePath);
             await file.CopyToStreamAsync(destinationStream);
         }
 
@@ -325,7 +320,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         private void HandleException(Exception e)
         {
             //Swallow 404's and fire a message
-            if (Common.IsExceptionNotFound(e))
+            if (Microsoft.Azure.BatchExplorer.Helpers.Common.IsExceptionNotFound(e))
             {
                 Messenger.Default.Send(new ModelNotFoundAfterRefresh(this));
             }

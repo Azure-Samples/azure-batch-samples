@@ -1,7 +1,7 @@
 ﻿
 namespace Microsoft.Azure.BatchExplorer.Messages
 {
-    public class RebootTvmMessage
+    public class RebootComputeNodeMessage
     {
     }
 }

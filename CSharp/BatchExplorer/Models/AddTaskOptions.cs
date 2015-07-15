@@ -2,9 +2,10 @@
 {
     public class AddTaskOptions
     {
-        public string WorkItemName { get; set; }
-        public string JobName { get; set; }
+        public string JobId { get; set; }
+
         public string CommandLine { get; set; }
-        public string TaskName { get; set; }
+
+        public string TaskId { get; set; }
     }
 }
