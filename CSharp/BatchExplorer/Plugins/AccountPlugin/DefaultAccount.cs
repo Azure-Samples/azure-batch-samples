@@ -72,7 +72,6 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
 
         public DefaultAccount(IAccountManager parentAccountManager) : base(parentAccountManager)
         {
-            this.BatchServiceUrl = DefaultBatchServiceUrl;
             this.UniqueIdentifier = Guid.NewGuid();
         }
     }

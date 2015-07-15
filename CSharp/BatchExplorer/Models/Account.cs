@@ -8,8 +8,6 @@ namespace Microsoft.Azure.BatchExplorer.Models
     /// </summary>
     public abstract class Account
     {
-        protected const string DefaultBatchServiceUrl = @"https://batch.core.windows.net"; //The default
-        
         /// <summary>
         /// A friendly name for the account.  This is what BatchExplorer will refer to the account as in all dropdowns.
         /// </summary>

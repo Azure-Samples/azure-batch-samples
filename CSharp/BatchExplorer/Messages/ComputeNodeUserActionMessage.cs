@@ -2,18 +2,18 @@
 
 namespace Microsoft.Azure.BatchExplorer.Messages
 {
-    public enum TVMUserAction
+    public enum ComputeNodeUserAction
     {
         AddUser,
         DeleteUser,
         EditUser
     }
 
-    public class TvmUserActionMessage
+    public class ComputeNodeUserActionMessage
     {
-        public TVMUserAction Action { get; private set; }
+        public ComputeNodeUserAction Action { get; private set; }
 
-        public string Username { get; private set; }
+        public string UserName { get; private set; }
 
         public string Password { get; private set; }
 
@@ -21,15 +21,13 @@ namespace Microsoft.Azure.BatchExplorer.Messages
 
         public DateTime? ExpiryDate { get; private set; }
 
-        public TvmUserActionMessage(TVMUserAction action, string username, string password = null, bool? isAdmin = null, DateTime? expiryDate = null)
+        public ComputeNodeUserActionMessage(ComputeNodeUserAction action, string userName, string password = null, bool? isAdmin = null, DateTime? expiryDate = null)
         {
             this.Action = action;
-            this.Username = username;
+            this.UserName = userName;
             this.Password = password;
             this.IsAdmin = isAdmin.HasValue && isAdmin.Value;
             this.ExpiryDate = expiryDate;
         }
-
-
     }
 }

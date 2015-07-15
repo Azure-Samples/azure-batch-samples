@@ -30,30 +30,6 @@
 
         <StackPanel 
             Orientation="Horizontal"
-            Grid.Row="1"
-            Grid.Column="0">
-
-            <TextBlock 
-                VerticalAlignment="Center"
-                Margin="4,0,0,0"
-                Foreground="Red"
-                Text="*" />
-            <TextBlock
-                Margin="8,4"
-                VerticalAlignment="Center"
-                FontSize="12"
-                Text="Work Item Name"/>
-        </StackPanel>
-
-        <TextBox
-            Grid.Row="1"
-            Grid.Column="1"
-            Text="{Binding WorkItemName, Mode=OneWay}"
-            IsReadOnly="True"
-            Background="Transparent"/>
-
-        <StackPanel 
-            Orientation="Horizontal"
             Grid.Row="2" 
             Grid.Column="0">
 
@@ -66,13 +42,13 @@
                 Margin="8,4"
                 VerticalAlignment="Center"
                 FontSize="12"
-                Text="Job Name"/>
+                Text="Job Id"/>
         </StackPanel>
 
         <TextBox
             Grid.Row="2"
             Grid.Column="1"
-            Text="{Binding JobName, Mode=OneWay}"
+            Text="{Binding JobId, Mode=OneWay}"
             IsReadOnly="True"
             Background="Transparent"/>
         <StackPanel 
@@ -89,13 +65,13 @@
                 Margin="8,4"
                 VerticalAlignment="Center"
                 FontSize="12"
-                Text="Task Name"/>
+                Text="Task Id"/>
         </StackPanel>
         
         <TextBox
             Grid.Row="3"
             Grid.Column="1"
-            Text="{Binding TaskName}"/>
+            Text="{Binding TaskId}"/>
 
         <StackPanel 
             Orientation="Horizontal"

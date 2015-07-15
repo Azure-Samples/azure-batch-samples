@@ -12,119 +12,87 @@ using Microsoft.Azure.BatchExplorer.Service;
 namespace Microsoft.Azure.BatchExplorer.Helpers
 {
     /// <summary>
-    /// Gets all jobs, tasks, workitems, and pools for the current account with no caching or other frills
+    /// Gets all jobs, tasks, jobschedules, and pools for the current account with no caching or other frills
     /// </summary>
     public class BasicDataProvider : IDataProvider
     {
-        private const int MaxJobRequestsInFlight = 10;
-
         public Account CurrentAccount { get; private set; }
 
-        //TODO: This is public currently to allow Models access to the BatchService object for the purpose of making protocol calls
-        //TODO: We should make this private once all protocol calls are gone.
         public BatchService Service { get; private set; }
 
         public BasicDataProvider(Account currentAccount)
         {
             this.CurrentAccount = currentAccount;
-            this.Service = new BatchService(this.CurrentAccount.BatchServiceUrl, 
-                new BatchCredentials(this.CurrentAccount.AccountName, this.CurrentAccount.Key));
+            this.Service = new BatchService(new BatchSharedKeyCredentials(this.CurrentAccount.BatchServiceUrl, this.CurrentAccount.AccountName, this.CurrentAccount.Key));
         }
 
-        public IList<WorkItemModel> GetWorkItemCollection()
+        public async Task<IList<JobScheduleModel>> GetJobScheduleCollectionAsync()
         {
-            IEnumerable<ICloudWorkItem> workItems = this.Service.ListWorkItems(OptionsModel.Instance.ListDetailLevel);
+            IPagedEnumerable<CloudJobSchedule> jobSchedules = this.Service.ListJobSchedules(OptionsModel.Instance.ListDetailLevel);
+            List<JobScheduleModel> jobScheduleModels = new List<JobScheduleModel>();
 
-            using (var sem = new SemaphoreSlim(MaxJobRequestsInFlight))
-            {
-                var workItemsTasks = workItems.Select(
-                    async cloudWorkItem =>
-                        {
-                            if (cloudWorkItem.ExecutionInformation != null && cloudWorkItem.ExecutionInformation.RecentJob != null)
-                            {
-                                try
-                                {
-                                    await sem.WaitAsync();
-                                    try
-                                    {
-                                        var latestJob = await cloudWorkItem.GetJobAsync(cloudWorkItem.ExecutionInformation.RecentJob.Name);
-                                        return new WorkItemModel(cloudWorkItem, latestJob);
-                                    }
-                                    finally
-                                    {
-                                        sem.Release();
-                                    }
-                                }
-                                catch (BatchException be)
-                                {
-                                    if (be.RequestInformation != null && be.RequestInformation.AzureError != null && be.RequestInformation.AzureError.Code == BatchErrorCodeStrings.JobNotFound)
-                                    {
-                                        return new WorkItemModel(cloudWorkItem);
-                                    }
+            await jobSchedules.ForEachAsync(item => jobScheduleModels.Add(new JobScheduleModel(item)));
 
-                                    return null;
-                                }
-                                catch (Exception)
-                                {
-                                    // eat the exception for now
-                                    return null;
-                                }
-                            }
-                            else
-                            {
-                                return new WorkItemModel(cloudWorkItem);
-                            }
-                        })
-                    .ToArray();
-
-                Task.WaitAll(workItemsTasks);
-
-                return workItemsTasks
-                    .Select(task => task.Result)
-                    .Where(workItemModel => workItemModel != null)
-                    .ToList();
-            }
+            return jobScheduleModels;
         }
 
-        public async Task CreateWorkItem(CreateWorkItemOptions options)
+        public async Task CreateJobScheduleAsync(CreateJobScheduleOptions options)
         {
-            await this.Service.CreateWorkItemAsync(options);
+            await this.Service.CreateJobScheduleAsync(options);
         }
 
-        public async Task AddTask(AddTaskOptions options)
+        public async Task<IList<JobModel>> GetJobCollectionAsync()
+        {
+            IPagedEnumerable<CloudJob> jobs = this.Service.ListJobs(OptionsModel.Instance.ListDetailLevel);
+            List<JobModel> jobModels = new List<JobModel>();
+
+            await jobs.ForEachAsync(item => jobModels.Add(new JobModel(item)));
+
+            return jobModels;
+        }
+
+        public Task CreateJobAsync(CreateJobOptions options)
+        {
+            return this.Service.CreateJobAsync(options);
+        }
+
+        public async Task AddTaskAsync(AddTaskOptions options)
         {
             await this.Service.AddTaskAsync(options);
         }
 
-        public IList<PoolModel> GetPoolCollection()
+        public async Task<IList<PoolModel>> GetPoolCollectionAsync()
         {
-            IEnumerable<ICloudPool> pools = this.Service.ListPools(OptionsModel.Instance.ListDetailLevel);
-            IList<PoolModel> poolModels = pools.Select(pool => new PoolModel(pool)).ToList();
+            IPagedEnumerable<CloudPool> pools = this.Service.ListPools(OptionsModel.Instance.ListDetailLevel);
+            IList<PoolModel> poolModels = new List<PoolModel>();
+
+            await pools.ForEachAsync(item => poolModels.Add(new PoolModel(item)));
+
             return poolModels;
         }
 
         public async Task CreatePoolAsync(
-            string poolName, 
-            string vmSize, 
+            string poolId, 
+            string virtualMachineSize, 
             int? targetDedicated, 
             string autoScaleFormula, 
             bool communicationEnabled,
             string osFamily,
             string osVersion,
-            int maxTasksPerVM,
+            int maxTasksPerComputeNode,
             TimeSpan? timeout)
         {
-            await this.Service.CreatePoolAsync(poolName, vmSize, targetDedicated, autoScaleFormula, communicationEnabled, osFamily, osVersion, maxTasksPerVM, timeout);
+            await this.Service.CreatePoolAsync(poolId, virtualMachineSize, targetDedicated, autoScaleFormula, communicationEnabled, osFamily, osVersion, maxTasksPerComputeNode, timeout);
         }
 
-        public async Task CreateVMUserAsync(string poolName, string vmName, string userName, string password, DateTime expiryTime, bool admin)
+        public async Task CreateComputeNodeUserAsync(string poolId, string nodeId, string userName, string password, DateTime expiryTime, bool admin)
         {
-            await this.Service.CreateVMUserAsync(poolName, vmName, userName, password, expiryTime, admin);
+            await this.Service.CreateNodeUserAsync(poolId, nodeId, userName, password, expiryTime, admin);
         }
 
-        public async Task ResizePoolAsync(string poolName, int targetDedicated, TimeSpan? timeout, TVMDeallocationOption? deallocationOption)
+        public async Task ResizePoolAsync(string poolId, int targetDedicated, TimeSpan? timeout, ComputeNodeDeallocationOption? computeNodeDeallocationOption)
         {
-            await this.Service.ResizePool(poolName, targetDedicated, timeout, deallocationOption);
+            await this.Service.ResizePool(poolId, targetDedicated, timeout, computeNodeDeallocationOption);
         }
     }
 }

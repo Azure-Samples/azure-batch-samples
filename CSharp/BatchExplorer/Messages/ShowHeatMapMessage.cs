@@ -4,9 +4,9 @@ namespace Microsoft.Azure.BatchExplorer.Messages
 {
     public class ShowHeatMapMessage
     {
-        public ICloudPool Pool { get; private set; }
+        public CloudPool Pool { get; private set; }
 
-        public ShowHeatMapMessage(ICloudPool pool)
+        public ShowHeatMapMessage(CloudPool pool)
         {
             this.Pool = pool;
         }

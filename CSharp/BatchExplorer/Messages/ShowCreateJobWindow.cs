@@ -1,9 +1,9 @@
 ﻿
 namespace Microsoft.Azure.BatchExplorer.Messages
 {
-    public class ShowCreateWorkItemWindow
+    public class ShowCreateJobWindow
     {
-        public ShowCreateWorkItemWindow()
+        public ShowCreateJobWindow()
         {
         }
     }

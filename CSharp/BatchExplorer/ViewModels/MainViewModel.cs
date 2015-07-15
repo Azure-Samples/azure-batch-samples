@@ -34,6 +34,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         public Account ActiveAccount { get; private set; }
 
         #region Public UI Properties
+
         private bool poolTabIsSelected;
         /// <summary>
         /// True if the Pool Tab is selected
@@ -51,30 +52,30 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
-        private bool workitemTabIsSelected;
+        private bool jobScheduleTabIsSelected;
         /// <summary>
         /// True if the Pool Tab is selected
         /// </summary>
-        public bool WorkItemTabIsSelected
+        public bool JobScheduleTabIsSelected
         {
             get
             {
-                return this.workitemTabIsSelected;
+                return this.jobScheduleTabIsSelected;
             }
             set
             {
-                this.workitemTabIsSelected = value;
-                FirePropertyChangedEvent("WorkItemTabIsSelected");
+                this.jobScheduleTabIsSelected = value;
+                FirePropertyChangedEvent("JobScheduleTabIsSelected");
                 if (value)
                 {
-                    WorkItemDetailTabIsSelected = true;
+                    this.JobScheduleDetailTabIsSelected = true;
                 }
             }
         }
 
         private bool jobTabIsSelected;
         /// <summary>
-        /// True if the Pool Tab is selected
+        /// True if the Job Tab is selected
         /// </summary>
         public bool JobTabIsSelected
         {
@@ -89,37 +90,55 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
-        private ICollectionView workItemCollection;
+        private ICollectionView jobCollection;
+
         /// <summary>
-        /// The collection of work items for an account
+        /// The collection of jobs for an account
         /// </summary>
-        public ICollectionView WorkItems
+        public ICollectionView Jobs
         {
             get
             {
-                return this.workItemCollection;
+                return this.jobCollection;
             }
             set
             {
-                this.workItemCollection = value;
-                FirePropertyChangedEvent("WorkItems");
+                this.jobCollection = value;
+                FirePropertyChangedEvent("Jobs");
             }
         }
 
-        private bool workitemDetailTabIsSelected;
+        private ICollectionView jobScheduleCollection;
         /// <summary>
-        /// True if the Pool Tab is selected
+        /// The collection of job schedules for an account
         /// </summary>
-        public bool WorkItemDetailTabIsSelected
+        public ICollectionView JobSchedules
         {
             get
             {
-                return this.workitemDetailTabIsSelected;
+                return this.jobScheduleCollection;
             }
             set
             {
-                this.workitemDetailTabIsSelected = value;
-                FirePropertyChangedEvent("WorkItemDetailTabIsSelected");
+                this.jobScheduleCollection = value;
+                FirePropertyChangedEvent("JobSchedules");
+            }
+        }
+
+        private bool jobScheduleDetailTabIsSelected;
+        /// <summary>
+        /// True if the job schedule tab is selected
+        /// </summary>
+        public bool JobScheduleDetailTabIsSelected
+        {
+            get
+            {
+                return this.jobScheduleDetailTabIsSelected;
+            }
+            set
+            {
+                this.jobScheduleDetailTabIsSelected = value;
+                FirePropertyChangedEvent("JobScheduleDetailTabIsSelected");
             }
         }
 
@@ -187,95 +206,128 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 this.selectedPool = value;
                 if (this.selectedPool != null)
                 {
-                    //Load the TVMs in this pool just in time if they haven't been loaded yet
+                    //Load the ComputeNodes in this pool just in time if they haven't been loaded yet
                     if (!this.selectedPool.HasLoadedChildren)
                     {
                         this.selectedPool.RefreshAsync(ModelRefreshType.Children).ContinueWith(
                             (t) =>
                             {
                                 FirePropertyChangedEvent("SelectedPool");
-                                FirePropertyChangedEvent("VMsTabTitle");
+                                FirePropertyChangedEvent("ComputeNodesTabTitle");
                             },
                             TaskContinuationOptions.NotOnFaulted);
                     }
                     else
                     {
-                        SelectedTVM = this.selectedPool.Tvms.Count > 0 ? this.selectedPool.Tvms[0] : null;
+                        this.SelectedComputeNode = this.selectedPool.ComputeNodes.Count > 0 ? this.selectedPool.ComputeNodes[0] : null;
+                        FirePropertyChangedEvent("SelectedPool");
+                        FirePropertyChangedEvent("ComputeNodesTabTitle");
                     }
                 }
-                FirePropertyChangedEvent("SelectedPool");
-                FirePropertyChangedEvent("VMsTabTitle");
             }
         }
 
-        private TvmModel selectedTVM;
+        private ComputeNodeModel selectedComputeNode;
         /// <summary>
-        /// The tvm selected from the list of tvms
+        /// The computeNode selected from the list of nodes
         /// </summary>
-        public TvmModel SelectedTVM
+        public ComputeNodeModel SelectedComputeNode
         {
             get
             {
-                return this.selectedTVM;
+                return this.selectedComputeNode;
             }
             set
             {
-                this.selectedTVM = value;
-                if (this.selectedTVM != null)
+                this.selectedComputeNode = value;
+                if (this.selectedComputeNode != null)
                 {
-                    if (!this.selectedTVM.HasLoadedChildren)
+                    if (!this.selectedComputeNode.HasLoadedChildren)
                     {
-                        this.selectedTVM.RefreshAsync(ModelRefreshType.Children);
+                        this.selectedComputeNode.RefreshAsync(ModelRefreshType.Children);
                     }
                 }
-                FirePropertyChangedEvent("SelectedTVM");
+                FirePropertyChangedEvent("SelectedComputeNode");
             }
         }
 
-        private ITaskFile selectedTvmFile;
-        public ITaskFile SelectedTvmFile
+        private NodeFile selectedNodeFile;
+        public NodeFile SelectedNodeFile
         {
             get
             {
-                return this.selectedTvmFile;
+                return this.selectedNodeFile;
             }
             set
             {
-                this.selectedTvmFile = value;
-                this.FirePropertyChangedEvent("SelectedTvmFile");
+                this.selectedNodeFile = value;
+                this.FirePropertyChangedEvent("SelectedNodeFile");
             }
 
         }
 
-        private ITaskFile _selectedTaskFile;
-        public ITaskFile SelectedTaskFile
+        private NodeFile selectedTaskFile;
+        public NodeFile SelectedTaskFile
         {
             get
             {
-                return this._selectedTaskFile;
+                return this.selectedTaskFile;
             }
             set
             {
-                this._selectedTaskFile = value;
+                this.selectedTaskFile = value;
                 this.FirePropertyChangedEvent("SelectedTaskFile");
             }
         }
 
-        private WorkItemModel selectedWorkItem;
+        private JobScheduleModel selectedJobSchedule;
 
-        public WorkItemModel SelectedWorkItem
+        public JobScheduleModel SelectedJobSchedule
         {
             get
             {
-                return this.selectedWorkItem;
+                return this.selectedJobSchedule;
             }
             set
             {
-                this.selectedWorkItem = value;
-                FirePropertyChangedEvent("SelectedWorkItem");
+                this.selectedJobSchedule = value;
+                FirePropertyChangedEvent("SelectedJobSchedule");
             }
         }
 
+        private JobModel selectedJob;
+
+        public JobModel SelectedJob
+        {
+            get
+            {
+                return this.selectedJob;
+            }
+            set
+            {
+                this.selectedJob = value;
+                if (this.selectedJob != null)
+                {
+                    if (!this.selectedJob.HasLoadedChildren)
+                    {
+                        this.selectedJob.RefreshAsync(ModelRefreshType.Children).ContinueWith(
+                            (t) =>
+                            {
+                                FirePropertyChangedEvent("SelectedJob");
+                                FirePropertyChangedEvent("TasksTabTitle");
+                            },
+                            TaskContinuationOptions.NotOnFaulted);
+                    }
+                    else
+                    {
+                        this.selectedJob.SelectedTask = this.selectedJob.Tasks.Count > 0 ? this.selectedJob.Tasks[0] : null;
+                        FirePropertyChangedEvent("SelectedJob");
+                        FirePropertyChangedEvent("TasksTabTitle");
+                    }
+                }
+                
+            }
+        }
 
         public string TitleString
         {
@@ -311,17 +363,19 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         /// </summary>
         public ICollectionView Pools { get; private set; }
 
-        private ObservableCollection<WorkItemModel> workItems;
+        private ObservableCollection<JobScheduleModel> jobSchedules;
+
+        private ObservableCollection<JobModel> jobs;
 
         private Task asyncOperationCompletionMonitoringTask; 
 
         #region Tab title binding properties
-        public string WorkItemTabTitle
+        public string JobScheduleTabTitle
         {
             get
             {
-                const string workItemsTabPrefix = "Work Items";
-                return this.workItems == null ? workItemsTabPrefix : string.Format(CultureInfo.CurrentCulture, "{0} ({1})", workItemsTabPrefix, this.workItems.Count);
+                const string jobScheduleTabPrefix = "Job Schedules";
+                return this.jobSchedules == null ? jobScheduleTabPrefix : string.Format(CultureInfo.CurrentCulture, "{0} ({1})", jobScheduleTabPrefix, this.jobSchedules.Count);
             }
         }
 
@@ -339,17 +393,25 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             get
             {
                 const string jobTabPrefix = "Jobs";
-                // May not make sense to add the count here since we load incrementally. May be confusing to the user.
-                return jobTabPrefix;
+                return this.jobs == null ? jobTabPrefix : string.Format(CultureInfo.CurrentCulture, "{0} ({1})", jobTabPrefix, this.jobs.Count);
             }
         }
 
-        public string VMsTabTitle
+        public string TasksTabTitle
         {
             get
             {
-                const string vmTabPrefix = "VMs";
-                return SelectedPool == null || SelectedPool.Tvms == null ? vmTabPrefix : string.Format(CultureInfo.CurrentCulture, "{0} ({1})", vmTabPrefix, SelectedPool.Tvms.Count);
+                const string taskTabPrefix = "Tasks";
+                return this.SelectedJob == null || this.SelectedJob.Tasks == null ? taskTabPrefix : string.Format(CultureInfo.CurrentCulture, "{0} ({1})", taskTabPrefix, this.SelectedJob.Tasks.Count);
+            }
+        }
+
+        public string ComputeNodesTabTitle
+        {
+            get
+            {
+                const string computeNodeTabPrefix = "Compute Nodes";
+                return SelectedPool == null || SelectedPool.ComputeNodes == null ? computeNodeTabPrefix : string.Format(CultureInfo.CurrentCulture, "{0} ({1})", computeNodeTabPrefix, SelectedPool.ComputeNodes.Count);
             }
         }
 
@@ -368,7 +430,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             this.RegisterMessages();
 
             //TODO: Should do this all in an "onload" or something to avoid overloaded constructor work?
-            Common.LoadPlugins(this);
+            Microsoft.Azure.BatchExplorer.Helpers.Common.LoadPlugins(this);
             
             this.AccountManagers = new List<AccountManagerContainer>();
 
@@ -380,8 +442,6 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             
             JobTabIsSelected = true;
             
-            FirePropertyChangedEvent("WorkItemTabTitle");
-
             //Register for async operation updates
             Messenger.Default.Register<AsyncOperationListChangedMessage>(this, (o) => this.FirePropertyChangedEvent("AsyncOperations"));
 
@@ -560,7 +620,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         #region Refresh operations
 
         /// <summary>
-        /// Refresh all workitems, jobs, and pools
+        /// Refresh all job schedules, jobs, and pools
         /// </summary>
         public CommandBase RefreshAll
         {
@@ -592,18 +652,26 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         }
 
         /// <summary>
-        /// Refresh all work items
+        /// Refresh all job schedules
         /// </summary>
-        public CommandBase RefreshWorkItems
+        public CommandBase RefreshJobSchedules
         {
             get
             {
                 return new CommandBase(
-                    (o) =>
-                    {
-                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(GetDataAsync(dataProvider, true, false, false));
-                    }
-                );
+                    (o) => AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.GetDataAsync(dataProvider, jobSchedules: true, jobs: false, pools: false)));
+            }
+        }
+
+        /// <summary>
+        /// Refresh all jobs
+        /// </summary>
+        public CommandBase RefreshJobs
+        {
+            get
+            {
+                return new CommandBase(
+                    (o) => AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.GetDataAsync(dataProvider, jobSchedules: false, jobs: true, pools: false)));
             }
         }
 
@@ -615,11 +683,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             get
             {
                 return new CommandBase(
-                    (o) =>
-                    {
-                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(GetDataAsync(dataProvider, false, false, true));
-                    }
-                );
+                    (o) => AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.GetDataAsync(dataProvider, jobSchedules: false, jobs: false, pools: true)));
             }
         }
 
@@ -647,59 +711,59 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         #region VM operations
 
         /// <summary>
-        /// Reboot the selected TVM
+        /// Reboot the selected Compute Node
         /// </summary>
-        public CommandBase RebootTVM
+        public CommandBase RebootComputeNode
         {
             get
             {
                 return new CommandBase(
                     (o) =>
                     {
-                        Messenger.Default.Register<RebootTvmConfirmationMessage>(this, (message) =>
+                        Messenger.Default.Register<RebootComputeNodeConfirmationMessage>(this, (message) =>
                         {
-                            if (message.Confirmation == TvmRebootConfimation.Confirmed)
+                            if (message.Confirmation == ComputeNodeRebootConfimation.Confirmed)
                             {
-                                AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.SelectedTVM.RebootAsync());
+                                AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.SelectedComputeNode.RebootAsync());
                             }
 
-                            Messenger.Default.Unregister<RebootTvmConfirmationMessage>(this);
+                            Messenger.Default.Unregister<RebootComputeNodeConfirmationMessage>(this);
                         });
 
-                        Messenger.Default.Send<RebootTvmMessage>(new RebootTvmMessage());
+                        Messenger.Default.Send<RebootComputeNodeMessage>(new RebootComputeNodeMessage());
                     }
                 );
             }
         }
 
         /// <summary>
-        /// Reimage the selected TVM
+        /// Reimage the selected Compute Node
         /// </summary>
-        public CommandBase ReimageTVM
+        public CommandBase ReimageComputeNode
         {
             get
             {
                 return new CommandBase(
                     (o) =>
                     {
-                        Messenger.Default.Register<ReimageTvmConfirmationMessage>(this, (message) =>
+                        Messenger.Default.Register<ReimageComputeNodeConfirmationMessage>(this, (message) =>
                         {
-                            if (message.Confirmation == TvmReimageConfimation.Confirmed)
+                            if (message.Confirmation == ComputeNodeReimageConfimation.Confirmed)
                             {
-                                AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.SelectedTVM.ReimageAsync());
+                                AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.SelectedComputeNode.ReimageAsync());
                             }
 
-                            Messenger.Default.Unregister<ReimageTvmConfirmationMessage>(this);
+                            Messenger.Default.Unregister<ReimageComputeNodeConfirmationMessage>(this);
                         });
 
-                        Messenger.Default.Send<ReimageTvmMessage>(new ReimageTvmMessage());
+                        Messenger.Default.Send<ReimageComputeNodeMessage>(new ReimageComputeNodeMessage());
                     }
                 );
             }
         }
 
         /// <summary>
-        /// Download RDP from the selected TVM and prompt the user for a save file dialog
+        /// Download RDP from the selected ComputeNode and prompt the user for a save file dialog
         /// </summary>
         public CommandBase DownloadRDP
         {
@@ -708,14 +772,14 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 return new CommandBase(
                     (o) =>
                     {
-                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.DownloadRDPFileAsync(this.SelectedTVM));
+                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.DownloadRDPFileAsync(this.SelectedComputeNode));
                     }
                 );
             }
         }
 
         /// <summary>
-        /// Download RDP from the selected TVM and open it.
+        /// Download RDP from the selected ComputeNode and open it.
         /// </summary>
         public CommandBase OpenRDP
         {
@@ -724,50 +788,50 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 return new CommandBase(
                     (o) =>
                     {
-                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.DownloadRDPFileAsync(this.SelectedTVM, Path.GetTempPath()));
+                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.DownloadRDPFileAsync(this.SelectedComputeNode, Path.GetTempPath()));
                     }
                 );
             }
         }
 
         /// <summary>
-        /// Add a user to the selected VM
+        /// Add a user to the selected compute node
         /// </summary>
-        public CommandBase AddVMUser
+        public CommandBase AddComputeNodeUser
         {
             get
             {
                 return new CommandBase(
                     (o) =>
                     {
-                        TvmModel selectedTVM = (TvmModel)o;
-                        Messenger.Default.Send(new ShowCreateVMUserWindow(selectedTVM.ParentPool.Name, selectedTVM.Name));
+                        ComputeNodeModel selectedComputeNode = (ComputeNodeModel)o;
+                        Messenger.Default.Send(new ShowCreateComputeNodeUserWindow(selectedComputeNode.ParentPool.Id, selectedComputeNode.Id));
                     }
                 );
             }
         }
 
-        public CommandBase EditUserOnTVM
+        public CommandBase EditUserOnComputeNode
         {
             get
             {
                 return new CommandBase(
                     (o) =>
                     {
-                        Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("TODO: Edit user on TVM"));
+                        Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("TODO: Edit user on Compute Node"));
                     }
                 );
             }
         }
 
-        public CommandBase DeleteUserFromTVM
+        public CommandBase DeleteUserFromComputeNode
         {
             get
             {
                 return new CommandBase(
                     (o) =>
                     {
-                        Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("TODO: Delete user from TVM"));
+                        Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("TODO: Delete user from Compute Node"));
                     }
                 );
             }
@@ -787,7 +851,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         try
                         {
                             AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.DownloadFileAsync(
-                            this.SelectedWorkItem.SelectedJob.SelectedTask.SelectedTaskFile.Name, Path.GetTempPath(), false));
+                            this.SelectedJob.SelectedTask.SelectedTaskFile.Name, Path.GetTempPath(), false));
                         }
                         catch (Exception e)
                         {
@@ -808,7 +872,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         try
                         {
                             AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.DownloadFileAsync(
-                            this.SelectedWorkItem.SelectedJob.SelectedTask.SelectedTaskFile.Name, isTvmFile: false));
+                            this.SelectedJob.SelectedTask.SelectedTaskFile.Name, isNodeFile: false));
                         }
                         catch (Exception e)
                         {
@@ -820,27 +884,27 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
-        public CommandBase OpenTvmFile
+        public CommandBase OpenNodeFile
         {
             get
             {
                 return new CommandBase(
                     (o) =>
                     {
-                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.DownloadFileAsync(this.SelectedTvmFile.Name, Path.GetTempPath()));
+                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.DownloadFileAsync(this.SelectedNodeFile.Name, Path.GetTempPath()));
                     }
                 );
             }
         }
 
-        public CommandBase DownloadTvmFile
+        public CommandBase DownloadNodeFile
         {
             get
             {
                 return new CommandBase(
                     (o) =>
                     {
-                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.DownloadFileAsync(this.SelectedTvmFile.Name));
+                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.DownloadFileAsync(this.SelectedNodeFile.Name));
                     }
                 );
             }
@@ -864,16 +928,20 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         {
                             castItem.RefreshAsync(ModelRefreshType.Children | ModelRefreshType.Basic).ContinueWith((t) =>
                             {
-                                //Nothing to do for tasks
+                                var job = castItem as JobModel;
+                                if (job != null)
+                                {
+                                    FirePropertyChangedEvent("TasksTabTitle");
+                                }
 
                                 var pool = castItem as PoolModel;
                                 if (pool != null)
                                 {
                                     FirePropertyChangedEvent("Pools");
-                                    FirePropertyChangedEvent("VMsTabTitle");
+                                    FirePropertyChangedEvent("ComputeNodesTabTitle");
                                 }
 
-                                //Nothing to do for VMs
+                                //Nothing to do for compute nodes
                             });
                         }
                     });
@@ -928,7 +996,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                                             TaskModel taskModel = item as TaskModel;
                                             AsyncOperationTracker.Instance.AddTrackedInternalOperation(taskModel.DeleteAsync());
                                         } 
-                                        else if (itemType == typeof (TvmModel))
+                                        else if (itemType == typeof (ComputeNodeModel))
                                         {
                                             throw new NotImplementedException("Not implemented");
                                         }
@@ -954,7 +1022,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                     (o) =>
                     {
                         PoolModel pool = (PoolModel)o;
-                        Messenger.Default.Send<ShowResizePoolWindow>(new ShowResizePoolWindow(pool.Name, pool.CurrentDedicated));
+                        Messenger.Default.Send<ShowResizePoolWindow>(new ShowResizePoolWindow(pool.Id, pool.CurrentDedicated));
                     });
             }
         }
@@ -990,15 +1058,29 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
-        public CommandBase CreateWorkItem
+        public CommandBase CreateJobSchedule
         {
             get
             {
                 return new CommandBase(
                     (o) =>
                     {
-                        // Call a new window to show the Create Work Item UI
-                        Messenger.Default.Send<ShowCreateWorkItemWindow>(new ShowCreateWorkItemWindow());
+                        // Call a new window to show the Create Job Schedule UI
+                        Messenger.Default.Send<ShowCreateJobScheduleWindow>(new ShowCreateJobScheduleWindow());
+                    }
+                );
+            }
+        }
+
+        public CommandBase CreateJob
+        {
+            get
+            {
+                return new CommandBase(
+                    (o) =>
+                    {
+                        // Call a new window to show the Create Job UI
+                        Messenger.Default.Send(new ShowCreateJobWindow());
                     }
                 );
             }
@@ -1014,12 +1096,12 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                     (o) =>
                         {
                             PoolModel poolModel = (o as PoolModel);
-                            string poolName = poolModel.Name;
+                            string poolId = poolModel.Id;
 
-                            Task<ICloudPool> getPoolTask = dataProvider.Service.GetPoolAsync(poolName);
+                            Task<CloudPool> getPoolTask = dataProvider.Service.GetPoolAsync(poolId);
                             AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                                 getPoolTask,
-                                new PoolOperation(PoolOperation.GetPool, poolName)));
+                                new PoolOperation(PoolOperation.GetPool, poolId)));
                             getPoolTask.ContinueWith((asyncTask) => Messenger.Default.Send(new ShowHeatMapMessage(asyncTask.Result)));
                     }
                 );
@@ -1095,7 +1177,10 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         case RefreshTarget.Pools:
                             AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.GetDataAsync(dataProvider, false, false, true));
                             break;
-                        case RefreshTarget.WorkItems:
+                        case RefreshTarget.Jobs:
+                            AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.GetDataAsync(dataProvider, false, true, false));
+                            break;
+                        case RefreshTarget.JobSchedules:
                             AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.GetDataAsync(dataProvider, true, false, false));
                             break;
                     }
@@ -1106,12 +1191,12 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 {
                     ModelBase modelBase = message.Model;
 
-                    WorkItemModel workItemModel = modelBase as WorkItemModel;
-                    if (workItemModel != null)
+                    JobScheduleModel jobScheduleModel = modelBase as JobScheduleModel;
+                    if (jobScheduleModel != null)
                     {
-                        this.workItems.Remove(workItemModel);
-                        FirePropertyChangedEvent("WorkItemTabTitle");
-                        SelectedWorkItem = null;
+                        this.jobSchedules.Remove(jobScheduleModel);
+                        FirePropertyChangedEvent("JobScheduleTabTitle");
+                        this.SelectedJobSchedule = null;
                     }
 
                     PoolModel poolModel = modelBase as PoolModel;
@@ -1120,14 +1205,16 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         this.pools.Remove(poolModel);
                         FirePropertyChangedEvent("PoolTabTitle");
                         SelectedPool = null;
-                        SelectedTVM = null;
+                        this.SelectedComputeNode = null;
                     }
 
                     JobModel jobModel = modelBase as JobModel;
                     if (jobModel != null)
                     {
-                        jobModel.ParentWorkItem.Jobs.Remove(jobModel);
-                        FirePropertyChangedEvent("JobTabTitle");
+                        this.jobs.Remove(jobModel);
+                        this.SelectedJob = null;
+                        this.FirePropertyChangedEvent("JobTabTitle");
+                        this.FirePropertyChangedEvent("TasksTabTitle");
                     }
 
                     TaskModel taskModel = modelBase as TaskModel;
@@ -1138,13 +1225,13 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         FirePropertyChangedEvent("TasksTabTitle");
                     }
 
-                    TvmModel vmModel = modelBase as TvmModel;
+                    ComputeNodeModel vmModel = modelBase as ComputeNodeModel;
                     if (vmModel != null)
                     {
-                        vmModel.ParentPool.Tvms.Remove(vmModel);
-                        vmModel.ParentPool.UpdateTvmView();
-                        FirePropertyChangedEvent("VMsTabTitle");
-                        selectedTVM = null;
+                        vmModel.ParentPool.ComputeNodes.Remove(vmModel);
+                        vmModel.ParentPool.UpdateNodeView();
+                        FirePropertyChangedEvent("ComputeNodesTabTitle");
+                        this.selectedComputeNode = null;
                     }
                 });
         }
@@ -1153,11 +1240,11 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         /// Gets a specific set of data from the Batch service
         /// </summary>
         /// <param name="provider">The provider to retrieve the data with</param>
-        /// <param name="workItems">True if work item data should be retrieved</param>
+        /// <param name="jobSchedules">True if job schedule data should be retrieved</param>
         /// <param name="jobs">True if job data should be retrieved</param>
         /// <param name="pools">True if pool data should be retrieved</param>
         /// <returns></returns>
-        private async Task GetDataAsync(IDataProvider provider, bool workItems, bool jobs, bool pools)
+        private async Task GetDataAsync(IDataProvider provider, bool jobSchedules, bool jobs, bool pools)
         {
             //Turn on the correct wait spinners
             LeftSpinnerIsVisible = true;
@@ -1167,42 +1254,56 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             try
             {
                 //
-                // Get all the work items
+                // Get all the job schedules
                 //
-                if (workItems)
+                if (jobSchedules)
                 {
-                    System.Threading.Tasks.Task getWorkItems = System.Threading.Tasks.Task.Factory.StartNew(() =>
-                    {
-                        this.workItems = new ObservableCollection<WorkItemModel>(provider.GetWorkItemCollection());
-                    });
+                    System.Threading.Tasks.Task<IList<JobScheduleModel>> getJobSchedulesTask = provider.GetJobScheduleCollectionAsync();
                     AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
-                        getWorkItems, 
-                        new AccountOperation(AccountOperation.ListWorkItems)));
+                        getJobSchedulesTask, 
+                        new AccountOperation(AccountOperation.ListJobSchedules)));
 
-                    await getWorkItems;
-                    this.workItemCollection = CollectionViewSource.GetDefaultView(this.workItems);
+                    this.jobSchedules = new ObservableCollection<JobScheduleModel>(await getJobSchedulesTask);
+                    this.jobScheduleCollection = CollectionViewSource.GetDefaultView(this.jobSchedules);
                     
-                    WorkItems.Refresh();
-                    FirePropertyChangedEvent("WorkItems");
-                    FirePropertyChangedEvent("WorkItemTabTitle");
+                    this.JobSchedules.Refresh();
+                    FirePropertyChangedEvent("JobSchedules");
+                    FirePropertyChangedEvent("JobScheduleTabTitle");
                 }
 
-                SelectedWorkItem = null;
+                this.SelectedJobSchedule = null;
+
+                //
+                // Get all jobs
+                //
+                if (jobs)
+                {
+                    System.Threading.Tasks.Task<IList<JobModel>> getJobTask = provider.GetJobCollectionAsync();
+                    AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
+                        getJobTask,
+                        new AccountOperation(AccountOperation.ListJobs)));
+
+                    this.jobs = new ObservableCollection<JobModel>(await getJobTask);
+                    this.jobCollection = CollectionViewSource.GetDefaultView(this.jobs);
+
+                    this.Jobs.Refresh();
+                    FirePropertyChangedEvent("Jobs");
+                    FirePropertyChangedEvent("JobTabTitle");
+                }
+
+                this.SelectedJob = null;
 
                 //
                 // Get all pools
                 //
                 if (pools)
                 {
-                    System.Threading.Tasks.Task getPools = System.Threading.Tasks.Task.Factory.StartNew(() =>
-                    {
-                        this.pools = new ObservableCollection<PoolModel>(provider.GetPoolCollection());
-                    });
+                    System.Threading.Tasks.Task<IList<PoolModel>> getPoolsTask = provider.GetPoolCollectionAsync();
                     AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
-                        getPools,
+                        getPoolsTask,
                         new AccountOperation(AccountOperation.ListPools)));
 
-                    await getPools;
+                    this.pools = new ObservableCollection<PoolModel>(await getPoolsTask);
 
                     Pools = CollectionViewSource.GetDefaultView(this.pools);
                     Pools.Refresh();
@@ -1210,7 +1311,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                     FirePropertyChangedEvent("PoolTabTitle");
                 }
                 SelectedPool = null;
-                SelectedTVM = null;
+                this.SelectedComputeNode = null;
             }
             catch (Exception e)
             {
@@ -1243,7 +1344,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
-        private async System.Threading.Tasks.Task DownloadFileAsync(string file, string localDownloadTargetPath = null, bool isTvmFile = true)
+        private async System.Threading.Tasks.Task DownloadFileAsync(string file, string localDownloadTargetPath = null, bool isNodeFile = true)
         {
             string fileName = null;
             try
@@ -1276,13 +1377,13 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                     // Save document
                     using (FileStream destStream = new FileStream(fileName, FileMode.Create))
                     {
-                        if (isTvmFile)
+                        if (isNodeFile)
                         {
-                            await this.SelectedTVM.DownloadFileAsync(file, destStream);
+                            await this.SelectedComputeNode.DownloadFileAsync(file, destStream);
                         }
                         else
                         {
-                            await this.SelectedWorkItem.SelectedJob.SelectedTask.GetTaskFileAsync(file, destStream);
+                            await this.SelectedJob.SelectedTask.GetTaskFileAsync(file, destStream);
                         }
                     }
 
@@ -1307,7 +1408,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
-        private async System.Threading.Tasks.Task DownloadRDPFileAsync(TvmModel tvm, string localDownloadTargetPath = null)
+        private async System.Threading.Tasks.Task DownloadRDPFileAsync(ComputeNodeModel computeNode, string localDownloadTargetPath = null)
         {
             string fileName = null;
             bool? result;
@@ -1315,7 +1416,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             {
                 // Configure save file dialog box
                 Microsoft.Win32.SaveFileDialog saveFileDlg = new Microsoft.Win32.SaveFileDialog();
-                saveFileDlg.FileName = tvm.Name; // Default file name
+                saveFileDlg.FileName = computeNode.Id; // Default file name
                 saveFileDlg.DefaultExt = ".rdp"; // Default file extension.
                 saveFileDlg.Filter = "RDP File (.rdp)|*.rdp"; // Filter files by extension
 
@@ -1328,7 +1429,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
             else
             {
-                fileName = Path.Combine(localDownloadTargetPath, Path.GetFileName(tvm.Name) + ".rdp");
+                fileName = Path.Combine(localDownloadTargetPath, Path.GetFileName(computeNode.Id) + ".rdp");
                 result = true;
             }
 
@@ -1337,7 +1438,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 // Save document
                 using (MemoryStream memoryStream = new MemoryStream())
                 {
-                    await tvm.DownloadRDPAsync(memoryStream);
+                    await computeNode.DownloadRDPAsync(memoryStream);
 
                     memoryStream.Seek(0, SeekOrigin.Begin);
 

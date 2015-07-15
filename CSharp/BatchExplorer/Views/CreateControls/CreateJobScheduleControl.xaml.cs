@@ -4,18 +4,18 @@ using Microsoft.Azure.BatchExplorer.ViewModels;
 namespace Microsoft.Azure.BatchExplorer.Views.CreateControls
 {
     /// <summary>
-    /// Interaction logic for CreateVMUserControl.xaml
+    /// Interaction logic for CreateJobSchedule.xaml
     /// </summary>
-    public partial class CreateVMUserControl : UserControl
+    public partial class CreateJobScheduleControl : UserControl
     {
-        private readonly CreateVMUserViewModel viewModel;
+        private CreateJobScheduleViewModel viewModel;
 
-        public CreateVMUserControl(CreateVMUserViewModel viewModel)
+        public CreateJobScheduleControl(CreateJobScheduleViewModel viewModel)
         {
             InitializeComponent();
 
             this.viewModel = viewModel;
-            this.DataContext = this.viewModel;
+            this.DataContext = viewModel;
         }
     }
 }

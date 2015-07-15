@@ -13,9 +13,10 @@
         Title="{Binding TitleString}" 
         Height="800" Width="1200" d:DataContext="{d:DesignInstance Type=viewModels:MainViewModel, IsDesignTimeCreatable=True}">
     <Window.Resources>
-        <converters:TaskStatusColorConverter x:Key="TSCC"/>
-        <converters:JobStatusColorConverter x:Key="JSCC"/>
-        <converters:PoolAllocationStateColorConverter x:Key="PASCC"/>
+        <converters:TaskStatusColorConverter x:Key="TaskStatusColorConverter"/>
+        <converters:JobStateColorConverter x:Key="JobStateColorConverter"/>
+        <converters:JobScheduleStateColorConverter x:Key="JobScheduleStateColorConverter"/>
+        <converters:PoolAllocationStateColorConverter x:Key="PoolAllocationStateColorConverter"/>
         <converters:NullToVisibilityConverter x:Key="NVC"/>
         <converters:BoolToVisibilityConverter x:Key="BVC"/>
         <converters:InvertedBoolToVisibilityConverter x:Key="IBVC"/>
@@ -143,12 +144,14 @@
             </MenuItem>
 
             <MenuItem Header="_Tools" IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
-                <MenuItem Header="Create _Work Item" Command="{Binding CreateWorkItem}" HorizontalAlignment="Stretch" />
+                <MenuItem Header="Create Job _Schedule" Command="{Binding CreateJobSchedule}" HorizontalAlignment="Stretch" />
+                <MenuItem Header="Create _Job" Command="{Binding CreateJob}" HorizontalAlignment="Stretch" />
                 <MenuItem Header="Create _Pool" Command="{Binding CreatePool}" HorizontalAlignment="Stretch" />
             </MenuItem>
 
             <MenuItem Header="_Refresh" IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
-                <MenuItem Header="Refresh _Work Items" Command="{Binding RefreshWorkItems}" HorizontalAlignment="Stretch"/>
+                <MenuItem Header="Refresh Job _Schedules" Command="{Binding RefreshJobSchedules}" HorizontalAlignment="Stretch"/>
+                <MenuItem Header="Refresh _Jobs" Command="{Binding RefreshJobs}" HorizontalAlignment="Stretch"/>
                 <MenuItem Header="Refresh _Pools" Command="{Binding RefreshPools}" HorizontalAlignment="Stretch"/>
                 <MenuItem Header="_Refresh All" Command="{Binding RefreshAll}" HorizontalAlignment="Stretch"/>
             </MenuItem>
@@ -165,182 +168,114 @@
         </Menu>
         <Grid HorizontalAlignment="Stretch" Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="2*"/>
-                <ColumnDefinition Width="3*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <TabControl x:Name="LeftHandTab" >
-                <TabItem 
-                    Header="{Binding WorkItemTabTitle}" IsSelected="{Binding WorkItemTabIsSelected}">
+                <TabItem Header="{Binding JobScheduleTabTitle}" IsSelected="{Binding JobScheduleTabIsSelected}">
                     <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <Button
-                            Visibility="Collapsed"
-                            Margin="2"
-                            HorizontalAlignment="Right">
-                            Refresh
-                        </Button>
                         <DataGrid
-                            Grid.Row="1"
-                            ItemsSource="{Binding WorkItems}"
-                            SelectedItem="{Binding SelectedWorkItem}"
-                            BorderThickness="0"
-                            VerticalScrollBarVisibility="Auto"
-                            VerticalAlignment="Stretch"
-                            VerticalContentAlignment="Stretch">
+                            ItemsSource="{Binding JobSchedules}"
+                            SelectedItem="{Binding SelectedJobSchedule}">
                             <DataGrid.ContextMenu>
                                 <ContextMenu>
                                     <MenuItem 
                                         Header="Refresh"
-                                        Command="{Binding SelectedWorkItem.RefreshItem}"
-                                        CommandParameter="{Binding SelectedWorkItem}" />
+                                        Command="{Binding SelectedJobSchedule.RefreshItem}"
+                                        CommandParameter="{Binding SelectedJobSchedule}" />
                                     <MenuItem 
                                         Header="Enable"
-                                        Command="{Binding SelectedWorkItem.EnableWorkItem}"
-                                        CommandParameter="{Binding SelectedWorkItem}"/>
+                                        Command="{Binding SelectedJobSchedule.EnableJobSchedule}"
+                                        CommandParameter="{Binding SelectedJobSchedule}"/>
                                     <MenuItem 
                                         Header="Terminate"
-                                        Command="{Binding SelectedWorkItem.TerminateWorkItem}"
-                                        CommandParameter="{Binding SelectedWorkItem}"/>
+                                        Command="{Binding SelectedJobSchedule.TerminateJobSchedule}"
+                                        CommandParameter="{Binding SelectedJobSchedule}"/>
                                     <MenuItem 
                                         Header="Disable"
-                                        Command="{Binding SelectedWorkItem.DisableWorkItem}"
-                                        CommandParameter="{Binding SelectedWorkItem}"/>
+                                        Command="{Binding SelectedJobSchedule.DisableJobSchedule}"
+                                        CommandParameter="{Binding SelectedJobSchedule}"/>
                                     <MenuItem 
                                         Header="Delete"
-                                        Command="{Binding SelectedWorkItem.Delete}"
-                                        CommandParameter="{Binding SelectedWorkItem}"/>
+                                        Command="{Binding SelectedJobSchedule.Delete}"
+                                        CommandParameter="{Binding SelectedJobSchedule}"/>
                                 </ContextMenu>
                             </DataGrid.ContextMenu>
                             <DataGrid.Columns>
-                                <DataGridTemplateColumn Width="*">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Expander
-                                                Background="White"
-                                                MaxHeight="320"
-                                                VerticalContentAlignment="Stretch">
-                                                <Expander.Header>
-                                                    <Grid
-                                                        VerticalAlignment="Stretch"
-                                                        HorizontalAlignment="Stretch">
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="24"/>
-                                                            <ColumnDefinition Width="24"/>
-                                                            <ColumnDefinition Width="24"/>
-                                                            <ColumnDefinition Width="*"/>
-                                                        </Grid.ColumnDefinitions>
+                                <DataGridTextColumn Header="Id" Binding="{Binding Id}"/>
+                                <DataGridTextColumn Header="Display Name" Binding="{Binding DisplayName}"/>
+                                <DataGridTextColumn Header="State" Binding="{Binding State}">
+                                    <DataGridTextColumn.CellStyle>
+                                        <Style TargetType="DataGridCell">
+                                            <Setter Property="Foreground" Value="{Binding State, Converter={StaticResource JobScheduleStateColorConverter}}"/>
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                            <Setter Property="Background" Value="White"/>
+                                        </Style>
+                                    </DataGridTextColumn.CellStyle>
+                                </DataGridTextColumn>
 
-                                                        <Button
-                                                            Margin="2"
-                                                            Grid.Column="0"
-                                                            Command="{Binding RefreshItem}"
-                                                            CommandParameter="{Binding}"
-                                                            ToolTip="Refresh Work Item">
-                                                        <Button.Content>
-                                                            <Image Source="../Assets/Icons/refresh_24.png"></Image>
-                                                        </Button.Content> 
-                                                        </Button>
+                                <DataGridTextColumn Header="" Width="*" CanUserReorder="False" CanUserSort="False"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
 
-                                                        <Button
-                                                            Grid.Column="1"
-                                                            Margin="2"
-                                                            Command="{Binding DownloadNMoreJobs}"
-                                                            ToolTip="Download the next 10 jobs">
-                                                            <Button.Content>
-                                                                <Image Source="../Assets/Icons/add_incremental_24.png"></Image>
-                                                            </Button.Content>
-                                                        </Button>
-                                                        <Button
-                                                            Grid.Column="2"
-                                                            Margin="2"
-                                                            Command="{Binding DownloadAllJobs}"
-                                                            ToolTip="Download all jobs">
-                                                            <Button.Content>
-                                                                <Image Source="../Assets/Icons/add_all_24.png"></Image>
-                                                            </Button.Content>
-                                                        </Button>
-                                                        <TextBlock
-                                                            Grid.Column="4"
-                                                            Margin="4,0"
-                                                            VerticalAlignment="Center"
-                                                            Text="{Binding Name}"/>
-                                                    </Grid>
-                                                </Expander.Header>
-                                                <Grid>
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="*"/>
-                                                    </Grid.RowDefinitions>
-
-                                                    <datagrid:DataGridControl
-                                                        Grid.Row="1"
-                                                        ItemsSource="{Binding Jobs}"
-                                                        SelectedItem="{Binding SelectedJob}"
-                                                        SelectionChanged="Selector_OnSelectionChanged"
-                                                        BorderThickness="0"
-                                                        SelectionMode="Single"
-                                                        NavigationBehavior="RowOnly"
-                                                        AutoCreateColumns="False"
-                                                        ItemScrollingBehavior="Immediate">
-                                                        <datagrid:DataGridControl.Columns>
-                                                            <datagrid:Column FieldName="Name" Title="Job"/>
-                                                            <datagrid:Column FieldName="State" Title="State"/>
-                                                            <datagrid:Column FieldName="CreationTime" Title="Create Time" Width="*"/>
-                                                        </datagrid:DataGridControl.Columns>
-                                                        <datagrid:DataGridControl.ContextMenu>
-                                                            <ContextMenu>
-                                                                <MenuItem 
-                                                                    Header="Refresh Job"
-                                                                    Command="{Binding RefreshItem}"
-                                                                    CommandParameter="{Binding SelectedJob}" />
-                                                                <MenuItem 
-                                                                    Header="Enable Job"
-                                                                    Command="{Binding EnableJob}"
-                                                                    CommandParameter="{Binding SelectedJob}"/>
-                                                                <MenuItem Header="Disable Job">
-                                                                    <MenuItem 
-                                                                        Header="Requeue Tasks"
-                                                                        Command="{Binding DisableJob}"
-                                                                        CommandParameter="{x:Static common:DisableJobOption.Requeue}"/>
-                                                                    <MenuItem
-                                                                        Header="Terminate Tasks"
-                                                                        Command="{Binding DisableJob}"
-                                                                        CommandParameter="{x:Static common:DisableJobOption.Terminate}"/>
-                                                                    <MenuItem Header="Wait for Tasks"
-                                                                        Command="{Binding DisableJob}"
-                                                                        CommandParameter="{x:Static common:DisableJobOption.Wait}"/>
-                                                                </MenuItem>
-                                                                <MenuItem 
-                                                                    Header="Delete Job"
-                                                                    Command="{Binding Delete}"
-                                                                    CommandParameter="{Binding SelectedJob}"/>
-                                                                <MenuItem
-                                                                    Header="Terminate Job"
-                                                                    Command="{Binding TerminateJob}"
-                                                                    CommandParameter="{Binding SelectedJob}"/>
-                                                                <MenuItem
-                                                                    Header="Add Task"
-                                                                    Command="{Binding AddTask}"
-                                                                    CommandParameter="{Binding SelectedJob}"/>
-                                                            </ContextMenu>
-                                                        </datagrid:DataGridControl.ContextMenu>
-                                                        <datagrid:DataGridControl.View>
-                                                            <datagrid:TableView UseDefaultHeadersFooters="False">
-                                                                <datagrid:TableView.Theme>
-                                                                    <datagrid:ZuneNormalColorTheme/>
-                                                                </datagrid:TableView.Theme>
-                                                            </datagrid:TableView>
-                                                        </datagrid:DataGridControl.View>
-                                                    </datagrid:DataGridControl>
-                                                    <toolkit:BusyIndicator 
-                                                        IsBusy="{Binding IsBusy}"/>
-                                                </Grid>
-                                            </Expander>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
+                </TabItem>
+                <TabItem Header="{Binding JobTabTitle}" IsSelected="{Binding JobTabIsSelected}">
+                    <Grid>
+                        <DataGrid
+                            ItemsSource="{Binding Jobs}"
+                            SelectedItem="{Binding SelectedJob}">
+                            <DataGrid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem 
+                                        Header="Refresh"
+                                        Command="{Binding SelectedJob.RefreshItem}"
+                                        CommandParameter="{Binding SelectedJob}" />
+                                    <MenuItem 
+                                        Header="Enable"
+                                        Command="{Binding SelectedJob.EnableJob}"
+                                        CommandParameter="{Binding SelectedJob}"/>
+                                    <MenuItem 
+                                        Header="Terminate"
+                                        Command="{Binding SelectedJob.TerminateJob}"
+                                        CommandParameter="{Binding SelectedJob}"/>
+                                    <MenuItem Header="Disable">
+                                        <MenuItem 
+                                            Header="Requeue Tasks"
+                                            Command="{Binding SelectedJob.DisableJob}"
+                                            CommandParameter="{x:Static common:DisableJobOption.Requeue}"/>
+                                        <MenuItem
+                                            Header="Terminate Tasks"
+                                            Command="{Binding SelectedJob.DisableJob}"
+                                            CommandParameter="{x:Static common:DisableJobOption.Terminate}"/>
+                                        <MenuItem 
+                                            Header="Wait for Tasks"
+                                            Command="{Binding SelectedJob.DisableJob}"
+                                            CommandParameter="{x:Static common:DisableJobOption.Wait}"/>
+                                    </MenuItem>
+                                    <MenuItem 
+                                        Header="Delete"
+                                        Command="{Binding SelectedJob.Delete}"
+                                        CommandParameter="{Binding SelectedJob}"/>
+                                    <MenuItem 
+                                        Header="Add Task"
+                                        Command="{Binding SelectedJob.AddTask}"
+                                        CommandParameter="{Binding SelectedJob}"/>
+                                </ContextMenu>
+                            </DataGrid.ContextMenu>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Id" Binding="{Binding Id}"/>
+                                <DataGridTextColumn Header="Display Name" Binding="{Binding DisplayName}"/>
+                                <DataGridTextColumn Header="State" Binding="{Binding State}">
+                                    <DataGridTextColumn.CellStyle>
+                                        <Style TargetType="DataGridCell">
+                                            <Setter Property="Foreground" Value="{Binding State, Converter={StaticResource JobStateColorConverter}}"/>
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                            <Setter Property="Background" Value="White"/>
+                                        </Style>
+                                    </DataGridTextColumn.CellStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="" Width="*" CanUserReorder="False" CanUserSort="False"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Grid>
@@ -369,19 +304,19 @@
                             </ContextMenu>
                         </DataGrid.ContextMenu>
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Name" Binding="{Binding Name}"/>
+                            <DataGridTextColumn Header="Id" Binding="{Binding Id}"/>
                             <DataGridTextColumn Header="State" Binding="{Binding State}"/>
                             <DataGridTextColumn Header="Current Dedicated" Binding="{Binding CurrentDedicated}"/>
                             <DataGridTextColumn Header="Allocation State" Binding="{Binding AllocationState}">
-                            <DataGridTextColumn.CellStyle>
-                                <Style TargetType="DataGridCell">
-                                    <Setter Property="Foreground" Value="{Binding AllocationState, Converter={StaticResource PASCC}}"/>
-                                    <Setter Property="FontWeight" Value="Bold"/>
-                                    <Setter Property="Background" Value="White"/>
-                                </Style>
-                            </DataGridTextColumn.CellStyle>
+                                <DataGridTextColumn.CellStyle>
+                                    <Style TargetType="DataGridCell">
+                                        <Setter Property="Foreground" Value="{Binding AllocationState, Converter={StaticResource PoolAllocationStateColorConverter}}"/>
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                        <Setter Property="Background" Value="White"/>
+                                    </Style>
+                                </DataGridTextColumn.CellStyle>
                             </DataGridTextColumn>
-                            <DataGridTextColumn Header="VM Size" Binding="{Binding VMSize}"/>
+                            <DataGridTextColumn Header="VM Size" Binding="{Binding VirtualMachineSize}"/>
                             
                             <DataGridTextColumn Header="" Width="*" 
                                                 CanUserReorder="False" CanUserSort="False"/>
@@ -391,55 +326,61 @@
             </TabControl>
             <toolkit:BusyIndicator IsBusy="{Binding LeftSpinnerIsVisible}"/>
             <GridSplitter Width="6" BorderBrush="DimGray" BorderThickness="1,0" VerticalAlignment="Stretch"/>
-            <Grid Column="1" Visibility="{Binding PoolTabIsSelected, Converter={StaticResource IBVC}}">
+            <Grid Column="1" Visibility="{Binding JobScheduleTabIsSelected, Converter={StaticResource BVC}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TabControl>
+                    <TabItem Header="Job Schedule Details" IsSelected="{Binding JobScheduleDetailTabIsSelected}">
+                        <ListView ItemsSource="{Binding Path=SelectedJobSchedule.PropertyValuePairs}"
+                                  ItemTemplate="{StaticResource PropertyList}"/>
+
+                    </TabItem>
+                </TabControl>
+                <toolkit:BusyIndicator IsBusy="{Binding UpperRightSpinnerIsVisible}"/>
+            </Grid>
+            <Grid Column="1" Visibility="{Binding JobTabIsSelected, Converter={StaticResource BVC}}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="3*"/>
                     <RowDefinition Height="2*"/>
                 </Grid.RowDefinitions>
                 <TabControl>
-                    <TabItem Header="Work Item Details" IsSelected="{Binding WorkItemDetailTabIsSelected}">
-                        <ListView ItemsSource="{Binding Path=SelectedWorkItem.PropertyValuePairs}"
-                                  ItemTemplate="{StaticResource PropertyList}"/>
-
-                    </TabItem>
-
                     <TabItem Header="Job Details">
-                        <ListView ItemsSource="{Binding Path=SelectedWorkItem.SelectedJob.PropertyValuePairs}"
+                        <ListView ItemsSource="{Binding Path=SelectedJob.PropertyValuePairs}"
                                   ItemTemplate="{StaticResource PropertyList}"/>
                     </TabItem>
-                    <TabItem
-                        Visibility="{Binding Path=SelectedWorkItem.TaskTabVisible, Converter={StaticResource BVC}, FallbackValue=Collapsed}">
+                    <TabItem>
                         <TabItem.Header>
-                            <TextBlock Text="{Binding Path=SelectedWorkItem.TasksTabTitle}"></TextBlock>
+                            <TextBlock Text="{Binding Path=TasksTabTitle}"></TextBlock>
                         </TabItem.Header>
-                        <DataGrid ItemsSource="{Binding Path=SelectedWorkItem.SelectedJob.TaskCollection}"
-                                  SelectedItem="{Binding Path=SelectedWorkItem.SelectedJob.SelectedTask}">
+                        <DataGrid ItemsSource="{Binding Path=SelectedJob.TaskCollection}"
+                                  SelectedItem="{Binding Path=SelectedJob.SelectedTask}">
                             <DataGrid.InputBindings>
-                                <KeyBinding Command="{Binding RefreshItem}" CommandParameter="{Binding SelectedWorkItem.SelectedJob}" Key="F5" />
+                                <KeyBinding Command="{Binding RefreshItem}" CommandParameter="{Binding SelectedJob}" Key="F5" />
                             </DataGrid.InputBindings>
                             <DataGrid.ContextMenu>
                                 <ContextMenu>
                                     <MenuItem Header="Refresh"
                                               Command="{Binding RefreshItem}"
-                                              CommandParameter="{Binding Path=SelectedWorkItem.SelectedJob.SelectedTask}"/>
+                                              CommandParameter="{Binding Path=SelectedJob.SelectedTask}"/>
                                     <MenuItem Header="Refresh All Tasks"
                                               Command="{Binding RefreshTasks}"
-                                              CommandParameter="{Binding Path=SelectedWorkItem.SelectedJob.SelectedTask.ParentJob}"/>
+                                              CommandParameter="{Binding Path=SelectedJob.SelectedTask.ParentJob}"/>
                                     <MenuItem Header="Delete"
                                               Command="{Binding Delete}"
-                                              CommandParameter="{Binding Path=SelectedWorkItem.SelectedJob.SelectedTask}"/>
+                                              CommandParameter="{Binding Path=SelectedJob.SelectedTask}"/>
                                     <MenuItem Header="Terminate"
                                               Command="{Binding Terminate}"
-                                              CommandParameter="{Binding Path=SelectedWorkItem.SelectedJob.SelectedTask}"/>
+                                              CommandParameter="{Binding Path=SelectedJob.SelectedTask}"/>
                                 </ContextMenu>
                             </DataGrid.ContextMenu>
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Name" Binding="{Binding Name}" />
+                                <DataGridTextColumn Header="Id" Binding="{Binding Id}" />
                                 <DataGridTextColumn Header="Created" Binding="{Binding CreationTime}"/>
                                 <DataGridTextColumn Header="Status" Binding="{Binding State}">
                                     <DataGridTextColumn.CellStyle>
                                         <Style TargetType="DataGridCell">
-                                            <Setter Property="Foreground" Value="{Binding State, Converter={StaticResource TSCC}}"/>
+                                            <Setter Property="Foreground" Value="{Binding State, Converter={StaticResource TaskStatusColorConverter}}"/>
                                             <Setter Property="FontWeight" Value="Bold"/>
                                             <Setter Property="Background" Value="Transparent"/>
                                         </Style>
@@ -450,13 +391,13 @@
                             </DataGrid.Columns>
                         </DataGrid>
                     </TabItem>
-                    
+
                 </TabControl>
                 <toolkit:BusyIndicator IsBusy="{Binding UpperRightSpinnerIsVisible}"/>
-                <Grid Grid.Row="1" Visibility="{Binding Path=SelectedWorkItem.SelectedJob.SelectedTask, Converter={StaticResource NVC}}">
+                <Grid Grid.Row="1" Visibility="{Binding Path=SelectedJob.SelectedTask, Converter={StaticResource NVC}}">
                     <TabControl >
                         <TabControl.InputBindings>
-                            <KeyBinding Command="{Binding RefreshItem}" CommandParameter="{Binding Path=SelectedWorkItem.SelectedJob.SelectedTask}" Key="F5" />
+                            <KeyBinding Command="{Binding RefreshItem}" CommandParameter="{Binding Path=SelectedJob.SelectedTask}" Key="F5" />
                         </TabControl.InputBindings>
                         <TabControl.Resources>
                             <Style TargetType="ListView">
@@ -475,12 +416,12 @@
                             </Style>
                         </TabControl.Resources>
                         <TabItem Header="Task Details">
-                            <ListView ItemsSource="{Binding Path=SelectedWorkItem.SelectedJob.SelectedTask.PropertyValuePairs}"
+                            <ListView ItemsSource="{Binding Path=SelectedJob.SelectedTask.PropertyValuePairs}"
                                       ItemTemplate="{StaticResource PropertyList}">
                             </ListView>
                         </TabItem>
                         <TabItem Header="Resources">
-                            <DataGrid ItemsSource="{Binding Path=SelectedWorkItem.SelectedJob.SelectedTask.ResourceFiles}">
+                            <DataGrid ItemsSource="{Binding Path=SelectedJob.SelectedTask.ResourceFiles}">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="File Path" Binding="{Binding FilePath}"/>
                                     <DataGridTextColumn Header="Blob Source" Binding="{Binding BlobSource}"/>
@@ -489,9 +430,9 @@
                         </TabItem>
                         <TabItem Header="Outputs">
                             <Grid>
-                                <DataGrid ItemsSource="{Binding Path=SelectedWorkItem.SelectedJob.SelectedTask.OutputFiles}"
-                                          SelectedItem="{Binding Path=SelectedWorkItem.SelectedJob.SelectedTask.SelectedTaskFile}"
-                                          Visibility="{Binding Path=SelectedWorkItem.SelectedJob.SelectedTask.HasOutputFiles, Converter={StaticResource BVC}}">
+                                <DataGrid ItemsSource="{Binding Path=SelectedJob.SelectedTask.OutputFiles}"
+                                          SelectedItem="{Binding Path=SelectedJob.SelectedTask.SelectedTaskFile}"
+                                          Visibility="{Binding Path=SelectedJob.SelectedTask.HasOutputFiles, Converter={StaticResource BVC}}">
                                     <DataGrid.ContextMenu>
                                         <ContextMenu>
                                             <MenuItem Header="Open File"
@@ -499,7 +440,7 @@
                                             <MenuItem Header="Download File"
                                                 Command="{Binding DownloadTaskFile}"/>
                                         </ContextMenu>
-                                    </DataGrid.ContextMenu>                                    
+                                    </DataGrid.ContextMenu>
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Name" Binding="{Binding Name}"/>
                                         <DataGridTextColumn Header="Content Size" Binding="{Binding Properties.ContentLength}"/>
@@ -509,13 +450,13 @@
                                     </DataGrid.Columns>
                                 </DataGrid>
                                 <TextBlock Text="No outputs available. Try refreshing the Task." Margin="0,10,0,0"
-                                           Visibility="{Binding Path=SelectedWorkItem.SelectedJob.SelectedTask.HasOutputFiles, Converter={StaticResource IBVC}}"/>
+                                           Visibility="{Binding Path=SelectedJob.SelectedTask.HasOutputFiles, Converter={StaticResource IBVC}}"/>
                                 <toolkit:BusyIndicator IsBusy="{Binding LowerRightSpinnerIsVisible}"/>
                             </Grid>
                         </TabItem>
                         <TabItem Header="Environment">
                             <Grid>
-                                <DataGrid ItemsSource="{Binding Path=SelectedWorkItem.SelectedJob.SelectedTask.EnvironmentSettings}">
+                                <DataGrid ItemsSource="{Binding Path=SelectedJob.SelectedTask.EnvironmentSettings}">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Name" Binding="{Binding Name}"/>
                                         <DataGridTextColumn Header="Value" Binding="{Binding Value}"/>
@@ -527,7 +468,7 @@
                         <TabItem Header="Stats">
                             <Grid>
                                 <ListView
-                                    ItemsSource="{Binding Path=SelectedWorkItem.SelectedJob.SelectedTask.Statistics}" 
+                                    ItemsSource="{Binding Path=SelectedJob.SelectedTask.Statistics}" 
                                     ItemTemplate="{StaticResource PropertyList}"/>
                                 <toolkit:BusyIndicator IsBusy="{Binding LowerRightSpinnerIsVisible}"/>
                             </Grid>
@@ -547,48 +488,48 @@
                                   ItemTemplate="{StaticResource PropertyList}">
                         </ListView>
                     </TabItem>
-                    <TabItem Header="{Binding VMsTabTitle}" IsSelected="True">
-                        <DataGrid ItemsSource="{Binding SelectedPool.TvmCollection}"
-                                  SelectedItem="{Binding SelectedTVM}">
+                    <TabItem Header="{Binding ComputeNodesTabTitle}" IsSelected="True">
+                        <DataGrid ItemsSource="{Binding SelectedPool.ComputeNodeCollection}"
+                                  SelectedItem="{Binding SelectedComputeNode}">
                             <DataGrid.InputBindings>
-                                <KeyBinding Command="{Binding RefreshItem}" CommandParameter="{Binding SelectedTVM.ParentPool}" Key="F5" />
+                                <KeyBinding Command="{Binding RefreshItem}" CommandParameter="{Binding SelectedComputeNode.ParentPool}" Key="F5" />
                             </DataGrid.InputBindings>
                             <DataGrid.ContextMenu>
                                 <ContextMenu>
                                     <MenuItem Header="Refresh"
                                         Command="{Binding RefreshItem}"
-                                        CommandParameter="{Binding SelectedTVM}"/>
-                                    <MenuItem Header="Refresh All VMs"
+                                        CommandParameter="{Binding SelectedComputeNode}"/>
+                                    <MenuItem Header="Refresh All Compute Nodes"
                                         Command="{Binding RefreshItem}"
-                                        CommandParameter="{Binding SelectedTVM.ParentPool}"/>
+                                        CommandParameter="{Binding SelectedComputeNode.ParentPool}"/>
                                     <MenuItem Header="Download RDP File"
                                         Command="{Binding DownloadRDP}"
-                                        CommandParameter="{Binding SelectedTVM}"/>
+                                        CommandParameter="{Binding SelectedComputeNode}"/>
                                     <MenuItem Header="Open RDP File"
                                         Command="{Binding OpenRDP}"
-                                        CommandParameter="{Binding SelectedTVM}"/>
+                                        CommandParameter="{Binding SelectedComputeNode}"/>
                                     <MenuItem Header="Reboot"
-                                        Command="{Binding RebootTVM}"
-                                        CommandParameter="{Binding SelectedTVM}"/>
+                                        Command="{Binding RebootComputeNode}"
+                                        CommandParameter="{Binding SelectedComputeNode}"/>
                                     <MenuItem Header="Reimage"
-                                        Command="{Binding ReimageTVM}"
-                                        CommandParameter="{Binding SelectedTVM}"/>
+                                        Command="{Binding ReimageComputeNode}"
+                                        CommandParameter="{Binding SelectedComputeNode}"/>
                                     <MenuItem Header="Add User"
-                                        Command="{Binding AddVMUser}"
-                                        CommandParameter="{Binding SelectedTVM}"/>
+                                        Command="{Binding AddComputeNodeUser}"
+                                        CommandParameter="{Binding SelectedComputeNode}"/>
                                     <MenuItem Header="Edit User" IsEnabled="False"
-                                        Command="{Binding EditUserOnTVM}"
-                                        CommandParameter="{Binding SelectedTVM}"/>
+                                        Command="{Binding EditUserOnComputeNode}"
+                                        CommandParameter="{Binding SelectedComputeNode}"/>
                                     <MenuItem Header="Delete User" IsEnabled="False"
-                                        Command="{Binding DeleteUserFromTVM}"
-                                        CommandParameter="{Binding SelectedTVM}"/>
+                                        Command="{Binding DeleteUserFromComputeNode}"
+                                        CommandParameter="{Binding SelectedComputeNode}"/>
                                 </ContextMenu>
                             </DataGrid.ContextMenu>
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Name" Binding="{Binding Name}"/>
-                                <DataGridTextColumn Header="VM Allocation Time" Binding="{Binding CreationTime}"/>
+                                <DataGridTextColumn Header="Id" Binding="{Binding Id}"/>
+                                <DataGridTextColumn Header="Compute Node Allocation Time" Binding="{Binding CreationTime}"/>
                                 <DataGridTextColumn Header="Status" Binding="{Binding State}"/>
-                                <DataGridTextColumn Header="Pool" Binding="{Binding ParentPool.Name}"/>
+                                <DataGridTextColumn Header="Pool" Binding="{Binding ParentPool.Id}"/>
                                 <DataGridTextColumn Header="" Width="*" 
                                                 CanUserReorder="False" CanUserSort="False"/>
                             </DataGrid.Columns>
@@ -603,7 +544,7 @@
                 <toolkit:BusyIndicator IsBusy="{Binding UpperRightSpinnerIsVisible}"/>
                 <TabControl Grid.Row="2">
                     <TabControl.InputBindings>
-                        <KeyBinding Command="{Binding RefreshItem}" CommandParameter="{Binding SelectedTVM}" Key="F5" />
+                        <KeyBinding Command="{Binding RefreshItem}" CommandParameter="{Binding SelectedComputeNode}" Key="F5" />
                     </TabControl.InputBindings>
                     <TabControl.Resources>
                         <Style TargetType="ListView">
@@ -622,60 +563,60 @@
                         </Style>
                     </TabControl.Resources>
                     <TabItem Header="Basic">
-                        <ListView ItemsSource="{Binding SelectedTVM.PropertyValuePairs}"
+                        <ListView ItemsSource="{Binding SelectedComputeNode.PropertyValuePairs}"
                                       ItemTemplate="{StaticResource PropertyList}"/>
                     </TabItem>
                     <TabItem Header="Start Task Info">
                         <Grid>
-                            <Grid Visibility="{Binding SelectedTVM.HasStartTaskInfo, Converter={StaticResource BVC}}">
+                            <Grid Visibility="{Binding SelectedComputeNode.HasStartTaskInfo, Converter={StaticResource BVC}}">
                                 <DataGrid 
-                                        ItemsSource="{Binding SelectedTVM.StartTaskInfo}">
+                                        ItemsSource="{Binding SelectedComputeNode.StartTaskInfo}">
                                     <DataGrid.Columns>
-                                        <DataGridTextColumn Header="State" Binding="{Binding SelectedTVM.StartTaskInfo.State}"/>
-                                        <DataGridTextColumn Header="Retry Count" Binding="{Binding SelectedTVM.StartTaskInfo.RetryCount}"/>
-                                        <DataGridTextColumn Header="Exit Code" Binding="{Binding SelectedTVM.StartTaskInfo.ExitCode}"/>
-                                        <DataGridTextColumn Header="End Time" Binding="{Binding SelectedTVM.StartTaskInfo.EndTime}"/>
+                                        <DataGridTextColumn Header="State" Binding="{Binding SelectedCompute.StartTaskInfo.State}"/>
+                                        <DataGridTextColumn Header="Retry Count" Binding="{Binding SelectedCompute.StartTaskInfo.RetryCount}"/>
+                                        <DataGridTextColumn Header="Exit Code" Binding="{Binding SelectedCompute.StartTaskInfo.ExitCode}"/>
+                                        <DataGridTextColumn Header="End Time" Binding="{Binding SelectedCompute.StartTaskInfo.EndTime}"/>
                                     </DataGrid.Columns>
                                 </DataGrid>
                             </Grid>
                             <TextBlock Text="No Start Task"
-                                           Visibility="{Binding SelectedTVM.HasStartTaskInfo, Converter={StaticResource IBVC}}"
+                                           Visibility="{Binding SelectedComputeNode.HasStartTaskInfo, Converter={StaticResource IBVC}}"
                                            VerticalAlignment="Top"/>
                         </Grid>
                     </TabItem>
                     <TabItem Header="Recent Tasks">
                         <Grid>
                             <DataGrid 
-                                    Visibility="{Binding SelectedTVM.HasRecentTasks, Converter={StaticResource BVC}}"
-                                    ItemsSource="{Binding SelectedTVM.RecentTasks}">
+                                    Visibility="{Binding SelectedComputeNode.HasRecentTasks, Converter={StaticResource BVC}}"
+                                    ItemsSource="{Binding SelectedComputeNode.RecentTasks}">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Job Name" Binding="{Binding JobName}"/>
-                                    <DataGridTextColumn Header="Task Name" Binding="{Binding TaskName}"/>
+                                    <DataGridTextColumn Header="Job Id" Binding="{Binding JobId}"/>
+                                    <DataGridTextColumn Header="Task Id" Binding="{Binding TaskId}"/>
                                     <DataGridTextColumn Header="Task State" Binding="{Binding TaskState}"/>
                                     <DataGridTextColumn Header="Task URL" Binding="{Binding TaskUrl}"/>
-                                    <DataGridTextColumn Header="Work Item Name" Binding="{Binding WorkItemName}"/>
+                                    <DataGridTextColumn Header="Job Schedule Id" Binding="{Binding JobScheduleId}"/>
                                     <DataGridTextColumn Header="Start Time" Binding="{Binding ExecutionInfo.StartTime}"/>
                                     <DataGridTextColumn Header="End Time" Binding="{Binding ExecutionInfo.EndTime}"/>
                                     <DataGridTextColumn Header="Terminate Reason" Binding="{Binding ExecutionInfo.TerminateReason}"/>
                                 </DataGrid.Columns>
                             </DataGrid>
                             <TextBlock Text="No Recent Tasks"
-                                           Visibility="{Binding SelectedTVM.HasRecentTasks, Converter={StaticResource IBVC}}"
+                                           Visibility="{Binding SelectedComputeNode.HasRecentTasks, Converter={StaticResource IBVC}}"
                                            VerticalAlignment="Top"/>
                         </Grid>
                     </TabItem>
                     <TabItem Header="Files">
                         <Grid>
                             <DataGrid 
-                                    Visibility="{Binding SelectedTVM.HasFiles, Converter={StaticResource BVC}}"
-                                    ItemsSource="{Binding SelectedTVM.Files}"
-                                    SelectedItem="{Binding SelectedTvmFile}">
+                                    Visibility="{Binding SelectedComputeNode.HasFiles, Converter={StaticResource BVC}}"
+                                    ItemsSource="{Binding SelectedComputeNode.Files}"
+                                    SelectedItem="{Binding SelectedNodeFile}">
                                 <DataGrid.ContextMenu>
                                     <ContextMenu>
                                         <MenuItem Header="Open File"
-                                                Command="{Binding OpenTvmFile}"/>
+                                                Command="{Binding OpenNodeFile}"/>
                                         <MenuItem Header="Download File"
-                                                Command="{Binding DownloadTvmFile}"/>
+                                                Command="{Binding DownloadNodeFile}"/>
                                     </ContextMenu>
                                 </DataGrid.ContextMenu>
                                 <DataGrid.Columns>
@@ -686,7 +627,7 @@
                                 </DataGrid.Columns>
                             </DataGrid>
                             <TextBlock Text="No Files"
-                                           Visibility="{Binding SelectedTVM.HasFiles, Converter={StaticResource IBVC}}"
+                                           Visibility="{Binding SelectedComputeNode.HasFiles, Converter={StaticResource IBVC}}"
                                            VerticalAlignment="Top"/>
                             <toolkit:BusyIndicator IsBusy="{Binding LowerRightSpinnerIsVisible}"/>
                         </Grid>
