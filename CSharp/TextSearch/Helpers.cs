@@ -1,13 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Microsoft.Azure.Batch.Common;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Auth;
-using Microsoft.WindowsAzure.Storage.Blob;
-
-namespace Microsoft.Azure.Batch.Samples.TextSearch
+﻿namespace Microsoft.Azure.Batch.Samples.TextSearch
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Threading.Tasks;
+    using Microsoft.Azure.Batch.Common;
+    using Microsoft.WindowsAzure.Storage;
+    using Microsoft.WindowsAzure.Storage.Auth;
+    using Microsoft.WindowsAzure.Storage.Blob;
+
     /// <summary>
     /// Class containing helpers for the TextSearch sample.
     /// </summary>
@@ -52,18 +52,18 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
         }
 
         /// <summary>
-        /// Constructs a collection of <see cref="IResourceFile"/> objects based on the files specified.
+        /// Constructs a collection of <see cref="ResourceFile"/> objects based on the files specified.
         /// </summary>
-        /// <param name="containerSas">The container sas which refers to the Azure Storage container which contains the resource file blobs.</param>
-        /// <param name="dependencies">The files to construct the <see cref="IResourceFile"/> objects with.</param>
+        /// <param name="containerSas">The container SAS which refers to the Azure Storage container which contains the resource file blobs.</param>
+        /// <param name="dependencies">The files to construct the <see cref="ResourceFile"/> objects with.</param>
         /// <returns>A list of resource file objects.</returns>
-        public static List<IResourceFile> GetResourceFiles(string containerSas, IEnumerable<string> dependencies)
+        public static List<ResourceFile> GetResourceFiles(string containerSas, IEnumerable<string> dependencies)
         {
-            List<IResourceFile> resourceFiles = new List<IResourceFile>();
+            List<ResourceFile> resourceFiles = new List<ResourceFile>();
 
             foreach (string dependency in dependencies)
             {
-                IResourceFile resourceFile = new ResourceFile(ConstructBlobSource(containerSas, dependency), dependency);
+                ResourceFile resourceFile = new ResourceFile(ConstructBlobSource(containerSas, dependency), dependency);
                 resourceFiles.Add(resourceFile);
             }
 
@@ -93,11 +93,11 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
         }
         
         /// <summary>
-        /// Gets the mapper task name corresponding to the specified task number.
+        /// Gets the mapper task id corresponding to the specified task number.
         /// </summary>
         /// <param name="taskNumber">The mapper task number.</param>
-        /// <returns>The mapper task name corresponding to the specified task number.</returns>
-        public static string GetMapperTaskName(int taskNumber)
+        /// <returns>The mapper task id corresponding to the specified task number.</returns>
+        public static string GetMapperTaskId(int taskNumber)
         {
             return string.Format("{0}_{1}", Constants.MapperTaskPrefix, taskNumber);
         }
@@ -113,12 +113,12 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
         }
 
         /// <summary>
-        /// Checks for a tasks success or failure, and optionally dumps the output of the task.  In the case that the task hit a scheduler or execution error,
+        /// Checks for a task's success or failure, and optionally dumps the output of the task.  In the case that the task hit a scheduler or execution error,
         /// dumps that information as well.
         /// </summary>
         /// <param name="boundTask">The task.</param>
         /// <param name="dumpStandardOutOnTaskSuccess">True to log the standard output file of the task even if it succeeded.  False to not log anything if the task succeeded.</param>
-        public static async Task CheckForTaskSuccessAsync(ICloudTask boundTask, bool dumpStandardOutOnTaskSuccess)
+        public static async Task CheckForTaskSuccessAsync(CloudTask boundTask, bool dumpStandardOutOnTaskSuccess)
         {
             if (boundTask.State == TaskState.Completed)
             {
@@ -129,7 +129,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                     if (boundTask.ExecutionInformation.SchedulingError != null)
                     {
                         TaskSchedulingError schedulingError = boundTask.ExecutionInformation.SchedulingError;
-                        Console.WriteLine("Task {0} hit scheduling error.", boundTask.Name);
+                        Console.WriteLine("Task {0} hit scheduling error.", boundTask.Id);
                         Console.WriteLine("SchedulingError Code: {0}", schedulingError.Code);
                         Console.WriteLine("SchedulingError Message: {0}", schedulingError.Message);
                         Console.WriteLine("SchedulingError Category: {0}", schedulingError.Category);
@@ -140,21 +140,20 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                             Console.WriteLine("{0} : {1}", detail.Name, detail.Value);
                         }
 
-                        throw new TextSearchException(string.Format("Task {0} failed with a scheduling error", boundTask.Name));
+                        throw new TextSearchException(string.Format("Task {0} failed with a scheduling error", boundTask.Id));
                     }
                     
                     //Read the content of the output files if the task exited.
                     if (boundTask.ExecutionInformation.ExitCode.HasValue)
                     {
-                        Console.WriteLine("Task {0} exit code: {1}", boundTask.Name, boundTask.ExecutionInformation.ExitCode);
+                        Console.WriteLine("Task {0} exit code: {1}", boundTask.Id, boundTask.ExecutionInformation.ExitCode);
 
                         if (dumpStandardOutOnTaskSuccess && boundTask.ExecutionInformation.ExitCode.Value == 0 || boundTask.ExecutionInformation.ExitCode.Value != 0)
                         {
                             //Dump the standard out file of the task.
-                            ITaskFile taskStandardOut = await boundTask.GetTaskFileAsync(
-                                Batch.Constants.StandardOutFileName);
+                            NodeFile taskStandardOut = await boundTask.GetNodeFileAsync(Batch.Constants.StandardOutFileName);
 
-                            Console.WriteLine("Task {0} StdOut:", boundTask.Name);
+                            Console.WriteLine("Task {0} StdOut:", boundTask.Id);
                             Console.WriteLine("----------------------------------------");
                             string stdOutString = await taskStandardOut.ReadAsStringAsync();
                             Console.WriteLine(stdOutString);
@@ -163,45 +162,22 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                         //Check for nonzero exit code and dump standard error if there was a nonzero exit code.
                         if (boundTask.ExecutionInformation.ExitCode.Value != 0)
                         {
-                            ITaskFile taskErrorFile = await boundTask.GetTaskFileAsync(
-                                Batch.Constants.StandardErrorFileName);
+                            NodeFile taskErrorFile = await boundTask.GetNodeFileAsync(Batch.Constants.StandardErrorFileName);
 
-                            Console.WriteLine("Task {0} StdErr:", boundTask.Name);
+                            Console.WriteLine("Task {0} StdErr:", boundTask.Id);
                             Console.WriteLine("----------------------------------------");
                             string stdErrString = await taskErrorFile.ReadAsStringAsync();
                             Console.WriteLine(stdErrString);
 
-                            throw new TextSearchException(string.Format("Task {0} failed with a nonzero exit code", boundTask.Name));
+                            throw new TextSearchException(string.Format("Task {0} failed with a nonzero exit code", boundTask.Id));
                         }
                     }
                 }
                 else
                 {
-                    throw new TextSearchException(string.Format("Task {0} is not completed yet.  Current state: {1}", boundTask.Name, boundTask.State));
+                    throw new TextSearchException(string.Format("Task {0} is not completed yet.  Current state: {1}", boundTask.Id, boundTask.State));
                 }
             }
-        }
-
-        /// <summary>
-        /// Wait for an active job to be created.
-        /// </summary>
-        /// <param name="boundWorkItem">The work item to monitor for job creation.</param>
-        /// <returns>The name of the job.</returns>
-        public static async Task<string> WaitForActiveJobAsync(ICloudWorkItem boundWorkItem)
-        {
-            //Wait for job to be created
-            while (boundWorkItem.ExecutionInformation == null ||
-                   boundWorkItem.ExecutionInformation.RecentJob == null)
-            {
-                await Task.Delay(TimeSpan.FromSeconds(5));
-                Console.WriteLine("Getting bound work item {0}", boundWorkItem.Name);
-                await boundWorkItem.RefreshAsync();
-            }
-            
-            //Get the job which is running - once this job is complete our work is done
-            string boundJobName = boundWorkItem.ExecutionInformation.RecentJob.Name;
-
-            return boundJobName;
         }
     }
 

@@ -1,7 +1,7 @@
-﻿using System.Text;
-
-namespace Microsoft.Azure.Batch.Samples.TextSearch.Properties
+﻿namespace Microsoft.Azure.Batch.Samples.TextSearch.Properties
 {
+    using System.Text;
+
     internal partial class Settings
     {
         public override string ToString()
@@ -18,7 +18,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch.Properties
             
             stringBuilder.AppendFormat("{0} = {1}", "NumberOfMapperTasks", this.NumberOfMapperTasks).AppendLine();
             stringBuilder.AppendFormat("{0} = {1}", "ShouldUploadResources", this.ShouldUploadResources).AppendLine();
-            stringBuilder.AppendFormat("{0} = {1}", "ShouldDeleteWorkItem", this.ShouldDeleteWorkItem).AppendLine();
+            stringBuilder.AppendFormat("{0} = {1}", "ShouldDeleteJob", this.ShouldDeleteJob).AppendLine();
             stringBuilder.AppendFormat("{0} = {1}", "RegularExpression", this.RegularExpression).AppendLine();
             
             return stringBuilder.ToString();
