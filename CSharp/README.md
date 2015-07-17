@@ -27,9 +27,6 @@ The HelloWorld sample is an introduction to the framework required to communicat
 ###[ImgProc](./ImgProc)
 ImgProc demonstrates how to use a single binary that acts both as a client submitting work to the service and as the executable that runs as a task. This particular sample utilizes ImageMagick to convert image files into their associated thumbprint images.
 
-###[JMScheduling](./JMScheduling)
-This sample shows how to use a Job Manager task. A JM task is the first task to run in a job and is used to dynamically shape the nature of the work performed during the execution of the job. For example, the JM might choose to submit a different sets of tasks based on the output of tasks that preceded them, etc. This solution has two projects: JMScheduling which calls the Batch service to create the objects needed to start a job and JobManager which is the actual executable that is run on a compute node in the service. It also shows how to upload the Job Manager binaries to a storage account using Azure Storage APIs.
-
 ###[TextSearch](./TextSearch)
 This map-reduce style sample uses Azure Batch to perform parallel text processing on an input file by splitting it up into multiple sub-files and performing regular expression matching on each sub-file. The results are then rolled-up into a final report. This sample also uses a Job Manager to orchestrate the mapper and reducer tasks. It combines all 4 functions into one binary: the submission of the workitem, the job manager, and the mapper and reducer code.
 
