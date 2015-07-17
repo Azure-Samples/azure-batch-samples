@@ -7,8 +7,8 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
     /// input file by splitting it up into multiple sub-files and performing regular expression
     /// matching on each sub-file. The results are then rolled-up into a final report.
     /// 
-    /// WorkItemSubmitter - Uploads the files required for the text processing to Azure Storage and submits a 
-    /// workitem that utilizes the autopool functionality. Also provides a job manager task.  
+    /// JobSubmitter - Uploads the files required for the text processing to Azure Storage and submits a 
+    /// job to the Azure Batch service that utilizes the autopool functionality. Also provides a job manager task.  
     /// The job manager task will run on the autopool and drive the work done on the Batch Service.
     /// 
     /// The JobManager task - The job manager task submits mapper and reducer tasks and also monitors the 
@@ -23,7 +23,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
     /// </summary>
     public class Program
     {
-        //The same Exe is shared for the work item submitter, job manager task, mapper task, reducer task
+        //The same Exe is shared for the job submitter, job manager task, mapper task, reducer task
         //Decide which one to start based on the command line parameters.
         public static void Main(string[] args)
         {
@@ -37,7 +37,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
 
                 if (args[0] == "-JobManagerTask")
                 {
-                    JobManagerTask jobManager = new JobManagerTask();
+                    TextSearchJobManagerTask jobManager = new TextSearchJobManagerTask();
                     jobManager.RunAsync().Wait();
                 }
                 else if (args[0] == "-MapperTask")
@@ -58,9 +58,9 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                     ReducerTask reducerTask = new ReducerTask();
                     reducerTask.RunAsync().Wait();
                 }
-                else if (args[0] == "-SubmitWorkItem")
+                else if (args[0] == "-SubmitJob")
                 {
-                    WorkItemSubmitter submitter = new WorkItemSubmitter();
+                    JobSubmitter submitter = new JobSubmitter();
                     submitter.RunAsync().Wait();
                 }
                 else
@@ -82,7 +82,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
         private static void DisplayUsage()
         {
             Console.WriteLine("{0} Usage:", Constants.TextSearchExe);
-            Console.WriteLine("{0} -SubmitWorkItem              - Runs the work item submitter", Constants.TextSearchExe);
+            Console.WriteLine("{0} -SubmitJob                   - Runs the job submitter", Constants.TextSearchExe);
             Console.WriteLine("{0} -JobManagerTask              - Runs the job manager, submits tasks and waits for their completion", Constants.TextSearchExe);
             Console.WriteLine("{0} -MapperTask <blob SAS>       - Runs the mapper task, which downloads a file and performs a search on it", Constants.TextSearchExe);
             Console.WriteLine("{0} -ReducerTask                 - Runs the reducer task which collects the output of all the mapper tasks and combines it", Constants.TextSearchExe);
