@@ -8,25 +8,34 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
     public static class Constants
     {
         public const string TextSearchExe = "TextSearch.exe";
-        public const string TextSearchExeConfiguration = "TextSearch.exe.config";
-        public const string StorageClientDll = "Microsoft.WindowsAzure.Storage.dll";
-        public const string BatchClientDll = "Microsoft.Azure.Batch.dll";
-        public const string EdmDll = "Microsoft.Data.Edm.dll";
-        public const string ODataDll = "Microsoft.Data.OData.dll";
-        public const string SpatialDll = "System.Spatial.dll";
         public const string MapperTaskPrefix = "MapperTask";
-        public const string ReducerTaskName = "ReducerTask";
+        public const string ReducerTaskId = "ReducerTask";
         public const string TextFilePath = "Text.txt";
 
+        /// <summary>
+        /// The list of required files to run the TextSearch executable.  Since TextSearch is run as a job manager which issues Azure
+        /// Batch API calls, it needs all the DLLs of the Batch client library.
+        /// </summary>
         public readonly static IReadOnlyList<string> RequiredExecutableFiles = new List<string>
                                                                 {
                                                                     TextSearchExe,
-                                                                    TextSearchExeConfiguration,
-                                                                    BatchClientDll,
-                                                                    EdmDll,
-                                                                    ODataDll,
-                                                                    SpatialDll,
-                                                                    StorageClientDll
+                                                                    "TextSearch.pdb",
+                                                                    "TextSearch.exe.config",
+                                                                    "Microsoft.WindowsAzure.Storage.dll",
+                                                                    "Microsoft.Azure.Batch.dll",
+                                                                    "Hyak.Common.dll",
+                                                                    "Microsoft.Azure.Common.dll",
+                                                                    "Microsoft.Azure.Common.NetFramework.dll",
+                                                                    "Microsoft.Data.Services.Client.dll",
+                                                                    "Microsoft.Threading.Tasks.dll",
+                                                                    "Microsoft.Threading.Tasks.Extensions.Desktop.dll",
+                                                                    "Microsoft.Threading.Tasks.Extensions.dll",
+                                                                    "Newtonsoft.Json.dll",
+                                                                    "System.Net.Http.Extensions.dll",
+                                                                    "System.Net.Http.Primitives.dll",
+                                                                    "Microsoft.Data.Edm.dll",
+                                                                    "Microsoft.Data.OData.dll",
+                                                                    "System.Spatial.dll",
                                                                 };
     }
 }

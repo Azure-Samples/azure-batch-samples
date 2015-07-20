@@ -1,9 +1,9 @@
-﻿using System.Collections.Generic;
-using System.IO;
-using System.Threading.Tasks;
-
-namespace Microsoft.Azure.Batch.Samples.TextSearch
+﻿namespace Microsoft.Azure.Batch.Samples.TextSearch
 {
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Threading.Tasks;
+
     /// <summary>
     /// Supports splitting a file into smaller subfiles based on line count.
     /// </summary>
