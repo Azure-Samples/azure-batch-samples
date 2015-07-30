@@ -14,6 +14,9 @@ We're in the process of updating the samples to use the just released 2.0 versio
 
 ##Sample Descriptions
 
+###[AccountManagement](./AccountManagement)
+This sample demonstrates how to use the Microsoft.Azure.Management.Batch library to perform basic operations related to Batch accounts.
+
 ###[BatchExplorer](./BatchExplorer)
 Updated to Batch Client 2.0
 
