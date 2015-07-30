@@ -14,7 +14,12 @@ namespace Microsoft.Azure.BatchExplorer.Converters
         //TODO: Switch this and other color converters to be colorblind friendly?
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            AllocationState state = (AllocationState)value;
+            AllocationState state = AllocationState.Unmapped;
+            if (value != null)
+            {
+                state = (AllocationState)value;
+            }
+
             switch (state)
             {
                 case AllocationState.Invalid:

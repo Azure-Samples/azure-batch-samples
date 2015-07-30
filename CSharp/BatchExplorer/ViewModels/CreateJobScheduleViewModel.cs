@@ -457,14 +457,18 @@
             {
                 if (this.IsInputValid())
                 {
-                    string osFamilyString;
-                    if (Common.SupportedOSFamilyDictionary.ContainsKey(this.SelectedOSFamily))
+                    string osFamilyString = null;
+
+                    if (this.UseAutoPool)
                     {
-                        osFamilyString = Common.SupportedOSFamilyDictionary[this.SelectedOSFamily];
-                    }
-                    else
-                    {
-                        osFamilyString = this.SelectedOSFamily;
+                        if (Common.SupportedOSFamilyDictionary.ContainsKey(this.SelectedOSFamily))
+                        {
+                            osFamilyString = Common.SupportedOSFamilyDictionary[this.SelectedOSFamily];
+                        }
+                        else
+                        {
+                            osFamilyString = this.SelectedOSFamily;
+                        }
                     }
 
                     CreateJobScheduleOptions options = new CreateJobScheduleOptions()

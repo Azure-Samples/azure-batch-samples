@@ -33,7 +33,7 @@
         /// The state of the JobSchedule.
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public JobScheduleState State { get { return this.JobSchedule.State; } }
+        public JobScheduleState? State { get { return this.JobSchedule.State; } }
         
         #endregion
 

@@ -98,7 +98,7 @@
                     Id = options.JobManagerOptions.JobManagerId
                 };
 
-                jobManager.TaskConstraints = new TaskConstraints(options.JobManagerOptions.MaxTaskWallClockTime, options.JobManagerOptions.RetentionTime, options.JobManagerOptions.MaxTaskRetryCount);
+                jobManager.Constraints = new TaskConstraints(options.JobManagerOptions.MaxTaskWallClockTime, options.JobManagerOptions.RetentionTime, options.JobManagerOptions.MaxTaskRetryCount);
 
                 unboundJobSchedule.JobSpecification.JobManagerTask = jobManager;
             }
@@ -187,7 +187,7 @@
 
             unboundJob.Id = createJobOptions.JobId;
             unboundJob.Priority = createJobOptions.Priority;
-            unboundJob.JobConstraints = new JobConstraints(createJobOptions.MaxWallClockTime, createJobOptions.MaxRetryCount);
+            unboundJob.Constraints = new JobConstraints(createJobOptions.MaxWallClockTime, createJobOptions.MaxRetryCount);
 
             PoolInformation poolInformation = new PoolInformation();
             if (createJobOptions.AutoPoolOptions.UseAutoPool.HasValue && createJobOptions.AutoPoolOptions.UseAutoPool.Value)
@@ -223,7 +223,7 @@
                     Id = createJobOptions.JobManagerOptions.JobManagerId
                 };
 
-                jobManager.TaskConstraints = new TaskConstraints(
+                jobManager.Constraints = new TaskConstraints(
                     createJobOptions.JobManagerOptions.MaxTaskWallClockTime, 
                     createJobOptions.JobManagerOptions.RetentionTime, 
                     createJobOptions.JobManagerOptions.MaxTaskRetryCount);

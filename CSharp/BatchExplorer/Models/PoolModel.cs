@@ -33,13 +33,13 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// Creation time of the pool
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public DateTime CreationTime { get { return this.Pool.CreationTime; } }
+        public DateTime? CreationTime { get { return this.Pool.CreationTime; } }
 
         /// <summary>
         /// State of the pool
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public PoolState State { get { return this.Pool.State; } }
+        public PoolState? State { get { return this.Pool.State; } }
 
         /// <summary>
         /// The size of ComputeNodes in this pool
@@ -57,7 +57,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// The pool allocation state
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public AllocationState AllocationState { get { return this.Pool.AllocationState; } }
+        public AllocationState? AllocationState { get { return this.Pool.AllocationState; } }
 
         /// <summary>
         /// The ComputeNode collection associated with this pool
