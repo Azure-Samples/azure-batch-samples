@@ -33,13 +33,13 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// The state of this task
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public TaskState State { get { return this.Task.State; } }
+        public TaskState? State { get { return this.Task.State; } }
 
         /// <summary>
         /// The creation time of this task
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public DateTime CreationTime { get { return this.Task.CreationTime; } }
+        public DateTime? CreationTime { get { return this.Task.CreationTime; } }
 
         /// <summary>
         /// The commandline this task runs
@@ -57,19 +57,19 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// The number of times to retry this task
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public int? MaxTaskRetryCount { get { return this.Task.TaskConstraints.MaxTaskRetryCount; } }
+        public int? MaxTaskRetryCount { get { return this.Task.Constraints.MaxTaskRetryCount; } }
 
         /// <summary>
         /// Maximum time a task is allowed to run after it is created
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public TimeSpan? MaxWallClockTime { get { return this.Task.TaskConstraints.MaxWallClockTime; } }
+        public TimeSpan? MaxWallClockTime { get { return this.Task.Constraints.MaxWallClockTime; } }
 
         /// <summary>
         /// Duration of time for which files in the task's working directory are retained, from the time execution completed
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public TimeSpan? RetentionTime { get { return this.Task.TaskConstraints.RetentionTime; } }
+        public TimeSpan? RetentionTime { get { return this.Task.Constraints.RetentionTime; } }
         
         /// <summary>
         /// The environmental settings

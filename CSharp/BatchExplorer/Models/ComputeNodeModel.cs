@@ -32,13 +32,13 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// The state of this ComputeNode
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public ComputeNodeState State { get { return this.ComputeNode.State; } }
+        public ComputeNodeState? State { get { return this.ComputeNode.State; } }
 
         /// <summary>
         /// The allocation time of the ComputeNode.
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public DateTime CreationTime { get { return this.ComputeNode.AllocationTime; } }
+        public DateTime? CreationTime { get { return this.ComputeNode.AllocationTime; } }
 
         /// <summary>
         /// True if there are files available, otherwise false

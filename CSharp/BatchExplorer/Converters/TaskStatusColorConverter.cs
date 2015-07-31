@@ -13,7 +13,12 @@ namespace Microsoft.Azure.BatchExplorer.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            TaskState state = (TaskState)value;
+            TaskState state = TaskState.Unmapped;
+            if (value != null)
+            {
+                state = (TaskState) value;
+            }
+
             switch (state)
             {
                 case TaskState.Invalid:

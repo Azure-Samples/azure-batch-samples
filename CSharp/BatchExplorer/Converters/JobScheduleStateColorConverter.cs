@@ -14,7 +14,12 @@ namespace Microsoft.Azure.BatchExplorer.Converters
         //TODO: Switch this and other color converters to be colorblind friendly?
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            JobScheduleState state = (JobScheduleState)value;
+            JobScheduleState state = JobScheduleState.Unmapped;
+            if (value != null)
+            {
+                state = (JobScheduleState) value;
+            }
+
             switch (state)
             {
                 case JobScheduleState.Active:
@@ -28,6 +33,7 @@ namespace Microsoft.Azure.BatchExplorer.Converters
                 case JobScheduleState.Terminating:
                     return new SolidColorBrush(Colors.DarkRed);
                 case JobScheduleState.Invalid:
+                case JobScheduleState.Unmapped:
                     return new SolidColorBrush(Colors.Gray);
                 default:
                     throw new ArgumentOutOfRangeException();
