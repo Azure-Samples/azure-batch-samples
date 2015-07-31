@@ -71,26 +71,46 @@ namespace AccountManagement
             // Prompts the user for their credentials and retrieves their account/subscription info
             profileClient.AddAccountAndLoadSubscriptions(azureAccount, profile.Environments[EnvironmentName.AzureCloud], null);
 
+            // By default, the first subscription is chosen
+            if (profileClient.Profile.Subscriptions.Count > 1)
+            {
+                SelectSubscription(profileClient.Profile);
+            }
+
             return profileClient.Profile;
+        }
+
+        // Prompt the user for the subscription to use
+        private static void SelectSubscription(AzureProfile profile)
+        {
+            string[] subscriptionNames = profile.Subscriptions.Values.Select(s => s.Name).ToArray();
+            string selectedSubscription = PromptForSelectionFromList(subscriptionNames, "Enter the number of the Azure subscription you would like to use:");
+            profile.DefaultSubscription = profile.Subscriptions.Values.First(s => s.Name.Equals(selectedSubscription));
         }
 
         // Prompt the user for the location where the resource group and Batch account will be created
         private static string PromptUserForLocation()
         {
-            Console.WriteLine("Enter the number of the location where you'd like to create your Batch account:");
-            for (int i = 0; i < Locations.Length; i++)
+            return PromptForSelectionFromList(Locations, "Enter the number of the location where you'd like to create your Batch account:");
+        }
+
+        // Prompts the user to select an item from a list of options
+        private static string PromptForSelectionFromList(string[] choices, string promptMessage)
+        {
+            Console.WriteLine(promptMessage);
+            for (int i = 0; i < choices.Length; i++)
             {
-                Console.WriteLine(" {0} - {1}", i + 1, Locations[i]);
+                Console.WriteLine(" {0} - {1}", i + 1, choices[i]);
             }
-            string locationText = Console.ReadLine();
+            string numberText = Console.ReadLine();
             Console.WriteLine();
-            int locationNumber = 0;
-            if (!int.TryParse(locationText, out locationNumber) || locationNumber < 0 || locationNumber > Locations.Length)
+            int number = 0;
+            if (!int.TryParse(numberText, out number) || number < 0 || number > choices.Length)
             {
                 throw new ArgumentException("Supplied value not a valid number from the list.");
             }
 
-            return Locations[locationNumber - 1];
+            return choices[number - 1];
         }
 
         // Create a resource group to create Batch accounts under.
