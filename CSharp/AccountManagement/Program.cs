@@ -46,6 +46,8 @@ namespace AccountManagement
                     CreateResourceGroupAsync(resourceManagementClient, location).Wait();
 
                     PerformBatchAccountOperationsAsync(profile, location).Wait();
+
+                    DeleteResourceGroupAsync(resourceManagementClient).Wait();
                 }
                 catch (AggregateException aex)
                 {
@@ -56,7 +58,6 @@ namespace AccountManagement
                 }
             }
 
-            Console.WriteLine();
             Console.WriteLine("Press any key to exit");
             Console.ReadKey();
         }
@@ -119,8 +120,20 @@ namespace AccountManagement
             ResourceGroupExistsResult existsResult = await resourceManagementClient.ResourceGroups.CheckExistenceAsync(ResourceGroupName);
             if (!existsResult.Exists)
             {
+                Console.WriteLine("Creating resource group {0}", ResourceGroupName);
                 await resourceManagementClient.ResourceGroups.CreateOrUpdateAsync(ResourceGroupName, new ResourceGroup(location));
+                Console.WriteLine("Resource group created");
+                Console.WriteLine();
             }
+        }
+
+        // Deletes the resource group
+        private static async Task DeleteResourceGroupAsync(IResourceManagementClient resourceManagementClient)
+        {
+            Console.WriteLine("Deleting resource group {0}", ResourceGroupName);
+            await resourceManagementClient.ResourceGroups.DeleteAsync(ResourceGroupName);
+            Console.WriteLine("Resource group deleted");
+            Console.WriteLine();
         }
 
         // Performs various Batch account operations
@@ -184,6 +197,7 @@ namespace AccountManagement
                 Console.WriteLine("Deleting account {0} ...", accountName);
                 await batchManagementClient.Accounts.DeleteAsync(ResourceGroupName, accountName);
                 Console.WriteLine("Account {0} deleted", accountName);
+                Console.WriteLine();
             }
         }
     }
