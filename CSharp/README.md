@@ -11,6 +11,9 @@ The samples require a pre-created pool with deployed compute nodes. If your task
 
 ##Sample Descriptions
 
+###[AccountManagement](./AccountManagement)
+This sample demonstrates how to use the Microsoft.Azure.Management.Batch library to perform basic operations related to Batch accounts.
+
 ###[BatchExplorer](./BatchExplorer)
 Azure Batch Explorer is a GUI application to view and manage Azure Batch Service. View this [blog post](http://blogs.technet.com/b/windowshpc/archive/2015/01/20/azure-batch-explorer-sample-walkthrough.aspx) for more details.
 
