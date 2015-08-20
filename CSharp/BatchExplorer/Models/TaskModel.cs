@@ -91,26 +91,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         {
             get { return (this.OutputFiles != null && this.OutputFiles.Any()); }
         }
-
-        /// <summary>
-        /// Statistics associated with this task
-        /// </summary>
-        [ChangeTracked(ModelRefreshType.Basic)]
-        public SortedDictionary<string, object> Statistics
-        {
-            get
-            {
-                if (this.Task.Statistics == null)
-                {
-                    return null; //abort
-                }
-
-                SortedDictionary<string, object> results = ObjectToSortedDictionary(this.Task.Statistics);
-
-                return results;
-            }
-        }
-
+        
         #endregion
 
         #region Public UI Properties
@@ -130,7 +111,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         #endregion
 
         private CloudTask Task { get; set; }
-        private static readonly List<string> PropertiesToOmitFromDisplay = new List<string> {"Stats", "FilesToStage"};
+        private static readonly List<string> PropertiesToOmitFromDisplay = new List<string> {"FilesToStage"};
         public TaskModel(JobModel parentJob, CloudTask task)
         {
             this.ParentJob = parentJob;
@@ -139,14 +120,10 @@ namespace Microsoft.Azure.BatchExplorer.Models
         }
 
         #region ModelBase implementation
-        public override SortedDictionary<string, object> PropertyValuePairs
+
+        public override List<PropertyModel> PropertyModel
         {
-            get
-            {
-                SortedDictionary<string, object> results = ObjectToSortedDictionary(this.Task, string.Empty, PropertiesToOmitFromDisplay);
-                results.Add(LastUpdateFromServerString, this.LastUpdatedTime);
-                return results;
-            }
+            get { return this.ObjectToPropertyModel(this.Task, PropertiesToOmitFromDisplay); }
         }
 
         public override async System.Threading.Tasks.Task RefreshAsync(ModelRefreshType refreshType, bool showTrackedOperation = true)

@@ -38,12 +38,29 @@
             <Setter Property="TextAlignment" Value="Left"/>
         </Style>
 
-        <DataTemplate x:Key="PropertyList">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="{Binding Key}" Width="300" TextAlignment="Left" FontWeight="Bold" Margin="0,0,10,0"/>
-                <TextBox Text="{Binding Value, Mode=OneWay}" IsReadOnly="True" BorderThickness="0" TextAlignment="Left" Foreground="Gray" Background="Transparent" TextWrapping="Wrap"/>
-            </StackPanel>
-        </DataTemplate>
+        <ResourceDictionary x:Key="TreeViewTemplates">
+            <DataTemplate DataType="{x:Type models:SimplePropertyModel}">
+                <TextBlock>
+                    <Run Text="{Binding PropertyName, Mode=OneWay}" FontWeight="Bold" />
+                    <Run Text=": " />
+                    <Run Text="{Binding PropertyValue, Mode=OneWay}" />
+                </TextBlock>
+            </DataTemplate>
+            <HierarchicalDataTemplate DataType="{x:Type models:CollectionPropertyModel}" ItemsSource="{Binding Items}">
+                <TextBlock>
+                    <Run Text="{Binding PropertyName, Mode=OneWay}" FontWeight="Bold" />
+                </TextBlock>
+            </HierarchicalDataTemplate>
+        </ResourceDictionary>
+        <CommandBinding x:Key="TreeViewCopyCommand" 
+                        Command="ApplicationCommands.Copy" 
+                        CanExecute="TreeViewCopyCommandBinding_CanExecute" 
+                        Executed="TreeViewCopyCommandBinding_Executed"/>
+        
+        <Style x:Key="TreeViewItemStyle" TargetType="{x:Type TreeViewItem}">
+            <Setter Property="IsExpanded" Value="True"/>
+        </Style>
+        
         <Style x:Key="ConnectAccountMenuItemStyle" TargetType="MenuItem">
             <Setter Property="Header" Value="{Binding Alias}"/>
             <Setter Property="Command" Value="{Binding DataContext.ConnectAccount, 
@@ -332,9 +349,14 @@
                 </Grid.RowDefinitions>
                 <TabControl>
                     <TabItem Header="Job Schedule Details" IsSelected="{Binding JobScheduleDetailTabIsSelected}">
-                        <ListView ItemsSource="{Binding Path=SelectedJobSchedule.PropertyValuePairs}"
-                                  ItemTemplate="{StaticResource PropertyList}"/>
-
+                        <TreeView 
+                            ItemsSource="{Binding SelectedJobSchedule.PropertyModel}"
+                            Resources="{StaticResource TreeViewTemplates}"
+                            ItemContainerStyle="{StaticResource TreeViewItemStyle}">
+                            <TreeView.CommandBindings>
+                                <StaticResource ResourceKey="TreeViewCopyCommand"/>
+                            </TreeView.CommandBindings>
+                        </TreeView>
                     </TabItem>
                 </TabControl>
                 <toolkit:BusyIndicator IsBusy="{Binding UpperRightSpinnerIsVisible}"/>
@@ -346,8 +368,14 @@
                 </Grid.RowDefinitions>
                 <TabControl>
                     <TabItem Header="Job Details">
-                        <ListView ItemsSource="{Binding Path=SelectedJob.PropertyValuePairs}"
-                                  ItemTemplate="{StaticResource PropertyList}"/>
+                        <TreeView 
+                            ItemsSource="{Binding SelectedJob.PropertyModel}"
+                            Resources="{StaticResource TreeViewTemplates}"
+                            ItemContainerStyle="{StaticResource TreeViewItemStyle}">
+                            <TreeView.CommandBindings>
+                                <StaticResource ResourceKey="TreeViewCopyCommand"/>
+                            </TreeView.CommandBindings>
+                        </TreeView>
                     </TabItem>
                     <TabItem>
                         <TabItem.Header>
@@ -416,9 +444,14 @@
                             </Style>
                         </TabControl.Resources>
                         <TabItem Header="Task Details">
-                            <ListView ItemsSource="{Binding Path=SelectedJob.SelectedTask.PropertyValuePairs}"
-                                      ItemTemplate="{StaticResource PropertyList}">
-                            </ListView>
+                            <TreeView 
+                                ItemsSource="{Binding SelectedJob.SelectedTask.PropertyModel}"
+                                Resources="{StaticResource TreeViewTemplates}"
+                                ItemContainerStyle="{StaticResource TreeViewItemStyle}">
+                                <TreeView.CommandBindings>
+                                    <StaticResource ResourceKey="TreeViewCopyCommand"/>
+                                </TreeView.CommandBindings>
+                            </TreeView>
                         </TabItem>
                         <TabItem Header="Resources">
                             <DataGrid ItemsSource="{Binding Path=SelectedJob.SelectedTask.ResourceFiles}">
@@ -465,14 +498,6 @@
                                 <toolkit:BusyIndicator IsBusy="{Binding LowerRightSpinnerIsVisible}"/>
                             </Grid>
                         </TabItem>
-                        <TabItem Header="Stats">
-                            <Grid>
-                                <ListView
-                                    ItemsSource="{Binding Path=SelectedJob.SelectedTask.Statistics}" 
-                                    ItemTemplate="{StaticResource PropertyList}"/>
-                                <toolkit:BusyIndicator IsBusy="{Binding LowerRightSpinnerIsVisible}"/>
-                            </Grid>
-                        </TabItem>
                     </TabControl>
                 </Grid>
             </Grid>
@@ -484,9 +509,14 @@
                 </Grid.RowDefinitions>
                 <TabControl>
                     <TabItem Header="Pool Details">
-                        <ListView ItemsSource="{Binding SelectedPool.PropertyValuePairs}"
-                                  ItemTemplate="{StaticResource PropertyList}">
-                        </ListView>
+                        <TreeView 
+                            ItemsSource="{Binding SelectedPool.PropertyModel}"
+                            Resources="{StaticResource TreeViewTemplates}"
+                            ItemContainerStyle="{StaticResource TreeViewItemStyle}">
+                            <TreeView.CommandBindings>
+                                <StaticResource ResourceKey="TreeViewCopyCommand"/>
+                            </TreeView.CommandBindings>
+                        </TreeView>
                     </TabItem>
                     <TabItem Header="{Binding ComputeNodesTabTitle}" IsSelected="True">
                         <DataGrid ItemsSource="{Binding SelectedPool.ComputeNodeCollection}"
@@ -535,10 +565,6 @@
                             </DataGrid.Columns>
                         </DataGrid>
                     </TabItem>
-                    <TabItem Header="Stats">
-                        <ListView ItemsSource="{Binding SelectedPool.Statistics}"
-                                  ItemTemplate="{StaticResource PropertyList}"/>
-                    </TabItem>
                 </TabControl>
                 <GridSplitter Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
                 <toolkit:BusyIndicator IsBusy="{Binding UpperRightSpinnerIsVisible}"/>
@@ -563,8 +589,14 @@
                         </Style>
                     </TabControl.Resources>
                     <TabItem Header="Basic">
-                        <ListView ItemsSource="{Binding SelectedComputeNode.PropertyValuePairs}"
-                                      ItemTemplate="{StaticResource PropertyList}"/>
+                        <TreeView 
+                            ItemsSource="{Binding SelectedComputeNode.PropertyModel}"
+                            Resources="{StaticResource TreeViewTemplates}"
+                            ItemContainerStyle="{StaticResource TreeViewItemStyle}">
+                            <TreeView.CommandBindings>
+                                <StaticResource ResourceKey="TreeViewCopyCommand"/>
+                            </TreeView.CommandBindings>
+                        </TreeView>
                     </TabItem>
                     <TabItem Header="Start Task Info">
                         <Grid>
