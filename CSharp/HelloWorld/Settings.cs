@@ -20,7 +20,6 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
             AddSetting(stringBuilder, "PoolTargetNodeCount", this.PoolTargetNodeCount);
             AddSetting(stringBuilder, "PoolOSFamily", this.PoolOSFamily);
             AddSetting(stringBuilder, "PoolNodeVirtualMachineSize", this.PoolNodeVirtualMachineSize);
-            AddSetting(stringBuilder, "ShouldDeletePool", this.ShouldDeletePool);
             AddSetting(stringBuilder, "ShouldDeleteJob", this.ShouldDeleteJob);
             
             return stringBuilder.ToString();

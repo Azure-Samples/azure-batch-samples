@@ -145,18 +145,6 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool ShouldDeletePool {
-            get {
-                return ((bool)(this["ShouldDeletePool"]));
-            }
-            set {
-                this["ShouldDeletePool"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
         public bool ShouldDeleteJob {
             get {

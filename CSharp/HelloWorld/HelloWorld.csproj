@@ -113,7 +113,6 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
-    <Compile Include="JobSubmitter.cs" />
     <Compile Include="Program.cs" />
   </ItemGroup>
   <ItemGroup>
