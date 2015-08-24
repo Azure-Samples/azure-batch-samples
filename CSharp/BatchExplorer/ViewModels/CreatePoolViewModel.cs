@@ -1,13 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using GalaSoft.MvvmLight.Messaging;
-using Microsoft.Azure.BatchExplorer.Helpers;
-using Microsoft.Azure.BatchExplorer.Messages;
-using Microsoft.Azure.BatchExplorer.Models;
-
-namespace Microsoft.Azure.BatchExplorer.ViewModels
+﻿namespace Microsoft.Azure.BatchExplorer.ViewModels
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Threading.Tasks;
+    using GalaSoft.MvvmLight.Messaging;
+    using Microsoft.Azure.BatchExplorer.Helpers;
+    using Microsoft.Azure.BatchExplorer.Messages;
+    using Microsoft.Azure.BatchExplorer.Models;
+    using Common = Helpers.Common;
+
     public class CreatePoolViewModel : EntityBase
     {
         #region Services
@@ -15,45 +16,45 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         #endregion
 
         #region Public UI Properties
-        private string poolName;
-        public string PoolName
+        private string poolId;
+        public string PoolId
         {
             get
             {
-                return this.poolName;
+                return this.poolId;
             }
             set
             {
-                this.poolName = value;
-                this.FirePropertyChangedEvent("PoolName");
+                this.poolId = value;
+                this.FirePropertyChangedEvent("PoolId");
             }
         }
 
-        private string selectedTvmSize;
-        public string SelectedTvmSize
+        private string selectedVirtualMachineSize;
+        public string SelectedVirtualMachineSize
         {
             get
             {
-                return this.selectedTvmSize;
+                return this.selectedVirtualMachineSize;
             }
             set
             {
-                this.selectedTvmSize = value;
-                this.FirePropertyChangedEvent("SelectedTvmSize");
+                this.selectedVirtualMachineSize = value;
+                this.FirePropertyChangedEvent("selectedVirtualMachineSize");
             }
         }
 
-        private List<string> availableTvmSizes;
-        public List<string> AvailableTvmSizes
+        private IReadOnlyList<string> availableVirtualMachineSizes;
+        public IReadOnlyList<string> AvailableVirtualMachineSizes
         {
             get
             {
-                return this.availableTvmSizes;
+                return this.availableVirtualMachineSizes;
             }
             set
             {
-                this.availableTvmSizes = value;
-                this.FirePropertyChangedEvent("AvailableTvmSizes");
+                this.availableVirtualMachineSizes = value;
+                this.FirePropertyChangedEvent("availableVirtualMachineSizes");
             }
         }
 
@@ -170,17 +171,17 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         }
 
         
-        private bool useCommunication;
-        public bool UseCommunication
+        private bool interComputeNodeCommunicationEnabled;
+        public bool InterComputeNodeCommunicationEnabled
         {
             get
             {
-                return this.useCommunication;
+                return this.interComputeNodeCommunicationEnabled;
             }
             set
             {
-                this.useCommunication = value;
-                this.FirePropertyChangedEvent("UseCommunication");
+                this.interComputeNodeCommunicationEnabled = value;
+                this.FirePropertyChangedEvent("InterComputeNodeCommunicationEnabled");
             }
         }
 
@@ -198,64 +199,35 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
-        private int maxTasksPerVM;
-        public int MaxTasksPerVM
+        private int maxTasksPerComputeNode;
+        public int MaxTasksPerComputeNode
         {
             get
             {
-                return this.maxTasksPerVM;
+                return this.maxTasksPerComputeNode;
             }
             set
             {
-                this.maxTasksPerVM = value;
-                this.FirePropertyChangedEvent("MaxTasksPerVM");
+                this.maxTasksPerComputeNode = value;
+                this.FirePropertyChangedEvent("MaxTasksPerComputeNode");
             }
         }
 
         #endregion
 
-        private static readonly Dictionary<string, string> SupportedOSFamilyDictionary = 
-            new Dictionary<string, string>
-        {
-            {"Windows Server 2008 R2", "2"},
-            {"Windows Server 2012", "3"},
-            {"Windows Server 2012 R2", "4"},
-        };
-
-        private static readonly List<string> TvmSizes = 
-            new List<string>
-            {
-                "Small", 
-                "Medium",
-                "Large", 
-                "ExtraLarge", 
-                "A5",
-                "A6",
-                "A7",
-                "A8",
-                "A9",
-                "STANDARD_D1",
-                "STANDARD_D2",
-                "STANDARD_D3",
-                "STANDARD_D4",
-                "STANDARD_D11",
-                "STANDARD_D12",
-                "STANDARD_D13",
-                "STANDARD_D14",
-            };  
-
+        
         public CreatePoolViewModel(IDataProvider batchService)
         {
             this.batchService = batchService;
 
-            // pre-populate the available tvm sizes
-            this.AvailableTvmSizes = TvmSizes;
+            // pre-populate the available VM sizes
+            this.AvailableVirtualMachineSizes = Common.SupportedVirtualMachineSizesList;
             this.AvailableOSVersions = new List<string> { "*" };
             this.TargetDedicated = 1;
-            this.MaxTasksPerVM = 1;
+            this.MaxTasksPerComputeNode = 1;
             this.IsBusy = false;
             
-            this.AvailableOSFamilies = new List<string>(SupportedOSFamilyDictionary.Keys);
+            this.AvailableOSFamilies = new List<string>(Common.SupportedOSFamilyDictionary.Keys);
         }
 
         public CommandBase CreatePool
@@ -288,9 +260,9 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                     System.Threading.Tasks.Task asyncTask;
 
                     string osFamilyString;
-                    if (SupportedOSFamilyDictionary.ContainsKey(this.SelectedOSFamily))
+                    if (Common.SupportedOSFamilyDictionary.ContainsKey(this.SelectedOSFamily))
                     {
-                        osFamilyString = SupportedOSFamilyDictionary[this.SelectedOSFamily];
+                        osFamilyString = Common.SupportedOSFamilyDictionary[this.SelectedOSFamily];
                     }
                     else
                     {
@@ -300,39 +272,39 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                     if (!this.UseAutoscale)
                     {
                         asyncTask = this.batchService.CreatePoolAsync(
-                            this.PoolName,
-                            this.SelectedTvmSize,
+                            this.PoolId,
+                            this.SelectedVirtualMachineSize,
                             this.TargetDedicated,
                             null,
-                            this.UseCommunication,
+                            this.InterComputeNodeCommunicationEnabled,
                             osFamilyString,
                             this.SelectedOSVersion,
-                            this.MaxTasksPerVM,
+                            this.MaxTasksPerComputeNode,
                             this.Timeout);
                     }
                     else
                     {
                         asyncTask = this.batchService.CreatePoolAsync(
-                            this.PoolName,
-                            this.SelectedTvmSize,
+                            this.PoolId,
+                            this.SelectedVirtualMachineSize,
                             null,
                             this.AutoscaleFormula,
-                            this.UseCommunication,
+                            this.InterComputeNodeCommunicationEnabled,
                             osFamilyString,
                             this.SelectedOSVersion,
-                            this.MaxTasksPerVM,
+                            this.MaxTasksPerComputeNode,
                             this.Timeout);
                     }
 
                     AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                         asyncTask,
-                        new PoolOperation(PoolOperation.AddPool, poolName)));
+                        new PoolOperation(PoolOperation.AddPool, this.poolId)));
                     await asyncTask;
 
                     Messenger.Default.Send<RefreshMessage>(new RefreshMessage(RefreshTarget.Pools));
 
-                    Messenger.Default.Send(new GenericDialogMessage(string.Format("Successfully created pool {0}", this.PoolName)));
-                    this.PoolName = string.Empty; //So that the user cannot accidentally try to create the same pool twice
+                    Messenger.Default.Send(new GenericDialogMessage(string.Format("Successfully created pool {0}", this.PoolId)));
+                    this.PoolId = string.Empty; //So that the user cannot accidentally try to create the same pool twice
                 }
             }
             catch (Exception e)
@@ -343,9 +315,9 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
 
         private bool IsInputValid()
         {
-            if (string.IsNullOrEmpty(this.PoolName))
+            if (string.IsNullOrEmpty(this.PoolId))
             {
-                Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Invalid values for Pool Name"));
+                Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Invalid values for Pool Id"));
                 return false;
             }
             else if (this.UseAutoscale)

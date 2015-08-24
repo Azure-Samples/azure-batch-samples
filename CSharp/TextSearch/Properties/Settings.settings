@@ -3,12 +3,12 @@
   <Profiles />
   <Settings>
     <Setting Name="BatchServiceUrl" Type="System.String" Scope="User">
-      <Value Profile="(Default)">https://batch.core.windows.net</Value>
+      <Value Profile="(Default)">https://(YourAccount).(region).batch.azure.com</Value>
     </Setting>
     <Setting Name="ShouldUploadResources" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="ShouldDeleteWorkItem" Type="System.Boolean" Scope="User">
+    <Setting Name="ShouldDeleteJob" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="RegularExpression" Type="System.String" Scope="User">

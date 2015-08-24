@@ -1,12 +1,13 @@
-﻿using System;
-using System.IO;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using Microsoft.Azure.Batch.Samples.TextSearch.Properties;
-using Microsoft.WindowsAzure.Storage.Blob;
-
-namespace Microsoft.Azure.Batch.Samples.TextSearch
+﻿namespace Microsoft.Azure.Batch.Samples.TextSearch
 {
+    using System;
+    using System.IO;
+    using System.Text.RegularExpressions;
+    using System.Threading.Tasks;
+    using Microsoft.Azure.Batch.Samples.TextSearch.Properties;
+    using Microsoft.WindowsAzure.Storage.Blob;
+
+
     /// <summary>
     /// The mapper task - it downloads a file from Azure Storage and processes it searching for a regular expression match on 
     /// each file line.

@@ -24,22 +24,22 @@ namespace Microsoft.Azure.BatchExplorer.Models
         public JobModel ParentJob { get; set; }
 
         /// <summary>
-        /// The name of this task
+        /// The id of this task
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public string Name { get { return this.Task.Name; } }
+        public string Id { get { return this.Task.Id; } }
 
         /// <summary>
         /// The state of this task
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public TaskState State { get { return this.Task.State; } }
+        public TaskState? State { get { return this.Task.State; } }
 
         /// <summary>
         /// The creation time of this task
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public DateTime CreationTime { get { return this.Task.CreationTime; } }
+        public DateTime? CreationTime { get { return this.Task.CreationTime; } }
 
         /// <summary>
         /// The commandline this task runs
@@ -51,37 +51,37 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// The set of Windows Azure blobs downloaded to run the task
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public IEnumerable<IResourceFile> ResourceFiles { get { return this.Task.ResourceFiles; } }
+        public IEnumerable<ResourceFile> ResourceFiles { get { return this.Task.ResourceFiles; } }
 
         /// <summary>
         /// The number of times to retry this task
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public int? MaxTaskRetryCount { get { return this.Task.TaskConstraints.MaxTaskRetryCount; } }
+        public int? MaxTaskRetryCount { get { return this.Task.Constraints.MaxTaskRetryCount; } }
 
         /// <summary>
         /// Maximum time a task is allowed to run after it is created
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public TimeSpan? MaxWallClockTime { get { return this.Task.TaskConstraints.MaxWallClockTime; } }
+        public TimeSpan? MaxWallClockTime { get { return this.Task.Constraints.MaxWallClockTime; } }
 
         /// <summary>
         /// Duration of time for which files in the task's working directory are retained, from the time execution completed
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public TimeSpan? RetentionTime { get { return this.Task.TaskConstraints.RetentionTime; } }
+        public TimeSpan? RetentionTime { get { return this.Task.Constraints.RetentionTime; } }
         
         /// <summary>
         /// The environmental settings
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public IEnumerable<IEnvironmentSetting> EnvironmentSettings { get { return this.Task.EnvironmentSettings; } }
+        public IEnumerable<EnvironmentSetting> EnvironmentSettings { get { return this.Task.EnvironmentSettings; } }
 
         /// <summary>
         /// The set of output files for this task object
         /// </summary>
         [ChangeTracked(ModelRefreshType.Children)]
-        public IEnumerable<ITaskFile> OutputFiles { get; private set; }
+        public IEnumerable<NodeFile> OutputFiles { get; private set; }
 
         /// <summary>
         /// True if there are output files to be had
@@ -115,9 +115,9 @@ namespace Microsoft.Azure.BatchExplorer.Models
 
         #region Public UI Properties
 
-        private ITaskFile selectedTaskFile;
+        private NodeFile selectedTaskFile;
 
-        public ITaskFile SelectedTaskFile
+        public NodeFile SelectedTaskFile
         {
             get { return this.selectedTaskFile; }
             set
@@ -129,9 +129,9 @@ namespace Microsoft.Azure.BatchExplorer.Models
 
         #endregion
 
-        private ICloudTask Task { get; set; }
+        private CloudTask Task { get; set; }
         private static readonly List<string> PropertiesToOmitFromDisplay = new List<string> {"Stats", "FilesToStage"};
-        public TaskModel(JobModel parentJob, ICloudTask task)
+        public TaskModel(JobModel parentJob, CloudTask task)
         {
             this.ParentJob = parentJob;
             this.Task = task;
@@ -158,17 +158,16 @@ namespace Microsoft.Azure.BatchExplorer.Models
                     //await this.Task.RefreshAsync(); TODO: This doesnt' work right now due to bug with OM, so must do GetTask directly
                     Messenger.Default.Send(new UpdateWaitSpinnerMessage(WaitSpinnerPanel.UpperRight, true));
 
-                    System.Threading.Tasks.Task<ICloudTask> asyncTask = MainViewModel.dataProvider.Service.GetTaskAsync(
-                        this.ParentJob.ParentWorkItemName,
-                        this.ParentJob.Name,
-                        this.Task.Name,
+                    System.Threading.Tasks.Task<CloudTask> asyncTask = MainViewModel.dataProvider.Service.GetTaskAsync(
+                        this.ParentJob.Id,
+                        this.Task.Id,
                         OptionsModel.Instance.ListDetailLevel);
 
                     if (showTrackedOperation)
                     {
                         AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                             asyncTask,
-                            new TaskOperation(TaskOperation.Refresh, this.ParentJob.ParentWorkItem.Name, this.ParentJob.Name, this.Task.Name)));
+                            new TaskOperation(TaskOperation.Refresh, this.ParentJob.Id, this.Task.Id)));
                     }
                     else
                     {
@@ -202,10 +201,10 @@ namespace Microsoft.Azure.BatchExplorer.Models
                     this.HasLoadedChildren = true;
                     try
                     {
-                        System.Threading.Tasks.Task<List<ITaskFile>> asyncTask = this.ListTaskFilesAsync();
+                        System.Threading.Tasks.Task<List<NodeFile>> asyncTask = this.ListTaskFilesAsync();
                         AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                             asyncTask,
-                            new TaskOperation(TaskOperation.ListTaskFiles, this.ParentJob.ParentWorkItem.Name, this.ParentJob.Name, this.Task.Name)));
+                            new TaskOperation(TaskOperation.ListFiles, this.ParentJob.Id, this.Task.Id)));
                         
                         this.OutputFiles = await asyncTask;
                     }
@@ -242,7 +241,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
                 System.Threading.Tasks.Task asyncTask = this.Task.DeleteAsync();
                 AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                     asyncTask,
-                    new TaskOperation(TaskOperation.Delete, this.ParentJob.ParentWorkItem.Name, this.ParentJob.Name, this.Task.Name)));
+                    new TaskOperation(TaskOperation.Delete, this.ParentJob.Id, this.Task.Id)));
                 await asyncTask;
             }
             catch (Exception e)
@@ -261,7 +260,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
                 System.Threading.Tasks.Task asyncTask = this.Task.TerminateAsync();
                 AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                     asyncTask,
-                    new TaskOperation(TaskOperation.Terminate, this.ParentJob.ParentWorkItem.Name, this.ParentJob.Name, this.Task.Name)));
+                    new TaskOperation(TaskOperation.Terminate, this.ParentJob.Id, this.Task.Id)));
                 await asyncTask;
                 await this.RefreshAsync(ModelRefreshType.Basic, showTrackedOperation: false);
             }
@@ -282,7 +281,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
             System.Threading.Tasks.Task asyncTask = this.DownloadTaskFile(filePath, outputStream);
             AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                 asyncTask,
-                new TaskOperation(TaskOperation.GetTaskFile, this.ParentJob.ParentWorkItem.Name, this.ParentJob.Name, this.Task.Name)));
+                new TaskOperation(TaskOperation.GetFile, this.ParentJob.Id, this.Task.Id)));
             await asyncTask;
         }
 
@@ -294,16 +293,11 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// Lists the task files associated with this task
         /// </summary>
         /// <returns></returns>
-        private async System.Threading.Tasks.Task<List<ITaskFile>> ListTaskFilesAsync()
+        private async System.Threading.Tasks.Task<List<NodeFile>> ListTaskFilesAsync()
         {
-            List<ITaskFile> results = new List<ITaskFile>();
-            IEnumerableAsyncExtended<ITaskFile> vmFiles = this.Task.ListTaskFiles(recursive: true);
-            IAsyncEnumerator<ITaskFile> asyncEnumerator = vmFiles.GetAsyncEnumerator();
+            IPagedEnumerable<NodeFile> vmFiles = this.Task.ListNodeFiles(recursive: true);
 
-            while (await asyncEnumerator.MoveNextAsync())
-            {
-                results.Add(asyncEnumerator.Current);
-            }
+            List<NodeFile> results = await vmFiles.ToListAsync();
             
             return results;
         }
@@ -316,14 +310,14 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// <returns></returns>
         private async System.Threading.Tasks.Task DownloadTaskFile(string filePath, Stream destinationStream)
         {
-            ITaskFile file = await this.Task.GetTaskFileAsync(filePath);
+            NodeFile file = await this.Task.GetNodeFileAsync(filePath);
             await file.CopyToStreamAsync(destinationStream);
         }
 
         private void HandleException(Exception e)
         {
             //Swallow 404's and fire a message
-            if (Common.IsExceptionNotFound(e))
+            if (Microsoft.Azure.BatchExplorer.Helpers.Common.IsExceptionNotFound(e))
             {
                 Messenger.Default.Send(new ModelNotFoundAfterRefresh(this));
             }

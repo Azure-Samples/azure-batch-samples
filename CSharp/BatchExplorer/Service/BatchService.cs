@@ -1,124 +1,109 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Microsoft.Azure.Batch;
-using Microsoft.Azure.Batch.Auth;
-using Microsoft.Azure.Batch.Common;
-using Microsoft.Azure.Batch.Protocol;
-using Microsoft.Azure.BatchExplorer.Models;
-
-namespace Microsoft.Azure.BatchExplorer.Service
+﻿namespace Microsoft.Azure.BatchExplorer.Service
 {
+    using System;
+    using System.Threading.Tasks;
+    using Microsoft.Azure.Batch;
+    using Microsoft.Azure.Batch.Common;
+    using Microsoft.Azure.BatchExplorer.Models;
+    using BatchSharedKeyCredential=Microsoft.Azure.Batch.Auth.BatchSharedKeyCredentials;
+
     /// <summary>
     /// Manages communication with the Batch service
     /// </summary>
     public class BatchService : IDisposable
     {
-        public Uri BaseUri { get; private set; }
-        public BatchCredentials Credentials { get; private set; }
+        public BatchSharedKeyCredential Credentials { get; private set; }
 
-        private IBatchClient Client { get; set; }
+        private BatchClient Client { get; set; }
         private readonly IRetryPolicy retryPolicy;
         private bool disposed;
 
-        public BatchService(string baseUrl, BatchCredentials credentials)
+        public BatchService(BatchSharedKeyCredential credentials)
         {
-            this.Client = BatchClient.Connect(baseUrl, credentials);
-            this.BaseUri = new Uri(baseUrl);
+            this.Client = BatchClient.Open(credentials);
             this.Credentials = credentials;
             this.retryPolicy = new LinearRetry(TimeSpan.FromSeconds(10), 5);
-            
-            this.Client.CustomBehaviors.Add(new SetRetryPolicy(this.retryPolicy));
-            this.Client.CustomBehaviors.Add(new RequestInterceptor((req) => { req.MaximumExecutionTime = TimeSpan.FromMinutes(2); }));
+
+            this.Client.CustomBehaviors.Add(new RetryPolicyProvider(this.retryPolicy));
         }
 
-        #region WorkItem related operations
+        #region JobSchedule related operations
 
         /// <summary>
-        /// Returns a list of WorkItems
+        /// Returns a list of JobSchedules
         /// </summary>
         /// <returns></returns>
-        public IEnumerable<ICloudWorkItem> ListWorkItems(DetailLevel detailLevel = null)
+        public IPagedEnumerable<CloudJobSchedule> ListJobSchedules(DetailLevel detailLevel = null)
         {
-            using (IWorkItemManager wiManager = this.Client.OpenWorkItemManager())
-            {
-                return wiManager.ListWorkItems(detailLevel);
-            }
+            return this.Client.JobScheduleOperations.ListJobSchedules(detailLevel);
         }
 
         /// <summary>
-        /// Creates a work item with the specified work item options.
+        /// Creates a job schedule with the specified options.
         /// </summary>
-        /// <param name="options">The options describing the work item to create.</param>
+        /// <param name="options">The options describing the job schedule to create.</param>
         /// <returns></returns>
-        public async Task CreateWorkItemAsync(CreateWorkItemOptions options)
+        public async Task CreateJobScheduleAsync(CreateJobScheduleOptions options)
         {
-            try
+            CloudJobSchedule unboundJobSchedule = this.Client.JobScheduleOperations.CreateJobSchedule();
+            unboundJobSchedule.Id = options.JobScheduleId;
+                
+            PoolInformation poolInformation = new PoolInformation();
+            if (options.AutoPoolOptions.UseAutoPool.HasValue && options.AutoPoolOptions.UseAutoPool.Value)
             {
-                using (IWorkItemManager workItemManager = this.Client.OpenWorkItemManager())
-                {
-                    ICloudWorkItem unboundWorkItem = workItemManager.CreateWorkItem(options.WorkItemName);
-
-                    IJobExecutionEnvironment jobExecutionEnvironment = new JobExecutionEnvironment();
-                    if (options.UseAutoPool.HasValue && options.UseAutoPool.Value)
+                    AutoPoolSpecification autoPoolSpecification = new AutoPoolSpecification()
                     {
-                            IAutoPoolSpecification autoPoolSpecification = new AutoPoolSpecification()
-                            {
-                                AutoPoolNamePrefix = options.AutoPoolPrefix,
-                                KeepAlive = options.KeepAlive,
-                                PoolLifeTimeOption = options.LifeTimeOption.Equals("Job", StringComparison.OrdinalIgnoreCase) ? PoolLifeTimeOption.Job : PoolLifeTimeOption.WorkItem
-                            };
-
-                            jobExecutionEnvironment.AutoPoolSpecification = autoPoolSpecification;
-                    }
-                    else
-                    {
-                        jobExecutionEnvironment.PoolName = options.PoolName;
-                    }
-
-                    unboundWorkItem.JobExecutionEnvironment = jobExecutionEnvironment;
-                    unboundWorkItem.JobSpecification = new JobSpecification()
-                    {
-                        Priority = options.Priority
+                        AutoPoolIdPrefix = options.AutoPoolOptions.AutoPoolPrefix,
+                        KeepAlive = options.AutoPoolOptions.KeepAlive,
+                        PoolLifetimeOption = (PoolLifetimeOption)Enum.Parse(typeof(PoolLifetimeOption), options.AutoPoolOptions.LifeTimeOption),
+                        PoolSpecification = new PoolSpecification()
+                        {
+                            OSFamily = options.AutoPoolOptions.OSFamily,
+                            VirtualMachineSize = options.AutoPoolOptions.VirutalMachineSize,
+                            TargetDedicated = options.AutoPoolOptions.TargetDedicated
+                        }
                     };
 
-                    // TODO: These are read only
-                    unboundWorkItem.JobSpecification.JobConstraints = new JobConstraints(options.MaxWallClockTime, options.MaxRetryCount);
-
-                    if (options.CreateSchedule.HasValue && options.CreateSchedule.Value == true)
-                    {
-                        IWorkItemSchedule schedule = new WorkItemSchedule()
-                        {
-                            DoNotRunAfter = options.DoNotRunAfter,
-                            DoNotRunUntil = options.DoNotRunUntil,
-                            RecurrenceInterval = options.RecurrenceInterval,
-                            StartWindow = options.StartWindow
-                        };
-
-                        unboundWorkItem.Schedule = schedule;
-                    }
-
-                    if (options.CreateJobManager.HasValue && options.CreateJobManager.Value == true)
-                    {
-                        IJobManager jobManager = new JobManager()
-                        {
-                            CommandLine = options.CommandLine,
-                            KillJobOnCompletion = options.KillOnCompletion,
-                            Name = options.JobManagerName
-                        };
-
-                        jobManager.TaskConstraints = new TaskConstraints(options.MaxTaskWallClockTime, options.RetentionTime, options.MaxTaskRetryCount);
-
-                        unboundWorkItem.JobSpecification.JobManager = jobManager;
-                    }
-
-                    await unboundWorkItem.CommitAsync();
-                }
+                    poolInformation.AutoPoolSpecification = autoPoolSpecification;
             }
-            catch
+            else
             {
-                throw;
+                poolInformation.PoolId = options.PoolId;
             }
+                
+            unboundJobSchedule.JobSpecification = new JobSpecification()
+            {
+                Priority = options.Priority,
+                PoolInformation = poolInformation
+            };
+
+            // TODO: These are read only
+            unboundJobSchedule.JobSpecification.Constraints = new JobConstraints(options.MaxWallClockTime, options.MaxRetryCount);
+
+            Schedule schedule = new Schedule()
+            {
+                DoNotRunAfter = options.DoNotRunAfter,
+                DoNotRunUntil = options.DoNotRunUntil,
+                RecurrenceInterval = options.RecurrenceInterval,
+                StartWindow = options.StartWindow
+            };
+            unboundJobSchedule.Schedule = schedule;
+
+            if (options.CreateJobManager.HasValue && options.CreateJobManager.Value == true)
+            {
+                JobManagerTask jobManager = new JobManagerTask()
+                {
+                    CommandLine = options.JobManagerOptions.CommandLine,
+                    KillJobOnCompletion = options.JobManagerOptions.KillOnCompletion,
+                    Id = options.JobManagerOptions.JobManagerId
+                };
+
+                jobManager.Constraints = new TaskConstraints(options.JobManagerOptions.MaxTaskWallClockTime, options.JobManagerOptions.RetentionTime, options.JobManagerOptions.MaxTaskRetryCount);
+
+                unboundJobSchedule.JobSpecification.JobManagerTask = jobManager;
+            }
+
+            await unboundJobSchedule.CommitAsync();
         }
 
         #endregion
@@ -129,132 +114,167 @@ namespace Microsoft.Azure.BatchExplorer.Service
         /// Returns a list of pools
         /// </summary>
         /// <returns></returns>
-        public IEnumerable<ICloudPool> ListPools(DetailLevel detailLevel = null)
+        public IPagedEnumerable<CloudPool> ListPools(DetailLevel detailLevel = null)
         {
-            using (IPoolManager poolManager = this.Client.OpenPoolManager())
-            {
-                return poolManager.ListPools(detailLevel);
-            }
+            return this.Client.PoolOperations.ListPools(detailLevel);
         }
 
-        public Task<ICloudPool> GetPoolAsync(string poolName)
+        public Task<CloudPool> GetPoolAsync(string poolId)
         {
-            using (IPoolManager poolManager = this.Client.OpenPoolManager())
-            {
-                return poolManager.GetPoolAsync(poolName);
-            }
+            return this.Client.PoolOperations.GetPoolAsync(poolId);
         }
 
         /// <summary>
         /// Creates a pool.
         /// </summary>
-        /// <param name="poolName"></param>
-        /// <param name="vmSize"></param>
+        /// <param name="poolId"></param>
+        /// <param name="virtualMachineSize"></param>
         /// <param name="targetDedicated"></param>
         /// <param name="autoScaleFormula"></param>
         /// <param name="communicationEnabled"></param>
         /// <param name="osFamily"></param>
         /// <param name="osVersion"></param>
-        /// <param name="maxTasksPerVM"></param>
+        /// <param name="maxTasksPerComputeNode"></param>
         /// <param name="timeout"></param>
         /// <returns></returns>
         public async Task CreatePoolAsync(
-            string poolName, 
-            string vmSize, 
+            string poolId, 
+            string virtualMachineSize, 
             int? targetDedicated, 
             string autoScaleFormula, 
             bool communicationEnabled,
             string osFamily,
             string osVersion,
-            int maxTasksPerVM,
+            int maxTasksPerComputeNode,
             TimeSpan? timeout)
         {
-            using (IPoolManager poolManager = this.Client.OpenPoolManager())
-            {
-                ICloudPool unboundPool = poolManager.CreatePool(
-                    poolName, 
-                    osFamily: osFamily, 
-                    vmSize: vmSize, 
-                    targetDedicated: targetDedicated);
+            CloudPool unboundPool = this.Client.PoolOperations.CreatePool(
+                poolId, 
+                osFamily: osFamily, 
+                virtualMachineSize: virtualMachineSize, 
+                targetDedicated: targetDedicated);
                     
-                unboundPool.TargetOSVersion = osVersion;
-                unboundPool.Communication = communicationEnabled;
-                unboundPool.ResizeTimeout = timeout;
-                unboundPool.MaxTasksPerVM = maxTasksPerVM;
+            unboundPool.TargetOSVersion = osVersion;
+            unboundPool.InterComputeNodeCommunicationEnabled = communicationEnabled;
+            unboundPool.ResizeTimeout = timeout;
+            unboundPool.MaxTasksPerComputeNode = maxTasksPerComputeNode;
                 
-                if (!string.IsNullOrEmpty(autoScaleFormula))
-                {
-                    unboundPool.AutoScaleEnabled = true;
-                    unboundPool.AutoScaleFormula = autoScaleFormula;
-                }
-
-                await unboundPool.CommitAsync();
+            if (!string.IsNullOrEmpty(autoScaleFormula))
+            {
+                unboundPool.AutoScaleEnabled = true;
+                unboundPool.AutoScaleFormula = autoScaleFormula;
             }
+
+            await unboundPool.CommitAsync();
         }
 
         public async Task ResizePool(
-            string poolName,
+            string poolId,
             int targetDedicated,
             TimeSpan? timeout,
-            TVMDeallocationOption? deallocationOption)
+            ComputeNodeDeallocationOption? deallocationOption)
         {
-            using (IPoolManager poolManager = this.Client.OpenPoolManager())
-            {
-                await poolManager.ResizePoolAsync(poolName, targetDedicated, timeout, deallocationOption);
-            }
+            await this.Client.PoolOperations.ResizePoolAsync(poolId, targetDedicated, timeout, deallocationOption);
         }
 
         #endregion
 
         #region Job related operations
-        //
-        // Once full OM support is added, we can remove all protocol based job operations
-        //
+
+        public async Task CreateJobAsync(CreateJobOptions createJobOptions)
+        {
+            CloudJob unboundJob = this.Client.JobOperations.CreateJob();
+
+            unboundJob.Id = createJobOptions.JobId;
+            unboundJob.Priority = createJobOptions.Priority;
+            unboundJob.Constraints = new JobConstraints(createJobOptions.MaxWallClockTime, createJobOptions.MaxRetryCount);
+
+            PoolInformation poolInformation = new PoolInformation();
+            if (createJobOptions.AutoPoolOptions.UseAutoPool.HasValue && createJobOptions.AutoPoolOptions.UseAutoPool.Value)
+            {
+                AutoPoolSpecification autoPoolSpecification = new AutoPoolSpecification()
+                {
+                    AutoPoolIdPrefix = createJobOptions.AutoPoolOptions.AutoPoolPrefix,
+                    KeepAlive = createJobOptions.AutoPoolOptions.KeepAlive,
+                    PoolLifetimeOption = (PoolLifetimeOption)Enum.Parse(typeof(PoolLifetimeOption), createJobOptions.AutoPoolOptions.LifeTimeOption),
+                    PoolSpecification = new PoolSpecification()
+                    {
+                        OSFamily = createJobOptions.AutoPoolOptions.OSFamily,
+                        VirtualMachineSize = createJobOptions.AutoPoolOptions.VirutalMachineSize,
+                        TargetDedicated = createJobOptions.AutoPoolOptions.TargetDedicated
+                    }
+                };
+
+                poolInformation.AutoPoolSpecification = autoPoolSpecification;
+            }
+            else
+            {
+                poolInformation.PoolId = createJobOptions.PoolId;
+            }
+
+            unboundJob.PoolInformation = poolInformation;
+
+            if (createJobOptions.CreateJobManager.HasValue && createJobOptions.CreateJobManager.Value == true)
+            {
+                JobManagerTask jobManager = new JobManagerTask()
+                {
+                    CommandLine = createJobOptions.JobManagerOptions.CommandLine,
+                    KillJobOnCompletion = createJobOptions.JobManagerOptions.KillOnCompletion,
+                    Id = createJobOptions.JobManagerOptions.JobManagerId
+                };
+
+                jobManager.Constraints = new TaskConstraints(
+                    createJobOptions.JobManagerOptions.MaxTaskWallClockTime, 
+                    createJobOptions.JobManagerOptions.RetentionTime, 
+                    createJobOptions.JobManagerOptions.MaxTaskRetryCount);
+
+                unboundJob.JobManagerTask = jobManager;
+            }
+
+            await unboundJob.CommitAsync();
+        }
 
         /// <summary>
-        /// TODO: This is a hack because Job.Refresh breaks using the job due to its ParentWorkItem name being invalidated in the property router
+        /// Returns a list of jobs.
         /// </summary>
-        public ICloudJob GetJob(string workItemName, string jobName, DetailLevel detailLevel)
+        /// <param name="detailLevel"></param>
+        /// <returns></returns>
+        public IPagedEnumerable<CloudJob> ListJobs(DetailLevel detailLevel = null)
         {
-            using (System.Threading.Tasks.Task<ICloudJob> getJobTask = this.GetJobAsync(workItemName, jobName, detailLevel))
+            return this.Client.JobOperations.ListJobs(detailLevel);
+        }
+
+        public CloudJob GetJob(string jobId, DetailLevel detailLevel)
+        {
+            using (System.Threading.Tasks.Task<CloudJob> getJobTask = this.GetJobAsync(jobId, detailLevel))
             {
                 getJobTask.Wait();
                 return getJobTask.Result;
             }
         }
 
-        public Task<ICloudJob> GetJobAsync(string workItemName, string jobName, DetailLevel detailLevel)
+        public Task<CloudJob> GetJobAsync(string jobId, DetailLevel detailLevel)
         {
-            using (IWorkItemManager wiManager = this.Client.OpenWorkItemManager())
-            {
-                return wiManager.GetJobAsync(workItemName, jobName, detailLevel);
-            }
+            return this.Client.JobOperations.GetJobAsync(jobId, detailLevel);
         }
         
         #endregion
 
         #region Task related operations
-        //
-        // Once full OM support is enabled we can remove all protocol task operations
-        //
-        /// <summary>
-        /// TODO: This is a hack because Task.Refresh breaks using the job due to its ParentWorkItem name being invalidated in the property router
-        /// </summary>
-        public ICloudTask GetTask(string workItemName, string jobName, string taskName, DetailLevel detailLevel)
+
+        public CloudTask GetTask(string jobId, string taskId, DetailLevel detailLevel)
         {
-            using (Task<ICloudTask> getTaskTask = this.GetTaskAsync(workItemName, jobName, taskName, detailLevel))
+            using (Task<CloudTask> getTaskTask = this.GetTaskAsync(jobId, taskId, detailLevel))
             {
                 getTaskTask.Wait();
                 return getTaskTask.Result;
             }
         }
 
-        public Task<ICloudTask> GetTaskAsync(string workItemName, string jobName, string taskName, DetailLevel detailLevel)
+        public Task<CloudTask> GetTaskAsync(string jobId, string taskId, DetailLevel detailLevel)
         {
-            using (IWorkItemManager wiManager = this.Client.OpenWorkItemManager())
-            {
-                return wiManager.GetTaskAsync(workItemName, jobName, taskName, detailLevel);
-            }
+            return this.Client.JobOperations.GetTaskAsync(jobId, taskId, detailLevel);
+         
         }
 
         /// <summary>
@@ -264,28 +284,22 @@ namespace Microsoft.Azure.BatchExplorer.Service
         /// <returns></returns>
         public async Task AddTaskAsync(AddTaskOptions options)
         {
-            using (IWorkItemManager workItemManager = this.Client.OpenWorkItemManager())
-            {
-                ICloudTask unboundTask = new CloudTask(options.TaskName, options.CommandLine);
-                await workItemManager.AddTaskAsync(options.WorkItemName, options.JobName, unboundTask);
-            }
+            CloudTask unboundTask = new CloudTask(options.TaskId, options.CommandLine);
+            await this.Client.JobOperations.AddTaskAsync(options.JobId, unboundTask);
         }
         #endregion
 
-        #region VM related operations
+        #region Node related operations
 
-        public Task CreateVMUserAsync(string poolName, string vmName, string userName, string password, DateTime expiryTime, bool admin)
+        public Task CreateNodeUserAsync(string poolId, string computeNodeId, string userName, string password, DateTime expiryTime, bool admin)
         {
-            using (IPoolManager poolManager = this.Client.OpenPoolManager())
-            {
-                IUser user = poolManager.CreateUser(poolName, vmName);
-                user.Name = userName;
-                user.Password = password;
-                user.ExpiryTime = expiryTime;
-                user.IsAdmin = admin;
+            ComputeNodeUser user = this.Client.PoolOperations.CreateComputeNodeUser(poolId, computeNodeId);
+            user.Name = userName;
+            user.Password = password;
+            user.ExpiryTime = expiryTime;
+            user.IsAdmin = admin;
 
-                return user.CommitAsync();
-            }
+            return user.CommitAsync();
         }
 
         #endregion
@@ -297,6 +311,11 @@ namespace Microsoft.Azure.BatchExplorer.Service
         {
             this.Dispose(true);
             GC.SuppressFinalize(this);   
+        }
+
+        ~BatchService()
+        {
+            this.Dispose(false);
         }
 
         /// <summary>

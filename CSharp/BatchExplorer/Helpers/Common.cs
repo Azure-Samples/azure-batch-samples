@@ -1,21 +1,53 @@
-﻿using System;
-using System.ComponentModel.Composition;
-using System.ComponentModel.Composition.Hosting;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Reflection;
-using Microsoft.Azure.Batch.Common;
-using Microsoft.Azure.BatchExplorer.ViewModels;
-
+﻿
 namespace Microsoft.Azure.BatchExplorer.Helpers
 {
+    using System;
+    using System.Collections.Generic;
+    using System.ComponentModel.Composition;
+    using System.ComponentModel.Composition.Hosting;
+    using System.IO;
+    using System.Linq;
+    using System.Net;
+    using System.Reflection;
+    using Microsoft.Azure.Batch.Common;
+    using Microsoft.Azure.BatchExplorer.ViewModels;
+
     public static class Common
     {
         public readonly static string LocalAppDataDirectory = System.Environment.GetEnvironmentVariable("LOCALAPPDATA");
         public const string LocalAppDataSubfolder = @"Microsoft\Azure Batch Explorer";
 
         public const string PluginSubfolderName = "Plugins";
+
+        public static readonly IReadOnlyDictionary<string, string> SupportedOSFamilyDictionary =
+            new Dictionary<string, string>
+        {
+            {"Windows Server 2008 R2", "2"},
+            {"Windows Server 2012", "3"},
+            {"Windows Server 2012 R2", "4"},
+        };
+
+        public static readonly IReadOnlyList<string> SupportedVirtualMachineSizesList =
+            new List<string>
+            {
+                "Small", 
+                "Medium",
+                "Large", 
+                "ExtraLarge", 
+                "A5",
+                "A6",
+                "A7",
+                "A8",
+                "A9",
+                "STANDARD_D1",
+                "STANDARD_D2",
+                "STANDARD_D3",
+                "STANDARD_D4",
+                "STANDARD_D11",
+                "STANDARD_D12",
+                "STANDARD_D13",
+                "STANDARD_D14",
+            };  
 
         /// <summary>
         /// Determines if an exception is a "NotFound" exception from the Batch service
@@ -39,7 +71,7 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
                 if (batchException.RequestInformation != null &&
                     batchException.RequestInformation.AzureError != null)
                 {
-                    if(batchException.RequestInformation.HttpStatusCode == (int)HttpStatusCode.NotFound)
+                    if(batchException.RequestInformation.HttpStatusCode == HttpStatusCode.NotFound)
                     {
                         return true;
                     }
@@ -83,6 +115,18 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
                 }
                 throw;
             }
+        }
+
+        public static int? GetNullableIntValue(string content)
+        {
+            int value;
+            int? output = null;
+            if (Int32.TryParse(content, out value))
+            {
+                output = value;
+            }
+
+            return output;
         }
     }
 }

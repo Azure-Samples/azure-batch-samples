@@ -1,66 +1,61 @@
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Windows.Data;
-using GalaSoft.MvvmLight.Messaging;
-using Microsoft.Azure.Batch;
-using Microsoft.Azure.Batch.Common;
-using Microsoft.Azure.BatchExplorer.Helpers;
-using Microsoft.Azure.BatchExplorer.Messages;
-
 namespace Microsoft.Azure.BatchExplorer.Models
 {
+    using System;
+    using System.Collections.Generic;
+    using System.ComponentModel;
+    using System.Globalization;
+    using System.Threading.Tasks;
+    using System.Windows;
+    using System.Windows.Data;
+    using GalaSoft.MvvmLight.Messaging;
+    using Microsoft.Azure.Batch;
+    using Microsoft.Azure.Batch.Common;
+    using Microsoft.Azure.BatchExplorer.Helpers;
+    using Microsoft.Azure.BatchExplorer.Messages;
+    using ViewModels;
+
     /// <summary>
     /// The data model for the Job object
     /// </summary>
     public class JobModel : ModelBase
     {
         #region Public properties
-
-        /// <summary>
-        /// The parent work item
-        /// </summary>
-        public WorkItemModel ParentWorkItem { get; private set; }
-
-        /// <summary>
-        /// The parent work item name
-        /// </summary>
-        /// <remarks>
-        /// This field is used for the Extended WPF Toolkit which doesn't support referencing object members in data binding
-        /// for instance we cannot do {Binding ParentWorkItem.Name}
-        /// </remarks>
-        public string ParentWorkItemName
-        {
-            get
-            {
-                return this.ParentWorkItem.Name;
-            }
-        }
-
-        /// <summary>
-        /// The name of this job
-        /// </summary>
-        [ChangeTracked(ModelRefreshType.Basic)]
-        public string Name { get { return this.Job.Name; } }
-
-        /// <summary>
-        /// The creation time of the job
-        /// </summary>
-        [ChangeTracked(ModelRefreshType.Basic)]
-        public DateTime CreationTime { get { return this.Job.CreationTime; } }
-
-        /// <summary>
-        /// The state of the job
-        /// </summary>
-        [ChangeTracked(ModelRefreshType.Basic)]
-        public JobState State { get { return this.Job.State; } }
         
         /// <summary>
-        /// The tasks associated with this job
+        /// Gets the id of the job
+        /// </summary>
+        [ChangeTracked(ModelRefreshType.Basic)]
+        public string Id { get { return this.Job.Id; } }
+
+        /// <summary>
+        /// Gets the display name of the job
+        /// </summary>
+        [ChangeTracked(ModelRefreshType.Basic)]
+        public string DisplayName { get { return this.Job.DisplayName; } }
+        
+        /// <summary>
+        /// Gets the creation time of the job.
+        /// </summary>
+        [ChangeTracked(ModelRefreshType.Basic)]
+        public DateTime? CreationTime { get { return this.Job.CreationTime; } }
+
+        /// <summary>
+        /// Gets the state of the job.
+        /// </summary>
+        [ChangeTracked(ModelRefreshType.Basic)]
+        public JobState? State { get { return this.Job.State; } }
+        
+        /// <summary>
+        /// Gets the tasks associated with this job.
+        /// </summary>
+        public List<TaskModel> Tasks { get; private set; }
+        
+        /// <summary>
+        /// Gets the task collection associated with this job.
         /// </summary>
         [ChangeTracked(ModelRefreshType.Children)]
-        public List<TaskModel> Tasks { get; private set; }
-
+        public ICollectionView TaskCollection { get; private set; }
+        
         private TaskModel selectedTask;
         public TaskModel SelectedTask
         {
@@ -74,23 +69,137 @@ namespace Microsoft.Azure.BatchExplorer.Models
                 this.FirePropertyChangedEvent("SelectedTask");
             }
         }
+        
+        #endregion
+
+        #region Commands
+
+
+        /// <summary>
+        /// Enable the selected job
+        /// </summary>
+        public CommandBase EnableJob
+        {
+            get
+            {
+                return
+                    new CommandBase(
+                        (param) => AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.EnableAsync()));
+            }
+        }
+
+
+        /// <summary>
+        /// Disable the selected job in the specified way
+        /// </summary>
+        public CommandBase DisableJob
+        {
+            get
+            {
+                return new CommandBase(
+                    (disableOption) =>
+                    {
+                        var castDisableOption = ((DisableJobOption)disableOption);
+                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.DisableAsync(castDisableOption));
+                    });
+            }
+        }
+
+        /// <summary>
+        /// Terminate the selected job
+        /// </summary>
+        public CommandBase TerminateJob
+        {
+            get
+            {
+                return new CommandBase(
+                    (item) => AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.TerminateAsync()));
+            }
+        }
+
+        /// <summary>
+        /// Delete the selected item
+        /// </summary>
+        public CommandBase Delete
+        {
+            get
+            {
+                return new CommandBase(
+                    (item) =>
+                    {
+                        var job = (item as JobModel);
+                        if (job != null)
+                        {
+                            Messenger.Default.Register<MultibuttonDialogReturnMessage>(this, (message) =>
+                            {
+                                if (message.MessageBoxResult == MessageBoxResult.Yes)
+                                {
+                                    AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.DeleteAsync());
+                                }
+                                Messenger.Default.Unregister<MultibuttonDialogReturnMessage>(this);
+                            });
+                            Messenger.Default.Send<LaunchMultibuttonDialogMessage>(new LaunchMultibuttonDialogMessage()
+                            {
+                                Caption = "Confirm delete",
+                                DialogMessage = "Do you want to delete this item?",
+                                MessageBoxButton = MessageBoxButton.YesNo
+                            });
+                        }
+                    });
+            }
+        }
+
+        /// <summary>
+        /// Creates a popup to add task to the specified job.
+        /// </summary>
+        public CommandBase AddTask
+        {
+            get
+            {
+                return new CommandBase(
+                    (o) =>
+                    {
+                        JobModel job = (JobModel)o;
+                        // Call a new window to show the Add Task UI
+                        Messenger.Default.Send(new ShowAddTaskWindow(job.Id));
+                    }
+                );
+            }
+        }
+
+        /// <summary>
+        /// Refresh the selected item
+        /// </summary>
+        public CommandBase RefreshItem
+        {
+            get
+            {
+                return new CommandBase(
+                    (item) =>
+                    {
+                        var job = (item as JobModel);
+                        if (job != null)
+                        {
+                            Task refreshTask = job.RefreshAsync(ModelRefreshType.Children | ModelRefreshType.Basic).ContinueWith((t) =>
+                            {
+                                FirePropertyChangedEvent("Jobs");
+                            });
+                            AsyncOperationTracker.Instance.AddTrackedInternalOperation(refreshTask);
+                        }
+                    });
+            }
+        }
+
 
         #endregion
 
-        private ICloudJob Job { get; set; }
+        private CloudJob Job { get; set; }
         
-        /// <summary>
-        /// The task collection associated with this job
-        /// </summary>
-        [ChangeTracked(ModelRefreshType.Children)]
-        public ICollectionView TaskCollection { get; private set; }
-
-        public JobModel(WorkItemModel parentWorkItem, ICloudJob job)
+        public JobModel(CloudJob job)
         {
             this.Job = job;
             this.Tasks = new List<TaskModel>();
             this.LastUpdatedTime = DateTime.UtcNow;
-            this.ParentWorkItem = parentWorkItem;
 
             this.TaskCollection = CollectionViewSource.GetDefaultView(this.Tasks);
             this.UpdateTaskView();
@@ -109,7 +218,6 @@ namespace Microsoft.Azure.BatchExplorer.Models
 
         public override async System.Threading.Tasks.Task RefreshAsync(ModelRefreshType refreshType, bool showTrackedOperation = true)
         {
-            //await this.Job.RefreshAsync(); //TODO: This causes ListTasks below to throw due to a bug in the OM, so for now we use a trick 
             Messenger.Default.Send(new UpdateWaitSpinnerMessage(WaitSpinnerPanel.UpperRight, true));
 
             if (refreshType.HasFlag(ModelRefreshType.Basic))
@@ -121,7 +229,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
                     {
                         AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                             asyncTask,
-                            new JobOperation(JobOperation.Refresh, this.ParentWorkItem.Name, this.Job.Name)));
+                            new JobOperation(JobOperation.Refresh, this.Job.Id)));
                     }
                     else
                     {
@@ -152,7 +260,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
                     System.Threading.Tasks.Task<List<TaskModel>> asyncTask = this.ListTasksAsync();
                     AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                         asyncTask, 
-                        new JobOperation(JobOperation.ListTasks, this.ParentWorkItem.Name, this.Job.Name)));
+                        new JobOperation(JobOperation.ListTasks, this.Job.Id)));
 
                     this.Tasks = await asyncTask;
                     this.TaskCollection = CollectionViewSource.GetDefaultView(this.Tasks);
@@ -182,7 +290,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
                 System.Threading.Tasks.Task asyncTask = this.Job.EnableAsync();
                 AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                     asyncTask,
-                    new JobOperation(JobOperation.Enable, this.ParentWorkItem.Name, this.Job.Name)));
+                    new JobOperation(JobOperation.Enable, this.Job.Id)));
                 await asyncTask;
                 await this.RefreshAsync(ModelRefreshType.Basic, showTrackedOperation: false);
             }
@@ -202,7 +310,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
                 System.Threading.Tasks.Task asyncTask = this.Job.DisableAsync(option);
                 AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                     asyncTask,
-                    new JobOperation(JobOperation.Disable, this.ParentWorkItem.Name, this.Job.Name)));
+                    new JobOperation(JobOperation.Disable, this.Job.Id)));
                 await asyncTask;
                 await this.RefreshAsync(ModelRefreshType.Basic, showTrackedOperation: false);
             }
@@ -221,7 +329,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
                 System.Threading.Tasks.Task asyncTask = this.Job.DeleteAsync();
                 AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                     asyncTask,
-                    new JobOperation(JobOperation.Delete, this.ParentWorkItem.Name, this.Job.Name)));
+                    new JobOperation(JobOperation.Delete, this.Job.Id)));
                 await asyncTask;
             }
             catch (Exception e)
@@ -240,7 +348,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
                 System.Threading.Tasks.Task asyncTask = this.Job.TerminateAsync();
                 AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                     asyncTask,
-                    new JobOperation(JobOperation.Terminate, this.ParentWorkItem.Name, this.Job.Name)));
+                    new JobOperation(JobOperation.Terminate, this.Job.Id)));
                 await asyncTask;
                 await this.RefreshAsync(ModelRefreshType.Basic, showTrackedOperation: false);
             }
@@ -253,14 +361,9 @@ namespace Microsoft.Azure.BatchExplorer.Models
         private async System.Threading.Tasks.Task<List<TaskModel>> ListTasksAsync()
         {
             List<TaskModel> results = new List<TaskModel>();
-
-            IEnumerableAsyncExtended<ICloudTask> taskList = this.Job.ListTasks(OptionsModel.Instance.ListDetailLevel);
-            IAsyncEnumerator<ICloudTask> asyncEnumerator = taskList.GetAsyncEnumerator();
-
-            while (await asyncEnumerator.MoveNextAsync())
-            {
-                results.Add(new TaskModel(this, asyncEnumerator.Current));
-            }
+            IPagedEnumerable<CloudTask> taskList = this.Job.ListTasks(OptionsModel.Instance.ListDetailLevel);
+            
+            await taskList.ForEachAsync(item => results.Add(new TaskModel(this, item)));
 
             return results;
         }
@@ -283,7 +386,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         private void HandleException(Exception e)
         {
             //Swallow 404's and fire a message
-            if (Common.IsExceptionNotFound(e))
+            if (Microsoft.Azure.BatchExplorer.Helpers.Common.IsExceptionNotFound(e))
             {
                 Messenger.Default.Send(new ModelNotFoundAfterRefresh(this));
             }

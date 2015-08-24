@@ -15,46 +15,33 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
 
         #region Public UI Properties
         
-        private string workItemName;
-        public string WorkItemName
-        {
-            get
-            {
-                return this.workItemName;
-            }
-            set
-            {
-                this.workItemName = value;
-                this.FirePropertyChangedEvent("WorkItemName");
-            }
-        }
 
-        private string jobName;
-        public string JobName
+        private string jobId;
+        public string JobId
         {
             get
             {
-                return this.jobName;
+                return this.jobId;
             }
             set
             {
-                this.jobName = value;
-                this.FirePropertyChangedEvent("JobName");
+                this.jobId = value;
+                this.FirePropertyChangedEvent("JobId");
             }
         }
 
         // Basic Task Details
-        private string taskName;
-        public string TaskName
+        private string taskId;
+        public string TaskId
         {
             get
             {
-                return this.taskName;
+                return this.taskId;
             }
             set
             {
-                this.taskName = value;
-                this.FirePropertyChangedEvent("TaskName");
+                this.taskId = value;
+                this.FirePropertyChangedEvent("TaskId");
             }
         }
 
@@ -96,13 +83,12 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         }
         #endregion
 
-        public AddTaskViewModel(IDataProvider batchService, string workItemName, string jobName)
+        public AddTaskViewModel(IDataProvider batchService, string jobId)
         {
             this.batchService = batchService;
             this.IsBusy = false;
 
-            this.WorkItemName = workItemName;
-            this.JobName = jobName;
+            this.JobId = jobId;
         }
 
         private async Task AddTaskAsync()
@@ -113,16 +99,15 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 {
                     AddTaskOptions options = new AddTaskOptions()
                     {
-                        WorkItemName = this.workItemName,
-                        JobName = this.jobName,
+                        JobId = this.jobId,
                         CommandLine = this.CommandLine,
-                        TaskName = this.TaskName
+                        TaskId = this.TaskId
                     };
 
-                    await this.batchService.AddTask(options);
+                    await this.batchService.AddTaskAsync(options);
 
-                    Messenger.Default.Send(new GenericDialogMessage(string.Format("Successfully added Task {0}", this.TaskName)));
-                    this.TaskName = string.Empty; //So that the user cannot accidentally try to create the same task twice
+                    Messenger.Default.Send(new GenericDialogMessage(string.Format("Successfully added Task {0}", this.TaskId)));
+                    this.TaskId = string.Empty; //So that the user cannot accidentally try to create the same task twice
                 }
             }
             catch (Exception e)
@@ -133,9 +118,9 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
 
         private bool IsInputValid()
         {
-            if (string.IsNullOrEmpty(this.TaskName))
+            if (string.IsNullOrEmpty(this.TaskId))
             {
-                Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Invalid values for Task Name"));
+                Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Invalid values for Task Id"));
                 return false;
             }
 

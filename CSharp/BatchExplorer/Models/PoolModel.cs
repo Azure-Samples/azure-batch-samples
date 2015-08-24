@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 ﻿using System.ComponentModel;
 ﻿using System.Windows.Data;
+using System.Threading.Tasks;
 ﻿using GalaSoft.MvvmLight.Messaging;
 using Microsoft.Azure.Batch;
 using Microsoft.Azure.Batch.Common;
@@ -18,33 +19,33 @@ namespace Microsoft.Azure.BatchExplorer.Models
         #region Public properties
 
         /// <summary>
-        /// The set of TVMs associated with this pool
+        /// The set of compute nodes associated with this pool
         /// </summary>
-        public List<TvmModel> Tvms { get; private set; }
+        public List<ComputeNodeModel> ComputeNodes { get; private set; }
 
         /// <summary>
-        /// The name of this pool
+        /// The id of this pool
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public string Name { get { return this.Pool.Name; } }
+        public string Id { get { return this.Pool.Id; } }
 
         /// <summary>
         /// Creation time of the pool
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public DateTime CreationTime { get { return this.Pool.CreationTime; } }
+        public DateTime? CreationTime { get { return this.Pool.CreationTime; } }
 
         /// <summary>
         /// State of the pool
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public PoolState State { get { return this.Pool.State; } }
+        public PoolState? State { get { return this.Pool.State; } }
 
         /// <summary>
-        /// The size of VMs in this pool
+        /// The size of ComputeNodes in this pool
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public string VMSize { get { return this.Pool.VMSize; } }
+        public string VirtualMachineSize { get { return this.Pool.VirtualMachineSize; } }
 
         /// <summary>
         /// The current dedicated size of this pool
@@ -56,13 +57,13 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// The pool allocation state
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public AllocationState AllocationState { get { return this.Pool.AllocationState; } }
+        public AllocationState? AllocationState { get { return this.Pool.AllocationState; } }
 
         /// <summary>
-        /// The Tvm collection associated with this pool
+        /// The ComputeNode collection associated with this pool
         /// </summary>
         [ChangeTracked(ModelRefreshType.Children)]
-        public ICollectionView TvmCollection { get; set; }
+        public ICollectionView ComputeNodeCollection { get; set; }
 
         /// <summary>
         /// The statistics associated with this pool
@@ -79,19 +80,19 @@ namespace Microsoft.Azure.BatchExplorer.Models
 
         #endregion
 
-        private ICloudPool Pool { get; set; }
+        private CloudPool Pool { get; set; }
 
         /// <summary>
         /// Create a pool model from the pool cache entity
         /// </summary>
-        public PoolModel(ICloudPool pool)
+        public PoolModel(CloudPool pool)
         {
             this.Pool = pool;
             this.LastUpdatedTime = DateTime.UtcNow;
-            this.Tvms = new List<TvmModel>();
+            this.ComputeNodes = new List<ComputeNodeModel>();
 
-            this.TvmCollection = CollectionViewSource.GetDefaultView(this.Tvms);
-            this.UpdateTvmView();
+            this.ComputeNodeCollection = CollectionViewSource.GetDefaultView(this.ComputeNodes);
+            this.UpdateNodeView();
         }
 
         #region ModelBase implementation
@@ -106,19 +107,19 @@ namespace Microsoft.Azure.BatchExplorer.Models
             }
         }
 
-        public override async System.Threading.Tasks.Task RefreshAsync(ModelRefreshType refreshType, bool showTrackedOperation = true)
+        public override async Task RefreshAsync(ModelRefreshType refreshType, bool showTrackedOperation = true)
         {
             if (refreshType.HasFlag(ModelRefreshType.Basic))
             {
                 try
                 {
                     Messenger.Default.Send(new UpdateWaitSpinnerMessage(WaitSpinnerPanel.Left, true));
-                    System.Threading.Tasks.Task asyncTask = this.Pool.RefreshAsync();
+                    Task asyncTask = this.Pool.RefreshAsync();
                     if (showTrackedOperation)
                     {
                         AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                             asyncTask,
-                            new PoolOperation(PoolOperation.Refresh, this.Pool.Name)));
+                            new PoolOperation(PoolOperation.Refresh, this.Pool.Id)));
                     }
                     else
                     {
@@ -152,14 +153,14 @@ namespace Microsoft.Azure.BatchExplorer.Models
                     //Set this before the children load so that on revisit we know we have loaded the children (or are in the process)
                     this.HasLoadedChildren = true;
 
-                    System.Threading.Tasks.Task<List<TvmModel>> asyncTask = this.ListVMsAsync();
+                    Task<List<ComputeNodeModel>> asyncTask = this.ListComputeNodesAsync();
                     AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                         asyncTask,
-                        new PoolOperation(PoolOperation.ListVMs, this.Pool.Name)));
-                    this.Tvms = await asyncTask;
+                        new PoolOperation(PoolOperation.ListComputeNodes, this.Pool.Id)));
+                    this.ComputeNodes = await asyncTask;
 
-                    this.TvmCollection = CollectionViewSource.GetDefaultView(this.Tvms);
-                    this.UpdateTvmView();
+                    this.ComputeNodeCollection = CollectionViewSource.GetDefaultView(this.ComputeNodes);
+                    this.UpdateNodeView();
                 }
                 catch (Exception e)
                 {
@@ -182,14 +183,14 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// <summary>
         /// Delete this pool from the server
         /// </summary>
-        public async System.Threading.Tasks.Task DeleteAsync()
+        public async Task DeleteAsync()
         {
             try
             {
-                System.Threading.Tasks.Task asyncTask = this.Pool.DeleteAsync();
+                Task asyncTask = this.Pool.DeleteAsync();
                 AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                     asyncTask,
-                    new PoolOperation(PoolOperation.Delete, this.Pool.Name)));
+                    new PoolOperation(PoolOperation.Delete, this.Pool.Id)));
                 await asyncTask;
             }
             catch (Exception e)
@@ -201,14 +202,14 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// <summary>
         /// Resize this pool
         /// </summary>
-        public async System.Threading.Tasks.Task ResizeAsync(int target, TimeSpan timeout, TVMDeallocationOption deallocationOption)
+        public async Task ResizeAsync(int target, TimeSpan timeout, ComputeNodeDeallocationOption deallocationOption)
         {
             try
             {
-                System.Threading.Tasks.Task asyncTask = this.Pool.ResizeAsync(target, timeout, deallocationOption);
+                Task asyncTask = this.Pool.ResizeAsync(target, timeout, deallocationOption);
                 AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                     asyncTask,
-                    new PoolOperation(PoolOperation.Resize, this.Pool.Name)));
+                    new PoolOperation(PoolOperation.Resize, this.Pool.Id)));
                 await asyncTask;
                 await this.RefreshAsync(ModelRefreshType.Basic, showTrackedOperation: false);
             }
@@ -218,16 +219,12 @@ namespace Microsoft.Azure.BatchExplorer.Models
             }
         }
 
-        private async System.Threading.Tasks.Task<List<TvmModel>> ListVMsAsync()
+        private async Task<List<ComputeNodeModel>> ListComputeNodesAsync()
         {
-            List<TvmModel> results = new List<TvmModel>();
-            IEnumerableAsyncExtended<IVM> jobList = this.Pool.ListVMs(OptionsModel.Instance.ListDetailLevel);
-            IAsyncEnumerator<IVM> asyncEnumerator = jobList.GetAsyncEnumerator();
+            List<ComputeNodeModel> results = new List<ComputeNodeModel>();
+            IPagedEnumerable<ComputeNode> jobList = this.Pool.ListComputeNodes(OptionsModel.Instance.ListDetailLevel);
 
-            while (await asyncEnumerator.MoveNextAsync())
-            {
-                results.Add(new TvmModel(this, asyncEnumerator.Current));
-            }
+            await jobList.ForEachAsync(item => results.Add(new ComputeNodeModel(this, item)));
 
             return results;
         }
@@ -237,9 +234,9 @@ namespace Microsoft.Azure.BatchExplorer.Models
         #region Public methods
 
         /// <summary>
-        /// Updates associated list of TVMs view
+        /// Updates associated list of ComputeNodes view
         /// </summary>
-        public void UpdateTvmView()
+        public void UpdateNodeView()
         {
             this.FireChangesOnRefresh(ModelRefreshType.Children);
         }
@@ -251,7 +248,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         private void HandleException(Exception e)
         {
             //Swallow 404's and fire a message
-            if (Common.IsExceptionNotFound(e))
+            if (Microsoft.Azure.BatchExplorer.Helpers.Common.IsExceptionNotFound(e))
             {
                 Messenger.Default.Send(new ModelNotFoundAfterRefresh(this));
             }

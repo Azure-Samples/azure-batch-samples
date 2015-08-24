@@ -30,9 +30,13 @@ namespace Microsoft.Azure.BatchExplorer.Models
             get { return this.displayOperationHistory; }
             set
             {
+                bool origialValue = this.displayOperationHistory;
                 this.displayOperationHistory = value;
-                Messenger.Default.Send(new ShowAsyncOperationTabMessage(this.displayOperationHistory));
-                this.FirePropertyChangedEvent("DisplayOperationHistory");
+                if (origialValue != value)
+                {
+                    Messenger.Default.Send(new ShowAsyncOperationTabMessage(this.displayOperationHistory));
+                    this.FirePropertyChangedEvent("DisplayOperationHistory");
+                }
             }
         }
 
@@ -148,7 +152,9 @@ namespace Microsoft.Azure.BatchExplorer.Models
         private static string GetOptionsFilePath()
         {
             // create the directory if necessary
-            string fullDirectoryPath = Path.Combine(Common.LocalAppDataDirectory, Common.LocalAppDataSubfolder);
+            string fullDirectoryPath = Path.Combine(
+                Microsoft.Azure.BatchExplorer.Helpers.Common.LocalAppDataDirectory, 
+                Microsoft.Azure.BatchExplorer.Helpers.Common.LocalAppDataSubfolder);
             Directory.CreateDirectory(fullDirectoryPath);
 
             string path = Path.Combine(fullDirectoryPath, OptionsFileName);

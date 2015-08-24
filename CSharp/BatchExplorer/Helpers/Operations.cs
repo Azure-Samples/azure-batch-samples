@@ -25,7 +25,8 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
 
     public class AccountOperation : Operation
     {
-        public const string ListWorkItems = "ListWorkItems";
+        public const string ListJobSchedules = "ListJobSchedules";
+        public const string ListJobs = "ListJobs";
         public const string ListPools = "ListPools";
         public const string ListOSVersions = "ListOSVersions";
 
@@ -40,7 +41,7 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         }
     }
 
-    public class WorkItemOperation : Operation
+    public class JobScheduleOperation : Operation
     {
         public const string Enable = "Enable";
         public const string Disable = "Disable";
@@ -49,18 +50,18 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         public const string ListJobs = "ListJobs";
         public const string Refresh = "Refresh";
 
-        private readonly string workItemName;
-        private const string OperationTargetFormatString = @"WorkItem: {0}";
+        private readonly string jobScheduleId;
+        private const string OperationTargetFormatString = @"JobSchedule: {0}";
 
         public override string OperationTarget
         {
-            get { return string.Format(CultureInfo.CurrentCulture, OperationTargetFormatString, this.workItemName); }
+            get { return string.Format(CultureInfo.CurrentCulture, OperationTargetFormatString, this.jobScheduleId); }
         }
 
-        public WorkItemOperation(string operationName, string workItemName)
+        public JobScheduleOperation(string operationName, string jobScheduleId)
             : base(operationName)
         {
-            this.workItemName = workItemName;
+            this.jobScheduleId = jobScheduleId;
         }
     }
 
@@ -73,21 +74,19 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         public const string Refresh = "Refresh";
         public const string ListTasks = "ListTasks";
 
-        private readonly string workItemName;
-        private readonly string jobName;
+        private readonly string jobId;
 
-        private const string OperationTargetFormatString = @"WorkItem: {0}, Job: {1}";
+        private const string OperationTargetFormatString = @"Job: {0}";
 
         public override string OperationTarget
         {
-            get { return string.Format(CultureInfo.CurrentCulture, OperationTargetFormatString, this.workItemName, this.jobName); }
+            get { return string.Format(CultureInfo.CurrentCulture, OperationTargetFormatString, this.jobId); }
         }
 
-        public JobOperation(string operationName, string workItemName, string jobName)
+        public JobOperation(string operationName, string jobId)
             : base(operationName)
         {
-            this.workItemName = workItemName;
-            this.jobName = jobName;
+            this.jobId = jobId;
         }
     }
 
@@ -96,26 +95,24 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         public const string Terminate = "Terminate";
         public const string Delete = "Delete";
         public const string Refresh = "Refresh";
-        public const string ListTaskFiles = "ListTaskFiles";
-        public const string GetTaskFile = "GetTaskFile";
+        public const string ListFiles = "ListFiles";
+        public const string GetFile = "GetFile";
 
-        private readonly string workItemName;
-        private readonly string jobName;
-        private readonly string taskName;
+        private readonly string jobId;
+        private readonly string taskId;
 
-        private const string OperationTargetFormatString = @"WorkItem: {0}, Job: {1}, Task: {2}";
+        private const string OperationTargetFormatString = @"Job: {0}, Task: {1}";
 
         public override string OperationTarget
         {
-            get { return string.Format(CultureInfo.CurrentCulture, OperationTargetFormatString, this.workItemName, this.jobName, this.taskName); }
+            get { return string.Format(CultureInfo.CurrentCulture, OperationTargetFormatString, this.jobId, this.taskId); }
         }
 
-        public TaskOperation(string operationName, string workItemName, string jobName, string taskName)
+        public TaskOperation(string operationName, string jobId, string taskId)
             : base(operationName)
         {
-            this.workItemName = workItemName;
-            this.jobName = jobName;
-            this.taskName = taskName;
+            this.jobId = jobId;
+            this.taskId = taskId;
         }
     }
 
@@ -125,48 +122,48 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         public const string Resize = "Resize";
         public const string Delete = "Delete";
         public const string Refresh = "Refresh";
-        public const string ListVMs = "ListVMs";
+        public const string ListComputeNodes = "ListComputeNodes";
         public const string GetPool = "GetPool";
 
-        private readonly string poolName;
+        private readonly string poolId;
         private const string OperationTargetFormatString = @"Pool: {0}";
 
         public override string OperationTarget
         {
-            get { return string.Format(CultureInfo.CurrentCulture, OperationTargetFormatString, this.poolName); }
+            get { return string.Format(CultureInfo.CurrentCulture, OperationTargetFormatString, this.poolId); }
         }
 
-        public PoolOperation(string operationName, string poolName)
+        public PoolOperation(string operationName, string poolId)
             : base(operationName)
         {
-            this.poolName = poolName;
+            this.poolId = poolId;
         }
     }
 
-    public class VMOperation : Operation
+    public class ComputeNodeOperation : Operation
     {
         public const string Reboot = "Reboot";
         public const string Reimage = "Reimage";
         public const string Refresh = "Refresh";
-        public const string ListVMFiles = "ListVMFiles";
+        public const string ListFiles = "ListFiles";
         public const string GetRdp = "GetRdp";
-        public const string GetVMFile = "GetVMFile";
+        public const string GetFile = "GetFile";
         public const string CreateUser = "CreateUser";
 
-        private readonly string poolName;
-        private readonly string vmName;
-        private const string OperationTargetFormatString = @"Pool: {0}, VM: {1}";
+        private readonly string poolId;
+        private readonly string nodeId;
+        private const string OperationTargetFormatString = @"Pool: {0}, Node: {1}";
 
         public override string OperationTarget
         {
-            get { return string.Format(CultureInfo.CurrentCulture, OperationTargetFormatString, this.poolName, this.vmName); }
+            get { return string.Format(CultureInfo.CurrentCulture, OperationTargetFormatString, this.poolId, this.nodeId); }
         }
 
-        public VMOperation(string operationName, string poolName, string vmName)
+        public ComputeNodeOperation(string operationName, string poolId, string nodeId)
             : base(operationName)
         {
-            this.poolName = poolName;
-            this.vmName = vmName;
+            this.poolId = poolId;
+            this.nodeId = nodeId;
         }
     }
 }

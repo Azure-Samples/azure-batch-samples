@@ -16,17 +16,17 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         #endregion
 
         #region Public UI Properties
-        private string poolName;
-        public string PoolName
+        private string poolId;
+        public string PoolId
         {
             get
             {
-                return this.poolName;
+                return this.poolId;
             }
             set
             {
-                this.poolName = value;
-                this.FirePropertyChangedEvent("PoolName");
+                this.poolId = value;
+                this.FirePropertyChangedEvent("PoolId");
             }
         }
         
@@ -85,15 +85,14 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         {
             deallocationOptionValues = new List<string>();
             deallocationOptionValues.Add(string.Empty);
-            deallocationOptionValues.AddRange(Enum.GetNames(typeof (TVMDeallocationOption)));
-            deallocationOptionValues.Remove(TVMDeallocationOption.Invalid.ToString());
+            deallocationOptionValues.AddRange(Enum.GetNames(typeof (ComputeNodeDeallocationOption)));
         }
 
-        public ResizePoolViewModel(IDataProvider batchService, string poolName, int? currentDedicated)
+        public ResizePoolViewModel(IDataProvider batchService, string poolId, int? currentDedicated)
         {
             this.batchService = batchService;
 
-            this.PoolName = poolName;
+            this.PoolId = poolId;
             this.TargetDedicated = currentDedicated ?? 0;
             this.DeallocationOptionString = null;
 
@@ -125,14 +124,14 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         {
             try
             {
-                TVMDeallocationOption? deallocationOption;
+                ComputeNodeDeallocationOption? deallocationOption;
                 if (this.IsInputValid(out deallocationOption))
                 {
-                    Task asyncTask = this.batchService.ResizePoolAsync(this.PoolName, this.TargetDedicated, this.Timeout, deallocationOption);
+                    Task asyncTask = this.batchService.ResizePoolAsync(this.PoolId, this.TargetDedicated, this.Timeout, deallocationOption);
 
                     AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                         asyncTask,
-                        new PoolOperation(PoolOperation.Resize, poolName)));
+                        new PoolOperation(PoolOperation.Resize, this.poolId)));
                     await asyncTask;
 
                     Messenger.Default.Send(new CloseGenericPopup());
@@ -144,13 +143,13 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
-        private bool IsInputValid(out TVMDeallocationOption? deallocationOption)
+        private bool IsInputValid(out ComputeNodeDeallocationOption? deallocationOption)
         {
             deallocationOption = null;
             
             if (!string.IsNullOrEmpty(this.DeallocationOptionString))
             {
-                TVMDeallocationOption innerDeallocationOption;
+                ComputeNodeDeallocationOption innerDeallocationOption;
                 bool parsedCorrectly = Enum.TryParse(this.DeallocationOptionString, out innerDeallocationOption);
                 if (parsedCorrectly)
                 {
@@ -163,9 +162,9 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 }
             }
             
-            if (string.IsNullOrEmpty(this.PoolName))
+            if (string.IsNullOrEmpty(this.PoolId))
             {
-                Messenger.Default.Send(new GenericDialogMessage("Invalid values for Pool Name"));
+                Messenger.Default.Send(new GenericDialogMessage("Invalid values for Pool Id"));
                 return false;
             }
             else if (this.TargetDedicated < 0)

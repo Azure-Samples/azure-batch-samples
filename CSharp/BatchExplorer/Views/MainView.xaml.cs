@@ -21,8 +21,10 @@ namespace Microsoft.Azure.BatchExplorer.Views
         private GenericEmptyWindow heatmapWindow;
 
         private GridLength asyncOperationTabHeight;
-        private const int InitialWindowWidth = 800;
-        private const int InitialWindowHeight = 800;
+        private const int MinWindowHeight = 100;
+        private const int MaxWindowHeight = 800;
+        private const int MinWindowWidth = 180;
+        private const int MaxWindowWidth = 800;
 
         public MainView()
         {
@@ -46,20 +48,25 @@ namespace Microsoft.Azure.BatchExplorer.Views
                     //Need to use dispatcher.Invoke because this message may be called via a non UI thread, and those threads
                     //Cannot create controls/windows.  To work around this, creation of the window is run in the dispacter of the main view (this)
                     this.Dispatcher.Invoke(() =>
-                                               {
-                                                   this.genericPopupWindow = new GenericEmptyWindow();
+                    {
+                        this.genericPopupWindow = new GenericEmptyWindow();
 
-                                                   this.genericPopupWindow.Height = InitialWindowHeight;
-                                                   this.genericPopupWindow.Width = InitialWindowWidth;
-                                                   this.genericPopupWindow.Title = "Message";
-                                                   this.genericPopupWindow.Owner = this;
-                                                   this.genericPopupWindow.Content = new GenericMessageControl(new GenericMessageViewModel(m.MessageString));
-                                                   this.genericPopupWindow.ResizeMode = System.Windows.ResizeMode.CanResizeWithGrip;
-                                                   this.IsEnabled = false;
-                                                   this.genericPopupWindow.ShowDialog();
-                                                   this.IsEnabled = true;
-                                                   this.genericPopupWindow = null;
-                                               });
+                        this.genericPopupWindow.MinHeight = MinWindowHeight;
+                        this.genericPopupWindow.MaxHeight = MaxWindowHeight;
+                        this.genericPopupWindow.MinWidth = MinWindowWidth;
+                        this.genericPopupWindow.MaxWidth = MaxWindowWidth;
+                        this.genericPopupWindow.Title = "Message";
+                        this.genericPopupWindow.Owner = this;
+                        this.genericPopupWindow.Content = new GenericMessageControl(new GenericMessageViewModel(m.MessageString));
+                        this.genericPopupWindow.ResizeMode = System.Windows.ResizeMode.CanResizeWithGrip;
+                        this.genericPopupWindow.SizeToContent = System.Windows.SizeToContent.WidthAndHeight;
+                        this.genericPopupWindow.VerticalContentAlignment = System.Windows.VerticalAlignment.Top;
+                        this.genericPopupWindow.HorizontalContentAlignment = System.Windows.HorizontalAlignment.Center;
+                        this.IsEnabled = false;
+                        this.genericPopupWindow.ShowDialog();
+                        this.IsEnabled = true;
+                        this.genericPopupWindow = null;
+                    });
                 });
             //Add listener for the message to show the delete confirm dialog box
             Messenger.Default.Register<ShowDeleteWarningMessage>(this, (m) =>
@@ -137,30 +144,30 @@ namespace Microsoft.Azure.BatchExplorer.Views
                     Messenger.Default.Send<MultibuttonDialogReturnMessage>(new MultibuttonDialogReturnMessage(result));
                 });
 
-            Messenger.Default.Register<RebootTvmMessage>(this, (message) =>
+            Messenger.Default.Register<RebootComputeNodeMessage>(this, (message) =>
                 {
-                    MessageBoxResult result = MessageBox.Show("Are you sure you want to reboot this TVM?", "TVM Reboot", MessageBoxButton.YesNo);
-                    TvmRebootConfimation confimation = TvmRebootConfimation.Cancelled;
+                    MessageBoxResult result = MessageBox.Show("Are you sure you want to reboot this Compute Node?", "Compute Node Reboot", MessageBoxButton.YesNo);
+                    ComputeNodeRebootConfimation confimation = ComputeNodeRebootConfimation.Cancelled;
 
                     if (result == MessageBoxResult.Yes)
                     {
-                        confimation = TvmRebootConfimation.Confirmed;
+                        confimation = ComputeNodeRebootConfimation.Confirmed;
                     }
 
-                    Messenger.Default.Send<RebootTvmConfirmationMessage>(new RebootTvmConfirmationMessage(confimation));
+                    Messenger.Default.Send<RebootComputeNodeConfirmationMessage>(new RebootComputeNodeConfirmationMessage(confimation));
                 });
 
-            Messenger.Default.Register<ReimageTvmMessage>(this, (message) =>
+            Messenger.Default.Register<ReimageComputeNodeMessage>(this, (message) =>
             {
-                MessageBoxResult result = MessageBox.Show("Are you sure you want to reimage this TVM?", "TVM Reimage", MessageBoxButton.YesNo);
-                TvmReimageConfimation confimation = TvmReimageConfimation.Cancelled;
+                MessageBoxResult result = MessageBox.Show("Are you sure you want to reimage this Compute Node?", "Compute Node Reimage", MessageBoxButton.YesNo);
+                ComputeNodeReimageConfimation confimation = ComputeNodeReimageConfimation.Cancelled;
 
                 if (result == MessageBoxResult.Yes)
                 {
-                    confimation = TvmReimageConfimation.Confirmed;
+                    confimation = ComputeNodeReimageConfimation.Confirmed;
                 }
 
-                Messenger.Default.Send<ReimageTvmConfirmationMessage>(new ReimageTvmConfirmationMessage(confimation));
+                Messenger.Default.Send<ReimageComputeNodeConfirmationMessage>(new ReimageComputeNodeConfirmationMessage(confimation));
             });
 
             Messenger.Default.Register<ShowAboutWindow>(this, (message) =>
@@ -190,11 +197,15 @@ namespace Microsoft.Azure.BatchExplorer.Views
                 (m) =>
                 {
                     this.genericEmptyWindow = new GenericEmptyWindow();
+                    this.genericEmptyWindow.MinHeight = MinWindowHeight;
+                    this.genericEmptyWindow.MaxHeight = MaxWindowHeight;
+                    this.genericEmptyWindow.MinWidth = MinWindowWidth;
+                    this.genericEmptyWindow.MaxWidth = MaxWindowWidth;
                     this.genericEmptyWindow.Title = "Operation Details";
                     this.genericEmptyWindow.Content = new AsyncOperationDetailsControl(new AsyncOperationDetailsViewModel(m.AsyncOperation));
                     this.genericEmptyWindow.Owner = this;
-                    this.genericEmptyWindow.Width = InitialWindowWidth;
-                    this.genericEmptyWindow.Height = InitialWindowHeight;
+                    this.genericEmptyWindow.ResizeMode = System.Windows.ResizeMode.CanResizeWithGrip;
+                    this.genericEmptyWindow.SizeToContent = System.Windows.SizeToContent.WidthAndHeight;
                     this.IsEnabled = false;
                     this.genericEmptyWindow.ShowDialog();
                     this.IsEnabled = true;
@@ -223,13 +234,14 @@ namespace Microsoft.Azure.BatchExplorer.Views
                     this.genericEmptyWindow = null;
                 });
 
+            const int optionsRowLocation = 3;
             //Check if we need to collapse the operation history display on start
             if (!OptionsModel.Instance.DisplayOperationHistory)
             {
                 //Store the current height and then hide the control and move the grid to auto
-                asyncOperationTabHeight = this.MainGrid.RowDefinitions[3].Height;
+                asyncOperationTabHeight = this.MainGrid.RowDefinitions[optionsRowLocation].Height;
                 this.AsyncOperationGrid.Visibility = Visibility.Collapsed;
-                this.MainGrid.RowDefinitions[3].Height = GridLength.Auto;
+                this.MainGrid.RowDefinitions[optionsRowLocation].Height = GridLength.Auto;
             }
 
             Messenger.Default.Register<ShowAsyncOperationTabMessage>(this,
@@ -238,22 +250,35 @@ namespace Microsoft.Azure.BatchExplorer.Views
                     if (m.Show)
                     {
                         this.AsyncOperationGrid.Visibility = Visibility.Visible;
-                        this.MainGrid.RowDefinitions[3].Height = asyncOperationTabHeight;
+                        this.MainGrid.RowDefinitions[optionsRowLocation].Height = asyncOperationTabHeight;
                     }
                     else
                     {
                         //Store the current height and then hide the control and move the grid to auto
-                        asyncOperationTabHeight = this.MainGrid.RowDefinitions[3].Height;
+                        asyncOperationTabHeight = this.MainGrid.RowDefinitions[optionsRowLocation].Height;
                         this.AsyncOperationGrid.Visibility = Visibility.Collapsed;
-                        this.MainGrid.RowDefinitions[3].Height = GridLength.Auto;
+                        this.MainGrid.RowDefinitions[optionsRowLocation].Height = GridLength.Auto;
                     }
                 });
 
-            Messenger.Default.Register<ShowCreateWorkItemWindow>(this, (message) =>
+            Messenger.Default.Register<ShowCreateJobScheduleWindow>(this, (message) =>
             {
                 this.genericEmptyWindow = new GenericEmptyWindow();
-                this.genericEmptyWindow.Title = "Create Work Item";
-                this.genericEmptyWindow.Content = new CreateControls.CreateWorkItemControl(new CreateWorkItemViewModel(MainViewModel.dataProvider));
+                this.genericEmptyWindow.Title = "Create Job Schedule";
+                this.genericEmptyWindow.Content = new CreateControls.CreateJobScheduleControl(new CreateJobScheduleViewModel(MainViewModel.dataProvider));
+                this.genericEmptyWindow.Owner = this;
+                this.genericEmptyWindow.SizeToContent = System.Windows.SizeToContent.Height;
+                this.IsEnabled = false;
+                this.genericEmptyWindow.ShowDialog();
+                this.IsEnabled = true;
+                this.genericEmptyWindow = null;
+            });
+
+            Messenger.Default.Register<ShowCreateJobWindow>(this, (message) =>
+            {
+                this.genericEmptyWindow = new GenericEmptyWindow();
+                this.genericEmptyWindow.Title = "Create Job";
+                this.genericEmptyWindow.Content = new CreateControls.CreateJobControl(new CreateJobViewModel(MainViewModel.dataProvider));
                 this.genericEmptyWindow.Owner = this;
                 this.genericEmptyWindow.SizeToContent = System.Windows.SizeToContent.Height;
                 this.IsEnabled = false;
@@ -266,7 +291,7 @@ namespace Microsoft.Azure.BatchExplorer.Views
             {
                 this.genericEmptyWindow = new GenericEmptyWindow();
                 this.genericEmptyWindow.Title = "Add Task";
-                this.genericEmptyWindow.Content = new CreateControls.AddTaskControl(new AddTaskViewModel(MainViewModel.dataProvider, message.WorkItemName, message.JobName));
+                this.genericEmptyWindow.Content = new CreateControls.AddTaskControl(new AddTaskViewModel(MainViewModel.dataProvider, message.JobId));
                 this.genericEmptyWindow.Owner = this;
                 this.genericEmptyWindow.SizeToContent = System.Windows.SizeToContent.Height;
                 this.IsEnabled = false;
@@ -275,7 +300,7 @@ namespace Microsoft.Azure.BatchExplorer.Views
                 this.genericEmptyWindow = null;
             });
 
-            Messenger.Default.Register<ShowCreateVMUserWindow>(this, (message) =>
+            Messenger.Default.Register<ShowCreateComputeNodeUserWindow>(this, (message) =>
             {
                 //Make sure we close the popup afterward
                 Messenger.Default.Register<CloseGenericPopup>(this,
@@ -286,8 +311,8 @@ namespace Microsoft.Azure.BatchExplorer.Views
                     });
 
                 this.genericEmptyWindow = new GenericEmptyWindow();
-                this.genericEmptyWindow.Title = "Create VM User";
-                this.genericEmptyWindow.Content = new CreateControls.CreateVMUserControl(new CreateVMUserViewModel(MainViewModel.dataProvider, message.PoolName, message.VMName));
+                this.genericEmptyWindow.Title = "Create Compute Node User";
+                this.genericEmptyWindow.Content = new CreateControls.CreateComputeNodeUserControl(new CreateComputeNodeUserViewModel(MainViewModel.dataProvider, message.PoolId, message.ComputeNodeId));
                 this.genericEmptyWindow.Owner = this;
                 this.genericEmptyWindow.SizeToContent = System.Windows.SizeToContent.Height;
                 this.IsEnabled = false;
@@ -308,7 +333,7 @@ namespace Microsoft.Azure.BatchExplorer.Views
 
                 this.genericEmptyWindow = new GenericEmptyWindow();
                 this.genericEmptyWindow.Title = "Resize Pool";
-                this.genericEmptyWindow.Content = new CreateControls.ResizePoolControl(new ResizePoolViewModel(MainViewModel.dataProvider, message.PoolName, message.CurrentDedicated));
+                this.genericEmptyWindow.Content = new CreateControls.ResizePoolControl(new ResizePoolViewModel(MainViewModel.dataProvider, message.PoolId, message.CurrentDedicated));
                 this.genericEmptyWindow.Owner = this;
                 this.genericEmptyWindow.SizeToContent = System.Windows.SizeToContent.WidthAndHeight;
                 this.IsEnabled = false;
@@ -340,26 +365,6 @@ namespace Microsoft.Azure.BatchExplorer.Views
                         this.heatmapWindow.Show();
                     });
             });
-        }
-
-        private void Selector_OnSelectionChanged(object sender, DataGridSelectionChangedEventArgs e)
-        {
-            /*
-             * HACK - Get Selected Job Item Updated
-             * For some reason, the binding of the SelectedItem property to SelectedJob doesn't work.
-             * Work around this for now by setting the property manually
-             *
-             * REMARKS - Using the 0th index of the collection works in this case because we have
-             * set the data grid to use Single Selection Mode
-             */
-
-            if (this.viewModel.SelectedWorkItem != null)
-            {
-                if (e.SelectionInfos.Count > 0 && e.SelectionInfos[0].AddedItems.Count > 0)
-                {
-                    this.viewModel.SelectedWorkItem.SelectedJob = e.SelectionInfos[0].AddedItems[0] as JobModel;
-                }
-            }
         }
     }
 }

@@ -2,12 +2,12 @@
 {
     public class ShowResizePoolWindow
     {
-        public string PoolName { get; private set; }
+        public string PoolId { get; private set; }
         public int? CurrentDedicated { get; private set; }
 
-        public ShowResizePoolWindow(string poolName, int? currentDedicated)
+        public ShowResizePoolWindow(string poolId, int? currentDedicated)
         {
-            this.PoolName = poolName;
+            this.PoolId = poolId;
             this.CurrentDedicated = currentDedicated;
         }
     }

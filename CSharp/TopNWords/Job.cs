@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.IO;
 using Microsoft.Azure.Batch.Auth;
 using Microsoft.Azure.Batch.Common;
@@ -11,156 +12,210 @@ using Microsoft.WindowsAzure.Storage.Blob;
 namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
 {
     /// <summary>
-    /// In this sample, we have a set of input blobs and we use the Batch Service to process
-    /// these blobs in parallel on multiple VMs. Each Task finds out the TopNWords for
-    /// the corresponding blob.
+    /// In this sample, the Batch Service is used to process a set of input blobs in parallel on multiple 
+    /// compute nodes. Each task finds out the TopNWords for its corresponding blob.
     /// 
-    /// The sample creates a run-once workitem with no job manager. We then create 
-    /// multiple tasks and assign each task to a blob. We then wait for each of the 
-    /// task to complete and then print out the topNWords for each input blob.
+    /// The sample creates a run-once job followed by multiple tasks which each task assigned to process a
+    /// specific blob. It then waits for each of the tasks to complete where it prints out the topNWords for
+    /// each input blob.
     /// </summary>
-    public class Job
+    public static class Job
     {
+        // files that are required on the compute nodes that run the tasks
         private const string TopNWordsExeName = "TopNWordsSample.exe";
         private const string StorageClientDllName = "Microsoft.WindowsAzure.Storage.dll";
-        
+
         public static void JobMain(string[] args)
         {
             //Load the configuration
             TopNWordsConfiguration configuration = TopNWordsConfiguration.LoadConfigurationFromAppConfig();
-            
+
             StagingStorageAccount stagingStorageAccount = new StagingStorageAccount(
-                configuration.StorageAccountName, 
-                configuration.StorageAccountKey, 
+                configuration.StorageAccountName,
+                configuration.StorageAccountKey,
                 configuration.StorageAccountBlobEndpoint);
 
-            IBatchClient client = BatchClient.Connect(configuration.BatchServiceUrl, new BatchCredentials(configuration.BatchAccountName, configuration.BatchAccountKey));
-            string stagingContainer = null;
-
-            //Create a pool (if user hasn't provided one)
-            if (configuration.ShouldCreatePool)
+            using (BatchClient client = BatchClient.Open(new BatchSharedKeyCredentials(configuration.BatchServiceUrl, configuration.BatchAccountName, configuration.BatchAccountKey)))
             {
-                using (IPoolManager pm = client.OpenPoolManager())
+                string stagingContainer = null;
+
+                //Create a pool (if user hasn't provided one)
+                if (configuration.ShouldCreatePool)
                 {
-                    //OSFamily 4 == OS 2012 R2
-                    //You can learn more about os families and versions at:
+                    //OSFamily 4 == OS 2012 R2. You can learn more about os families and versions at:
                     //http://msdn.microsoft.com/en-us/library/azure/ee924680.aspx
-                    ICloudPool pool = pm.CreatePool(configuration.PoolName, targetDedicated: configuration.PoolSize, osFamily: "4", vmSize: "small");
-                    Console.WriteLine("Adding pool {0}", configuration.PoolName);
-                    pool.Commit();
+                    CloudPool pool = client.PoolOperations.CreatePool(configuration.PoolId, targetDedicated: configuration.PoolSize, osFamily: "4", virtualMachineSize: "small");
+                    Console.WriteLine("Adding pool {0}", configuration.PoolId);
+
+                    try
+                    {
+                        pool.Commit();
+                    }
+                    catch (AggregateException ae)
+                    {
+                        // Go through all exceptions and dump useful information
+                        ae.Handle(x =>
+                        {
+                            Console.Error.WriteLine("Creating pool ID {0} failed", configuration.PoolId);
+                            if (x is BatchException)
+                            {
+                                BatchException be = x as BatchException;
+
+                                Console.WriteLine(be.ToString());
+                                Console.WriteLine();
+                            }
+                            else
+                            {
+                                Console.WriteLine(x);
+                            }
+
+                            // can't continue without a pool
+                            return false;
+                        });
+                    }
                 }
-            }
-            
-            try
-            {
-                using (IWorkItemManager wm = client.OpenWorkItemManager())
+
+                try
                 {
-                    IToolbox toolbox = client.OpenToolbox();
+                    Console.WriteLine("Creating job: " + configuration.JobId);
+                    // get an empty unbound Job
+                    CloudJob unboundJob = client.JobOperations.CreateJob();
+                    unboundJob.Id = configuration.JobId;
+                    unboundJob.PoolInformation = new PoolInformation() { PoolId = configuration.PoolId };
 
-                    //Use the TaskSubmissionHelper to help us create a WorkItem and add tasks to it.
-                    ITaskSubmissionHelper taskSubmissionHelper = toolbox.CreateTaskSubmissionHelper(wm, configuration.PoolName);
-                    taskSubmissionHelper.WorkItemName = configuration.WorkItemName;
+                    // Commit Job to create it in the service
+                    unboundJob.Commit();
 
+                    // create file staging objects that represent the executable and its dependent assembly to run as the task.
+                    // These files are copied to every node before the corresponding task is scheduled to run on that node.
                     FileToStage topNWordExe = new FileToStage(TopNWordsExeName, stagingStorageAccount);
                     FileToStage storageDll = new FileToStage(StorageClientDllName, stagingStorageAccount);
 
+                    // In this sample, the input data is copied separately to Storage and its URI is passed to the task as an argument.
+                    // This approach is appropriate when the amount of input data is large such that copying it to every node via FileStaging
+                    // is not desired and the number of tasks is small since a large number of readers of the blob might get throttled
+                    // by Storage which will lengthen the overall processing time.
+                    //
+                    // You'll need to observe the behavior and use published techniques for finding the right balance of performance versus
+                    // complexity.
                     string bookFileUri = UploadBookFileToCloudBlob(configuration, configuration.BookFileName);
                     Console.WriteLine("{0} uploaded to cloud", configuration.BookFileName);
-                    
+
+                    // initialize a collection to hold the tasks that will be submitted in their entirety
+                    List<CloudTask> tasksToRun = new List<CloudTask>(configuration.NumberOfTasks);
+
                     for (int i = 1; i <= configuration.NumberOfTasks; i++)
                     {
-                        ICloudTask task = new CloudTask("task_no_" + i, String.Format("{0} --Task {1} {2} {3} {4}", 
-                            TopNWordsExeName, 
-                            bookFileUri, 
+                        CloudTask task = new CloudTask("task_no_" + i, String.Format("{0} --Task {1} {2} {3} {4}",
+                            TopNWordsExeName,
+                            bookFileUri,
                             configuration.NumberOfTopWords,
-                            configuration.StorageAccountName, 
+                            configuration.StorageAccountName,
                             configuration.StorageAccountKey));
 
-                        //This is the list of files to stage to a container -- for each TaskSubmissionHelper one container is created and 
+                        //This is the list of files to stage to a container -- for each job, one container is created and 
                         //files all resolve to Azure Blobs by their name (so two tasks with the same named file will create just 1 blob in
-                        //the TaskSubmissionHelper's container).
+                        //the container).
                         task.FilesToStage = new List<IFileStagingProvider>
                                             {
                                                 topNWordExe, 
                                                 storageDll
                                             };
 
-                        taskSubmissionHelper.AddTask(task);
+                        tasksToRun.Add(task);
                     }
 
-                    //Commit all the tasks to the Batch Service.
-                    IJobCommitUnboundArtifacts artifacts = taskSubmissionHelper.Commit() as IJobCommitUnboundArtifacts;
-                    
-                    foreach (var fileStagingArtifact in artifacts.FileStagingArtifacts)
+                    // Commit all the tasks to the Batch Service. Ask AddTask to return information about the files that were staged.
+                    // The container information is used later on to remove these files from Storage.
+                    ConcurrentBag<ConcurrentDictionary<Type, IFileStagingArtifact>> fsArtifactBag = new ConcurrentBag<ConcurrentDictionary<Type, IFileStagingArtifact>>();
+                    client.JobOperations.AddTask(configuration.JobId, tasksToRun, fileStagingArtifacts: fsArtifactBag);
+
+                    // loop through the bag of artifacts, looking for the one that matches our staged files. Once there,
+                    // capture the name of the container holding the files so they can be deleted later on if that option
+                    // was configured in the settings.
+                    foreach (var fsBagItem in fsArtifactBag)
                     {
-                        SequentialFileStagingArtifact stagingArtifact = fileStagingArtifact.Value as SequentialFileStagingArtifact;
-                        if (stagingArtifact != null)
+                        IFileStagingArtifact fsValue;
+                        if (fsBagItem.TryGetValue(typeof(FileToStage), out fsValue))
                         {
-                            stagingContainer = stagingArtifact.BlobContainerCreated;
-                            Console.WriteLine("Uploaded files to container: {0} -- you will be charged for their storage unless you delete them.", 
-                                stagingArtifact.BlobContainerCreated);
+                            SequentialFileStagingArtifact stagingArtifact = fsValue as SequentialFileStagingArtifact;
+                            if (stagingArtifact != null)
+                            {
+                                stagingContainer = stagingArtifact.BlobContainerCreated;
+                                Console.WriteLine(
+                                    "Uploaded files to container: {0} -- you will be charged for their storage unless you delete them.",
+                                    stagingArtifact.BlobContainerCreated);
+                            }
                         }
                     }
 
                     //Get the job to monitor status.
-                    ICloudJob job = wm.GetJob(artifacts.WorkItemName, artifacts.JobName);
+                    CloudJob job = client.JobOperations.GetJob(configuration.JobId);
 
-                    Console.Write("Waiting for tasks to complete ...");
-                    // Wait 1 minute for all tasks to reach the completed state
-                    client.OpenToolbox().CreateTaskStateMonitor().WaitAll(job.ListTasks(), TaskState.Completed,  TimeSpan.FromMinutes(20));
-                    Console.WriteLine("Done.");
+                    Console.Write("Waiting for tasks to complete ...   ");
+                    // Wait 20 minutes for all tasks to reach the completed state. The long timeout is necessary for the first
+                    // time a pool is created in order to allow nodes to be added to the pool and initialized to run tasks.
+                    IPagedEnumerable<CloudTask> ourTasks = job.ListTasks(new ODATADetailLevel(selectClause: "id"));
+                    client.Utilities.CreateTaskStateMonitor().WaitAll(ourTasks, TaskState.Completed, TimeSpan.FromMinutes(20));
+                    Console.WriteLine("tasks are done.");
 
-                    foreach (ICloudTask task in job.ListTasks())
+                    foreach (CloudTask t in ourTasks)
                     {
-                        Console.WriteLine("Task " + task.Name + " says:\n" + task.GetTaskFile(Constants.StandardOutFileName).ReadAsString());
-                        Console.WriteLine(task.GetTaskFile(Constants.StandardErrorFileName).ReadAsString());
+                        Console.WriteLine("Task " + t.Id);
+                        Console.WriteLine("stdout:" + Environment.NewLine + t.GetNodeFile(Constants.StandardOutFileName).ReadAsString());
+                        Console.WriteLine();
+                        Console.WriteLine("stderr:" + Environment.NewLine + t.GetNodeFile(Constants.StandardErrorFileName).ReadAsString());
                     }
                 }
-            }
-            finally
-            {
-                //Delete the pool that we created
-                if (configuration.ShouldCreatePool)
+                finally
                 {
-                    using (IPoolManager pm = client.OpenPoolManager())
+                    //Delete the pool that we created
+                    if (configuration.ShouldCreatePool)
                     {
-                        Console.WriteLine("Deleting pool: {0}", configuration.PoolName);
-                        pm.DeletePool(configuration.PoolName);
+                        Console.WriteLine("Deleting pool: {0}", configuration.PoolId);
+                        client.PoolOperations.DeletePool(configuration.PoolId);
                     }
-                }
 
-                //Delete the workitem that we created
-                if (configuration.ShouldDeleteWorkItem)
-                {
-                    using (IWorkItemManager wm = client.OpenWorkItemManager())
+                    //Delete the job that we created
+                    if (configuration.ShouldDeleteJob)
                     {
-                        Console.WriteLine("Deleting work item: {0}", configuration.WorkItemName);
-                        wm.DeleteWorkItem(configuration.WorkItemName);
+                        Console.WriteLine("Deleting job: {0}", configuration.JobId);
+                        client.JobOperations.DeleteJob(configuration.JobId);
                     }
-                }
 
-                //Delete the containers we created
-                if(configuration.ShouldDeleteContainer)
-                {
-                    DeleteContainers(configuration, stagingContainer);
+                    //Delete the containers we created
+                    if (configuration.ShouldDeleteContainer)
+                    {
+                        DeleteContainers(configuration, stagingContainer);
+                    }
                 }
             }
         }
 
         /// <summary>
-        /// Delete the containers in Azure Storage which are created by this sample.
+        /// create a client for accessing blob storage
         /// </summary>
-        /// <param name="configuration"></param>
-        /// <param name="fileStagingContainer"></param>
-        private static void DeleteContainers(TopNWordsConfiguration configuration, string fileStagingContainer)
+        private static CloudBlobClient GetCloudBlobClient(string accountName, string accountKey)
         {
-            StorageCredentials cred = new StorageCredentials(configuration.StorageAccountName, configuration.StorageAccountKey);
+            StorageCredentials cred = new StorageCredentials(accountName, accountKey);
             CloudStorageAccount storageAccount = new CloudStorageAccount(cred, true);
             CloudBlobClient client = storageAccount.CreateCloudBlobClient();
 
+            return client;
+        }
+
+        private static string booksContainerName = "books";
+
+        /// <summary>
+        /// Delete the containers in Azure Storage which are created by this sample.
+        /// </summary>
+        private static void DeleteContainers(TopNWordsConfiguration configuration, string fileStagingContainer)
+        {
+            CloudBlobClient client = GetCloudBlobClient(configuration.StorageAccountName, configuration.StorageAccountKey);
+
             //Delete the books container
-            CloudBlobContainer container = client.GetContainerReference("books");
-            Console.WriteLine("Deleting container: {0}", "books");
+            CloudBlobContainer container = client.GetContainerReference(booksContainerName);
+            Console.WriteLine("Deleting container: " + booksContainerName);
             container.DeleteIfExists();
 
             //Delete the file staging container
@@ -168,7 +223,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
             {
                 container = client.GetContainerReference(fileStagingContainer);
                 Console.WriteLine("Deleting container: {0}", fileStagingContainer);
-                container.DeleteIfExists();   
+                container.DeleteIfExists();
             }
         }
 
@@ -180,12 +235,10 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
         /// <returns>The URI of the blob.</returns>
         private static string UploadBookFileToCloudBlob(TopNWordsConfiguration configuration, string fileName)
         {
-            StorageCredentials cred = new StorageCredentials(configuration.StorageAccountName, configuration.StorageAccountKey);
-            CloudStorageAccount storageAccount = new CloudStorageAccount(cred, true);
-            CloudBlobClient client = storageAccount.CreateCloudBlobClient();
-            
+            CloudBlobClient client = GetCloudBlobClient(configuration.StorageAccountName, configuration.StorageAccountKey);
+
             //Create the "books" container if it doesn't exist.
-            CloudBlobContainer container = client.GetContainerReference("books");
+            CloudBlobContainer container = client.GetContainerReference(booksContainerName);
             container.CreateIfNotExists();
 
             //Upload the blob.

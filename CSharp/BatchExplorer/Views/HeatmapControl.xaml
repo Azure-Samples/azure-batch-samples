@@ -39,12 +39,12 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <Label Grid.Row="0" Grid.Column="0" Padding="5,1">Pool Name:</Label>
+            <Label Grid.Row="0" Grid.Column="0" Padding="5,1">Pool Id:</Label>
             <TextBox 
                 Grid.Row="0" 
                 Grid.Column="1" 
                 Padding="5,1"
-                Text="{Binding Path=HeatMap.PoolName, Mode=OneWay}" 
+                Text="{Binding Path=HeatMap.PoolId, Mode=OneWay}" 
                 HorizontalAlignment="Left"
                 VerticalAlignment="Center"
                 IsReadOnly="True"
@@ -61,7 +61,7 @@
                 IsReadOnly="True"
                 Background="Transparent"
                 BorderThickness="0"/>
-            <Label Grid.Row="2" Grid.Column="0" Padding="5,1" HorizontalAlignment="Left">Max Tasks Per VM:</Label>
+            <Label Grid.Row="2" Grid.Column="0" Padding="5,1" HorizontalAlignment="Left">Max Tasks Per Compute Node:</Label>
             <TextBox 
                 Grid.Row="2" 
                 Grid.Column="1" 
@@ -95,7 +95,7 @@
                 IsReadOnly="True"
                 Background="Transparent"
                 BorderThickness="0"/>
-            <Label Grid.Row="1" Grid.Column="3" Padding="5,1" HorizontalAlignment="Left">Target Number VM's:</Label>
+            <Label Grid.Row="1" Grid.Column="3" Padding="5,1" HorizontalAlignment="Left">Target Number Compute Nodes:</Label>
             <TextBox 
                 Grid.Row="1" 
                 Grid.Column="4" 
@@ -106,7 +106,7 @@
                 IsReadOnly="True"
                 Background="Transparent"
                 BorderThickness="0"/>
-            <Label Grid.Row="2" Grid.Column="3" Padding="5,1" HorizontalAlignment="Left">Current Number VM's:</Label>
+            <Label Grid.Row="2" Grid.Column="3" Padding="5,1" HorizontalAlignment="Left">Current Number Compute Nodes</Label>
             <TextBox 
                 Grid.Row="2" 
                 Grid.Column="4" 
@@ -117,7 +117,7 @@
                 IsReadOnly="True"
                 Background="Transparent"
                 BorderThickness="0"/>
-            <Label Grid.Row="3" Grid.Column="3" Padding="5,1" HorizontalAlignment="Left">Schedulable VM's:</Label>
+            <Label Grid.Row="3" Grid.Column="3" Padding="5,1" HorizontalAlignment="Left">Schedulable Compute Nodes</Label>
             <TextBox 
                 Grid.Row="4" 
                 Grid.Column="4" 

@@ -39,9 +39,9 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
         public int NumberOfTopWords { get; private set; }
 
         /// <summary>
-        /// The name of the pool.
+        /// The ID of the pool.
         /// </summary>
-        public string PoolName { get; private set; }
+        public string PoolId { get; private set; }
 
         /// <summary>
         /// If a pool should be created.
@@ -49,9 +49,9 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
         public bool ShouldCreatePool { get; private set; }
 
         /// <summary>
-        /// The name of the work item.
+        /// The ID of the job.
         /// </summary>
-        public string WorkItemName { get; private set; }
+        public string JobId { get; private set; }
 
         /// <summary>
         /// The name of the storage account to store the files required to run the tasks.
@@ -74,9 +74,9 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
         public string BookFileName { get; private set; }
 
         /// <summary>
-        /// If the work item should be deleted when the sample ends.
+        /// If the job should be deleted when the sample ends.
         /// </summary>
-        public bool ShouldDeleteWorkItem { get; private set; }
+        public bool ShouldDeleteJob { get; private set; }
 
         /// <summary>
         /// If the container should be deleted when the sample ends.
@@ -92,29 +92,29 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
             TopNWordsConfiguration configuration = new TopNWordsConfiguration();
 
             configuration.BatchServiceUrl = ConfigurationManager.AppSettings["BatchServiceUrl"];
-            configuration.BatchAccountName = ConfigurationManager.AppSettings["Account"];
-            configuration.BatchAccountKey = ConfigurationManager.AppSettings["Key"];
+            configuration.BatchAccountName = ConfigurationManager.AppSettings["BatchAccount"];
+            configuration.BatchAccountKey = ConfigurationManager.AppSettings["BatchKey"];
 
             configuration.NumberOfTasks = Int32.Parse(ConfigurationManager.AppSettings["NumTasks"]);
             configuration.PoolSize = Int32.Parse(ConfigurationManager.AppSettings["PoolSize"]);
             configuration.NumberOfTopWords = Int32.Parse(ConfigurationManager.AppSettings["NumTopWords"]);
 
-            configuration.PoolName = ConfigurationManager.AppSettings["PoolName"];
-            configuration.ShouldCreatePool = string.IsNullOrEmpty(configuration.PoolName);
+            configuration.PoolId = ConfigurationManager.AppSettings["PoolId"];
+            configuration.ShouldCreatePool = string.IsNullOrEmpty(configuration.PoolId);
 
             if (configuration.ShouldCreatePool)
             {
-                configuration.PoolName = "TopNWordsPool" + DateTime.Now.ToString("_yyMMdd_HHmmss_") + Guid.NewGuid().ToString("N");
+                configuration.PoolId = "TopNWordsPool" + DateTime.Now.ToString("_yyMMdd_HHmmss_") + Guid.NewGuid().ToString("N");
             }
 
-            configuration.WorkItemName = "TopNWordsWi" + DateTime.Now.ToString("_yyMMdd_HHmmss_") + Guid.NewGuid().ToString("N");
+            configuration.JobId = "TopNWordsJob" + DateTime.Now.ToString("_yyMMdd_HHmmss_") + Guid.NewGuid().ToString("N");
 
             configuration.StorageAccountName = ConfigurationManager.AppSettings["StorageAccountName"];
             configuration.StorageAccountKey = ConfigurationManager.AppSettings["StorageAccountKey"];
             configuration.StorageAccountBlobEndpoint = ConfigurationManager.AppSettings["StorageAccountBlobEndpoint"];
             configuration.BookFileName = ConfigurationManager.AppSettings["BookFileName"];
 
-            configuration.ShouldDeleteWorkItem = bool.Parse(ConfigurationManager.AppSettings["DeleteWorkitem"]);
+            configuration.ShouldDeleteJob = bool.Parse(ConfigurationManager.AppSettings["DeleteJob"]);
             configuration.ShouldDeleteContainer = bool.Parse(ConfigurationManager.AppSettings["DeleteContainer"]);
 
 

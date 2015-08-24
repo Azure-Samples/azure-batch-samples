@@ -25,7 +25,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("https://batch.core.windows.net")]
+        [global::System.Configuration.DefaultSettingValueAttribute("https://(YourAccount).(region).batch.azure.com")]
         public string BatchServiceUrl {
             get {
                 return ((string)(this["BatchServiceUrl"]));
@@ -50,12 +50,12 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool ShouldDeleteWorkItem {
+        public bool ShouldDeleteJob {
             get {
-                return ((bool)(this["ShouldDeleteWorkItem"]));
+                return ((bool)(this["ShouldDeleteJob"]));
             }
             set {
-                this["ShouldDeleteWorkItem"] = value;
+                this["ShouldDeleteJob"] = value;
             }
         }
         
