@@ -65,6 +65,7 @@ dlldata.c
 *.pidb
 *.svclog
 *.scc
+*.chk
 
 # Chutzpah Test files
 _Chutzpah*
@@ -198,3 +199,5 @@ FakesAssemblies/
 # Visual Studio 6 workspace options file
 *.opt
 
+# Roslyn
+**/*.sln.ide/**
