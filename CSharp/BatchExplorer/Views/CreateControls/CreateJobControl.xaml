@@ -193,7 +193,7 @@
                         Margin="8,4"
                         VerticalAlignment="Center"
                         FontSize="12"
-                        Text="Pool LifeTime Options"/>
+                        Text="Pool Lifetime Option"/>
 
                     <ComboBox
                         Visibility="{Binding UseAutoPool, Converter={StaticResource BooleanToVisibilityConverter}}"
@@ -267,7 +267,7 @@
                         Grid.Column="0"
                         Margin="8,4"
                         FontSize="12"
-                        Text="Target Dedciated" />
+                        Text="Target Dedicated" />
 
                     <TextBox 
                         Visibility="{Binding UseAutoPool, Converter={StaticResource BooleanToVisibilityConverter}}"
