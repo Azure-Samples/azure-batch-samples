@@ -533,7 +533,21 @@
                 Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Invalid values for Pool Id"));
                 return false;
             }
-            
+
+            if (this.UseAutoPool)
+            {
+                if (string.IsNullOrEmpty(this.SelectedVirtualMachineSize))
+                {
+                    Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Auto pool requires virtual machine size to be specified"));
+                    return false;
+                }
+                if (string.IsNullOrEmpty(this.SelectedOSFamily))
+                {
+                    Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Auto pool requires OS family to be specified"));
+                    return false;
+                }
+            }
+
             if (this.IsCreateJobManagerSelected)
             {
                 if (string.IsNullOrEmpty(this.JobManagerId))
