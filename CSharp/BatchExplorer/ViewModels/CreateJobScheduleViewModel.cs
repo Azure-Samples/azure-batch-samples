@@ -391,6 +391,34 @@
             }
         }
 
+        private IReadOnlyList<string> availableVirtualMachineSizes;
+        public IReadOnlyList<string> AvailableVirtualMachineSizes
+        {
+            get
+            {
+                return this.availableVirtualMachineSizes;
+            }
+            set
+            {
+                this.availableVirtualMachineSizes = value;
+                this.FirePropertyChangedEvent("availableVirtualMachineSizes");
+            }
+        }
+
+        private List<string> availableOSFamilies;
+        public List<string> AvailableOSFamilies
+        {
+            get
+            {
+                return this.availableOSFamilies;
+            }
+            set
+            {
+                this.availableOSFamilies = value;
+                this.FirePropertyChangedEvent("AvailableOSFamilies");
+            }
+        }
+
         public bool IsCreateJobScheduleButtonEnabled
         {
             get
@@ -449,6 +477,9 @@
             this.SelectedKeepAliveItem = this.AvailableKeepAliveOptions[0];
             this.SelectedLifetimeOption = this.AvailableLifeTimeOptions[0];
             this.KillOnCompletionSelectedItem = this.AvailableKillOnCompletionOptions[0];
+
+            this.AvailableVirtualMachineSizes = Common.SupportedVirtualMachineSizesList;
+            this.AvailableOSFamilies = new List<string>(Common.SupportedOSFamilyDictionary.Keys);
         }
 
         private async Task CreateJobScheduleAsync()
