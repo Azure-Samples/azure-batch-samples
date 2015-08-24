@@ -4,7 +4,6 @@
     using System.IO;
     using System.Text.RegularExpressions;
     using System.Threading.Tasks;
-    using Microsoft.Azure.Batch.Samples.TextSearch.Properties;
     using Microsoft.WindowsAzure.Storage.Blob;
 
 
