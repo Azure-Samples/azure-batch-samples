@@ -37,7 +37,7 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
                 }
                 else
                 {
-                    errors.Add(string.Format("Resource file '{0}' was not of the form 'url => path'", fileString));
+                    errors.Add(string.Format("Resource file '{0}' was not of the form 'blobSource => filePath'", fileString));
                 }
             }
 
@@ -76,18 +76,18 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
 
     public sealed class ResourceFileInfo
     {
-        private readonly string _blobUrl;
+        private readonly string _blobSource;
         private readonly string _filePath;
 
-        public ResourceFileInfo(string blobUrl, string filePath)
+        public ResourceFileInfo(string blobSource, string filePath)
         {
-            _blobUrl = blobUrl;
+            _blobSource = blobSource;
             _filePath = filePath;
         }
 
-        public string BlobUrl
+        public string BlobSource
         {
-            get { return _blobUrl; }
+            get { return _blobSource; }
         }
 
         public string FilePath

@@ -263,7 +263,7 @@
                 <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,4">Command Line</TextBlock>
                 <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding StartTaskCommandLine}" Margin="0,0,0,2" />
                 <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,4">Resource Files</TextBlock>
-                <TextBox Grid.Row="1" Grid.Column="1" AcceptsReturn="True" Text="{Binding StartTaskResourceFiles}" ToolTip="List of resource files in format blobSource => filePath, delimited by semicolons" Margin="0,0,0,2" />
+                <TextBox Grid.Row="1" Grid.Column="1" AcceptsReturn="True" Text="{Binding StartTaskResourceFiles}" ToolTip="List of resource files in format blobSource => filePath, delimited by newlines or semicolons" Margin="0,0,0,2" />
                 <CheckBox Grid.Row="2" Grid.ColumnSpan="2" Margin="0,4" IsChecked="{Binding StartTaskRunElevated}">Run Elevated</CheckBox>
             </Grid>
         </Grid>
