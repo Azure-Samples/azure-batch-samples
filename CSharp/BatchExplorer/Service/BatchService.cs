@@ -146,7 +146,8 @@
             string osFamily,
             string osVersion,
             int maxTasksPerComputeNode,
-            TimeSpan? timeout)
+            TimeSpan? timeout,
+            StartTaskOptions startTask)
         {
             CloudPool unboundPool = this.Client.PoolOperations.CreatePool(
                 poolId, 
@@ -163,6 +164,16 @@
             {
                 unboundPool.AutoScaleEnabled = true;
                 unboundPool.AutoScaleFormula = autoScaleFormula;
+            }
+
+            if (startTask != null)
+            {
+                unboundPool.StartTask = new StartTask
+                {
+                    CommandLine = startTask.CommandLine,
+                    RunElevated = startTask.RunElevated,
+                    ResourceFiles = startTask.ResourceFiles.ConvertAll(f => new ResourceFile(f.BlobUrl, f.FilePath)),
+                };
             }
 
             await unboundPool.CommitAsync();
