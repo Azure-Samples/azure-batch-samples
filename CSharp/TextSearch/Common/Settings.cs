@@ -1,8 +1,8 @@
-﻿namespace Microsoft.Azure.Batch.Samples.TextSearch.Properties
+﻿namespace Microsoft.Azure.Batch.Samples.TextSearch
 {
     using System.Text;
 
-    internal partial class Settings
+    public partial class Settings
     {
         public override string ToString()
         {

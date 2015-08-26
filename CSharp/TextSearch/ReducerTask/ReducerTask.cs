@@ -3,7 +3,6 @@
     using System;
     using System.Threading.Tasks;
     using Microsoft.Azure.Batch.Auth;
-    using Microsoft.Azure.Batch.Samples.TextSearch.Properties;
 
     /// <summary>
     /// The reducer task.  This task aggregates the results from mapper tasks and prints the results.

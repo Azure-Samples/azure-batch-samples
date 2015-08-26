@@ -11,7 +11,7 @@
     /// <summary>
     /// Class containing helpers for the TextSearch sample.
     /// </summary>
-    public class Helpers
+    public static class Helpers
     {
         /// <summary>
         /// Constructs a container shared access signature.
@@ -48,7 +48,7 @@
                                                    };
 
             string sasString = container.GetSharedAccessSignature(sasPolicy);
-            return string.Format("{0}{1}", container.Uri, sasString); ;
+            return String.Format("{0}{1}", container.Uri, sasString); ;
         }
 
         /// <summary>
@@ -99,7 +99,7 @@
         /// <returns>The mapper task id corresponding to the specified task number.</returns>
         public static string GetMapperTaskId(int taskNumber)
         {
-            return string.Format("{0}_{1}", Constants.MapperTaskPrefix, taskNumber);
+            return String.Format("{0}_{1}", Constants.MapperTaskPrefix, taskNumber);
         }
 
         /// <summary>
@@ -109,7 +109,7 @@
         /// <returns>The file name corresponding to the specified file number.</returns>
         public static string GetSplitFileName(int fileNumber)
         {
-            return string.Format("TextFile_{0}.txt", fileNumber);
+            return String.Format("TextFile_{0}.txt", fileNumber);
         }
 
         /// <summary>
@@ -118,10 +118,13 @@
         /// </summary>
         /// <param name="boundTask">The task.</param>
         /// <param name="dumpStandardOutOnTaskSuccess">True to log the standard output file of the task even if it succeeded.  False to not log anything if the task succeeded.</param>
-        public static async Task CheckForTaskSuccessAsync(CloudTask boundTask, bool dumpStandardOutOnTaskSuccess)
+        /// <returns>The string containing the standard out of the file, or null if stdout could not be gathered.</returns>
+        public static async Task<string> CheckForTaskSuccessAsync(CloudTask boundTask, bool dumpStandardOutOnTaskSuccess)
         {
             if (boundTask.State == TaskState.Completed)
             {
+                string result = null;
+
                 //Check to see if the task has execution information metadata.
                 if (boundTask.ExecutionInformation != null)
                 {
@@ -140,7 +143,7 @@
                             Console.WriteLine("{0} : {1}", detail.Name, detail.Value);
                         }
 
-                        throw new TextSearchException(string.Format("Task {0} failed with a scheduling error", boundTask.Id));
+                        throw new TextSearchException(String.Format("Task {0} failed with a scheduling error", boundTask.Id));
                     }
                     
                     //Read the content of the output files if the task exited.
@@ -156,6 +159,7 @@
                             Console.WriteLine("Task {0} StdOut:", boundTask.Id);
                             Console.WriteLine("----------------------------------------");
                             string stdOutString = await taskStandardOut.ReadAsStringAsync();
+                            result = stdOutString;
                             Console.WriteLine(stdOutString);
                         }
 
@@ -169,15 +173,71 @@
                             string stdErrString = await taskErrorFile.ReadAsStringAsync();
                             Console.WriteLine(stdErrString);
 
-                            throw new TextSearchException(string.Format("Task {0} failed with a nonzero exit code", boundTask.Id));
+                            throw new TextSearchException(String.Format("Task {0} failed with a nonzero exit code", boundTask.Id));
                         }
                     }
                 }
-                else
-                {
-                    throw new TextSearchException(string.Format("Task {0} is not completed yet.  Current state: {1}", boundTask.Id, boundTask.State));
-                }
+
+                return result;
             }
+            else
+            {
+                throw new TextSearchException(String.Format("Task {0} is not completed yet.  Current state: {1}", boundTask.Id, boundTask.State));
+            }
+        }
+
+        /// <summary>
+        /// Processes all the exceptions inside an <see cref="AggregateException"/> and writes each inner exception to the console.
+        /// </summary>
+        /// <param name="aggregateException">The <see cref="AggregateException"/> to process.</param>
+        public static void ProcessAggregateException(AggregateException aggregateException)
+        {
+            // Go through all exceptions and dump useful information
+            foreach (Exception exception in aggregateException.InnerExceptions)
+            {
+                Console.WriteLine(exception.ToString());
+                Console.WriteLine();
+            }
+        }
+
+        /// <summary>
+        /// Downloads the specified blobs text.
+        /// </summary>
+        /// <param name="storageAccount">The storage account to download the blob from.</param>
+        /// <param name="containerName">The container name.</param>
+        /// <param name="blobName">The blob name.</param>
+        /// <returns>The text of the blob.</returns>
+        public static async Task<string> DownloadBlobTextAsync(CloudStorageAccount storageAccount, string containerName, string blobName)
+        {
+            containerName = containerName.ToLower(); //Force lower case because Azure Storage only allows lower case container names.
+
+            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
+            CloudBlobContainer container = blobClient.GetContainerReference(containerName);
+            CloudBlockBlob blob = container.GetBlockBlobReference(blobName);
+
+            string text = await blob.DownloadTextAsync();
+
+            return text;
+        }
+
+        /// <summary>
+        /// Uploads the specified text to a blob.
+        /// </summary>
+        /// <param name="storageAccount">The storage account.</param>
+        /// <param name="containerName">The container name.</param>
+        /// <param name="blobName">The blob name.</param>
+        /// <param name="text">The text to upload.</param>
+        /// <returns></returns>
+        public static async Task UploadBlobTextAsync(CloudStorageAccount storageAccount, string containerName, string blobName, string text)
+        {
+            containerName = containerName.ToLower(); //Force lower case because Azure Storage only allows lower case container names.
+
+            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
+            CloudBlobContainer blobContainer = blobClient.GetContainerReference(containerName);
+
+            CloudBlockBlob blob = blobContainer.GetBlockBlobReference(blobName);
+
+            await blob.UploadTextAsync(text);
         }
     }
 

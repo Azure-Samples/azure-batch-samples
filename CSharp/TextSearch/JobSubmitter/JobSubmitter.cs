@@ -6,7 +6,6 @@
     using System.Threading.Tasks;
     using Microsoft.Azure.Batch.Auth;
     using Microsoft.Azure.Batch.Common;
-    using Microsoft.Azure.Batch.Samples.TextSearch.Properties;
     using Microsoft.WindowsAzure.Storage;
     using Microsoft.WindowsAzure.Storage.Auth;
     using Microsoft.WindowsAzure.Storage.Blob;
@@ -79,47 +78,46 @@
 
                 //Define the pool specification for the pool which the job will run on.
                 PoolSpecification poolSpecification = new PoolSpecification()
-                                                            {
-                                                                TargetDedicated = numberOfPoolComputeNodes,
-                                                                VirtualMachineSize = "small",
-                                                                //You can learn more about os families and versions at: 
-                                                                //http://azure.microsoft.com/documentation/articles/cloud-services-guestos-update-matrix
-                                                                OSFamily = "4",
-                                                                TargetOSVersion = "*"
-                                                            };
+                    {
+                        TargetDedicated = numberOfPoolComputeNodes,
+                        VirtualMachineSize = "small",
+                        //You can learn more about os families and versions at: 
+                        //http://azure.microsoft.com/documentation/articles/cloud-services-guestos-update-matrix
+                        OSFamily = "4",
+                        TargetOSVersion = "*"
+                    };
 
                 //Use the auto pool feature of the Batch Service to create a pool when the job is created.
                 //This creates a new pool for each job which is added.
                 AutoPoolSpecification autoPoolSpecification = new AutoPoolSpecification()
-                                                                    {
-                                                                        AutoPoolIdPrefix= "TextSearchPool",
-                                                                        KeepAlive = false,
-                                                                        PoolLifetimeOption = PoolLifetimeOption.Job,
-                                                                        PoolSpecification = poolSpecification
-                                                                    };
+                    {
+                        AutoPoolIdPrefix= "TextSearchPool",
+                        KeepAlive = false,
+                        PoolLifetimeOption = PoolLifetimeOption.Job,
+                        PoolSpecification = poolSpecification
+                    };
 
                 //Define the pool information for this job -- it will run on the pool defined by the auto pool specification above.
                 PoolInformation poolInformation = new PoolInformation()
-                                                  {
-                                                      AutoPoolSpecification = autoPoolSpecification
-                                                  };
+                    {
+                        AutoPoolSpecification = autoPoolSpecification
+                    };
                 
                 //Define the job manager for this job.  This job manager will run first and will submit the tasks for 
                 //the job.  The job manager is the executable which manages the lifetime of the job
                 //and all tasks which should run for the job.  In this case, the job manager submits the mapper and reducer tasks.
-                string jobManagerCommandLine = string.Format("{0} -JobManagerTask", Constants.TextSearchExe);
                 List<ResourceFile> jobManagerResourceFiles = Helpers.GetResourceFiles(containerSasUrl, Constants.RequiredExecutableFiles);
                 const string jobManagerTaskId = "JobManager";
 
                 JobManagerTask jobManagerTask = new JobManagerTask()
-                                                {
-                                                    ResourceFiles = jobManagerResourceFiles,
-                                                    CommandLine = jobManagerCommandLine,
-                                                    
-                                                    //Determines if the job should terminate when the job manager process exits
-                                                    KillJobOnCompletion = true,
-                                                    Id = jobManagerTaskId
-                                                };
+                    {
+                        ResourceFiles = jobManagerResourceFiles,
+                        CommandLine = Constants.JobManagerExecutable,
+
+                        //Determines if the job should terminate when the job manager process exits.
+                        KillJobOnCompletion = true,
+                        Id = jobManagerTaskId
+                    };
 
                 //Create the unbound job in local memory.  An object which exists only in local memory (and not on the Batch Service) is "unbound".
                 string jobId = Environment.GetEnvironmentVariable("USERNAME") + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
@@ -143,15 +141,13 @@
                     CloudTask boundJobManagerTask = await boundJob.GetTaskAsync(jobManagerTaskId);
 
                     TimeSpan maxJobCompletionTimeout = TimeSpan.FromMinutes(30);
-
-
-                    // Monitor the current tasks to see when they are done, and then exit the job manager.  Monitoring the tasks
-                    // for completion is necessary if you are using KillJobOnCompletion = TRUE, as otherwise when the job manager
-                    // exits it will kill all of the tasks that are still running under the job.
-                    //
+                    
+                    // Monitor the current tasks to see when they are done.
                     // Occasionally a task may get killed and requeued during an upgrade or hardware failure, including the job manager
                     // task.  The job manager will be re-run in this case.  Robustness against this was not added into the sample for 
                     // simplicity, but should be added into any production code.
+                    Console.WriteLine("Waiting for job's tasks to complete");
+
                     TaskStateMonitor taskStateMonitor = batchClient.Utilities.CreateTaskStateMonitor();
                     bool timedOut = await taskStateMonitor.WaitAllAsync(new List<CloudTask> { boundJobManagerTask }, TaskState.Completed, maxJobCompletionTimeout);
 
@@ -160,28 +156,27 @@
                     await boundJobManagerTask.RefreshAsync();
 
                     //Check to ensure the job manager task exited successfully.
-                    await Helpers.CheckForTaskSuccessAsync(boundJobManagerTask, dumpStandardOutOnTaskSuccess: true);
+                    await Helpers.CheckForTaskSuccessAsync(boundJobManagerTask, dumpStandardOutOnTaskSuccess: false);
 
                     if (timedOut)
                     {
                         throw new TimeoutException(string.Format("Timed out waiting for job manager task to complete."));
                     }
-                }
-                catch (AggregateException e)
-                {
-                    e.Handle(
-                        (innerE) =>
-                            {
-                                //We print all the inner exceptions for debugging purposes.
-                                Console.WriteLine(innerE.ToString());
-                                return false;
-                            });
-                    throw;
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine("Hit unexpected exception: {0}", e.ToString());
-                    throw;
+
+                    //
+                    // Download and write out the reducer tasks output
+                    //
+                    CloudStorageAccount cloudStorageAccount = new CloudStorageAccount(
+                        new StorageCredentials(
+                            this.configurationSettings.StorageAccountName,
+                            this.configurationSettings.StorageAccountKey),
+                        this.configurationSettings.StorageServiceUrl,
+                        useHttps: true);
+
+                    string reducerText = await Helpers.DownloadBlobTextAsync(cloudStorageAccount, this.configurationSettings.BlobContainer, Constants.ReducerTaskResultBlobName);
+                    Console.WriteLine("Reducer reuslts:");
+                    Console.WriteLine(reducerText);
+
                 }
                 finally
                 {
@@ -197,7 +192,6 @@
                     //Note that there were files uploaded to a container specified in the 
                     //configuration file.  This container will not be deleted or cleaned up by this sample.
                 }
-                
             }
         }
 
@@ -240,11 +234,11 @@
             try
             {
                 CloudStorageAccount cloudStorageAccount = new CloudStorageAccount(
-                new StorageCredentials(
-                    this.configurationSettings.StorageAccountName,
-                    this.configurationSettings.StorageAccountKey),
+                    new StorageCredentials(
+                        this.configurationSettings.StorageAccountName,
+                        this.configurationSettings.StorageAccountKey),
                 this.configurationSettings.StorageServiceUrl,
-                true);
+                useHttps: true);
 
                 CloudBlobClient client = cloudStorageAccount.CreateCloudBlobClient();
                 CloudBlobContainer container = client.GetContainerReference(containerName);
