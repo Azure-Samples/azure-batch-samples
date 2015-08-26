@@ -173,6 +173,7 @@
                     CommandLine = startTask.CommandLine,
                     RunElevated = startTask.RunElevated,
                     ResourceFiles = startTask.ResourceFiles.ConvertAll(f => new ResourceFile(f.BlobUrl, f.FilePath)),
+                    WaitForSuccess = true,
                 };
             }
 
