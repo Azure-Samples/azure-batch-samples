@@ -4,17 +4,24 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
+             xmlns:converter="clr-namespace:Microsoft.Azure.BatchExplorer.Converters"
              mc:Ignorable="d">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </UserControl.Resources>
     <Grid Background="WhiteSmoke"
           Name="MainGrid"
           Height="Auto"
-          Width="Auto">
+          Width="Auto"
+          Grid.IsSharedSizeScope="True">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*" SharedSizeGroup="editors"/>
         </Grid.ColumnDefinitions>
 
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -235,9 +242,36 @@
             IsChecked="{Binding UseCommunication}"/>
 
         <Separator Grid.Row="19" Grid.ColumnSpan="2"/>
+
+        <Grid Grid.Row="20" Grid.ColumnSpan="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <CheckBox Grid.Row="0" Margin="8,0,0,0" IsChecked="{Binding HasStartTask}">Start Task</CheckBox>
+            <Grid Grid.Row="1" Margin="28,0,0,0" Visibility="{Binding HasStartTask, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" SharedSizeGroup="editors" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,4">Command Line</TextBlock>
+                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding StartTaskCommandLine}" Margin="0,0,0,2" />
+                <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,4">Resource Files</TextBlock>
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding StartTaskResourceFiles}" ToolTip="List of resource files in format blobSource => filePath, delimited by semicolons" Margin="0,0,0,2" />
+                <CheckBox Grid.Row="2" Grid.ColumnSpan="2" Margin="0,4" IsChecked="{Binding StartTaskRunElevated}">Run Elevated</CheckBox>
+            </Grid>
+        </Grid>
+
+        <Separator Grid.Row="21" Grid.ColumnSpan="2"/>
         
         <Button 
-            Grid.Row="20"
+            Grid.Row="22"
             Grid.Column="1"
             Margin="0,12,0,0"
             VerticalAlignment="Bottom" 
