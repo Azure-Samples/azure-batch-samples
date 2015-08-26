@@ -8,7 +8,7 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
 {
     public static class ResourceFileStringParser
     {
-        private static readonly char[] FileDelimiter = new[] { ';' };
+        private static readonly string[] FileDelimiter = new[] { ";", Environment.NewLine };
         private static readonly string[] PartDelimiter = new[] { "=>" };
 
         public static ResourceFileParseResult Parse(string text)
