@@ -10,7 +10,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
     {
         public string CommandLine { get; set; }
 
-        public List<Helpers.ResourceFileInfo> ResourceFiles { get; set; }
+        public List<ResourceFileInfo> ResourceFiles { get; set; }
 
         public bool RunElevated { get; set; }
     }

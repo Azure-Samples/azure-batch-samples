@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Azure.BatchExplorer.Models;
 
 namespace Microsoft.Azure.BatchExplorer.Helpers
 {
@@ -71,28 +72,6 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         public IReadOnlyList<ResourceFileInfo> Files
         {
             get { return _files; }
-        }
-    }
-
-    public sealed class ResourceFileInfo
-    {
-        private readonly string _blobSource;
-        private readonly string _filePath;
-
-        public ResourceFileInfo(string blobSource, string filePath)
-        {
-            _blobSource = blobSource;
-            _filePath = filePath;
-        }
-
-        public string BlobSource
-        {
-            get { return _blobSource; }
-        }
-
-        public string FilePath
-        {
-            get { return _filePath; }
         }
     }
 }
