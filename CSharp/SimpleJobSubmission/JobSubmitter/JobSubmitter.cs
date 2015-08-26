@@ -21,6 +21,11 @@
     {
         private readonly Settings configurationSettings;
 
+        // The SimpleTask project is included via project-depedency, so the 
+        // executable produced by that project will be in the same working 
+        // directory as JobSubmitter at runtime.
+        private const string SimpleTaskExe = "SimpleTask.exe";
+
         public JobSubmitter()
         {
             this.configurationSettings = Settings.Default;
@@ -152,8 +157,8 @@
         }
 
         /// <summary>
-        /// Creates a job and adds 4 tasks to it.  2 tasks are basic with only a command line.  The other 2 tasks use 
-        /// the file staging feature in order to add a resource file which each task consumes.
+        /// Creates a job and adds a task to it. The task is a 
+        /// custom executable which has a resource file associated with it.
         /// </summary>
         /// <param name="batchClient">The BatchClient to use when interacting with the Batch service.</param>
         /// <param name="jobId">The ID of the job.</param>
@@ -168,42 +173,36 @@
             // Commit Job to create it in the service
             await unboundJob.CommitAsync();
 
-            // create 2 quick tasks. Each task within a job must have a unique ID
             List<CloudTask> tasksToRun = new List<CloudTask>();
-            tasksToRun.Add(new CloudTask("task1", "hostname"));
-            tasksToRun.Add(new CloudTask("task2", "cmd /c dir /s"));
 
-            // Also create 2 tasks which require some resource files
-            CloudTask taskWithFiles1 = new CloudTask("task_with_file1", "cmd /c type 2>nul *.txt");
-            CloudTask taskWithFiles2 = new CloudTask("task_with_file2", "cmd /c dir /s");
+            // Create a task which requires some resource files
+            CloudTask taskWithFiles = new CloudTask("task_with_file1", SimpleTaskExe);
 
             // Set up a collection of files to be staged -- these files will be uploaded to Azure Storage
             // when the tasks are submitted to the Azure Batch service.
-            taskWithFiles1.FilesToStage = new List<IFileStagingProvider>();
-            taskWithFiles2.FilesToStage = new List<IFileStagingProvider>();
-
+            taskWithFiles.FilesToStage = new List<IFileStagingProvider>();
+            
             // generate a local file in temp directory
-            string path = Path.Combine(Environment.GetEnvironmentVariable("TEMP"), "HelloWorld.txt");
-            File.WriteAllText(path, "hello from Batch SimpleJobSubmission sample!");
+            string localSampleFile = Path.Combine(Environment.GetEnvironmentVariable("TEMP"), "HelloWorld.txt");
+            File.WriteAllText(localSampleFile, "hello from Batch SimpleJobSubmission sample!");
+
+            StagingStorageAccount fileStagingStorageAccount = new StagingStorageAccount(
+                storageAccount: this.configurationSettings.StorageAccountName,
+                storageAccountKey: this.configurationSettings.StorageAccountKey,
+                blobEndpoint: this.configurationSettings.StorageBlobEndpoint);
 
             // add the files as a task dependency so they will be uploaded to storage before the task 
             // is submitted and downloaded to the node before the task starts execution.
-            FileToStage fileToStage = new FileToStage(path,
-                new StagingStorageAccount(
-                    storageAccount: this.configurationSettings.StorageAccountName,
-                    storageAccountKey: this.configurationSettings.StorageAccountKey,
-                    blobEndpoint: this.configurationSettings.StorageBlobEndpoint));
+            FileToStage helloWorldFile = new FileToStage(localSampleFile, fileStagingStorageAccount);
+            FileToStage simpleTaskFile = new FileToStage(SimpleTaskExe, fileStagingStorageAccount);
 
+            // When this task is added via JobOperations.AddTaskAsync below, the FilesToStage are uploaded to storage once.
+            // The Batch service does not automatically delete content from your storage account, so files added in this 
+            // way must be manually removed when they are no longer used.
+            taskWithFiles.FilesToStage.Add(helloWorldFile);
+            taskWithFiles.FilesToStage.Add(simpleTaskFile);
 
-            // When these tasks are added via JobOperations.AddTaskAsync below, the fileToStage is uploaded to storage once,
-            // and a SAS is generated and supplied to each of the tasks.  The Batch service does not automatically delete
-            // content from your storage account, so files added in this way must be manually removed when they are no longer
-            // used.
-            taskWithFiles1.FilesToStage.Add(fileToStage);
-            taskWithFiles2.FilesToStage.Add(fileToStage);
-
-            tasksToRun.Add(taskWithFiles1);
-            tasksToRun.Add(taskWithFiles2);
+            tasksToRun.Add(taskWithFiles);
 
             var fileStagingArtifacts = new ConcurrentBag<ConcurrentDictionary<Type, IFileStagingArtifact>>();
             

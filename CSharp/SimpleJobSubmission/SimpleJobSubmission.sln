@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleJobSubmission", "SimpleJobSubmission.csproj", "{96FA96C5-2982-4A67-9939-58D03D5E7414}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JobSubmitter", "JobSubmitter\JobSubmitter.csproj", "{96FA96C5-2982-4A67-9939-58D03D5E7414}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleTask", "SimpleTask\SimpleTask.csproj", "{0950B124-DEED-4F4C-B067-70E0AE06B41C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{96FA96C5-2982-4A67-9939-58D03D5E7414}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{96FA96C5-2982-4A67-9939-58D03D5E7414}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{96FA96C5-2982-4A67-9939-58D03D5E7414}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0950B124-DEED-4F4C-B067-70E0AE06B41C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0950B124-DEED-4F4C-B067-70E0AE06B41C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0950B124-DEED-4F4C-B067-70E0AE06B41C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0950B124-DEED-4F4C-B067-70E0AE06B41C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

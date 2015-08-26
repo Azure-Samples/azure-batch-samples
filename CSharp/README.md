@@ -18,13 +18,16 @@ This sample demonstrates how to use the Microsoft.Azure.Management.Batch library
 Azure Batch Explorer is a GUI application to view and manage Azure Batch Service. View this [blog post](http://blogs.technet.com/b/windowshpc/archive/2015/01/20/azure-batch-explorer-sample-walkthrough.aspx) for more details.
 
 ###[HelloWorld](./HelloWorld)
-The HelloWorld sample is an introduction to the framework required to communicate with the Batch service. It performs some basic list functions as well as creating a pool and a job with its set of example tasks. It also demonstrates submitting collections of tasks and the task state monitor which, together, provides a simple way of submitting a set of tasks to the service and monitoring their completion. It also demonstrates the use of the FileStaging interface that moves files from your client machine to the compute nodes in the pool prior to running the task on that node.
+The HelloWorld sample is an introduction to the framework required to communicate with the Batch service. It submits a job with an auto-pool, and then submits a task which performs a simple echo command.  The task has no required files.  The focus of this sample is on the API calls required to add a job to the Batch service and monitor the status of that job from a client.
 
-###[ImgProc](./ImgProc)
-ImgProc demonstrates how to use a single binary that acts both as a client submitting work to the service and as the executable that runs as a task. This particular sample utilizes ImageMagick to convert image files into their associated thumbprint images.
+###[SimpleJobSubmission](./SimpleJobSubmission)
+This sample expands on the HelloWorld sample.  It creates a fixed pool, and then uses the FileStaging feature to submit a task which has a set of required files. The FileStaging is used to move the files into Azure Storage and then onto the Batch compute node.
 
 ###[TextSearch](./TextSearch)
-This map-reduce style sample uses Azure Batch to perform parallel text processing on an input file by splitting it up into multiple sub-files and performing regular expression matching on each sub-file. The results are then rolled-up into a final report. This sample also uses a Job Manager to orchestrate the mapper and reducer tasks. It combines all 4 functions into one binary: the submission of the workitem, the job manager, and the mapper and reducer code.
+This map-reduce style sample uses Azure Batch to perform parallel text processing on an input file by splitting it up into multiple sub-files and performing regular expression matching on each sub-file. The results are then rolled-up into a final report. This sample also uses a Job Manager to orchestrate the mapper and reducer tasks. It combines all 4 functions into one binary: the submission of the job, the job manager, and the mapper and reducer code.
 
 ###[TopNWords](./TopNWords)
 This sample demonstrates how to process a set of input blobs in parallel on multiple compute nodes. In this case, there is only one blob but the code can be expanded to load more blobs and bind them to individual tasks. The task writes a list of length N to stdout that contains the words in the blob with the highest occurrence count. A run-once job is created followed by the creation of multiple tasks with each task processing its blob. The job code then waits for each of the tasks to complete and prints out the list generated for each input blob.
+
+###[ImgProc](./ImgProc)
+ImgProc demonstrates how to use a single binary that acts both as a client submitting work to the service and as the executable that runs as a task. This particular sample utilizes ImageMagick to convert image files into their associated thumbprint images.
