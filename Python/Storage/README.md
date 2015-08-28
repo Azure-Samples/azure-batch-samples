@@ -49,7 +49,7 @@ file from Azure even if the local file exists, one can override the detection
 mechanism with `--download`. `--upload` is available to force the transfer to
 Azure storage. Note that specifying a particular direction does not force the
 actual operation to occur as that depends on other options specified such as
-skipping on MD5 matches. Note that you may use the --remoteresource flag to
+skipping on MD5 matches. Note that you may use the `--remoteresource` flag to
 rename the local file as the blob name on Azure storage if uploading.
 
 If the local resource is a directory that exists, the script will attempt to
@@ -89,6 +89,7 @@ script in a virtualenv environment without the ndg-httpsclient package.
 Python versions >= 2.7.9 are not affected by this issue.
 
 ###Change Log
+* 0.9.8: fix blob endpoint for non-SAS input, add retry on ServerBusy
 * 0.9.7: normalize SAS keys (accept keys with or without ? char prefix)
 * 0.9.6: revert local resource path expansion, PEP8 fixes
 * 0.9.5: fix directory creation issue
