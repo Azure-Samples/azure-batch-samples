@@ -166,5 +166,17 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles {
                 this["ShouldDeleteJob"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("PoolAndResourceFilesContainer")]
+        public string BlobContainer {
+            get {
+                return ((string)(this["BlobContainer"]));
+            }
+            set {
+                this["BlobContainer"] = value;
+            }
+        }
     }
 }

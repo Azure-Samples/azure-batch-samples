@@ -128,6 +128,10 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Common\Microsoft.Azure.Batch.Samples.Common.csproj">
+      <Project>{612b170a-1697-4c40-bd57-26a6c8ac6534}</Project>
+      <Name>Microsoft.Azure.Batch.Samples.Common</Name>
+    </ProjectReference>
     <ProjectReference Include="..\SimpleTask\SimpleTask.csproj">
       <Project>{0950b124-deed-4f4c-b067-70e0ae06b41c}</Project>
       <Name>SimpleTask</Name>

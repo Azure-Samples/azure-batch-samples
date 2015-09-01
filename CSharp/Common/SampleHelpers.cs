@@ -113,27 +113,28 @@
         /// </summary>
         /// <param name="cloudStorageAccount">The cloud storage account to upload the file to.</param>
         /// <param name="containerName">The name of the container to upload the blob to.</param>
-        /// <param name="fileName">The name of the file to upload.</param>
-        private static async Task UploadFileToBlobAsync(CloudStorageAccount cloudStorageAccount, string containerName, string fileName)
+        /// <param name="filePath">The path of the file to upload.</param>
+        private static async Task UploadFileToBlobAsync(CloudStorageAccount cloudStorageAccount, string containerName, string filePath)
         {
             containerName = containerName.ToLower(); //Force lower case because Azure Storage only allows lower case container names.
 
             try
             {
+                string fileName = Path.GetFileName(filePath);
                 CloudBlobClient client = cloudStorageAccount.CreateCloudBlobClient();
                 CloudBlobContainer container = client.GetContainerReference(containerName);
                 CloudBlockBlob blob = container.GetBlockBlobReference(fileName);
-
+                
                 //Create the container if it doesn't exist.
                 await container.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Off, null, null); //Forbid public access
 
-                Console.WriteLine("Uploading {0} to {1}", fileName, blob.Uri);
-                using (FileStream fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read))
+                Console.WriteLine("Uploading {0} to {1}", filePath, blob.Uri);
+                using (FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
                 {
                     //Upload the file to the specified container.
                     await blob.UploadFromStreamAsync(fileStream);
                 }
-                Console.WriteLine("Done uploading {0}", fileName);
+                Console.WriteLine("Done uploading {0}", filePath);
             }
             catch (AggregateException aggregateException)
             {

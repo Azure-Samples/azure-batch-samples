@@ -5,13 +5,14 @@
     using System.Collections.Generic;
     using System.IO;
     using System.Threading.Tasks;
-    using WindowsAzure.Storage;
-    using WindowsAzure.Storage.Auth;
-    using WindowsAzure.Storage.Blob;
+    using Common;
     using Microsoft.Azure.Batch;
     using Microsoft.Azure.Batch.Auth;
     using Microsoft.Azure.Batch.Common;
     using Microsoft.Azure.Batch.FileStaging;
+    using WindowsAzure.Storage;
+    using WindowsAzure.Storage.Auth;
+    using WindowsAzure.Storage.Blob;
     using Constants = Microsoft.Azure.Batch.Constants;
 
     /// <summary>
@@ -61,7 +62,7 @@
                 string jobId = null;
 
                 // Track the containers which are created as part of job submission so that we can clean them up later.
-                HashSet<string> blobContainerNames = null;
+                HashSet<string> blobContainerNames = new HashSet<string>();
 
                 try
                 {
@@ -113,6 +114,38 @@
                     virtualMachineSize: this.configurationSettings.PoolNodeVirtualMachineSize,
                     osFamily: this.configurationSettings.PoolOSFamily);
 
+                // Create a new start task to facilitate pool-wide file management or installation.
+                // In this case, we just add a single dummy data file to the StartTask.
+                const string startTaskFileName = "StartTask.txt";
+                string localSampleFile = Path.Combine(Environment.GetEnvironmentVariable("TEMP"), startTaskFileName);
+                File.WriteAllText(localSampleFile, "hello from Batch PoolsAndResourceFiles sample!");
+                List<string> files = new List<string> { localSampleFile };
+
+                // Upload the file for the start task to Azure Storage
+                CloudStorageAccount cloudStorageAccount = new CloudStorageAccount(
+                    new StorageCredentials(this.configurationSettings.StorageAccountName,
+                        this.configurationSettings.StorageAccountKey), 
+                    new Uri(this.configurationSettings.StorageBlobEndpoint),
+                    null,
+                    null,
+                    null);
+
+                await SampleHelpers.UploadResourcesAsync(
+                    cloudStorageAccount, 
+                    this.configurationSettings.BlobContainer,
+                    files);
+
+                // Generate resource file references to the blob we just uploaded
+                string containerSas = SampleHelpers.ConstructContainerSas(cloudStorageAccount, this.configurationSettings.BlobContainer);
+
+                List<ResourceFile> startTaskResourceFiles = SampleHelpers.GetResourceFiles(containerSas, new List<string> { startTaskFileName });
+
+                pool.StartTask = new StartTask()
+                    {
+                        CommandLine = "cmd /c dir",
+                        ResourceFiles = startTaskResourceFiles
+                    };
+
                 // Create the pool on the Batch Service
                 await pool.CommitAsync();
 
@@ -121,7 +154,6 @@
                     pool,
                     this.configurationSettings.PoolTargetNodeCount,
                     this.configurationSettings.PoolNodeVirtualMachineSize);
-
             }
             catch (BatchException e)
             {

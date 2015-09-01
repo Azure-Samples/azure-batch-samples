@@ -3,10 +3,11 @@
     using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
-    using WindowsAzure.Storage;
-    using WindowsAzure.Storage.Auth;
+    using Common;
     using Microsoft.Azure.Batch.Auth;
     using Microsoft.Azure.Batch.Common;
+    using WindowsAzure.Storage;
+    using WindowsAzure.Storage.Auth;
 
     /// <summary>
     /// The job manager task.  This task manages the other tasks in the job.  It first submits the 
@@ -50,14 +51,19 @@
                 this.configurationSettings.BatchAccountName,
                 this.configurationSettings.BatchAccountKey);
 
+            CloudStorageAccount cloudStorageAccount = new CloudStorageAccount(
+                new StorageCredentials(
+                    this.configurationSettings.StorageAccountName,
+                    this.configurationSettings.StorageAccountKey),
+                this.configurationSettings.StorageServiceUrl,
+                useHttps: true);
+
             using (BatchClient batchClient = await BatchClient.OpenAsync(batchSharedKeyCredentials))
             {
                 //Construct a container SAS to provide the Batch Service access to the files required to
                 //run the mapper and reducer tasks.
-                string containerSas = Helpers.ConstructContainerSas(
-                    this.configurationSettings.StorageAccountName,
-                    this.configurationSettings.StorageAccountKey,
-                    this.configurationSettings.StorageServiceUrl,
+                string containerSas = SampleHelpers.ConstructContainerSas(
+                    cloudStorageAccount,
                     this.configurationSettings.BlobContainer);
 
                 //
@@ -83,14 +89,8 @@
                 //
                 // Upload the results of the reducer task to Azure storage for consumption later
                 //
-                CloudStorageAccount cloudStorageAccount = new CloudStorageAccount(
-                new StorageCredentials(
-                    this.configurationSettings.StorageAccountName,
-                    this.configurationSettings.StorageAccountKey),
-                this.configurationSettings.StorageServiceUrl,
-                useHttps: true);
 
-                await Helpers.UploadBlobTextAsync(cloudStorageAccount, this.configurationSettings.BlobContainer, Constants.ReducerTaskResultBlobName, textToUpload);
+                await SampleHelpers.UploadBlobTextAsync(cloudStorageAccount, this.configurationSettings.BlobContainer, Constants.ReducerTaskResultBlobName, textToUpload);
 
                 //The job manager has completed.
                 Console.WriteLine("JobManager completed successfully.");
@@ -108,7 +108,7 @@
             {
                 string taskId = Helpers.GetMapperTaskId(i);
                 string fileBlobName = Helpers.GetSplitFileName(i);
-                string fileBlobPath = Helpers.ConstructBlobSource(containerSas, fileBlobName);
+                string fileBlobPath = SampleHelpers.ConstructBlobSource(containerSas, fileBlobName);
 
                 string commandLine = string.Format("{0} {1}", Constants.MapperTaskExecutable, fileBlobPath);
                 CloudTask unboundMapperTask = new CloudTask(taskId, commandLine);
@@ -116,7 +116,7 @@
                 //The set of files (exes, dlls and configuration files) required to run the mapper task.
                 IReadOnlyList<string> mapperTaskRequiredFiles = Constants.RequiredExecutableFiles;
 
-                List<ResourceFile> mapperTaskResourceFiles = Helpers.GetResourceFiles(containerSas, mapperTaskRequiredFiles);
+                List<ResourceFile> mapperTaskResourceFiles = SampleHelpers.GetResourceFiles(containerSas, mapperTaskRequiredFiles);
 
                 unboundMapperTask.ResourceFiles = mapperTaskResourceFiles;
 
@@ -180,7 +180,7 @@
             CloudTask unboundReducerTask = new CloudTask(Constants.ReducerTaskId, Constants.ReducerTaskExecutable);
 
             //The set of files (exes, dlls and configuration files) required to run the reducer task.
-            List<ResourceFile> reducerTaskResourceFiles = Helpers.GetResourceFiles(containerSas, Constants.RequiredExecutableFiles);
+            List<ResourceFile> reducerTaskResourceFiles = SampleHelpers.GetResourceFiles(containerSas, Constants.RequiredExecutableFiles);
 
             unboundReducerTask.ResourceFiles = reducerTaskResourceFiles;
 

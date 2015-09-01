@@ -38,5 +38,8 @@
     <Setting Name="ShouldDeleteJob" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
+    <Setting Name="BlobContainer" Type="System.String" Scope="User">
+      <Value Profile="(Default)">PoolAndResourceFilesContainer</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

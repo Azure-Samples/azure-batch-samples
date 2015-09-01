@@ -22,6 +22,7 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
             AddSetting(stringBuilder, "PoolNodeVirtualMachineSize", this.PoolNodeVirtualMachineSize);
             AddSetting(stringBuilder, "ShouldDeletePool", this.ShouldDeletePool);
             AddSetting(stringBuilder, "ShouldDeleteJob", this.ShouldDeleteJob);
+            AddSetting(stringBuilder, "BlobContainer", this.BlobContainer);
             
             return stringBuilder.ToString();
         }
