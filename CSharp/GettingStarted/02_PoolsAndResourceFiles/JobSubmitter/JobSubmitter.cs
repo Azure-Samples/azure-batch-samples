@@ -1,4 +1,4 @@
-﻿namespace Microsoft.Azure.Batch.Samples.SimpleJobSubmission
+﻿namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
 {
     using System;
     using System.Collections.Concurrent;
@@ -184,7 +184,7 @@
             
             // generate a local file in temp directory
             string localSampleFile = Path.Combine(Environment.GetEnvironmentVariable("TEMP"), "HelloWorld.txt");
-            File.WriteAllText(localSampleFile, "hello from Batch SimpleJobSubmission sample!");
+            File.WriteAllText(localSampleFile, "hello from Batch PoolsAndResourceFiles sample!");
 
             StagingStorageAccount fileStagingStorageAccount = new StagingStorageAccount(
                 storageAccount: this.configurationSettings.StorageAccountName,

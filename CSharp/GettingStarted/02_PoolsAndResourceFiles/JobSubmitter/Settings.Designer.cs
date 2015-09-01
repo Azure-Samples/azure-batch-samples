@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Microsoft.Azure.Batch.Samples.SimpleJobSubmission {
+namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
@@ -133,7 +133,7 @@ namespace Microsoft.Azure.Batch.Samples.SimpleJobSubmission {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("HelloWorld-Pool")]
+        [global::System.Configuration.DefaultSettingValueAttribute("PoolsAndResourceFilesPool")]
         public string PoolId {
             get {
                 return ((string)(this["PoolId"]));

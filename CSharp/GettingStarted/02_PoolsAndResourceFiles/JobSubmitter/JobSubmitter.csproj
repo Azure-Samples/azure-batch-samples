@@ -7,7 +7,7 @@
     <ProjectGuid>{96FA96C5-2982-4A67-9939-58D03D5E7414}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Microsoft.Azure.Batch.Samples.SimpleJobSubmission</RootNamespace>
+    <RootNamespace>Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles</RootNamespace>
     <AssemblyName>JobSubmitter</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>

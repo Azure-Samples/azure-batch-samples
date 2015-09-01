@@ -1,9 +1,9 @@
-﻿namespace Microsoft.Azure.Batch.Samples.SimpleJobSubmission
+﻿namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
 {
     using System;
 
     /// <summary>
-    /// The main program of the SimpleJobSubmission sample
+    /// The main program of the PoolsAndResourceFiles sample
     /// </summary>
     public static class Program
     {

@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace Microsoft.Azure.Batch.Samples.SimpleJobSubmission
+namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
 {
     public partial class Settings
     {
