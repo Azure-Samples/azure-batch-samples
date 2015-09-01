@@ -17,11 +17,8 @@ This sample demonstrates how to use the Microsoft.Azure.Management.Batch library
 ###[BatchExplorer](./BatchExplorer)
 Azure Batch Explorer is a GUI application to view and manage Azure Batch Service. View this [blog post](http://blogs.technet.com/b/windowshpc/archive/2015/01/20/azure-batch-explorer-sample-walkthrough.aspx) for more details.
 
-###[HelloWorld](./HelloWorld)
-The HelloWorld sample is an introduction to the framework required to communicate with the Batch service. It submits a job with an auto-pool, and then submits a task which performs a simple echo command.  The task has no required files.  The focus of this sample is on the API calls required to add a job to the Batch service and monitor the status of that job from a client.
-
-###[SimpleJobSubmission](./SimpleJobSubmission)
-This sample expands on the HelloWorld sample.  It creates a fixed pool, and then uses the FileStaging feature to submit a task which has a set of required files. The FileStaging is used to move the files into Azure Storage and then onto the Batch compute node.
+###[GettingStarted](./GettingStarted)
+This set of samples is intended to be the first stopping point for learning Azure Batch.  It covers basic features of the service, including jobs, pools, tasks, and more.
 
 ###[TextSearch](./TextSearch)
 This map-reduce style sample uses Azure Batch to perform parallel text processing on an input file by splitting it up into multiple sub-files and performing regular expression matching on each sub-file. The results are then rolled-up into a final report. This sample also uses a Job Manager to orchestrate the mapper and reducer tasks. It combines all 4 functions into one binary: the submission of the job, the job manager, and the mapper and reducer code.
