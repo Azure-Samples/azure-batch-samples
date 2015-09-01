@@ -96,7 +96,7 @@ except NameError:  # pragma: no cover
 # pylint: enable=W0622,C0103
 
 # global defines
-_SCRIPT_VERSION = '0.9.7'
+_SCRIPT_VERSION = '0.9.8'
 _DEFAULT_MAX_STORAGEACCOUNT_WORKERS = 64
 _MAX_BLOB_CHUNK_SIZE_BYTES = 4194304
 _MAX_LISTBLOBS_RESULTS = 1000
@@ -448,7 +448,7 @@ class BlobChunkWorker(threading.Thread):
                 filedesc.close()
         if not data:
             raise IOError('could not read {}: {} -> {}'.format(
-                localresource, offset, offset+bytestoxfer))
+                localresource, offset, offset + bytestoxfer))
         # issue REST put
         if as_page_blob(self._pageblob, self._autovhd, localresource):
             aligned = page_align_content_length(bytestoxfer)
@@ -457,7 +457,7 @@ class BlobChunkWorker(threading.Thread):
                 data = data.ljust(aligned, b'0')
             # compute page md5
             contentmd5 = compute_md5_for_data_asbase64(data)
-            rangestr = 'bytes={}-{}'.format(offset, offset+aligned-1)
+            rangestr = 'bytes={}-{}'.format(offset, offset + aligned - 1)
             azure_request(
                 self.blob_service.put_page, timeout=self.timeout,
                 container_name=container, blob_name=remoteresource,
@@ -488,7 +488,7 @@ class BlobChunkWorker(threading.Thread):
         Raises:
             Nothing
         """
-        rangestr = 'bytes={}-{}'.format(offset, offset+bytestoxfer)
+        rangestr = 'bytes={}-{}'.format(offset, offset + bytestoxfer)
         blobdata = azure_request(
             self.blob_service.get_blob, timeout=self.timeout,
             container_name=container, blob_name=remoteresource,
@@ -541,6 +541,7 @@ def azure_request(req, timeout=None, *args, **kwargs):
             try:
                 if not ('TooManyRequests' in exc.message or
                         'InternalError' in exc.message or
+                        'ServerBusy' in exc.message or
                         'OperationTimedOut' in exc.message):
                     raise
             except AttributeError:
