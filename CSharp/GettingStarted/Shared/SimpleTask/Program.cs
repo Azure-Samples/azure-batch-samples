@@ -1,4 +1,4 @@
-﻿namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
+﻿namespace Microsoft.Azure.Batch.Samples.SimpleTask
 {
     using System;
     using System.IO;

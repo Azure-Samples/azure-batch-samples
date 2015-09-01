@@ -207,5 +207,23 @@
 
             await blob.UploadTextAsync(text);
         }
+
+        /// <summary>
+        /// Deletes the specified containers
+        /// </summary>
+        /// <param name="storageAccount">The storage account with the containers to delete.</param>
+        /// <param name="blobContainerNames">The name of the containers created for the jobs resource files.</param>
+        /// <returns>An asynchronous <see cref="Task"/> representing the operation.</returns>
+        public static async Task DeleteContainersAsync(CloudStorageAccount storageAccount, IEnumerable<string> blobContainerNames)
+        {
+            CloudBlobClient cloudBlobClient = storageAccount.CreateCloudBlobClient();
+            foreach (string blobContainerName in blobContainerNames)
+            {
+                CloudBlobContainer container = cloudBlobClient.GetContainerReference(blobContainerName);
+                Console.WriteLine("Deleting container: {0}", blobContainerName);
+
+                await container.DeleteAsync();
+            }
+        }
     }
 }
