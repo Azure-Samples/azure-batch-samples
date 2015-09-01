@@ -106,20 +106,6 @@
                 throw new TextSearchException(String.Format("Task {0} is not completed yet.  Current state: {1}", boundTask.Id, boundTask.State));
             }
         }
-
-        /// <summary>
-        /// Processes all the exceptions inside an <see cref="AggregateException"/> and writes each inner exception to the console.
-        /// </summary>
-        /// <param name="aggregateException">The <see cref="AggregateException"/> to process.</param>
-        public static void ProcessAggregateException(AggregateException aggregateException)
-        {
-            // Go through all exceptions and dump useful information
-            foreach (Exception exception in aggregateException.InnerExceptions)
-            {
-                Console.WriteLine(exception.ToString());
-                Console.WriteLine();
-            }
-        }
     }
 
     /// <summary>

@@ -2,6 +2,8 @@
 
 namespace Microsoft.Azure.Batch.Samples.TextSearch
 {
+    using Common;
+
     /// <summary>
     /// The main program for the JobSubmitter
     /// </summary>
@@ -17,7 +19,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
             }
             catch (AggregateException e)
             {
-                Helpers.ProcessAggregateException(e);
+                SampleHelpers.PrintAggregateException(e);
 
                 throw;
             }

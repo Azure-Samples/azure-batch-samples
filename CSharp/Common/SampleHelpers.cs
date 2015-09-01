@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Linq;
     using System.Threading.Tasks;
     using Microsoft.WindowsAzure.Storage;
     using Microsoft.WindowsAzure.Storage.Blob;
@@ -102,10 +103,34 @@
             //Upload any additional files specified.
             foreach (string fileName in filesToUpload)
             {
-                asyncTasks.Add(SampleHelpers.UploadFileToBlobAsync(cloudStorageAccount, containerName, fileName));
+                asyncTasks.Add(UploadFileToBlobAsync(cloudStorageAccount, containerName, fileName));
             }
 
             await Task.WhenAll(asyncTasks); //Wait for all the uploads to finish.
+        }
+
+        /// <summary>
+        /// Uploads some files and creates a collection of resource file references to the blob paths.
+        /// </summary>
+        /// <param name="cloudStorageAccount">The cloud storage account to upload the resources to.</param>
+        /// <param name="blobContainerName">The name of the blob container to upload the files to.</param>
+        /// <param name="filePaths">The files to upload.</param>
+        /// <returns>A collection of resource files.</returns>
+        public static async Task<List<ResourceFile>> UploadResourcesAndCreateResourceFileReferencesAsync(CloudStorageAccount cloudStorageAccount, string blobContainerName, List<string> filePaths)
+        {
+            // Upload the file for the start task to Azure Storage
+            await SampleHelpers.UploadResourcesAsync(
+                cloudStorageAccount,
+                blobContainerName,
+                filePaths);
+
+            // Generate resource file references to the blob we just uploaded
+            string containerSas = SampleHelpers.ConstructContainerSas(cloudStorageAccount, blobContainerName);
+
+            List<string> fileNames = filePaths.Select(Path.GetFileName).ToList();
+            List<ResourceFile> resourceFiles = SampleHelpers.GetResourceFiles(containerSas, fileNames);
+            
+            return resourceFiles;
         }
 
         /// <summary>
@@ -223,6 +248,43 @@
                 Console.WriteLine("Deleting container: {0}", blobContainerName);
 
                 await container.DeleteAsync();
+            }
+        }
+
+        /// <summary>
+        /// Processes all the exceptions inside an <see cref="AggregateException"/> and writes each inner exception to the console.
+        /// </summary>
+        /// <param name="aggregateException">The <see cref="AggregateException"/> to process.</param>
+        public static void PrintAggregateException(AggregateException aggregateException)
+        {
+            // Go through all exceptions and dump useful information
+            foreach (Exception exception in aggregateException.InnerExceptions)
+            {
+                Console.WriteLine(exception.ToString());
+                Console.WriteLine();
+            }
+        }
+
+        /// <summary>
+        /// Deletes the pools and jobs specified.
+        /// </summary>
+        /// <param name="batchClient">The <see cref="BatchClient"/> to use to delete the pools and jobs</param>
+        /// <param name="jobIds">The job ids to delete.</param>
+        /// <param name="poolIds">The pool ids to delete.</param>
+        /// <returns>An asynchronous <see cref="Task"/> representing the operation.</returns>
+        public static async Task DeleteBatchResourcesAsync(BatchClient batchClient, List<string> jobIds, List<string> poolIds)
+        {
+            // Delete the jobs
+            foreach (string jobId in jobIds)
+            {
+                Console.WriteLine("Deleting job: {0}", jobId);
+                await batchClient.JobOperations.DeleteJobAsync(jobId);
+            }
+
+            foreach (string poolId in poolIds)
+            {
+                Console.WriteLine("Deleting pool: {0}", poolId);
+                await batchClient.PoolOperations.DeletePoolAsync(poolId);
             }
         }
     }

@@ -1,15 +1,15 @@
-﻿namespace Microsoft.Azure.Batch.Samples.TextSearch
+﻿namespace Microsoft.Azure.Batch.Samples.JobManager
 {
     using System;
     using Common;
 
-    public static class Program
+    public class Program
     {
         public static void Main(string[] args)
         {
             try
             {
-                TextSearchJobManagerTask jobManagerTask = new TextSearchJobManagerTask();
+                SampleJobManagerTask jobManagerTask = new SampleJobManagerTask();
 
                 jobManagerTask.RunAsync().Wait();
             }

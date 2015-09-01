@@ -1,8 +1,10 @@
-﻿namespace Microsoft.Azure.Batch.Samples.GettingStarted.Common
+﻿namespace Microsoft.Azure.Batch.Samples.Common
 {
     using System;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
+    using System.IO;
+    using System.Linq;
     using System.Threading.Tasks;
     using WindowsAzure.Storage;
     using WindowsAzure.Storage.Auth;
@@ -62,21 +64,18 @@
         /// Waits for all tasks under the specified job to complete and then prints each task's output to the console.
         /// </summary>
         /// <param name="batchClient">The BatchClient to use when interacting with the Batch service.</param>
-        /// <param name="jobId">The ID of the job.</param>
+        /// <param name="tasks">The tasks to wait for.</param>
+        /// <param name="timeout">The timeout.  After this time has elapsed if the job is not complete and exception will be thrown.</param>
         /// <returns>An asynchronous <see cref="Task"/> representing the operation.</returns>
-        public static async Task WaitForJobAndPrintOutputAsync(BatchClient batchClient, string jobId)
+        public static async Task WaitForTasksAndPrintOutputAsync(BatchClient batchClient, IEnumerable<CloudTask> tasks, TimeSpan timeout)
         {
-            Console.WriteLine("Waiting for all tasks to complete on job: {0} ...", jobId);
-
             // We use the task state monitor to monitor the state of our tasks -- in this case we will wait for them all to complete.
             TaskStateMonitor taskStateMonitor = batchClient.Utilities.CreateTaskStateMonitor();
 
             // Wait until the tasks are in completed state.
-            // If the pool is being resized then enough time is needed for the nodes to reach the idle state in order
-            // for tasks to run on them.
-            List<CloudTask> ourTasks = await batchClient.JobOperations.ListTasks(jobId).ToListAsync();
+            List<CloudTask> ourTasks = tasks.ToList();
 
-            bool timedOut = await taskStateMonitor.WaitAllAsync(ourTasks, TaskState.Completed, TimeSpan.FromMinutes(10));
+            bool timedOut = await taskStateMonitor.WaitAllAsync(ourTasks, TaskState.Completed, timeout);
 
             if (timedOut)
             {
@@ -129,21 +128,81 @@
         }
 
         /// <summary>
-        /// Deletes the specified containers
+        /// Creates a pool if it doesn't already exist.  If the pool already exists, this method resizes it to meet the expected
+        /// targets specified in settings.
         /// </summary>
-        /// <param name="storageAccount">The storage account with the containers to delete.</param>
-        /// <param name="blobContainerNames">The name of the containers created for the jobs resource files.</param>
+        /// <param name="batchClient">The BatchClient to create the pool with.</param>
+        /// <param name="pool">The pool to create.</param>
         /// <returns>An asynchronous <see cref="Task"/> representing the operation.</returns>
-        private static async Task DeleteContainersAsync(CloudStorageAccount storageAccount, IEnumerable<string> blobContainerNames)
+        public static async Task CreatePoolIfNotExistAsync(BatchClient batchClient, CloudPool pool)
         {
-            CloudBlobClient cloudBlobClient = storageAccount.CreateCloudBlobClient();
-            foreach (string blobContainerName in blobContainerNames)
-            {
-                CloudBlobContainer container = cloudBlobClient.GetContainerReference(blobContainerName);
-                Console.WriteLine("Deleting container: {0}", blobContainerName);
+            bool successfullyCreatedPool = false;
 
-                await container.DeleteAsync();
+            int poolTargetNodeCount = pool.TargetDedicated ?? 0;
+            string poolNodeVirtualMachineSize = pool.VirtualMachineSize;
+            string poolId = pool.Id;
+
+            // Attempt to create the pool
+            try
+            {
+                // Create an in-memory representation of the Batch pool which we would like to create.  We are free to modify/update 
+                // this pool object in memory until we commit it to the service via the CommitAsync method.
+                Console.WriteLine("Attempting to create pool: {0}", pool.Id);
+
+                // Create the pool on the Batch Service
+                await pool.CommitAsync();
+
+                successfullyCreatedPool = true;
+                Console.WriteLine("Created pool {0} with {1} {2} nodes",
+                    pool,
+                    poolTargetNodeCount,
+                    poolNodeVirtualMachineSize);
             }
+            catch (BatchException e)
+            {
+                // Swallow the specific error code PoolExists since that is expected if the pool already exists
+                if (e.RequestInformation != null &&
+                    e.RequestInformation.AzureError != null &&
+                    e.RequestInformation.AzureError.Code == BatchErrorCodeStrings.PoolExists)
+                {
+                    // The pool already existed when we tried to create it
+                    successfullyCreatedPool = false;
+                    Console.WriteLine("The pool already existed when we tried to create it");
+                }
+                else
+                {
+                    throw; // Any other exception is unexpected
+                }
+            }
+
+            // If the pool already existed, make sure that its targets are correct
+            if (!successfullyCreatedPool)
+            {
+                CloudPool existingPool = await batchClient.PoolOperations.GetPoolAsync(poolId);
+
+                // If the pool doesn't have the right number of nodes and it isn't resizing then we need
+                // to ask it to resize
+                if (existingPool.CurrentDedicated != poolTargetNodeCount &&
+                    existingPool.AllocationState != AllocationState.Resizing)
+                {
+                    // Resize the pool to the desired target.  Note that provisioning the nodes in the pool may take some time
+                    await existingPool.ResizeAsync(poolTargetNodeCount);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Generates a file in a temp location with the specified name and text.
+        /// </summary>
+        /// <param name="fileName">The name of the file.</param>
+        /// <param name="fileText">The text of the file.</param>
+        /// <returns>The full path to the file.</returns>
+        public static string GenerateTemporaryFile(string fileName, string fileText)
+        {
+            string filePath = Path.Combine(Environment.GetEnvironmentVariable("TEMP"), fileName);
+            File.WriteAllText(filePath, fileText);
+
+            return filePath;
         }
     }
 }

@@ -132,10 +132,6 @@
       <Project>{612b170a-1697-4c40-bd57-26a6c8ac6534}</Project>
       <Name>Microsoft.Azure.Batch.Samples.Common</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\Shared\GettingStartedCommon\GettingStartedCommon.csproj">
-      <Project>{249c4baf-6d02-4fce-80e8-2eed743eb2e6}</Project>
-      <Name>GettingStartedCommon</Name>
-    </ProjectReference>
     <ProjectReference Include="..\..\Shared\SimpleTask\SimpleTask.csproj">
       <Project>{0950b124-deed-4f4c-b067-70e0ae06b41c}</Project>
       <Name>SimpleTask</Name>
