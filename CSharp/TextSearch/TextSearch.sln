@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MapperTask", "MapperTask\Ma
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReducerTask", "ReducerTask\ReducerTask.csproj", "{AB57D31E-3493-48BB-8367-87F51668DC9D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Azure.Batch.Samples.Common", "..\Common\Microsoft.Azure.Batch.Samples.Common.csproj", "{612B170A-1697-4C40-BD57-26A6C8AC6534}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{AB57D31E-3493-48BB-8367-87F51668DC9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AB57D31E-3493-48BB-8367-87F51668DC9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AB57D31E-3493-48BB-8367-87F51668DC9D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{612B170A-1697-4C40-BD57-26A6C8AC6534}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{612B170A-1697-4C40-BD57-26A6C8AC6534}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{612B170A-1697-4C40-BD57-26A6C8AC6534}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{612B170A-1697-4C40-BD57-26A6C8AC6534}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

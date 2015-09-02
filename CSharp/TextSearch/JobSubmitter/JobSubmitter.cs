@@ -3,7 +3,9 @@
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Linq;
     using System.Threading.Tasks;
+    using Common;
     using Microsoft.Azure.Batch.Auth;
     using Microsoft.Azure.Batch.Common;
     using Microsoft.WindowsAzure.Storage;
@@ -38,6 +40,13 @@
             Console.WriteLine("----------------------------------------");
             Console.WriteLine(this.configurationSettings.ToString());
             
+            CloudStorageAccount cloudStorageAccount = new CloudStorageAccount(
+                new StorageCredentials(
+                    this.configurationSettings.StorageAccountName,
+                    this.configurationSettings.StorageAccountKey), 
+                this.configurationSettings.StorageServiceUrl,
+                useHttps: true);
+
             //Upload resources if required.
             if (this.configurationSettings.ShouldUploadResources)
             {
@@ -50,15 +59,18 @@
                 List<string> mapperTaskFiles = await splitter.SplitAsync(
                     Constants.TextFilePath, 
                     this.configurationSettings.NumberOfMapperTasks);
-                
-                await this.UploadResourcesAsync(mapperTaskFiles);
-            }
 
+                List<string> files = Constants.RequiredExecutableFiles.Union(mapperTaskFiles).ToList();
+
+                await SampleHelpers.UploadResourcesAsync(
+                    cloudStorageAccount,
+                    this.configurationSettings.BlobContainer,
+                    files);
+            }
+            
             //Generate a SAS for the container.
-            string containerSasUrl = Helpers.ConstructContainerSas(
-                this.configurationSettings.StorageAccountName,
-                this.configurationSettings.StorageAccountKey,
-                this.configurationSettings.StorageServiceUrl,
+            string containerSasUrl = SampleHelpers.ConstructContainerSas(
+                cloudStorageAccount,
                 this.configurationSettings.BlobContainer);
 
             //Set up the Batch Service credentials used to authenticate with the Batch Service.
@@ -106,7 +118,7 @@
                 //Define the job manager for this job.  This job manager will run first and will submit the tasks for 
                 //the job.  The job manager is the executable which manages the lifetime of the job
                 //and all tasks which should run for the job.  In this case, the job manager submits the mapper and reducer tasks.
-                List<ResourceFile> jobManagerResourceFiles = Helpers.GetResourceFiles(containerSasUrl, Constants.RequiredExecutableFiles);
+                List<ResourceFile> jobManagerResourceFiles = SampleHelpers.GetResourceFiles(containerSasUrl, Constants.RequiredExecutableFiles);
                 const string jobManagerTaskId = "JobManager";
 
                 JobManagerTask jobManagerTask = new JobManagerTask()
@@ -166,14 +178,8 @@
                     //
                     // Download and write out the reducer tasks output
                     //
-                    CloudStorageAccount cloudStorageAccount = new CloudStorageAccount(
-                        new StorageCredentials(
-                            this.configurationSettings.StorageAccountName,
-                            this.configurationSettings.StorageAccountKey),
-                        this.configurationSettings.StorageServiceUrl,
-                        useHttps: true);
 
-                    string reducerText = await Helpers.DownloadBlobTextAsync(cloudStorageAccount, this.configurationSettings.BlobContainer, Constants.ReducerTaskResultBlobName);
+                    string reducerText = await SampleHelpers.DownloadBlobTextAsync(cloudStorageAccount, this.configurationSettings.BlobContainer, Constants.ReducerTaskResultBlobName);
                     Console.WriteLine("Reducer reuslts:");
                     Console.WriteLine(reducerText);
 
@@ -195,96 +201,5 @@
             }
         }
 
-        /// <summary>
-        /// Upload resources required for this job to Azure Storage.
-        /// </summary>
-        /// <param name="additionalFilesToUpload">Additional files to upload.</param>
-        private async Task UploadResourcesAsync(IEnumerable<string> additionalFilesToUpload)
-        {
-            string containerName = this.configurationSettings.BlobContainer;
-
-            Console.WriteLine("Uploading resources to storage container: {0}", containerName);
-
-            List<Task> asyncTasks = new List<Task>();
-
-            //Upload the files which are required to run the executable.
-            foreach (string file in Constants.RequiredExecutableFiles)
-            {
-                asyncTasks.Add(this.UploadFileToBlobAsync(file, containerName));
-            }
-
-            //Upload any additional files specified.
-            foreach (string fileName in additionalFilesToUpload)
-            {
-                asyncTasks.Add(this.UploadFileToBlobAsync(fileName, containerName));
-            }
-
-            await Task.WhenAll(asyncTasks); //Wait for all the uploads to finish.
-        }
-
-        /// <summary>
-        /// Upload a file as a blob.
-        /// </summary>
-        /// <param name="fileName">The name of the file to upload.</param>
-        /// <param name="containerName">The name of the container to upload the blob to.</param>
-        private async Task UploadFileToBlobAsync(string fileName, string containerName)
-        {
-            containerName = containerName.ToLower(); //Force lower case because Azure Storage only allows lower case container names.
-            
-            try
-            {
-                CloudStorageAccount cloudStorageAccount = new CloudStorageAccount(
-                    new StorageCredentials(
-                        this.configurationSettings.StorageAccountName,
-                        this.configurationSettings.StorageAccountKey),
-                this.configurationSettings.StorageServiceUrl,
-                useHttps: true);
-
-                CloudBlobClient client = cloudStorageAccount.CreateCloudBlobClient();
-                CloudBlobContainer container = client.GetContainerReference(containerName);
-                CloudBlockBlob blob = container.GetBlockBlobReference(fileName);
-
-                //Create the container if it doesn't exist.
-                await container.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Off, null, null); //Forbid public access
-
-                Console.WriteLine("Uploading {0} to {1}", fileName, blob.Uri);
-                using (FileStream fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read))
-                {
-                    //Upload the file to the specified container.
-                    await blob.UploadFromStreamAsync(fileStream);
-                }
-                Console.WriteLine("Done uploading {0}", fileName);
-            }
-            catch (AggregateException aggregateException)
-            {
-                //If there was an AggregateException process it and dump the useful information.
-                foreach (Exception e in aggregateException.InnerExceptions)
-                {
-                    StorageException storageException = e as StorageException;
-                    if (storageException != null)
-                    {
-                        if (storageException.RequestInformation != null &&
-                            storageException.RequestInformation.ExtendedErrorInformation != null)
-                        {
-                            StorageExtendedErrorInformation errorInfo = storageException.RequestInformation.ExtendedErrorInformation;
-                            Console.WriteLine("Extended error information. Code: {0}, Message: {1}",
-                                              errorInfo.ErrorMessage,
-                                              errorInfo.ErrorCode);
-
-                            if (errorInfo.AdditionalDetails != null)
-                            {
-                                foreach (KeyValuePair<string, string> keyValuePair in errorInfo.AdditionalDetails)
-                                {
-                                    Console.WriteLine("Key: {0}, Value: {1}", keyValuePair.Key, keyValuePair.Value);
-                                }
-                            }
-                        }
-                    }
-                }
-               
-                throw; //Rethrow on blob upload failure.
-            }
-
-        }
     }
 }

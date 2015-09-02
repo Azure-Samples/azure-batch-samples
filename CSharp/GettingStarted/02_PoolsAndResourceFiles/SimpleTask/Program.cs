@@ -1,4 +1,4 @@
-﻿namespace Microsoft.Azure.Batch.Samples.SimpleJobSubmission
+﻿namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
 {
     using System;
     using System.IO;

@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace Microsoft.Azure.Batch.Samples.SimpleJobSubmission
+namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
 {
     public partial class Settings
     {
@@ -22,6 +22,7 @@ namespace Microsoft.Azure.Batch.Samples.SimpleJobSubmission
             AddSetting(stringBuilder, "PoolNodeVirtualMachineSize", this.PoolNodeVirtualMachineSize);
             AddSetting(stringBuilder, "ShouldDeletePool", this.ShouldDeletePool);
             AddSetting(stringBuilder, "ShouldDeleteJob", this.ShouldDeleteJob);
+            AddSetting(stringBuilder, "BlobContainer", this.BlobContainer);
             
             return stringBuilder.ToString();
         }

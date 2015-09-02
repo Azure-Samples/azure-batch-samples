@@ -1,5 +1,5 @@
 ﻿<?xml version='1.0' encoding='utf-8'?>
-<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="Microsoft.Azure.Batch.Samples.SimpleJobSubmission" GeneratedClassName="Settings">
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles" GeneratedClassName="Settings">
   <Profiles />
   <Settings>
     <Setting Name="BatchAccountName" Type="System.String" Scope="User">
@@ -30,13 +30,16 @@
       <Value Profile="(Default)">4</Value>
     </Setting>
     <Setting Name="PoolId" Type="System.String" Scope="User">
-      <Value Profile="(Default)">SimpleJobSubmission-Pool</Value>
+      <Value Profile="(Default)">PoolsAndResourceFilesPool</Value>
     </Setting>
     <Setting Name="ShouldDeletePool" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="ShouldDeleteJob" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="BlobContainer" Type="System.String" Scope="User">
+      <Value Profile="(Default)">PoolAndResourceFilesContainer</Value>
     </Setting>
   </Settings>
 </SettingsFile>
