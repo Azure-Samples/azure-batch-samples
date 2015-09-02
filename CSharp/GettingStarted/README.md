@@ -6,3 +6,5 @@ The HelloWorld sample is an introduction to the framework required to communicat
 ###[02_PoolsAndResourceFiles](./02_PoolsAndResourceFiles)
 This sample expands on the HelloWorld sample.  It creates a fixed pool, and then uses the FileStaging feature to submit a task which has a set of required files. The FileStaging is used to move the files into Azure Storage and then onto the Batch compute node.  This sample also showcases the use of a StartTask as a method to get files onto every node in the pool.
 
+###[03_JobManager](./03_JobManager)
+This sample extends on the previous sample.  It uses a fixed pool and submits a job with a JobManager task.  The JobManager task adds other tasks to the job and also ends the job when all tasks have completed.
