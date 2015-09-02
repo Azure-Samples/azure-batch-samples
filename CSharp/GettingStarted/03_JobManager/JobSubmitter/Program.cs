@@ -1,10 +1,10 @@
-﻿namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
+﻿namespace Microsoft.Azure.Batch.Samples.JobManager
 {
     using System;
     using Common;
 
     /// <summary>
-    /// The main program of the PoolsAndResourceFiles sample
+    /// The main program of the JobManager sample
     /// </summary>
     public static class Program
     {

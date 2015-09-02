@@ -104,6 +104,10 @@
     <Folder Include="Properties\" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\Common\Microsoft.Azure.Batch.Samples.Common.csproj">
+      <Project>{612b170a-1697-4c40-bd57-26a6c8ac6534}</Project>
+      <Name>Microsoft.Azure.Batch.Samples.Common</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Common\Common.csproj">
       <Project>{c3c6c51e-0bb3-4c86-95da-913cce289390}</Project>
       <Name>Common</Name>

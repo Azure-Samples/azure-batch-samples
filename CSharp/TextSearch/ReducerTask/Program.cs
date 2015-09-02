@@ -1,6 +1,7 @@
 ﻿namespace Microsoft.Azure.Batch.Samples.TextSearch
 {
     using System;
+    using Common;
 
     public class Program
     {
@@ -13,7 +14,7 @@
             }
             catch (AggregateException e)
             {
-                Helpers.ProcessAggregateException(e);
+                SampleHelpers.PrintAggregateException(e);
 
                 throw;
             }
