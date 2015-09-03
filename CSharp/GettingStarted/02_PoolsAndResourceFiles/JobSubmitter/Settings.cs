@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿//Copyright (c) Microsoft Corporation
+
+using System.Text;
 
 namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
 {

@@ -1,4 +1,6 @@
-﻿namespace Microsoft.Azure.Batch.Samples.TextSearch
+﻿//Copyright (c) Microsoft Corporation
+
+namespace Microsoft.Azure.Batch.Samples.TextSearch
 {
     using System.Text;
 

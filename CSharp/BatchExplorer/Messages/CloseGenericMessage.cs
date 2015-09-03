@@ -1,4 +1,6 @@
-﻿namespace Microsoft.Azure.BatchExplorer.Messages
+﻿//Copyright (c) Microsoft Corporation
+
+namespace Microsoft.Azure.BatchExplorer.Messages
 {
     public class CloseGenericMessage
     {

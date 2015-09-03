@@ -1,4 +1,6 @@
-﻿using System.Windows.Controls;
+﻿//Copyright (c) Microsoft Corporation
+
+using System.Windows.Controls;
 using GalaSoft.MvvmLight.Messaging;
 using Microsoft.Azure.BatchExplorer.Helpers;
 using Microsoft.Azure.BatchExplorer.Messages;

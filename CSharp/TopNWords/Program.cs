@@ -1,4 +1,6 @@
-﻿namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
+﻿//Copyright (c) Microsoft Corporation
+
+namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
 {
     public class Program
     {

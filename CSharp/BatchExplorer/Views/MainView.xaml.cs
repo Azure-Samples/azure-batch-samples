@@ -1,4 +1,6 @@
-﻿namespace Microsoft.Azure.BatchExplorer.Views
+﻿//Copyright (c) Microsoft Corporation
+
+namespace Microsoft.Azure.BatchExplorer.Views
 {
     using System;
     using System.Windows;

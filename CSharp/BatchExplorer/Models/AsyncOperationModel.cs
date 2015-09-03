@@ -1,4 +1,6 @@
-﻿using System;
+﻿//Copyright (c) Microsoft Corporation
+
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;

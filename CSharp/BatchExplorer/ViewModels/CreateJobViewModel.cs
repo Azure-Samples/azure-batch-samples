@@ -1,4 +1,6 @@
-﻿namespace Microsoft.Azure.BatchExplorer.ViewModels
+﻿//Copyright (c) Microsoft Corporation
+
+namespace Microsoft.Azure.BatchExplorer.ViewModels
 {
     using System;
     using System.Collections.Generic;

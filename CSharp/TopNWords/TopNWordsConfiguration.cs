@@ -1,4 +1,6 @@
-﻿using System;
+﻿//Copyright (c) Microsoft Corporation
+
+using System;
 using System.Configuration;
 
 namespace Microsoft.Azure.Batch.Samples.TopNWordsSample

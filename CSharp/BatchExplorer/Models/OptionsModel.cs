@@ -1,4 +1,6 @@
-﻿using System;
+﻿//Copyright (c) Microsoft Corporation
+
+using System;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Xml;

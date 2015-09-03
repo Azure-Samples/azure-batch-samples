@@ -1,4 +1,6 @@
-﻿using System.Globalization;
+﻿//Copyright (c) Microsoft Corporation
+
+using System.Globalization;
 
 namespace Microsoft.Azure.BatchExplorer.Helpers
 {

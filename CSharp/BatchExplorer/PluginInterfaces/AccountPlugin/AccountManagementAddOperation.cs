@@ -1,4 +1,6 @@
-﻿using System.Windows.Controls;
+﻿//Copyright (c) Microsoft Corporation
+
+using System.Windows.Controls;
 using Microsoft.Azure.BatchExplorer.Models;
 
 namespace Microsoft.Azure.BatchExplorer.PluginInterfaces.AccountPlugin
