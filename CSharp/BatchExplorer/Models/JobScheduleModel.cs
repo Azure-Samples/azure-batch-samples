@@ -50,14 +50,9 @@
 
         #region ModelBase implementation
 
-        public override SortedDictionary<string, object> PropertyValuePairs
+        public override List<PropertyModel> PropertyModel
         {
-            get
-            {
-                SortedDictionary<string, object> results = ObjectToSortedDictionary(this.JobSchedule);
-                results.Add(LastUpdateFromServerString, this.LastUpdatedTime);
-                return results;
-            }
+            get { return this.ObjectToPropertyModel(this.JobSchedule); }
         }
 
         public override async Task RefreshAsync(ModelRefreshType refreshType, bool showTrackedOperation = true)

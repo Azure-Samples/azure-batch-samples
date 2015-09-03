@@ -124,15 +124,10 @@ namespace Microsoft.Azure.BatchExplorer.Models
         }
 
         #region ModelBase implementation
-
-        public override SortedDictionary<string, object> PropertyValuePairs
+        
+        public override List<PropertyModel> PropertyModel
         {
-            get
-            {
-                SortedDictionary<string, object> results = ObjectToSortedDictionary(this.ComputeNode);
-                results.Add(LastUpdateFromServerString, this.LastUpdatedTime);
-                return results;
-            }
+            get { return this.ObjectToPropertyModel(this.ComputeNode); }
         }
 
         public override async Task RefreshAsync(ModelRefreshType refreshType, bool showTrackedOperation = true)
