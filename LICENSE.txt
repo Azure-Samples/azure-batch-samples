@@ -1,1 +1,5 @@
-See the individual directory's LICENSE file for the license associated with each sample.
+See the individual directory's LICENSE.txt file for the license associated
+with each sample. If the sample itself does not have a LICENSE.txt file, then
+either the parent directory will have a LICENSE.txt file covering all samples
+for the children or the self-contained sample file will have the license terms
+at the top of the file.
