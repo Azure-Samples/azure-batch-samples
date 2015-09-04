@@ -111,7 +111,7 @@ except NameError:  # pragma: no cover
 # pylint: enable=W0622,C0103
 
 # global defines
-_SCRIPT_VERSION = '0.9.9.0'
+_SCRIPT_VERSION = '0.9.9.1'
 _DEFAULT_MAX_STORAGEACCOUNT_WORKERS = 64
 _MAX_BLOB_CHUNK_SIZE_BYTES = 4194304
 _MAX_LISTBLOBS_RESULTS = 1000
@@ -172,7 +172,8 @@ class SasBlobList(object):
         Raises:
             Nothing
         """
-        self.next_marker = marker
+        if marker is not None and len(marker) > 0:
+            self.next_marker = marker
 
 
 class SasBlobService(object):
@@ -213,7 +214,7 @@ class SasBlobService(object):
         for blob in blobs.iter('Blob'):
             name = blob.find('Name').text
             props = blob.find('Properties')
-            cl = int(props.find('Content-Length').text)
+            cl = long(props.find('Content-Length').text)
             md5 = props.find('Content-MD5').text
             bt = props.find('BlobType').text
             result.add_blob(name, cl, md5, bt)

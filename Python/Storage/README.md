@@ -31,8 +31,8 @@ or through standard setup.py procedures. As of this script version 0.9.9.0,
 it no longer supports the legacy Azure Python SDK, i.e., `azure` package with
 version < 1.0.0 due to breaking changes in the azure packages.
 
-Program parameters and command-line options can be listed via the -h switch. At
-the minimum, three positional arguments are required: storage account name,
+Program parameters and command-line options can be listed via the `-h` switch.
+At the minimum, three positional arguments are required: storage account name,
 container name, local resource. Additionally, one of the following
 authentication switches must be supplied: `--subscriptionid` with
 `--managementcert`, `--storageaccountkey`, or `--saskey`. It is recommended
@@ -103,6 +103,7 @@ script in a `virtualenv` environment without the `ndg-httpsclient` package.
 Python versions >= 2.7.9 are not affected by this issue.
 
 ###Change Log
+* 0.9.9.1: fix content length > 32bit for blob lists via SAS on Python2
 * 0.9.9.0: update script for compatibility with new Azure Python packages
 * 0.9.8: fix blob endpoint for non-SAS input, add retry on ServerBusy
 * 0.9.7: normalize SAS keys (accept keys with or without ? char prefix)
