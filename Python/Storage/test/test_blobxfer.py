@@ -133,7 +133,7 @@ def test_sasblobservice_listblobs():
         b'<Delimiter>string-value</Delimiter><Blobs><Blob><Name>blob-name' + \
         b'</Name><Snapshot>date-time-value</Snapshot><Properties>' + \
         b'<Last-Modified>date-time-value</Last-Modified><Etag>etag</Etag>' + \
-        b'<Content-Length>1234</Content-Length><Content-Type>' + \
+        b'<Content-Length>2147483648</Content-Length><Content-Type>' + \
         b'blob-content-type</Content-Type><Content-Encoding />' + \
         b'<Content-Language /><Content-MD5>abc</Content-MD5>' + \
         b'<Cache-Control /><x-ms-blob-sequence-number>sequence-number' + \
@@ -147,8 +147,8 @@ def test_sasblobservice_listblobs():
         b'datetime</CopyCompletionTime><CopyStatusDescription>' + \
         b'error string</CopyStatusDescription></Properties><Metadata>' + \
         b'<Name>value</Name></Metadata></Blob><BlobPrefix><Name>' + \
-        b'blob-prefix</Name></BlobPrefix></Blobs><NextMarker />' + \
-        b'</EnumerationResults>'
+        b'blob-prefix</Name></BlobPrefix></Blobs><NextMarker>nm' + \
+        b'</NextMarker></EnumerationResults>'
 
     with requests_mock.mock() as m:
         m.get('mock://blobepcontainer?saskey', content=content)
@@ -156,10 +156,10 @@ def test_sasblobservice_listblobs():
         result = sbs.list_blobs('container', 'marker')
         assert len(result) == 1
         assert result[0].name == 'blob-name'
-        assert result[0].properties.content_length == 1234
+        assert result[0].properties.content_length == 2147483648
         assert result[0].properties.content_md5 == 'abc'
         assert result[0].properties.blobtype == 'BlockBlob'
-        assert result.next_marker is None
+        assert result.next_marker == 'nm'
 
         m.get('mock://blobepcontainer?saskey', content=b'', status_code=201)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
