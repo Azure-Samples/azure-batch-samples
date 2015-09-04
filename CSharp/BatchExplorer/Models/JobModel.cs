@@ -1,3 +1,5 @@
+//Copyright (c) Microsoft Corporation
+
 namespace Microsoft.Azure.BatchExplorer.Models
 {
     using System;

@@ -1,4 +1,6 @@
-﻿using System;
+﻿//Copyright (c) Microsoft Corporation
+
+using System;
 using Microsoft.Azure.BatchExplorer.PluginInterfaces.AccountPlugin;
 
 namespace Microsoft.Azure.BatchExplorer.Models

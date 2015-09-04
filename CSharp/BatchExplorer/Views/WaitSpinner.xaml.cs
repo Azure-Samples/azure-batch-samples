@@ -1,4 +1,6 @@
-﻿using System.Windows;
+﻿//Copyright (c) Microsoft Corporation
+
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Animation;
 

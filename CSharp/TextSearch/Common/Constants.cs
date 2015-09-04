@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿//Copyright (c) Microsoft Corporation
+
+using System.Collections.Generic;
 
 namespace Microsoft.Azure.Batch.Samples.TextSearch
 {

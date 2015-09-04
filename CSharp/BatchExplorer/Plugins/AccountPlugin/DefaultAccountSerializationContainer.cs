@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿//Copyright (c) Microsoft Corporation
+
+using System.Collections.Generic;
 using Microsoft.Azure.BatchExplorer.Models;
 using Microsoft.Azure.BatchExplorer.PluginInterfaces.AccountPlugin;
 

@@ -1,4 +1,6 @@
-﻿using System;
+﻿//Copyright (c) Microsoft Corporation
+
+using System;
 using System.Windows.Input;
 
 namespace Microsoft.Azure.BatchExplorer.Helpers

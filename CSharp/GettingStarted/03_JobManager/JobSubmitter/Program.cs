@@ -1,4 +1,6 @@
-﻿namespace Microsoft.Azure.Batch.Samples.JobManager
+﻿//Copyright (c) Microsoft Corporation
+
+namespace Microsoft.Azure.Batch.Samples.JobManager
 {
     using System;
     using Common;

@@ -1,4 +1,6 @@
-﻿namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
+﻿//Copyright (c) Microsoft Corporation
+
+namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
 {
     using System;
     using System.Collections.Concurrent;

@@ -1,4 +1,5 @@
-﻿
+﻿//Copyright (c) Microsoft Corporation
+
 namespace Microsoft.Azure.BatchExplorer.PluginInterfaces.AccountPlugin
 {
     /// <summary>

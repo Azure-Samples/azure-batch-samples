@@ -1,4 +1,6 @@
-﻿namespace Microsoft.Azure.BatchExplorer.Models
+﻿//Copyright (c) Microsoft Corporation
+
+namespace Microsoft.Azure.BatchExplorer.Models
 {
     using System;
     using System.Collections.Generic;

@@ -1,4 +1,6 @@
-﻿using System.ComponentModel;
+﻿//Copyright (c) Microsoft Corporation
+
+using System.ComponentModel;
 using System.Runtime.Serialization;
 
 namespace Microsoft.Azure.BatchExplorer.Helpers

@@ -1,4 +1,6 @@
-﻿namespace Microsoft.Azure.Batch.Samples.HelloWorld
+﻿//Copyright (c) Microsoft Corporation
+
+namespace Microsoft.Azure.Batch.Samples.HelloWorld
 {
     using System;
     using System.Collections.Generic;

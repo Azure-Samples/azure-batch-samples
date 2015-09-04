@@ -1,4 +1,6 @@
-﻿using Microsoft.Azure.BatchExplorer.Models;
+﻿//Copyright (c) Microsoft Corporation
+
+using Microsoft.Azure.BatchExplorer.Models;
 
 namespace Microsoft.Azure.BatchExplorer.Messages
 {
