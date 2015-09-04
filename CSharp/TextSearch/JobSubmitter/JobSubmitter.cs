@@ -4,7 +4,6 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
 {
     using System;
     using System.Collections.Generic;
-    using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
     using Common;
@@ -12,7 +11,6 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
     using Microsoft.Azure.Batch.Common;
     using Microsoft.WindowsAzure.Storage;
     using Microsoft.WindowsAzure.Storage.Auth;
-    using Microsoft.WindowsAzure.Storage.Blob;
 
     /// <summary>
     /// Submits the job to the Batch Service and waits for it to complete.
@@ -21,7 +19,8 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
     /// </summary>
     public class JobSubmitter
     {
-        private readonly Settings configurationSettings;
+        private readonly Settings textSearchSettings;
+        private readonly AccountSettings accountSettings;
 
         /// <summary>
         /// Constructs a JobSubmitter with default values.
@@ -29,7 +28,8 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
         public JobSubmitter()
         {
             //Load the configuration settings.
-            configurationSettings = Settings.Default;
+            this.textSearchSettings = Settings.Default;
+            this.accountSettings = AccountSettings.Default;
         }
 
         /// <summary>
@@ -40,46 +40,47 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
         {
             Console.WriteLine("Running with the following settings: ");
             Console.WriteLine("----------------------------------------");
-            Console.WriteLine(this.configurationSettings.ToString());
+            Console.WriteLine(this.textSearchSettings.ToString());
+            Console.WriteLine(this.accountSettings.ToString());
             
             CloudStorageAccount cloudStorageAccount = new CloudStorageAccount(
                 new StorageCredentials(
-                    this.configurationSettings.StorageAccountName,
-                    this.configurationSettings.StorageAccountKey), 
-                this.configurationSettings.StorageServiceUrl,
+                    this.accountSettings.StorageAccountName,
+                    this.accountSettings.StorageAccountKey), 
+                this.accountSettings.StorageServiceUrl,
                 useHttps: true);
 
             //Upload resources if required.
-            if (this.configurationSettings.ShouldUploadResources)
+            if (this.textSearchSettings.ShouldUploadResources)
             {
                 Console.WriteLine("Splitting file: {0} into {1} subfiles", 
                     Constants.TextFilePath, 
-                    this.configurationSettings.NumberOfMapperTasks);
+                    this.textSearchSettings.NumberOfMapperTasks);
 
                 //Split the text file into the correct number of files for consumption by the mapper tasks.
                 FileSplitter splitter = new FileSplitter();
                 List<string> mapperTaskFiles = await splitter.SplitAsync(
                     Constants.TextFilePath, 
-                    this.configurationSettings.NumberOfMapperTasks);
+                    this.textSearchSettings.NumberOfMapperTasks);
 
                 List<string> files = Constants.RequiredExecutableFiles.Union(mapperTaskFiles).ToList();
 
                 await SampleHelpers.UploadResourcesAsync(
                     cloudStorageAccount,
-                    this.configurationSettings.BlobContainer,
+                    this.textSearchSettings.BlobContainer,
                     files);
             }
             
             //Generate a SAS for the container.
             string containerSasUrl = SampleHelpers.ConstructContainerSas(
                 cloudStorageAccount,
-                this.configurationSettings.BlobContainer);
+                this.textSearchSettings.BlobContainer);
 
             //Set up the Batch Service credentials used to authenticate with the Batch Service.
             BatchSharedKeyCredentials credentials = new BatchSharedKeyCredentials(
-                this.configurationSettings.BatchServiceUrl,
-                this.configurationSettings.BatchAccountName,
-                this.configurationSettings.BatchAccountKey);
+                this.accountSettings.BatchServiceUrl,
+                this.accountSettings.BatchAccountName,
+                this.accountSettings.BatchAccountKey);
 
             using (BatchClient batchClient = await BatchClient.OpenAsync(credentials))
             {
@@ -88,7 +89,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                 //
 
                 //Allow enough compute nodes in the pool to run each mapper task, and 1 extra to run the job manager.
-                int numberOfPoolComputeNodes = 1 + this.configurationSettings.NumberOfMapperTasks;
+                int numberOfPoolComputeNodes = 1 + this.textSearchSettings.NumberOfMapperTasks;
 
                 //Define the pool specification for the pool which the job will run on.
                 PoolSpecification poolSpecification = new PoolSpecification()
@@ -181,7 +182,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                     // Download and write out the reducer tasks output
                     //
 
-                    string reducerText = await SampleHelpers.DownloadBlobTextAsync(cloudStorageAccount, this.configurationSettings.BlobContainer, Constants.ReducerTaskResultBlobName);
+                    string reducerText = await SampleHelpers.DownloadBlobTextAsync(cloudStorageAccount, this.textSearchSettings.BlobContainer, Constants.ReducerTaskResultBlobName);
                     Console.WriteLine("Reducer reuslts:");
                     Console.WriteLine(reducerText);
 
@@ -191,7 +192,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                     //Delete the job.
                     //This will delete the auto pool associated with the job as long as the pool
                     //keep alive property is set to false.
-                    if (this.configurationSettings.ShouldDeleteJob)
+                    if (this.textSearchSettings.ShouldDeleteJob)
                     {
                         Console.WriteLine("Deleting job {0}", jobId);
                         batchClient.JobOperations.DeleteJob(jobId);

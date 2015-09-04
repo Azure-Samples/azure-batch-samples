@@ -17,7 +17,9 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
     /// </summary>
     public class JobSubmitter
     {
-        private readonly Settings configurationSettings;
+        private readonly Settings jobManagerSettings;
+        private readonly AccountSettings accountSettings;
+
         private const string JobManagerTaskExe = "SampleJobManagerTask.exe";
         private const string JobManagerTaskId = "SampleJobManager";
         private static readonly IReadOnlyList<string> JobManagerRequiredFiles = new List<string>()
@@ -42,14 +44,17 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
                 "Microsoft.Data.OData.dll",
                 "System.Spatial.dll",
             };
+
         public JobSubmitter()
         {
-            this.configurationSettings = Settings.Default;
+            this.jobManagerSettings = Settings.Default;
+            this.accountSettings = AccountSettings.Default;
         }
 
-        public JobSubmitter(Settings settings)
+        public JobSubmitter(AccountSettings accountSettings, Settings settings)
         {
-            this.configurationSettings = settings;
+            this.jobManagerSettings = settings;
+            this.accountSettings = accountSettings;
         }
 
         /// <summary>
@@ -60,21 +65,20 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
         {
             Console.WriteLine("Running with the following settings: ");
             Console.WriteLine("-------------------------------------");
-            Console.WriteLine(this.configurationSettings.ToString());
+            Console.WriteLine(this.jobManagerSettings.ToString());
+            Console.WriteLine(this.accountSettings.ToString());
 
             // Set up the Batch Service credentials used to authenticate with the Batch Service.
             BatchSharedKeyCredentials credentials = new BatchSharedKeyCredentials(
-                this.configurationSettings.BatchServiceUrl,
-                this.configurationSettings.BatchAccountName,
-                this.configurationSettings.BatchAccountKey);
+                this.accountSettings.BatchServiceUrl,
+                this.accountSettings.BatchAccountName,
+                this.accountSettings.BatchAccountKey);
 
             CloudStorageAccount cloudStorageAccount = new CloudStorageAccount(
-                new StorageCredentials(this.configurationSettings.StorageAccountName,
-                    this.configurationSettings.StorageAccountKey),
-                new Uri(this.configurationSettings.StorageBlobEndpoint),
-                null,
-                null,
-                null);
+                new StorageCredentials(this.accountSettings.StorageAccountName,
+                    this.accountSettings.StorageAccountKey),
+                    this.accountSettings.StorageServiceUrl,
+                    useHttps: true);
 
             // Get an instance of the BatchClient for a given Azure Batch account.
             using (BatchClient batchClient = await BatchClient.OpenAsync(credentials))
@@ -109,14 +113,14 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
                     List<string> jobIdsToDelete = new List<string>();
                     List<string> poolIdsToDelete = new List<string>();
 
-                    if (this.configurationSettings.ShouldDeleteJob)
+                    if (this.jobManagerSettings.ShouldDeleteJob)
                     {
                         jobIdsToDelete.Add(jobId);
                     }
 
-                    if (this.configurationSettings.ShouldDeletePool)
+                    if (this.jobManagerSettings.ShouldDeletePool)
                     {
-                        poolIdsToDelete.Add(this.configurationSettings.PoolId);
+                        poolIdsToDelete.Add(this.jobManagerSettings.PoolId);
                     }
 
                     SampleHelpers.DeleteBatchResourcesAsync(batchClient, jobIdsToDelete, poolIdsToDelete).Wait();
@@ -136,10 +140,10 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
             // You can learn more about os families and versions at:
             // https://azure.microsoft.com/en-us/documentation/articles/cloud-services-guestos-update-matrix/
             CloudPool pool = batchClient.PoolOperations.CreatePool(
-                poolId: this.configurationSettings.PoolId,
-                targetDedicated: this.configurationSettings.PoolTargetNodeCount,
-                virtualMachineSize: this.configurationSettings.PoolNodeVirtualMachineSize,
-                osFamily: this.configurationSettings.PoolOSFamily);
+                poolId: this.jobManagerSettings.PoolId,
+                targetDedicated: this.jobManagerSettings.PoolTargetNodeCount,
+                virtualMachineSize: this.jobManagerSettings.PoolNodeVirtualMachineSize,
+                osFamily: this.jobManagerSettings.PoolOSFamily);
 
             // Create a new start task to facilitate pool-wide file management or installation.
             // In this case, we just add a single dummy data file to the StartTask.
@@ -148,7 +152,7 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
             
             List<ResourceFile> resourceFiles = await SampleHelpers.UploadResourcesAndCreateResourceFileReferencesAsync(
                 cloudStorageAccount,
-                this.configurationSettings.BlobContainer,
+                this.jobManagerSettings.BlobContainer,
                 files);
 
             pool.StartTask = new StartTask()
@@ -173,12 +177,12 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
             // create an empty unbound Job
             CloudJob unboundJob = batchClient.JobOperations.CreateJob();
             unboundJob.Id = jobId;
-            unboundJob.PoolInformation = new PoolInformation() { PoolId = this.configurationSettings.PoolId };
+            unboundJob.PoolInformation = new PoolInformation() { PoolId = this.jobManagerSettings.PoolId };
             
             // Upload the required files for the job manager task
-            await SampleHelpers.UploadResourcesAsync(storageAccount, this.configurationSettings.BlobContainer, JobManagerRequiredFiles);
+            await SampleHelpers.UploadResourcesAsync(storageAccount, this.jobManagerSettings.BlobContainer, JobManagerRequiredFiles);
 
-            string containerSas = SampleHelpers.ConstructContainerSas(storageAccount, this.configurationSettings.BlobContainer);
+            string containerSas = SampleHelpers.ConstructContainerSas(storageAccount, this.jobManagerSettings.BlobContainer);
             List<ResourceFile> jobManagerResourceFiles = SampleHelpers.GetResourceFiles(containerSas, JobManagerRequiredFiles);
 
             // Set up the JobManager environment settings
@@ -187,12 +191,12 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
                     // No need to pass the batch account name as an environment variable since the batch service provides
                     // an environment variable for each task which contains the account name
 
-                    new EnvironmentSetting("SAMPLE_BATCH_KEY", this.configurationSettings.BatchAccountKey),
-                    new EnvironmentSetting("SAMPLE_BATCH_URL", this.configurationSettings.BatchServiceUrl),
+                    new EnvironmentSetting("SAMPLE_BATCH_KEY", this.accountSettings.BatchAccountKey),
+                    new EnvironmentSetting("SAMPLE_BATCH_URL", this.accountSettings.BatchServiceUrl),
 
-                    new EnvironmentSetting("SAMPLE_STORAGE_ACCOUNT", this.configurationSettings.StorageAccountName),
-                    new EnvironmentSetting("SAMPLE_STORAGE_KEY", this.configurationSettings.StorageAccountKey),
-                    new EnvironmentSetting("SAMPLE_STORAGE_BLOB_URI", this.configurationSettings.StorageBlobEndpoint),
+                    new EnvironmentSetting("SAMPLE_STORAGE_ACCOUNT", this.accountSettings.StorageAccountName),
+                    new EnvironmentSetting("SAMPLE_STORAGE_KEY", this.accountSettings.StorageAccountKey),
+                    new EnvironmentSetting("SAMPLE_STORAGE_URL", this.accountSettings.StorageServiceUrl),
                 };
 
             unboundJob.JobManagerTask = new JobManagerTask()

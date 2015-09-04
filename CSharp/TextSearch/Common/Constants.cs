@@ -31,6 +31,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                 ReducerTaskExecutable,
                 "ReducerTask.pdb",
                 "Microsoft.Azure.Batch.Samples.Common.dll",
+                "Microsoft.Azure.Batch.Samples.Common.dll.config",
                 "Common.dll",
                 "app.config",
                 "Microsoft.WindowsAzure.Storage.dll",

@@ -6,6 +6,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.Text;
     using System.Threading.Tasks;
     using Microsoft.WindowsAzure.Storage;
     using Microsoft.WindowsAzure.Storage.Blob;
@@ -288,6 +289,11 @@ namespace Microsoft.Azure.Batch.Samples.Common
                 Console.WriteLine("Deleting pool: {0}", poolId);
                 await batchClient.PoolOperations.DeletePoolAsync(poolId);
             }
+        }
+
+        public static void AddSetting(StringBuilder stringBuilder, string settingName, object settingValue)
+        {
+            stringBuilder.AppendFormat("{0} = {1}", settingName, settingValue).AppendLine();
         }
     }
 }

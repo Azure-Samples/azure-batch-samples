@@ -25,18 +25,6 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("https://(YourAccount).(region).batch.azure.com")]
-        public string BatchServiceUrl {
-            get {
-                return ((string)(this["BatchServiceUrl"]));
-            }
-            set {
-                this["BatchServiceUrl"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
         public bool ShouldUploadResources {
             get {
@@ -73,18 +61,6 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("core.windows.net")]
-        public string StorageServiceUrl {
-            get {
-                return ((string)(this["StorageServiceUrl"]));
-            }
-            set {
-                this["StorageServiceUrl"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("TextSearchContainer")]
         public string BlobContainer {
             get {
@@ -97,30 +73,6 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("")]
-        public string BatchAccountName {
-            get {
-                return ((string)(this["BatchAccountName"]));
-            }
-            set {
-                this["BatchAccountName"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("")]
-        public string BatchAccountKey {
-            get {
-                return ((string)(this["BatchAccountKey"]));
-            }
-            set {
-                this["BatchAccountKey"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("2")]
         public int NumberOfMapperTasks {
             get {
@@ -128,30 +80,6 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch {
             }
             set {
                 this["NumberOfMapperTasks"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("")]
-        public string StorageAccountName {
-            get {
-                return ((string)(this["StorageAccountName"]));
-            }
-            set {
-                this["StorageAccountName"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("")]
-        public string StorageAccountKey {
-            get {
-                return ((string)(this["StorageAccountKey"]));
-            }
-            set {
-                this["StorageAccountKey"] = value;
             }
         }
     }

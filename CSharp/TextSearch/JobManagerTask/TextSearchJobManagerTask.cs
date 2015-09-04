@@ -17,7 +17,8 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
     /// </summary>
     public class TextSearchJobManagerTask
     {
-        private readonly Settings configurationSettings;
+        private readonly Settings textSearchSettings;
+        private readonly AccountSettings accountSettings;
         private readonly string accountName;
         private readonly string jobId;
 
@@ -26,7 +27,8 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
         /// </summary>
         public TextSearchJobManagerTask()
         {
-            this.configurationSettings = Settings.Default;
+            this.textSearchSettings = Settings.Default;
+            this.accountSettings = AccountSettings.Default;
 
             //Read some important data from preconfigured environment variables on the Batch compute node.
             this.accountName = Environment.GetEnvironmentVariable("AZ_BATCH_ACCOUNT_NAME");
@@ -45,19 +47,19 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
 
             Console.WriteLine("JobManager running with the following settings: ");
             Console.WriteLine("----------------------------------------");
-            Console.WriteLine(this.configurationSettings.ToString());
+            Console.WriteLine(this.textSearchSettings.ToString());
 
             //Set up the Batch Service credentials used to authenticate with the Batch Service.
             BatchSharedKeyCredentials batchSharedKeyCredentials = new BatchSharedKeyCredentials(
-                this.configurationSettings.BatchServiceUrl,
-                this.configurationSettings.BatchAccountName,
-                this.configurationSettings.BatchAccountKey);
+                this.accountSettings.BatchServiceUrl,
+                this.accountSettings.BatchAccountName,
+                this.accountSettings.BatchAccountKey);
 
             CloudStorageAccount cloudStorageAccount = new CloudStorageAccount(
                 new StorageCredentials(
-                    this.configurationSettings.StorageAccountName,
-                    this.configurationSettings.StorageAccountKey),
-                this.configurationSettings.StorageServiceUrl,
+                    this.accountSettings.StorageAccountName,
+                    this.accountSettings.StorageAccountKey),
+                this.accountSettings.StorageServiceUrl,
                 useHttps: true);
 
             using (BatchClient batchClient = await BatchClient.OpenAsync(batchSharedKeyCredentials))
@@ -66,7 +68,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                 //run the mapper and reducer tasks.
                 string containerSas = SampleHelpers.ConstructContainerSas(
                     cloudStorageAccount,
-                    this.configurationSettings.BlobContainer);
+                    this.textSearchSettings.BlobContainer);
 
                 //
                 // Submit mapper tasks.
@@ -92,7 +94,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                 // Upload the results of the reducer task to Azure storage for consumption later
                 //
 
-                await SampleHelpers.UploadBlobTextAsync(cloudStorageAccount, this.configurationSettings.BlobContainer, Constants.ReducerTaskResultBlobName, textToUpload);
+                await SampleHelpers.UploadBlobTextAsync(cloudStorageAccount, this.textSearchSettings.BlobContainer, Constants.ReducerTaskResultBlobName, textToUpload);
 
                 //The job manager has completed.
                 Console.WriteLine("JobManager completed successfully.");
@@ -101,12 +103,12 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
 
         private async Task SubmitMapperTasksAsync(BatchClient batchClient, string containerSas)
         {
-            Console.WriteLine("Submitting {0} mapper tasks.", this.configurationSettings.NumberOfMapperTasks);
+            Console.WriteLine("Submitting {0} mapper tasks.", this.textSearchSettings.NumberOfMapperTasks);
 
             //The collection of tasks to add to the Batch Service.
             List<CloudTask> tasksToAdd = new List<CloudTask>();
 
-            for (int i = 0; i < this.configurationSettings.NumberOfMapperTasks; i++)
+            for (int i = 0; i < this.textSearchSettings.NumberOfMapperTasks; i++)
             {
                 string taskId = Helpers.GetMapperTaskId(i);
                 string fileBlobName = Helpers.GetSplitFileName(i);

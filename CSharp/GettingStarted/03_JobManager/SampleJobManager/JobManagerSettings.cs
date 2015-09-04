@@ -16,7 +16,7 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
 
         public string StorageAccountKey { get; private set; }
 
-        public string StorageBlobEndpoint { get; private set; }
+        public string StorageAccountUrl { get; private set; }
 
         public JobManagerSettings(
             string batchAccountName,
@@ -24,7 +24,7 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
             string batchAccountUrl,
             string storageAccountName,
             string storageAccountKey,
-            string storageBlobEndpoint)
+            string storageAccountUrl)
         {
             this.BatchAccountName = batchAccountName;
             this.BatchAccountKey = batchAccountKey;
@@ -32,7 +32,7 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
 
             this.StorageAccountName = storageAccountName;
             this.StorageAccountKey = storageAccountKey;
-            this.StorageBlobEndpoint = storageBlobEndpoint;
+            this.StorageAccountUrl = storageAccountUrl;
         }
 
         public override string ToString()
@@ -45,7 +45,7 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
 
             stringBuilder.AppendFormat("{0} = {1}", "StorageAccountName", this.StorageAccountName).AppendLine();
             stringBuilder.AppendFormat("{0} = {1}", "StorageAccountKey", this.StorageAccountKey).AppendLine();
-            stringBuilder.AppendFormat("{0} = {1}", "StorageBlobEndpoint", this.StorageBlobEndpoint).AppendLine();
+            stringBuilder.AppendFormat("{0} = {1}", "storageAccountUrl", this.StorageAccountUrl).AppendLine();
 
             return stringBuilder.ToString();
         }
