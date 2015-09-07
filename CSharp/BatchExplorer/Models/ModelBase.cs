@@ -115,13 +115,14 @@ namespace Microsoft.Azure.BatchExplorer.Models
                     else if (typeof (IEnumerable).IsAssignableFrom(propertyType))
                     {
                         IEnumerable enumerable = propertyValue as IEnumerable;
+                        string prefix = CollectionPropertyModel.GetItemDisplayPrefix(enumerable);
                         List<PropertyModel> collectionModel = new List<PropertyModel>();
                         int i = 0;
                         foreach (object enumerableObject in enumerable)
                         {
                             List<PropertyModel> innerPropertyModels = this.ObjectToPropertyModelRecursive(enumerableObject, propertiesToOmit);
-                            
-                            collectionModel.Add(new CollectionPropertyModel("item" + i, innerPropertyModels));
+
+                            collectionModel.Add(new CollectionPropertyModel(prefix + i, innerPropertyModels));
                             i++;
                         }
 

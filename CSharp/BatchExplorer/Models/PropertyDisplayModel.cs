@@ -3,7 +3,9 @@
 namespace Microsoft.Azure.BatchExplorer.Models
 {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Linq;
     using System.Text;
     using System.Threading.Tasks;
@@ -41,6 +43,31 @@ namespace Microsoft.Azure.BatchExplorer.Models
             : base(propertyName)
         {
             this.Items = items;
+        }
+
+        internal static string GetItemDisplayPrefix(IEnumerable collection)
+        {
+            var elementType = ElementType(collection.GetType());
+            if (elementType == null)
+            {
+                return "item";
+            }
+            return elementType.Name;
+        }
+
+        private static Type ElementType(Type collectionType)
+        {
+            Debug.Assert(collectionType != null);
+            Debug.Assert(typeof(IEnumerable).IsAssignableFrom(collectionType));
+
+            var stis = collectionType.FindInterfaces((m, c) => m.IsConstructedGenericType && m.GetGenericTypeDefinition() == typeof(IEnumerable<>), null);
+
+            if (stis == null || stis.Length == 0 || stis.Length > 1)
+            {
+                return null;  // not a strongly typed collection, or a strongly typed collection of more than one thing (yikes)
+            }
+
+            return stis[0].GetGenericArguments()[0];
         }
     }
 }
