@@ -111,7 +111,7 @@ except NameError:  # pragma: no cover
 # pylint: enable=W0622,C0103
 
 # global defines
-_SCRIPT_VERSION = '0.9.9.1'
+_SCRIPT_VERSION = '0.9.9.3'
 _DEFAULT_MAX_STORAGEACCOUNT_WORKERS = 64
 _MAX_BLOB_CHUNK_SIZE_BYTES = 4194304
 _MAX_LISTBLOBS_RESULTS = 1000
@@ -819,8 +819,9 @@ def generate_xferspec_download(blob_service, args, storage_in_queue,
     # preallocate file
     with flock:
         filedesc = open(tmpfilename, 'wb')
-        filedesc.seek(contentlength - 1)
-        filedesc.write(b'\0')
+        if contentlength > 0:
+            filedesc.seek(contentlength - 1)
+            filedesc.write(b'\0')
         filedesc.close()
         if addfd:
             # reopen under r+b mode
@@ -1030,9 +1031,9 @@ def main():
             raise ValueError('cannot download remote file if not specified')
 
     # print all parameters
-    print('=======================================')
-    print('      azure blob xfer parameters')
-    print('=======================================')
+    print('======================================')
+    print(' azure blobxfer parameters [v{}]'.format(_SCRIPT_VERSION))
+    print('======================================')
     print('     subscription id: {}'.format(args.subscriptionid))
     print('     management cert: {}'.format(args.managementcert))
     print('  transfer direction: {}'.format(
@@ -1200,7 +1201,7 @@ def main():
         print('performing {} range-gets'.format(nstorageops))
         progress_text = 'range-gets'
     storage_out_queue = queue.Queue(nstorageops)
-    maxworkers = min([args.numworkers, nstorageops])
+    maxworkers = min((args.numworkers, nstorageops))
     exc_list = []
     for _ in xrange(maxworkers):
         thr = BlobChunkWorker(
