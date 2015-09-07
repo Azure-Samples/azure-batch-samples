@@ -1,4 +1,6 @@
-﻿using System;
+﻿//Copyright (c) Microsoft Corporation
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
@@ -39,7 +41,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// Sorted dictionary of property values representing the state of this object
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public abstract SortedDictionary<string, object> PropertyValuePairs { get; }
+        public abstract List<PropertyModel> PropertyModel { get; } 
 
         /// <summary>
         /// Determines if this model has loaded its children from the server or not
@@ -55,59 +57,85 @@ namespace Microsoft.Azure.BatchExplorer.Models
         public abstract System.Threading.Tasks.Task RefreshAsync(ModelRefreshType refreshType, bool showTrackedOperation = true);
         
         /// <summary>
-        /// Uses reflection to generated a storaged Dictionary containing property names and their values.
-        /// BEWARE THAT BAD THINGS WILL HAPPEN WITH CIRCULAR REFERENCES
+        /// Uses reflection to build a hierarchy of properties on a given object.
+        /// BEWARE THAT BAD THINGS WILL HAPPEN WITH CIRCULAR REFERENCES.
         /// </summary>
-        /// <param name="o">The object to convert to a sorted dictionary of values</param>
-        /// <param name="namePrefix">Prefix to insert before property names of object o</param>
-        /// <param name="propertiesToOmit">A list of names of properties to omit</param>
-        /// <returns>A sorted dictionary whose keys are the names of properties (ex: A.B) and whose values are the value of that property (for example the value of A.B)</returns>
-        protected static SortedDictionary<string, object> ObjectToSortedDictionary(object o, string namePrefix = "", List<string> propertiesToOmit = null)
+        /// <param name="o">The object to process.</param>
+        /// <param name="propertiesToOmit">The names of properties to omit</param>
+        /// <returns>A list of <see cref="PropertyModel"/> objects which represent the properties of the object.</returns>
+        protected List<PropertyModel> ObjectToPropertyModel(object o, List<string> propertiesToOmit = null)
         {
-            //Short circuit for enumerables because we don't handle them at all
-            var nameValuePairs = new SortedDictionary<string, object>();
-            if (o == null || o is IEnumerable)
+            if (propertiesToOmit == null)
             {
-                return nameValuePairs;
+                propertiesToOmit = new List<string>();
             }
+            propertiesToOmit.Add("CustomBehaviors");
             
-            var properties = o.GetType().GetProperties();
-            foreach (var propInfo in properties)
+            List<PropertyModel> result = this.ObjectToPropertyModelRecursive(o, propertiesToOmit);
+            result.Add(new SimplePropertyModel(LastUpdateFromServerString, this.LastUpdatedTime.ToString()));
+            return result;
+        }
+
+        private List<PropertyModel> ObjectToPropertyModelRecursive(object o, List<string> propertiesToOmit = null)
+        {
+            List<PropertyModel> results = new List<PropertyModel>();
+
+            PropertyInfo[] properties = o.GetType().GetProperties();
+            foreach (PropertyInfo propInfo in properties)
             {
                 //Determine if this property is in the list of properties to omit -- if it is we skip it
                 if (propertiesToOmit != null && propertiesToOmit.Contains(propInfo.Name))
                 {
                     continue;
                 }
-
+                
                 try
                 {
+                    PropertyModel propertyModel = null;
+
                     //Get the property type and value
                     object propertyValue = propInfo.GetValue(o);
                     Type propertyType = propertyValue == null ? typeof(object) : propertyValue.GetType();
-                
+
                     //Find the implementer of the ToString method
                     Type toStringDeclaringType = propertyType.GetMethod("ToString", Type.EmptyTypes).DeclaringType;
-                    string formattedPropertyName = string.IsNullOrEmpty(namePrefix) ? propInfo.Name : string.Format(CultureInfo.CurrentCulture, "{0}.{1}", namePrefix, propInfo.Name);
                 
                     //If the prop value is null, just write string.Empty
                     if (propertyValue == null)
                     {
-                        nameValuePairs.Add(formattedPropertyName, string.Empty);
+                        //Don't track null properties in order to keep the list short
+                        //propertyModel = new SimplePropertyModel(propInfo.Name, string.Empty);
                     }
                     //For other types which have a ToString declared, we want to use the built in ToString()
                     else if (toStringDeclaringType != typeof(object))
                     {
-                        nameValuePairs.Add(formattedPropertyName, propertyValue);
+                        propertyModel = new SimplePropertyModel(propInfo.Name, propertyValue.ToString());
+                    }
+                    //If we have a collection, enumerate the contents
+                    else if (typeof (IEnumerable).IsAssignableFrom(propertyType))
+                    {
+                        IEnumerable enumerable = propertyValue as IEnumerable;
+                        List<PropertyModel> collectionModel = new List<PropertyModel>();
+                        int i = 0;
+                        foreach (object enumerableObject in enumerable)
+                        {
+                            List<PropertyModel> innerPropertyModels = this.ObjectToPropertyModelRecursive(enumerableObject, propertiesToOmit);
+                            
+                            collectionModel.Add(new CollectionPropertyModel("item" + i, innerPropertyModels));
+                            i++;
+                        }
+
+                        propertyModel = new CollectionPropertyModel(propInfo.Name, collectionModel);
                     }
                     //For any complex properties without a ToString of their own, we recurse
                     else
                     {
-                        var innerResults = ObjectToSortedDictionary(propInfo.GetValue(o), formattedPropertyName);
-                        foreach (var innerResult in innerResults)
-                        {
-                            nameValuePairs.Add(innerResult.Key, innerResult.Value);
-                        }
+                        propertyModel = new CollectionPropertyModel(propInfo.Name, this.ObjectToPropertyModelRecursive(propertyValue, propertiesToOmit));
+                    }
+
+                    if (propertyModel != null)
+                    {
+                        results.Add(propertyModel);
                     }
                 }
                 catch (TargetInvocationException)
@@ -116,93 +144,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
                 }
             }
 
-            return nameValuePairs;
-        }
-
-        /// <summary>
-        /// Uses reflection to generated a storaged Dictionary containing property names and their values.
-        /// BEWARE THAT BAD THINGS WILL HAPPEN WITH CIRCULAR REFERENCES
-        /// </summary>
-        /// <param name="o">The object to convert to a sorted dictionary of values</param>
-        /// <param name="namePrefix">Prefix to insert before property names of object o</param>
-        /// <param name="propertiesToOmit">A list of names of properties to omit</param>
-        /// <returns>A sorted dictionary whose keys are the names of properties (ex: A.B) and whose values are the value of that property (for example the value of A.B)</returns>
-        protected static IDictionary<string, IDictionary<string, string>> ObjectToSortedDictionaryList(object o, string namePrefix = "", List<string> propertiesToOmit = null)
-        {
-            //Short circuit for enumerables because we don't handle them at all
-            IDictionary<string, IDictionary<string, string>> propertySet = new Dictionary<string, IDictionary<string, string>>();
-
-            if (o == null || o is IEnumerable)
-            {
-                return propertySet;
-            }
-
-            var properties = o.GetType().GetProperties();
-            foreach (var propInfo in properties)
-            {
-                //Determine if this property is in the list of properties to omit -- if it is we skip it
-                if (propertiesToOmit != null && propertiesToOmit.Contains(propInfo.Name))
-                {
-                    continue;
-                }
-
-                //Get the property type and value
-                object propertyValue = propInfo.GetValue(o);
-                Type propertyType = propertyValue == null ? typeof(object) : propertyValue.GetType();
-
-                //Find the implementer of the ToString method
-                Type toStringDeclaringType = propertyType.GetMethod("ToString", Type.EmptyTypes).DeclaringType;
-                string formattedPropertyName = string.IsNullOrEmpty(namePrefix) ? propInfo.Name : string.Format(CultureInfo.CurrentCulture, "{0}.{1}", namePrefix, propInfo.Name);
-
-                string[] parts = formattedPropertyName.Split('.');
-                string group;
-                string property;
-                string value;
-
-                // Add to the default list
-                if (parts.Count() == 1)
-                {
-                    group = "Basic";
-                    property = formattedPropertyName;
-                }
-                else
-                {
-                    group = parts[0];
-                    property = string.Join(".", parts.Skip(1));
-                }
-
-                if (!propertySet.ContainsKey(group))
-                {
-                    propertySet.Add(group, new SortedDictionary<string, string>());
-                }
-
-                //If the prop value is null, just write string.Empty
-                if (propertyValue == null)
-                {
-                    value = string.Empty;
-                    //nameValuePairs.Add(formattedPropertyName, string.Empty);
-                    propertySet[group].Add(property, string.Empty);
-                }
-                //For other types which have a ToString declared, we want to use the built in ToString()
-                else if (toStringDeclaringType != typeof(object))
-                {
-                    //nameValuePairs.Add(formattedPropertyName, propertyValue);
-                    //value = propertyValue.ToString();
-                    propertySet[group].Add(property, propertyValue.ToString());
-                }
-                //For any complex properties without a ToString of their own, we recurse
-                else
-                {
-                    var innerResults = ObjectToSortedDictionaryList(propInfo.GetValue(o), formattedPropertyName);
-                    foreach (var innerResult in innerResults)
-                    {
-                        //nameValuePairs.Add(innerResult.Key, innerResult.Value);
-                        propertySet[group].Add(innerResult.Key, innerResult.Value.ToString());
-                    }
-                }
-            }
-
-            return propertySet;
+            return results;
         }
 
         /// <summary>

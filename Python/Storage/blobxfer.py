@@ -54,6 +54,7 @@ Notes:
   respectively, if the skiponmatch parameter is enabled.
 
 TODO list:
+- remove dependency on azure python packages
 - convert from synchronous multithreading to asyncio/trollius
 """
 
@@ -77,11 +78,25 @@ import socket
 import sys
 import threading
 import time
+import xml.etree.ElementTree as ET
 # non-stdlib imports
-import azure
-import azure.servicemanagement
-import azure.storage
-import requests
+try:
+    import azure
+    import azure.common
+except ImportError:  # pragma: no cover
+    pass
+try:
+    import azure.servicemanagement
+except ImportError:  # pragma: no cover
+    pass
+try:
+    import azure.storage.blob
+except ImportError:  # pragma: no cover
+    pass
+try:
+    import requests
+except ImportError:  # pragma: no cover
+    pass
 
 # remap keywords for Python3
 # pylint: disable=W0622,C0103
@@ -96,7 +111,7 @@ except NameError:  # pragma: no cover
 # pylint: enable=W0622,C0103
 
 # global defines
-_SCRIPT_VERSION = '0.9.7'
+_SCRIPT_VERSION = '0.9.9.1'
 _DEFAULT_MAX_STORAGEACCOUNT_WORKERS = 64
 _MAX_BLOB_CHUNK_SIZE_BYTES = 4194304
 _MAX_LISTBLOBS_RESULTS = 1000
@@ -104,6 +119,61 @@ _PAGEBLOB_BOUNDARY = 512
 _DEFAULT_BLOB_ENDPOINT = 'blob.core.windows.net'
 _DEFAULT_MANAGEMENT_ENDPOINT = 'management.core.windows.net'
 _PY2 = sys.version_info.major == 2
+
+
+class SasBlobList(object):
+    """Sas Blob listing object"""
+    def __init__(self):
+        """Ctor for SasBlobList"""
+        self.blobs = []
+        self.next_marker = None
+
+    def __iter__(self):
+        """Iterator"""
+        return iter(self.blobs)
+
+    def __len__(self):
+        """Length"""
+        return len(self.blobs)
+
+    def __getitem__(self, index):
+        """Accessor"""
+        return self.blobs[index]
+
+    def add_blob(self, name, content_length, content_md5, blobtype):
+        """Adds a blob to the list
+        Parameters:
+            name - blob name
+            content_length - content length
+            content_md5 - content md5
+            blobtype - blob type
+        Returns:
+            Nothing
+        Raises:
+            Nothing
+        """
+        obj = type('bloblistobject', (object,), {})
+        obj.name = name
+        obj.properties = type('properties', (object,), {})
+        obj.properties.content_length = content_length
+        if content_md5 is not None and len(content_md5) > 0:
+            obj.properties.content_md5 = content_md5
+        else:
+            obj.properties.content_md5 = None
+        obj.properties.blobtype = blobtype
+        self.blobs.append(obj)
+
+    def set_next_marker(self, marker):
+        """Set the continuation token
+        Parameters:
+            marker - next marker
+        Returns:
+            Nothing
+        Raises:
+            Nothing
+        """
+        if marker is not None and len(marker) > 0:
+            self.next_marker = marker
 
 
 class SasBlobService(object):
@@ -128,6 +198,31 @@ class SasBlobService(object):
         else:
             self.saskey = saskey
         self.timeout = timeout
+
+    def _parse_blob_list_xml(self, content):
+        """Parse blob list in xml format to an attribute-based object
+        Parameters:
+            content - http response content in xml
+        Returns:
+            attribute-based object
+        Raises:
+            No special exception handling
+        """
+        result = SasBlobList()
+        root = ET.fromstring(content)
+        blobs = root.find('Blobs')
+        for blob in blobs.iter('Blob'):
+            name = blob.find('Name').text
+            props = blob.find('Properties')
+            cl = long(props.find('Content-Length').text)
+            md5 = props.find('Content-MD5').text
+            bt = props.find('BlobType').text
+            result.add_blob(name, cl, md5, bt)
+        try:
+            result.set_next_marker(root.find('NextMarker').text)
+        except Exception:
+            pass
+        return result
 
     def list_blobs(self, container_name, marker=None,
                    maxresults=_MAX_LISTBLOBS_RESULTS):
@@ -157,10 +252,7 @@ class SasBlobService(object):
             raise IOError(
                 'incorrect status code returned for list_blobs: {}'.format(
                     response.status_code))
-        response.body = response.content
-        # pylint: disable=W0212
-        return azure.storage._parse_blob_enum_results_list(response)
-        # pylint: enable=W0212
+        return self._parse_blob_list_xml(response.content)
 
     def get_blob(self, container_name, blob_name, x_ms_range):
         """Get blob
@@ -448,7 +540,7 @@ class BlobChunkWorker(threading.Thread):
                 filedesc.close()
         if not data:
             raise IOError('could not read {}: {} -> {}'.format(
-                localresource, offset, offset+bytestoxfer))
+                localresource, offset, offset + bytestoxfer))
         # issue REST put
         if as_page_blob(self._pageblob, self._autovhd, localresource):
             aligned = page_align_content_length(bytestoxfer)
@@ -457,7 +549,7 @@ class BlobChunkWorker(threading.Thread):
                 data = data.ljust(aligned, b'0')
             # compute page md5
             contentmd5 = compute_md5_for_data_asbase64(data)
-            rangestr = 'bytes={}-{}'.format(offset, offset+aligned-1)
+            rangestr = 'bytes={}-{}'.format(offset, offset + aligned - 1)
             azure_request(
                 self.blob_service.put_page, timeout=self.timeout,
                 container_name=container, blob_name=remoteresource,
@@ -488,7 +580,7 @@ class BlobChunkWorker(threading.Thread):
         Raises:
             Nothing
         """
-        rangestr = 'bytes={}-{}'.format(offset, offset+bytestoxfer)
+        rangestr = 'bytes={}-{}'.format(offset, offset + bytestoxfer)
         blobdata = azure_request(
             self.blob_service.get_blob, timeout=self.timeout,
             container_name=container, blob_name=remoteresource,
@@ -541,6 +633,7 @@ def azure_request(req, timeout=None, *args, **kwargs):
             try:
                 if not ('TooManyRequests' in exc.message or
                         'InternalError' in exc.message or
+                        'ServerBusy' in exc.message or
                         'OperationTimedOut' in exc.message):
                     raise
             except AttributeError:
@@ -566,7 +659,7 @@ def create_dir_ifnotexists(dirname):
         print('created local directory: {}'.format(dirname))
     except OSError as exc:
         if exc.errno != errno.EEXIST:
-            raise
+            raise  # pragma: no cover
 
 
 def compute_md5_for_file_asbase64(filename, pagealign=False, blocksize=65536):
@@ -663,11 +756,8 @@ def get_blob_listing(blob_service, args):
             container_name=args.container, marker=marker,
             maxresults=_MAX_LISTBLOBS_RESULTS)
         for blob in result:
-            blobdict[blob.name] = [blob.properties.content_length]
-            try:
-                blobdict[blob.name].append(blob.properties.content_md5)
-            except AttributeError:
-                blobdict[blob.name].append(None)
+            blobdict[blob.name] = [
+                blob.properties.content_length, blob.properties.content_md5]
         marker = result.next_marker
         if marker is None or len(marker) < 1:
             break
@@ -879,11 +969,6 @@ def main():
             len(args.storageaccountkey) < 1:
         raise ValueError('storage account key is invalid')
 
-    if args.storageaccountkey is None and \
-            args.saskey is None:
-        raise ValueError(
-            'could not get reference to storage account key or sas key')
-
     # set valid num workers
     if args.numworkers < 1:
         args.numworkers = 1
@@ -919,12 +1004,12 @@ def main():
         else:
             host_base = '.' + args.blobep
         if args.timeout is None:
-            blob_service = azure.storage.BlobService(
+            blob_service = azure.storage.blob.BlobService(
                 account_name=args.storageaccount,
                 account_key=args.storageaccountkey,
                 host_base=host_base)
         else:
-            blob_service = azure.storage.BlobService(
+            blob_service = azure.storage.blob.BlobService(
                 account_name=args.storageaccount,
                 account_key=args.storageaccountkey,
                 host_base=host_base, timeout=args.timeout)
@@ -1050,7 +1135,7 @@ def main():
                 azure_request(
                     blob_service.create_container, timeout=args.timeout,
                     container_name=args.container, fail_on_exist=False)
-            except azure.WindowsAzureConflictError:
+            except azure.common.AzureConflictHttpError:
                 pass
         # initialize page blobs
         if args.pageblob or args.autovhd:

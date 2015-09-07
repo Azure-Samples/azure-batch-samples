@@ -1,4 +1,6 @@
-﻿using Microsoft.Azure.BatchExplorer.Helpers;
+﻿//Copyright (c) Microsoft Corporation
+
+using Microsoft.Azure.BatchExplorer.Helpers;
 
 namespace Microsoft.Azure.BatchExplorer.Messages
 {

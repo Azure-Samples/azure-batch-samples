@@ -15,6 +15,8 @@ import threading
 import uuid
 # non-stdlib imports
 import azure
+import azure.common
+import azure.storage.blob
 from mock import (MagicMock, Mock, patch)
 import pytest
 import requests
@@ -90,6 +92,11 @@ def test_azure_request(patched_time_sleep):
         ex.message = 'Uncaught'
         blobxfer.azure_request(Mock(side_effect=ex))
 
+    with pytest.raises(Exception):
+        ex = Exception()
+        ex.__delattr__('message')
+        blobxfer.azure_request(Mock(side_effect=ex))
+
     try:
         blobxfer.azure_request(
             _func_raise_azure_exception_once, val=[], timeout=1)
@@ -115,19 +122,46 @@ def test_azure_request(patched_time_sleep):
         pytest.fail('unexpected Exception raised')
 
 
-@patch('azure.storage._parse_blob_enum_results_list', return_value='parsed')
-def test_sasblobservice_listblobs(patched_parse):
+def test_sasblobservice_listblobs():
     session = requests.Session()
     adapter = requests_mock.Adapter()
     session.mount('mock', adapter)
+    content = b'<?xml version="1.0" encoding="utf-8"?><EnumerationResults ' + \
+        b'ServiceEndpoint="http://myaccount.blob.core.windows.net/" ' + \
+        b'ContainerName="mycontainer"><Prefix>string-value</Prefix>' + \
+        b'<Marker>string-value</Marker><MaxResults>int-value</MaxResults>' + \
+        b'<Delimiter>string-value</Delimiter><Blobs><Blob><Name>blob-name' + \
+        b'</Name><Snapshot>date-time-value</Snapshot><Properties>' + \
+        b'<Last-Modified>date-time-value</Last-Modified><Etag>etag</Etag>' + \
+        b'<Content-Length>2147483648</Content-Length><Content-Type>' + \
+        b'blob-content-type</Content-Type><Content-Encoding />' + \
+        b'<Content-Language /><Content-MD5>abc</Content-MD5>' + \
+        b'<Cache-Control /><x-ms-blob-sequence-number>sequence-number' + \
+        b'</x-ms-blob-sequence-number><BlobType>BlockBlob</BlobType>' + \
+        b'<LeaseStatus>locked|unlocked</LeaseStatus><LeaseState>' + \
+        b'available | leased | expired | breaking | broken</LeaseState>' + \
+        b'<LeaseDuration>infinite | fixed</LeaseDuration><CopyId>id' + \
+        b'</CopyId><CopyStatus>pending | success | aborted | failed' + \
+        b'</CopyStatus><CopySource>source url</CopySource><CopyProgress>' + \
+        b'bytes copied/bytes total</CopyProgress><CopyCompletionTime>' + \
+        b'datetime</CopyCompletionTime><CopyStatusDescription>' + \
+        b'error string</CopyStatusDescription></Properties><Metadata>' + \
+        b'<Name>value</Name></Metadata></Blob><BlobPrefix><Name>' + \
+        b'blob-prefix</Name></BlobPrefix></Blobs><NextMarker>nm' + \
+        b'</NextMarker></EnumerationResults>'
 
     with requests_mock.mock() as m:
-        m.get('mock://blobepcontainer?saskey', text='data')
+        m.get('mock://blobepcontainer?saskey', content=content)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
-        results = sbs.list_blobs('container', 'marker')
-        assert results == patched_parse.return_value
+        result = sbs.list_blobs('container', 'marker')
+        assert len(result) == 1
+        assert result[0].name == 'blob-name'
+        assert result[0].properties.content_length == 2147483648
+        assert result[0].properties.content_md5 == 'abc'
+        assert result[0].properties.blobtype == 'BlockBlob'
+        assert result.next_marker == 'nm'
 
-        m.get('mock://blobepcontainer?saskey', text='', status_code=201)
+        m.get('mock://blobepcontainer?saskey', content=b'', status_code=201)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         with pytest.raises(IOError):
             sbs.list_blobs('container', 'marker')
@@ -409,7 +443,7 @@ def _mock_get_storage_account_properties(timeout=None, service_name=None):
 
 def _mock_blobservice_create_container(timeout=None, container_name=None,
                                        fail_on_exist=None):
-    raise azure.WindowsAzureConflictError('msg')
+    raise azure.common.AzureConflictHttpError('conflict', 409)
 
 
 @patch('blobxfer.parseargs')
@@ -479,7 +513,7 @@ def test_main1(patched_parseargs, tmpdir):
     args.subscriptionid = None
     args.remoteresource = 'blob'
     args.chunksizebytes = None
-    with patch('azure.storage.BlobService') as mock:
+    with patch('azure.storage.blob.BlobService') as mock:
         mock.return_value = None
         with pytest.raises(ValueError):
             blobxfer.main()
@@ -493,6 +527,13 @@ def test_main1(patched_parseargs, tmpdir):
     args.download = False
     args.upload = True
     args.remoteresource = None
+    args.storageaccountkey = ''
+    args.saskey = None
+    with pytest.raises(ValueError):
+        blobxfer.main()
+
+    args.storageaccountkey = None
+    args.saskey = 'saskey'
     with open(lpath, 'wt') as f:
         f.write(str(uuid.uuid4()))
 
@@ -503,6 +544,8 @@ def test_main1(patched_parseargs, tmpdir):
         m.put('https://blobep.blobep/container/blob?saskey'
               '&comp=block&blockid=00000000', status_code=201)
         m.put('https://blobep.blobep/container/' + lpath +
+              '?saskey&blockid=00000000&comp=block', status_code=201)
+        m.put('https://blobep.blobep/container/' + lpath +
               '?saskey&comp=blocklist', status_code=201)
         m.get('https://blobep.blobep/container?saskey&comp=list'
               '&restype=container&maxresults=1000',
@@ -510,8 +553,8 @@ def test_main1(patched_parseargs, tmpdir):
               '<EnumerationResults ContainerName="https://blobep.blobep/'
               'container"><Blobs><Blob><Name>' + lpath + '</Name>'
               '<Properties><Content-Length>6</Content-Length>'
-              '<Content-MD5>md5</Content-MD5></Properties></Blob>'
-              '</Blobs></EnumerationResults>')
+              '<Content-MD5>md5</Content-MD5><BlobType>BlockBlob</BlobType>'
+              '</Properties></Blob></Blobs></EnumerationResults>')
         args.progressbar = False
         args.keeprootdir = False
         args.skiponmatch = True
@@ -534,10 +577,21 @@ def test_main1(patched_parseargs, tmpdir):
               text='<?xml version="1.0" encoding="utf-8"?>'
               '<EnumerationResults ContainerName="https://blobep.blobep/'
               'container"><Blobs><Blob><Name>blob</Name><Properties>'
-              '<Content-Length>6</Content-Length><Content-MD5>md5'
-              '</Content-MD5></Properties></Blob></Blobs>'
-              '</EnumerationResults>')
+              '<Content-Length>6</Content-Length><Content-MD5>'
+              '</Content-MD5><BlobType>BlockBlob</BlobType></Properties>'
+              '</Blob></Blobs></EnumerationResults>')
         m.get('https://blobep.blobep/container/?saskey')
+        with pytest.raises(SystemExit):
+            blobxfer.main()
+
+        m.get('https://blobep.blobep/container?saskey&comp=list'
+              '&restype=container&maxresults=1000',
+              text='<?xml version="1.0" encoding="utf-8"?>'
+              '<EnumerationResults ContainerName="https://blobep.blobep/'
+              'container"><Blobs><Blob><Name>blob</Name><Properties>'
+              '<Content-Length>6</Content-Length><Content-MD5>md5'
+              '</Content-MD5><BlobType>BlockBlob</BlobType></Properties>'
+              '</Blob></Blobs></EnumerationResults>')
         blobxfer.main()
 
         tmplpath = str(tmpdir.join('test', 'test2', 'test3'))
@@ -618,8 +672,8 @@ def test_main2(patched_parseargs, tmpdir):
     args.container = 'container'
     args.chunksizebytes = 5
     args.localresource = lpath
-    args.blobep = 'blobep'
-    args.timeout = -1
+    args.blobep = '.blobep'
+    args.timeout = 10
     args.pageblob = False
     args.autovhd = False
     args.managementep = None
@@ -638,7 +692,7 @@ def test_main2(patched_parseargs, tmpdir):
     adapter = requests_mock.Adapter()
     session.mount('mock', adapter)
 
-    with patch('azure.storage.BlobService') as mock:
+    with patch('azure.storage.blob.BlobService') as mock:
         args.createcontainer = True
         args.pageblob = False
         args.autovhd = False

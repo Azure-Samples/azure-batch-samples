@@ -1,5 +1,6 @@
 ##blobxfer.py
-Please refer to the Microsoft HPC and Azure Batch Team [blog post](http://blogs.technet.com/b/windowshpc/archive/2015/04/16/linux-blob-transfer-python-code-sample.aspx)
+Please refer to the Microsoft HPC and Azure Batch Team
+[blog post](http://blogs.technet.com/b/windowshpc/archive/2015/04/16/linux-blob-transfer-python-code-sample.aspx)
 for code sample explanations.
 
 ###Introduction
@@ -12,18 +13,26 @@ with various transfer optimizations, built-in retries, and user-specified
 timeouts.
 
 The blobxfer script is a python script that can be used on any platform where
-Python 2.7, 3.3 or 3.4 can be installed. The script requires two
-prerequisite packages to be installed: (1) azure and (2) requests. The azure
-package is required for the script to utilize the
-[Azure Python SDK](http://azure.microsoft.com/en-us/documentation/articles/python-how-to-install/)
-to interact with Azure using a management certificate or a shared key. The
-requests package is required for SAS support. If SAS is not needed, one can
-remove all of the requests references from the script to reduce the
-prerequisite footprint. You can install these packages using pip, easy_install
-or through standard setup.py procedures.
+Python 2.7, 3.3 or 3.4 can be installed. Depending upon the desired mode of
+operation as listed above, the script will require the following packages,
+some of which will automatically pull required dependent packages:
+* Management Certificate
+  * `azure-servicemanagement-legacy` >= 0.20.0
+  * `azure-storage` >= 0.20.0
+* Shared Account Key
+  * `azure-storage` >= 0.20.0
+* SAS Key
+  * `requests` >= 2.7.0
 
-Program parameters and command-line options can be listed via the -h switch. At
-the minimum, three positional arguments are required: storage account name,
+If you want to utilize any/all of the connection methods to Azure Storage,
+then install all three of `azure-servicemanagement-legacy`, `azure-storage`,
+and `requests`. You can install these packages using pip, easy_install
+or through standard setup.py procedures. As of this script version 0.9.9.0,
+it no longer supports the legacy Azure Python SDK, i.e., `azure` package with
+version < 1.0.0 due to breaking changes in the azure packages.
+
+Program parameters and command-line options can be listed via the `-h` switch.
+At the minimum, three positional arguments are required: storage account name,
 container name, local resource. Additionally, one of the following
 authentication switches must be supplied: `--subscriptionid` with
 `--managementcert`, `--storageaccountkey`, or `--saskey`. It is recommended
@@ -49,7 +58,7 @@ file from Azure even if the local file exists, one can override the detection
 mechanism with `--download`. `--upload` is available to force the transfer to
 Azure storage. Note that specifying a particular direction does not force the
 actual operation to occur as that depends on other options specified such as
-skipping on MD5 matches. Note that you may use the --remoteresource flag to
+skipping on MD5 matches. Note that you may use the `--remoteresource` flag to
 rename the local file as the blob name on Azure storage if uploading.
 
 If the local resource is a directory that exists, the script will attempt to
@@ -75,20 +84,28 @@ indicate that with `--download`. When downloading an entire container, the
 script will attempt to pre-allocate file space and recreate the sub-directory
 structure as needed.
 
-###Notes
-A note on performance with Python versions < 2.7.9 (i.e., interpreter found
-on default Ubuntu 14.04 installations) -- as of requests 2.6.0, if certain
-packages are installed, as those found in `requests[security]` then the
-underlying urllib3 package will utilize the ndg-httpsclient package which
-will use [pyOpenSSL](https://urllib3.readthedocs.org/en/latest/security.html#pyopenssl).
-This will ensure the peers are [fully validated](https://urllib3.readthedocs.org/en/latest/security.html#insecureplatformwarning).
+###Performance Notes
+* Most likely, you will need to tweak the `--numworkers` argument that best
+suits your environment. The default of 64 may not work properly if you are
+attempting to run multiple blobxfer sessions in parallel from one machine or
+IP address.
+* As of requests 2.6.0 and Python versions < 2.7.9 (i.e., interpreter found
+on default Ubuntu 14.04 installations), if certain packages are installed,
+as those found in `requests[security]` then the underlying `urllib3`
+package will utilize the `ndg-httpsclient` package which will use
+[pyOpenSSL](https://urllib3.readthedocs.org/en/latest/security.html#pyopenssl).
+This will ensure the peers are
+[fully validated](https://urllib3.readthedocs.org/en/latest/security.html#insecureplatformwarning).
 However, this incurs a rather larger performance penalty. If you understand
 the potential security risks for disabling this behavior due to high
-performance requirements, you can either remove ndg-httpsclient or use the
-script in a virtualenv environment without the ndg-httpsclient package.
+performance requirements, you can either remove `ndg-httpsclient` or use the
+script in a `virtualenv` environment without the `ndg-httpsclient` package.
 Python versions >= 2.7.9 are not affected by this issue.
 
 ###Change Log
+* 0.9.9.1: fix content length > 32bit for blob lists via SAS on Python2
+* 0.9.9.0: update script for compatibility with new Azure Python packages
+* 0.9.8: fix blob endpoint for non-SAS input, add retry on ServerBusy
 * 0.9.7: normalize SAS keys (accept keys with or without ? char prefix)
 * 0.9.6: revert local resource path expansion, PEP8 fixes
 * 0.9.5: fix directory creation issue

@@ -1,4 +1,6 @@
-﻿using System.Reflection;
+﻿//Copyright (c) Microsoft Corporation
+
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 

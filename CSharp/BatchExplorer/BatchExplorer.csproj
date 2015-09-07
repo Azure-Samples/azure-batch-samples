@@ -210,6 +210,7 @@
     <Compile Include="Models\CreateAutoPoolOptions.cs" />
     <Compile Include="Models\CreateJobManagerOptions.cs" />
     <Compile Include="Models\CreateJobOptions.cs" />
+    <Compile Include="Models\PropertyDisplayModel.cs" />
     <Compile Include="Models\ResourceFileInfo.cs" />
     <Compile Include="Models\StartTaskOptions.cs" />
     <Compile Include="PluginInterfaces\AccountPlugin\AccountManagementAddOperation.cs" />

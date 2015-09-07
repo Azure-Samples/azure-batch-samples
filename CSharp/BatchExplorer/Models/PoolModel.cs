@@ -1,4 +1,6 @@
-﻿﻿using System;
+﻿//Copyright (c) Microsoft Corporation
+
+﻿using System;
 using System.Collections.Generic;
 ﻿using System.ComponentModel;
 ﻿using System.Windows.Data;
@@ -65,18 +67,6 @@ namespace Microsoft.Azure.BatchExplorer.Models
         [ChangeTracked(ModelRefreshType.Children)]
         public ICollectionView ComputeNodeCollection { get; set; }
 
-        /// <summary>
-        /// The statistics associated with this pool
-        /// </summary>
-        [ChangeTracked(ModelRefreshType.Basic)]
-        public SortedDictionary<string, object> Statistics
-        {
-            get
-            {
-                SortedDictionary<string, object> results = ObjectToSortedDictionary(this.Pool.Statistics);
-                return results;
-            }
-        }
 
         #endregion
 
@@ -97,13 +87,11 @@ namespace Microsoft.Azure.BatchExplorer.Models
 
         #region ModelBase implementation
 
-        public override SortedDictionary<string, object> PropertyValuePairs
+        public override List<PropertyModel> PropertyModel
         {
             get
             {
-                SortedDictionary<string, object> results = ObjectToSortedDictionary(this.Pool);
-                results.Add(LastUpdateFromServerString, this.LastUpdatedTime);
-                return results;
+                return this.ObjectToPropertyModel(this.Pool);
             }
         }
 

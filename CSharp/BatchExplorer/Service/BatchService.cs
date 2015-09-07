@@ -1,4 +1,6 @@
-﻿namespace Microsoft.Azure.BatchExplorer.Service
+﻿//Copyright (c) Microsoft Corporation
+
+namespace Microsoft.Azure.BatchExplorer.Service
 {
     using System;
     using System.Threading.Tasks;

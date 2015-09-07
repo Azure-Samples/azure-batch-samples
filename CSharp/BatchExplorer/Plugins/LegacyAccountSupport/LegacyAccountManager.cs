@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿//Copyright (c) Microsoft Corporation
+
+using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Serialization;
 using Microsoft.Azure.BatchExplorer.Models;

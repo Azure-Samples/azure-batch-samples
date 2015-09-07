@@ -1,4 +1,6 @@
-﻿using Microsoft.Azure.BatchExplorer.PluginInterfaces.AccountPlugin;
+﻿//Copyright (c) Microsoft Corporation
+
+using Microsoft.Azure.BatchExplorer.PluginInterfaces.AccountPlugin;
 
 namespace Microsoft.Azure.BatchExplorer.Helpers
 {

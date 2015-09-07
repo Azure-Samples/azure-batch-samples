@@ -1,4 +1,6 @@
-﻿namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
+﻿//Copyright (c) Microsoft Corporation
+
+namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
 {
     using System;
     using System.Collections.Generic;

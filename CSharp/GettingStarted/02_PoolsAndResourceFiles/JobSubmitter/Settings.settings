@@ -1,0 +1,45 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="BatchAccountName" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="BatchAccountKey" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="BatchServiceUrl" Type="System.String" Scope="User">
+      <Value Profile="(Default)">https://(YourAccount).(region).batch.azure.com</Value>
+    </Setting>
+    <Setting Name="StorageBlobEndpoint" Type="System.String" Scope="User">
+      <Value Profile="(Default)">https://(Your Storage Account).blob.core.windows.net</Value>
+    </Setting>
+    <Setting Name="StorageAccountName" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="StorageAccountKey" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="PoolTargetNodeCount" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">2</Value>
+    </Setting>
+    <Setting Name="PoolNodeVirtualMachineSize" Type="System.String" Scope="User">
+      <Value Profile="(Default)">small</Value>
+    </Setting>
+    <Setting Name="PoolOSFamily" Type="System.String" Scope="User">
+      <Value Profile="(Default)">4</Value>
+    </Setting>
+    <Setting Name="PoolId" Type="System.String" Scope="User">
+      <Value Profile="(Default)">PoolsAndResourceFilesPool</Value>
+    </Setting>
+    <Setting Name="ShouldDeletePool" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="ShouldDeleteJob" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="BlobContainer" Type="System.String" Scope="User">
+      <Value Profile="(Default)">PoolAndResourceFilesContainer</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>

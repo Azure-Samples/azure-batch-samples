@@ -1,13 +1,16 @@
-﻿using System.Windows;
-using GalaSoft.MvvmLight.Messaging;
-using Microsoft.Azure.BatchExplorer.Messages;
-using Microsoft.Azure.BatchExplorer.Models;
-using Microsoft.Azure.BatchExplorer.ViewModels;
-using Microsoft.Azure.BatchExplorer.Views.CreateControls;
-using Xceed.Wpf.DataGrid;
+﻿//Copyright (c) Microsoft Corporation
 
 namespace Microsoft.Azure.BatchExplorer.Views
 {
+    using System;
+    using System.Windows;
+    using System.Windows.Controls;
+    using System.Windows.Input;
+    using GalaSoft.MvvmLight.Messaging;
+    using Microsoft.Azure.BatchExplorer.Messages;
+    using Microsoft.Azure.BatchExplorer.Models;
+    using Microsoft.Azure.BatchExplorer.ViewModels;
+
     /// <summary>
     /// Interaction logic for MainView.xaml
     /// </summary>
@@ -34,7 +37,7 @@ namespace Microsoft.Azure.BatchExplorer.Views
 
             //Set the default grid height
             asyncOperationTabHeight = new GridLength(1, GridUnitType.Star);
-
+            
             //Add listener for the generic dialog message
             Messenger.Default.Register<GenericDialogMessage>(this, (m) =>
                 {
@@ -365,6 +368,39 @@ namespace Microsoft.Azure.BatchExplorer.Views
                         this.heatmapWindow.Show();
                     });
             });
+        }
+
+        public void TreeViewCopyCommandBinding_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            TreeView treeView = (TreeView)sender;
+            PropertyModel propertyModel = treeView.SelectedItem as PropertyModel;
+            SimplePropertyModel simplePropertyModel = propertyModel as SimplePropertyModel;
+
+            string text = null;
+
+            if (simplePropertyModel != null)
+            {
+                //TODO: This is bad to do?
+                text = string.Format("{0}: {1}", simplePropertyModel.PropertyName, simplePropertyModel.PropertyValue);
+            }
+            else if (propertyModel != null)
+            {
+                text = propertyModel.PropertyName;
+            }
+            else
+            {
+                throw new ArgumentException("sender");
+            }
+
+            Clipboard.SetText(text);
+        }
+
+        public void TreeViewCopyCommandBinding_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            TreeView treeView = (TreeView)sender;
+            SimplePropertyModel simplePropertyModel = treeView.SelectedItem as SimplePropertyModel;
+
+            e.CanExecute = simplePropertyModel != null;
         }
     }
 }

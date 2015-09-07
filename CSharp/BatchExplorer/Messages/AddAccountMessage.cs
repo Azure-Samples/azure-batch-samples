@@ -1,4 +1,6 @@
-﻿using Microsoft.Azure.BatchExplorer.ViewModels;
+﻿//Copyright (c) Microsoft Corporation
+
+using Microsoft.Azure.BatchExplorer.ViewModels;
 
 namespace Microsoft.Azure.BatchExplorer.Messages
 {
