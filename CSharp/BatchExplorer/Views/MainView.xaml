@@ -465,7 +465,7 @@
                             <Grid>
                                 <DataGrid ItemsSource="{Binding Path=SelectedJob.SelectedTask.OutputFiles}"
                                           SelectedItem="{Binding Path=SelectedJob.SelectedTask.SelectedTaskFile}"
-                                          Visibility="{Binding Path=SelectedJob.SelectedTask.HasOutputFiles, Converter={StaticResource BVC}}">
+                                          Visibility="{Binding Path=SelectedJob.SelectedTask.HasOutputFiles, Converter={StaticResource BVC}, FallbackValue=Hidden}">
                                     <DataGrid.ContextMenu>
                                         <ContextMenu>
                                             <MenuItem Header="Open File"
@@ -483,7 +483,7 @@
                                     </DataGrid.Columns>
                                 </DataGrid>
                                 <TextBlock Text="No outputs available. Try refreshing the Task." Margin="0,10,0,0"
-                                           Visibility="{Binding Path=SelectedJob.SelectedTask.HasOutputFiles, Converter={StaticResource IBVC}}"/>
+                                           Visibility="{Binding Path=SelectedJob.SelectedTask.HasOutputFiles, Converter={StaticResource IBVC}, FallbackValue=Hidden}"/>
                                 <toolkit:BusyIndicator IsBusy="{Binding LowerRightSpinnerIsVisible}"/>
                             </Grid>
                         </TabItem>
@@ -600,7 +600,7 @@
                     </TabItem>
                     <TabItem Header="Start Task Info">
                         <Grid>
-                            <Grid Visibility="{Binding SelectedComputeNode.HasStartTaskInfo, Converter={StaticResource BVC}}">
+                            <Grid Visibility="{Binding SelectedComputeNode.HasStartTaskInfo, Converter={StaticResource BVC}, FallbackValue=Hidden}">
                                 <DataGrid 
                                         ItemsSource="{Binding SelectedComputeNode.StartTaskInfo}">
                                     <DataGrid.Columns>
@@ -612,14 +612,14 @@
                                 </DataGrid>
                             </Grid>
                             <TextBlock Text="No Start Task"
-                                           Visibility="{Binding SelectedComputeNode.HasStartTaskInfo, Converter={StaticResource IBVC}}"
+                                           Visibility="{Binding SelectedComputeNode.HasStartTaskInfo, Converter={StaticResource IBVC}, FallbackValue=Hidden}"
                                            VerticalAlignment="Top"/>
                         </Grid>
                     </TabItem>
                     <TabItem Header="Recent Tasks">
                         <Grid>
                             <DataGrid 
-                                    Visibility="{Binding SelectedComputeNode.HasRecentTasks, Converter={StaticResource BVC}}"
+                                    Visibility="{Binding SelectedComputeNode.HasRecentTasks, Converter={StaticResource BVC}, FallbackValue=Hidden}"
                                     ItemsSource="{Binding SelectedComputeNode.RecentTasks}">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Job Id" Binding="{Binding JobId}"/>
@@ -633,14 +633,14 @@
                                 </DataGrid.Columns>
                             </DataGrid>
                             <TextBlock Text="No Recent Tasks"
-                                           Visibility="{Binding SelectedComputeNode.HasRecentTasks, Converter={StaticResource IBVC}}"
+                                           Visibility="{Binding SelectedComputeNode.HasRecentTasks, Converter={StaticResource IBVC}, FallbackValue=Hidden}"
                                            VerticalAlignment="Top"/>
                         </Grid>
                     </TabItem>
                     <TabItem Header="Files">
                         <Grid>
                             <DataGrid 
-                                    Visibility="{Binding SelectedComputeNode.HasFiles, Converter={StaticResource BVC}}"
+                                    Visibility="{Binding SelectedComputeNode.HasFiles, Converter={StaticResource BVC}, FallbackValue=Hidden}"
                                     ItemsSource="{Binding SelectedComputeNode.Files}"
                                     SelectedItem="{Binding SelectedNodeFile}">
                                 <DataGrid.ContextMenu>
@@ -659,7 +659,7 @@
                                 </DataGrid.Columns>
                             </DataGrid>
                             <TextBlock Text="No Files"
-                                           Visibility="{Binding SelectedComputeNode.HasFiles, Converter={StaticResource IBVC}}"
+                                           Visibility="{Binding SelectedComputeNode.HasFiles, Converter={StaticResource IBVC}, FallbackValue=Hidden}"
                                            VerticalAlignment="Top"/>
                             <toolkit:BusyIndicator IsBusy="{Binding LowerRightSpinnerIsVisible}"/>
                         </Grid>
