@@ -2,24 +2,6 @@
 <SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles" GeneratedClassName="Settings">
   <Profiles />
   <Settings>
-    <Setting Name="BatchAccountName" Type="System.String" Scope="User">
-      <Value Profile="(Default)" />
-    </Setting>
-    <Setting Name="BatchAccountKey" Type="System.String" Scope="User">
-      <Value Profile="(Default)" />
-    </Setting>
-    <Setting Name="BatchServiceUrl" Type="System.String" Scope="User">
-      <Value Profile="(Default)">https://(YourAccount).(region).batch.azure.com</Value>
-    </Setting>
-    <Setting Name="StorageBlobEndpoint" Type="System.String" Scope="User">
-      <Value Profile="(Default)">https://(Your Storage Account).blob.core.windows.net</Value>
-    </Setting>
-    <Setting Name="StorageAccountName" Type="System.String" Scope="User">
-      <Value Profile="(Default)" />
-    </Setting>
-    <Setting Name="StorageAccountKey" Type="System.String" Scope="User">
-      <Value Profile="(Default)" />
-    </Setting>
     <Setting Name="PoolTargetNodeCount" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">2</Value>
     </Setting>
