@@ -48,30 +48,30 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
 
     public sealed class ResourceFileParseResult
     {
-        private readonly IReadOnlyList<string> _errors;
-        private readonly IReadOnlyList<ResourceFileInfo> _files;
+        private readonly IReadOnlyList<string> errors;
+        private readonly IReadOnlyList<ResourceFileInfo> files;
 
         public static readonly ResourceFileParseResult Empty = new ResourceFileParseResult(new List<string>(), new List<ResourceFileInfo>());
 
         public ResourceFileParseResult(List<string> errors, List<ResourceFileInfo> files)
         {
-            _errors = errors.AsReadOnly();
-            _files = files.AsReadOnly();
+            this.errors = errors.AsReadOnly();
+            this.files = files.AsReadOnly();
         }
 
         public bool HasErrors
         {
-            get { return _errors.Any(); }
+            get { return errors.Any(); }
         }
 
         public IReadOnlyList<string> Errors
         {
-            get { return _errors; }
+            get { return errors; }
         }
 
         public IReadOnlyList<ResourceFileInfo> Files
         {
-            get { return _files; }
+            get { return files; }
         }
     }
 }

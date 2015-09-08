@@ -8,23 +8,23 @@ namespace Microsoft.Azure.BatchExplorer.Models
 {
     public sealed class ResourceFileInfo
     {
-        private readonly string _blobSource;
-        private readonly string _filePath;
+        private readonly string blobSource;
+        private readonly string filePath;
 
         public ResourceFileInfo(string blobSource, string filePath)
         {
-            _blobSource = blobSource;
-            _filePath = filePath;
+            this.blobSource = blobSource;
+            this.filePath = filePath;
         }
 
         public string BlobSource
         {
-            get { return _blobSource; }
+            get { return blobSource; }
         }
 
         public string FilePath
         {
-            get { return _filePath; }
+            get { return filePath; }
         }
     }
 }
