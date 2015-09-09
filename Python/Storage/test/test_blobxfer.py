@@ -278,6 +278,11 @@ def test_sasblobservice_putblob():
         with pytest.raises(IOError):
             sbs.put_blob('container', 'blob', None, 'PageBlob', 'md5', 4)
 
+        m.put('mock://blobepcontainer/blob?saskey', content=b'',
+              status_code=201)
+        sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
+        sbs.put_blob('container', 'blob', None, 'BlockBlob', 'md5', 0)
+
 
 def test_blobchunkworker_run(tmpdir):
     lpath = str(tmpdir.join('test.tmp'))
@@ -292,13 +297,31 @@ def test_blobchunkworker_run(tmpdir):
     sa_in_queue.put((False, lpath, 'blobep', 'saskey', 'container',
                      'blob', 'blockid', 0, 4, flock, None))
     args = MagicMock()
-    args.pageblob = False
+    args.pageblob = True
     args.autovhd = False
     args.timeout = None
 
     session = requests.Session()
     adapter = requests_mock.Adapter()
     session.mount('mock', adapter)
+
+    exc_list = []
+    sa_in_queue = queue.Queue()
+    sa_out_queue = queue.Queue()
+    sa_in_queue.put((True, lpath, 'blobep', 'saskey', 'container',
+                     'blob', 'blockid', 0, 4, flock, None))
+    sa_in_queue.put((False, lpath, 'blobep', 'saskey', 'container',
+                     'blob', 'blockid', 0, 4, flock, None))
+    with requests_mock.mock() as m:
+        m.put('mock://blobepcontainer/blob?saskey', status_code=200)
+        sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
+        bcw = blobxfer.BlobChunkWorker(
+            exc_list, sa_in_queue, sa_out_queue, args, sbs)
+        with pytest.raises(IOError):
+            bcw.putblobdata(lpath, 'container', 'blob', 'blockid',
+                            0, 4, flock, None)
+
+    args.pageblob = False
     with requests_mock.mock() as m:
         m.put('mock://blobepcontainer/blob?saskey', status_code=201)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
@@ -320,22 +343,24 @@ def test_blobchunkworker_run(tmpdir):
         bcw.run()
         assert len(exc_list) > 0
 
-    exc_list = []
-    sa_in_queue = queue.Queue()
-    sa_out_queue = queue.Queue()
-    sa_in_queue.put((True, lpath, 'blobep', 'saskey', 'container',
-                     'blob', 'blockid', 0, 4, flock, None))
-    sa_in_queue.put((False, lpath, 'blobep', 'saskey', 'container',
-                     'blob', 'blockid', 0, 4, flock, None))
-    args.pageblob = True
-    with requests_mock.mock() as m:
-        m.put('mock://blobepcontainer/blob?saskey', status_code=200)
-        sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
-        bcw = blobxfer.BlobChunkWorker(
-            exc_list, sa_in_queue, sa_out_queue, args, sbs)
-        with pytest.raises(IOError):
-            bcw.putblobdata(lpath, 'container', 'blob', 'blockid',
-                            0, 4, flock, None)
+        # test zero-length putblob
+        bcw.putblobdata(
+            lpath, 'container', 'blob', 'blockid', 0, 0, flock, None)
+        bcw._pageblob = True
+        bcw.putblobdata(
+            lpath, 'container', 'blob', 'blockid', 0, 0, flock, None)
+
+        # test empty page
+        with open(lpath, 'wb') as f:
+            f.write(b'\0' * 4 * 1024 * 1024)
+        bcw.putblobdata(
+            lpath, 'container', 'blob', 'blockid', 0, 4 * 1024 * 1024,
+            flock, None)
+        with open(lpath, 'wb') as f:
+            f.write(b'\0' * 4 * 1024)
+        bcw.putblobdata(
+            lpath, 'container', 'blob', 'blockid', 0, 4 * 1024,
+            flock, None)
 
 
 @patch('blobxfer.azure_request', return_value=None)

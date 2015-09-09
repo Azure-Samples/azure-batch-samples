@@ -51,7 +51,7 @@ Notes:
   byte-aligned. The MD5 for the blob is computed using the final aligned
   data if the source is not page boundary byte-aligned. This enables these
   page blobs or files to be skipped during subsequent download or upload,
-  respectively, if the skiponmatch parameter is enabled.
+  if the skiponmatch parameter is enabled.
 
 TODO list:
 - remove dependency on azure python packages
@@ -111,9 +111,10 @@ except NameError:  # pragma: no cover
 # pylint: enable=W0622,C0103
 
 # global defines
-_SCRIPT_VERSION = '0.9.9.3'
+_SCRIPT_VERSION = '0.9.9.4'
 _DEFAULT_MAX_STORAGEACCOUNT_WORKERS = 64
 _MAX_BLOB_CHUNK_SIZE_BYTES = 4194304
+_EMPTY_MAX_PAGE_SIZE_MD5 = 'tc+p1sj+vWGPkawoQ9UKHA=='
 _MAX_LISTBLOBS_RESULTS = 1000
 _PAGEBLOB_BOUNDARY = 512
 _DEFAULT_BLOB_ENDPOINT = 'blob.core.windows.net'
@@ -307,10 +308,10 @@ class SasBlobService(object):
             container_name - container name
             blob_name - name of blob
             blob - should be None for PageBlob (unused)
-            x_ms_blob_type - should be 'PageBlob'
+            x_ms_blob_type - should be 'PageBlob' or 'BlockBlob'
             x_ms_blob_content_md5 - blob MD5 hash
             x_ms_blob_content_length - content length aligned to
-                512-byte boundary
+                512-byte boundary if PageBlob
         Returns:
             blob content
         Raises:
@@ -320,8 +321,10 @@ class SasBlobService(object):
             blobep=self.blobep, container_name=container_name,
             blob_name=blob_name, saskey=self.saskey)
         reqheaders = {
-            'x-ms-blob-type': x_ms_blob_type,
-            'x-ms-blob-content-length': str(x_ms_blob_content_length)}
+            'x-ms-blob-type': x_ms_blob_type}
+        if x_ms_blob_type == 'PageBlob':
+            reqheaders['x-ms-blob-content-length'] = str(
+                x_ms_blob_content_length)
         if x_ms_blob_content_md5 is not None:
             reqheaders['x-ms-blob-content-md5'] = x_ms_blob_content_md5
         response = azure_request(
@@ -527,6 +530,20 @@ class BlobChunkWorker(threading.Thread):
         Raises:
             IOError if file cannot be read
         """
+        # if bytestoxfer is zero, then we're transferring a zero-byte
+        # file, use put blob instead of page/block ops
+        if bytestoxfer == 0:
+            contentmd5 = compute_md5_for_data_asbase64(b'')
+            if as_page_blob(self._pageblob, self._autovhd, localresource):
+                blob_type = 'PageBlob'
+            else:
+                blob_type = 'BlockBlob'
+            azure_request(
+                self.blob_service.put_blob, container_name=container,
+                blob_name=remoteresource, blob=None, x_ms_blob_type=blob_type,
+                x_ms_blob_content_md5=contentmd5,
+                x_ms_blob_content_length=bytestoxfer)
+            return
         # read the file at specified offset, must take lock
         data = None
         with flock:
@@ -546,22 +563,33 @@ class BlobChunkWorker(threading.Thread):
             aligned = page_align_content_length(bytestoxfer)
             # fill data to boundary
             if aligned != bytestoxfer:
-                data = data.ljust(aligned, b'0')
+                data = data.ljust(aligned, b'\0')
             # compute page md5
             contentmd5 = compute_md5_for_data_asbase64(data)
+            # check if this page is empty
+            if contentmd5 == _EMPTY_MAX_PAGE_SIZE_MD5:
+                return
+            elif len(data) != _MAX_BLOB_CHUNK_SIZE_BYTES:
+                data_chk = b'\0' * len(data)
+                data_chk_md5 = compute_md5_for_data_asbase64(data_chk)
+                del data_chk
+                if data_chk_md5 == contentmd5:
+                    return
+                del data_chk_md5
+            # upload page range
             rangestr = 'bytes={}-{}'.format(offset, offset + aligned - 1)
             azure_request(
-                self.blob_service.put_page, timeout=self.timeout,
-                container_name=container, blob_name=remoteresource,
-                page=data, x_ms_range=rangestr,
-                x_ms_page_write='update', content_md5=contentmd5)
+                self.blob_service.put_page, container_name=container,
+                blob_name=remoteresource, page=data, x_ms_range=rangestr,
+                x_ms_page_write='update', content_md5=contentmd5,
+                timeout=self.timeout)
         else:
             # compute block md5
             contentmd5 = compute_md5_for_data_asbase64(data)
             azure_request(
-                self.blob_service.put_block, timeout=self.timeout,
-                container_name=container, blob_name=remoteresource,
-                block=data, blockid=blockid, content_md5=contentmd5)
+                self.blob_service.put_block, container_name=container,
+                blob_name=remoteresource, block=data, blockid=blockid,
+                content_md5=contentmd5, timeout=self.timeout)
         del data
 
     def getblobrange(self, localresource, container, remoteresource, offset,
@@ -878,7 +906,7 @@ def generate_xferspec_upload(args, storage_in_queue, blobskipdict, blockids,
                 print('MISMATCH, re-uploading')
             else:
                 print('match, skipping upload')
-                return None, None, None, None
+                return None, 0, None, None
     # create blockids entry
     if localfile not in blockids:
         blockids[localfile] = []
@@ -1185,17 +1213,26 @@ def main():
         sys.exit(0)
 
     if xfertoazure:
+        # count number of empty files
+        emptyfiles = 0
+        for fsize in filesizes.items():
+            if fsize[1] == 0:
+                emptyfiles += 1
+        print('detected {} empty files to upload'.format(emptyfiles))
         if args.pageblob:
-            print('performing {} put pages and {} set blob properties'.format(
-                nstorageops, len(blockids)))
+            print('performing {} put pages/blobs and {} set blob '
+                  'properties'.format(
+                      nstorageops, len(blockids) - emptyfiles))
             progress_text = 'pages'
         elif args.autovhd:
-            print('performing {} mixed page/block operations '
-                  'with {} finalizing ops'.format(nstorageops, len(blockids)))
+            print('performing {} mixed page/block operations with {} '
+                  'finalizing ops'.format(
+                      nstorageops, len(blockids) - emptyfiles))
             progress_text = 'chunks'
         else:
-            print('performing {} put blocks and {} put block lists'.format(
-                nstorageops, len(blockids)))
+            print('performing {} put blocks/blobs and {} put block '
+                  'lists'.format(
+                      nstorageops, len(blockids) - emptyfiles))
             progress_text = 'blocks'
     else:
         print('performing {} range-gets'.format(nstorageops))
@@ -1215,16 +1252,16 @@ def main():
         args.progressbar, 'xfer', progress_text, nstorageops,
         done_ops, storage_start)
     while True:
+        _, localresource, _, _, _, _, _, _, _, _ = storage_out_queue.get()
         if len(exc_list) > 0:
             for exc in exc_list:
                 print(exc)
             sys.exit(1)
-        _, localresource, _, _, _, _, _, _, _, _ = storage_out_queue.get()
         if xfertoazure:
-            completed_blockids[localresource] = \
-                completed_blockids[localresource] + 1
-            if completed_blockids[localresource] == \
-                    len(blockids[localresource]):
+            completed_blockids[localresource] = completed_blockids[
+                localresource] + 1
+            if completed_blockids[localresource] == len(
+                    blockids[localresource]):
                 if as_page_blob(args.pageblob, args.autovhd, localresource):
                     if args.computefilemd5:
                         azure_request(
@@ -1234,14 +1271,16 @@ def main():
                             blob_name=filemap[localresource],
                             x_ms_blob_content_md5=md5map[localresource])
                 else:
-                    azure_request(
-                        blob_service.put_block_list,
-                        timeout=args.timeout,
-                        container_name=args.container,
-                        blob_name=filemap[localresource],
-                        block_list=blockids[localresource],
-                        x_ms_blob_content_md5=md5map[localresource])
-        done_ops = done_ops + 1
+                    # only perform put block list on non-zero byte files
+                    if filesizes[localresource] > 0:
+                        azure_request(
+                            blob_service.put_block_list,
+                            timeout=args.timeout,
+                            container_name=args.container,
+                            blob_name=filemap[localresource],
+                            block_list=blockids[localresource],
+                            x_ms_blob_content_md5=md5map[localresource])
+        done_ops += 1
         progress_bar(
             args.progressbar, 'xfer', progress_text, nstorageops,
             done_ops, storage_start)
