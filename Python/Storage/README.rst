@@ -90,6 +90,9 @@ resource exists. For example:
 
   blobxfer.py mystorageacct container0 mylocalfile.txt
 
+Note: if you downloaded the script via PyPI, you should not append .py to
+the invocation; just blobxfer should suffice.
+
 If mylocalfile.txt exists locally, then the script will attempt to upload the
 file to container0 on mystorageacct. If the file does not exist, then it will
 attempt to download the resource. If the desired behavior is to download the
@@ -148,6 +151,8 @@ Performance Notes
 Change Log
 ----------
 
+- 0.9.9.4: improve page blob upload algorithm to skip empty max size pages.
+  fix zero length file uploads. fix single file upload that's skipped.
 - 0.9.9.3: fix downloading of blobs with content length of zero
 - 0.9.9.1: fix content length > 32bit for blob lists via SAS on Python2
 - 0.9.9.0: update script for compatibility with new Azure Python packages
