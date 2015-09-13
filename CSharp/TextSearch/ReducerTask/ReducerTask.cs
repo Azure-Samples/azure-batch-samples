@@ -4,6 +4,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
 {
     using System;
     using System.Threading.Tasks;
+    using Common;
     using Microsoft.Azure.Batch.Auth;
 
     /// <summary>
@@ -11,7 +12,9 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
     /// </summary>
     public class ReducerTask
     {
-        private readonly Settings configurationSettings;
+        private readonly Settings textSearchSettings;
+        private readonly AccountSettings accountSettings;
+
         private readonly string accountName;
         private readonly string jobId;
 
@@ -20,7 +23,8 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
         /// </summary>
         public ReducerTask()
         {
-            this.configurationSettings = Settings.Default;
+            this.textSearchSettings = Settings.Default;
+            this.accountSettings = AccountSettings.Default;
 
             //Read some important data from preconfigured environment variables on the Batch compute node.
             this.accountName = Environment.GetEnvironmentVariable("AZ_BATCH_ACCOUNT_NAME");
@@ -34,14 +38,14 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
         {
             //Set up the Batch Service credentials used to authenticate with the Batch Service.
             BatchSharedKeyCredentials credentials = new BatchSharedKeyCredentials(
-                this.configurationSettings.BatchServiceUrl,
-                this.configurationSettings.BatchAccountName, 
-                this.configurationSettings.BatchAccountKey); 
+                this.accountSettings.BatchServiceUrl,
+                this.accountSettings.BatchAccountName,
+                this.accountSettings.BatchAccountKey); 
 
             using (BatchClient batchClient = await BatchClient.OpenAsync(credentials))
             {
                 //Gather each Mapper tasks output and write it to standard out.
-                for (int i = 0; i < this.configurationSettings.NumberOfMapperTasks; i++)
+                for (int i = 0; i < this.textSearchSettings.NumberOfMapperTasks; i++)
                 {
                     string mapperTaskId = Helpers.GetMapperTaskId(i);
 

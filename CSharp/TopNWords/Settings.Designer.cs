@@ -8,12 +8,12 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Microsoft.Azure.Batch.Samples.JobManager {
+namespace Microsoft.Azure.Batch.Samples.TopNWordsSample {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "12.0.0.0")]
-    public sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase {
+    internal sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase {
         
         private static Settings defaultInstance = ((Settings)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new Settings())));
         
@@ -25,49 +25,97 @@ namespace Microsoft.Azure.Batch.Samples.JobManager {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("2")]
-        public int PoolTargetNodeCount {
+        [global::System.Configuration.DefaultSettingValueAttribute("70")]
+        public int NumberOfTasks {
             get {
-                return ((int)(this["PoolTargetNodeCount"]));
+                return ((int)(this["NumberOfTasks"]));
             }
             set {
-                this["PoolTargetNodeCount"] = value;
+                this["NumberOfTasks"] = value;
             }
         }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("small")]
-        public string PoolNodeVirtualMachineSize {
+        [global::System.Configuration.DefaultSettingValueAttribute("3")]
+        public int PoolNodeCount {
             get {
-                return ((string)(this["PoolNodeVirtualMachineSize"]));
+                return ((int)(this["PoolNodeCount"]));
             }
             set {
-                this["PoolNodeVirtualMachineSize"] = value;
+                this["PoolNodeCount"] = value;
             }
         }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("4")]
-        public string PoolOSFamily {
+        [global::System.Configuration.DefaultSettingValueAttribute("10")]
+        public int TopWordCount {
             get {
-                return ((string)(this["PoolOSFamily"]));
+                return ((int)(this["TopWordCount"]));
             }
             set {
-                this["PoolOSFamily"] = value;
+                this["TopWordCount"] = value;
             }
         }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("JobManagerSamplePool")]
+        [global::System.Configuration.DefaultSettingValueAttribute("book.txt")]
+        public string BookFileName {
+            get {
+                return ((string)(this["BookFileName"]));
+            }
+            set {
+                this["BookFileName"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("TopNWordsPool")]
         public string PoolId {
             get {
                 return ((string)(this["PoolId"]));
             }
             set {
                 this["PoolId"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool DeleteJob {
+            get {
+                return ((bool)(this["DeleteJob"]));
+            }
+            set {
+                this["DeleteJob"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool DeleteContainer {
+            get {
+                return ((bool)(this["DeleteContainer"]));
+            }
+            set {
+                this["DeleteContainer"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("TopNWordsJob")]
+        public string JobId {
+            get {
+                return ((string)(this["JobId"]));
+            }
+            set {
+                this["JobId"] = value;
             }
         }
         
@@ -97,13 +145,13 @@ namespace Microsoft.Azure.Batch.Samples.JobManager {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("JobManagerSampleContainer")]
-        public string BlobContainer {
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ShouldDeleteContainer {
             get {
-                return ((string)(this["BlobContainer"]));
+                return ((bool)(this["ShouldDeleteContainer"]));
             }
             set {
-                this["BlobContainer"] = value;
+                this["ShouldDeleteContainer"] = value;
             }
         }
     }

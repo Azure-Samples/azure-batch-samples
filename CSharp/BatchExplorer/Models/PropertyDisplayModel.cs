@@ -47,7 +47,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
 
         internal static string GetItemDisplayPrefix(IEnumerable collection)
         {
-            var elementType = ElementType(collection.GetType());
+            Type elementType = ElementType(collection.GetType());
             if (elementType == null)
             {
                 return "item";
@@ -60,14 +60,14 @@ namespace Microsoft.Azure.BatchExplorer.Models
             Debug.Assert(collectionType != null);
             Debug.Assert(typeof(IEnumerable).IsAssignableFrom(collectionType));
 
-            var stis = collectionType.FindInterfaces((m, c) => m.IsConstructedGenericType && m.GetGenericTypeDefinition() == typeof(IEnumerable<>), null);
+            Type[] stronglyTypedInterfaces = collectionType.FindInterfaces((m, c) => m.IsConstructedGenericType && m.GetGenericTypeDefinition() == typeof(IEnumerable<>), null);
 
-            if (stis == null || stis.Length == 0 || stis.Length > 1)
+            if (stronglyTypedInterfaces == null || stronglyTypedInterfaces.Length == 0 || stronglyTypedInterfaces.Length > 1)
             {
                 return null;  // not a strongly typed collection, or a strongly typed collection of more than one thing (yikes)
             }
 
-            return stis[0].GetGenericArguments()[0];
+            return stronglyTypedInterfaces[0].GetGenericArguments()[0];
         }
     }
 }

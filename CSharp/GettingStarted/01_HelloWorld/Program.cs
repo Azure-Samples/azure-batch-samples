@@ -6,6 +6,7 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
     using System.Collections.Generic;
     using System.Threading.Tasks;
     using Auth;
+    using Batch.Common;
     using Common;
 
     /// <summary>
@@ -17,8 +18,9 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
         {
             try
             {
-                Settings configurationSettings = Settings.Default;
-                HelloWorldAsync(configurationSettings).Wait();
+                Settings helloWorldConfigurationSettings = Settings.Default;
+                AccountSettings accountSettings = AccountSettings.Default;
+                HelloWorldAsync(accountSettings, helloWorldConfigurationSettings).Wait();
             }
             catch (AggregateException aggregateException)
             {
@@ -39,17 +41,18 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
         /// <summary>
         /// Submits a job to the Azure Batch service, and waits for it to complete
         /// </summary>
-        private static async Task HelloWorldAsync(Settings configurationSettings)
+        private static async Task HelloWorldAsync(AccountSettings accountSettings, Settings helloWorldConfigurationSettings)
         {
             Console.WriteLine("Running with the following settings: ");
             Console.WriteLine("-------------------------------------");
-            Console.WriteLine(configurationSettings.ToString());
+            Console.WriteLine(helloWorldConfigurationSettings.ToString());
+            Console.WriteLine(accountSettings.ToString());
 
             // Set up the Batch Service credentials used to authenticate with the Batch Service.
             BatchSharedKeyCredentials credentials = new BatchSharedKeyCredentials(
-                configurationSettings.BatchServiceUrl,
-                configurationSettings.BatchAccountName,
-                configurationSettings.BatchAccountKey);
+                accountSettings.BatchServiceUrl,
+                accountSettings.BatchAccountName,
+                accountSettings.BatchAccountKey);
 
             // Get an instance of the BatchClient for a given Azure Batch account.
             using (BatchClient batchClient = await BatchClient.OpenAsync(credentials))
@@ -62,7 +65,7 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
                 try
                 {
                     // Submit the job
-                    await SubmitJobAsync(batchClient, configurationSettings, jobId);
+                    await SubmitJobAsync(batchClient, helloWorldConfigurationSettings, jobId);
 
                     // Wait for the job to complete
                     await WaitForJobAndPrintOutputAsync(batchClient, jobId);
@@ -70,7 +73,7 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
                 finally
                 {
                     // Delete the job to ensure the tasks are cleaned up
-                    if (!string.IsNullOrEmpty(jobId) && configurationSettings.ShouldDeleteJob)
+                    if (!string.IsNullOrEmpty(jobId) && helloWorldConfigurationSettings.ShouldDeleteJob)
                     {
                         Console.WriteLine("Deleting job: {0}", jobId);
                         batchClient.JobOperations.DeleteJob(jobId);

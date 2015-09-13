@@ -9,6 +9,9 @@ Download the samples and open the solution file for each one using Visual Studio
 ###Preallocating Pools and Compute Nodes
 The samples require a pre-created pool with deployed compute nodes. If your tasks are not being scheduled, it is likely that there are no nodes to host their tasks; some of the samples detect this and will add 3 small nodes to the specified pool. You can use Batch Explorer to monitor this situation as well as create the pool and resize it to have some number of nodes. You can then supply this pool name to some of the samples so you don't have to wait for the nodes to become available.
 
+###Configuring Credentials
+In order the run the samples, they must be configured with Azure Batch and Azure Storage credentials.  The credentials for each sample are gathered from the AccountSettings configuration located here [here](./Common/AccountSettings.settings).  The settings can be set via the Visual Studio settings manager.  Once you have configured your account credentials you can run any of the samples, and they will make use of the credentials provided in the AccountSettings configuration.    
+
 ##Sample Descriptions
 
 ###[AccountManagement](./AccountManagement)
