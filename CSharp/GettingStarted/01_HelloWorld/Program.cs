@@ -60,7 +60,7 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
                 // add a retry policy. The built-in policies are No Retry (default), Linear Retry, and Exponential Retry
                 batchClient.CustomBehaviors.Add(RetryPolicyProvider.LinearRetryProvider(TimeSpan.FromSeconds(10), 3));
 
-                string jobId = string.Format("{0}-{1}-{2}", "HelloWorldJob", Environment.GetEnvironmentVariable("USERNAME"), DateTime.Now.ToString("yyyyMMdd-HHmmss"));
+                string jobId = GettingStartedCommon.CreateJobId("HelloWorldJob");
 
                 try
                 {

@@ -59,7 +59,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
         public static string CreateJobId(string prefix)
         {
             // a job is uniquely identified by its ID so your account name along with a timestamp is added as suffix
-            return string.Format("{0}-{1}-{2}", prefix, Environment.GetEnvironmentVariable("USERNAME"), DateTime.Now.ToString("yyyyMMdd-HHmmss"));
+            return string.Format("{0}-{1}-{2}", prefix, new string(Environment.UserName.Where(char.IsLetterOrDigit).ToArray()), DateTime.Now.ToString("yyyyMMdd-HHmmss"));
         }
 
         /// <summary>
