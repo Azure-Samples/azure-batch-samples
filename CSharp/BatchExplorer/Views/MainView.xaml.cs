@@ -60,6 +60,7 @@ namespace Microsoft.Azure.BatchExplorer.Views
                         this.genericPopupWindow.MaxWidth = MaxWindowWidth;
                         this.genericPopupWindow.Title = "Message";
                         this.genericPopupWindow.Owner = this;
+                        this.genericPopupWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
                         this.genericPopupWindow.Content = new GenericMessageControl(new GenericMessageViewModel(m.MessageString));
                         this.genericPopupWindow.ResizeMode = System.Windows.ResizeMode.CanResizeWithGrip;
                         this.genericPopupWindow.SizeToContent = System.Windows.SizeToContent.WidthAndHeight;
