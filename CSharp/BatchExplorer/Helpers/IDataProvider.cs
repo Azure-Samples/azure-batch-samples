@@ -70,7 +70,8 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
             string osFamily,
             string osVersion,
             int maxTasksPerComputeNode,
-            TimeSpan? timeout);
+            TimeSpan? timeout,
+            StartTaskOptions startTask);
 
         /// <summary>
         /// Creates a ComputeNode user.

@@ -82,9 +82,10 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
             string osFamily,
             string osVersion,
             int maxTasksPerComputeNode,
-            TimeSpan? timeout)
+            TimeSpan? timeout,
+            StartTaskOptions startTask)
         {
-            await this.Service.CreatePoolAsync(poolId, virtualMachineSize, targetDedicated, autoScaleFormula, communicationEnabled, osFamily, osVersion, maxTasksPerComputeNode, timeout);
+            await this.Service.CreatePoolAsync(poolId, virtualMachineSize, targetDedicated, autoScaleFormula, communicationEnabled, osFamily, osVersion, maxTasksPerComputeNode, timeout, startTask);
         }
 
         public async Task CreateComputeNodeUserAsync(string poolId, string nodeId, string userName, string password, DateTime expiryTime, bool admin)

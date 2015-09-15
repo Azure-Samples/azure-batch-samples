@@ -4,6 +4,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Threading.Tasks;
     using GalaSoft.MvvmLight.Messaging;
     using Microsoft.Azure.BatchExplorer.Helpers;
@@ -215,9 +216,64 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
+        private bool hasStartTask;
+        public bool HasStartTask
+        {
+            get
+            {
+                return this.hasStartTask;
+            }
+            set
+            {
+                this.hasStartTask = value;
+                this.FirePropertyChangedEvent("HasStartTask");
+            }
+        }
+
+        private string startTaskCommandLine;
+        public string StartTaskCommandLine
+        {
+            get
+            {
+                return this.startTaskCommandLine;
+            }
+            set
+            {
+                this.startTaskCommandLine = value;
+                this.FirePropertyChangedEvent("StartTaskCommandLine");
+            }
+        }
+
+        private string startTaskResourceFiles;
+        public string StartTaskResourceFiles
+        {
+            get
+            {
+                return this.startTaskResourceFiles;
+            }
+            set
+            {
+                this.startTaskResourceFiles = value;
+                this.FirePropertyChangedEvent("StartTaskResourceFiles");
+            }
+        }
+
+        private bool startTaskRunElevated;
+        public bool StartTaskRunElevated
+        {
+            get
+            {
+                return this.startTaskRunElevated;
+            }
+            set
+            {
+                this.startTaskRunElevated = value;
+                this.FirePropertyChangedEvent("StartTaskRunElevated");
+            }
+        }
         #endregion
 
-        
+
         public CreatePoolViewModel(IDataProvider batchService)
         {
             this.batchService = batchService;
@@ -282,7 +338,8 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                             osFamilyString,
                             this.SelectedOSVersion,
                             this.MaxTasksPerComputeNode,
-                            this.Timeout);
+                            this.Timeout,
+                            this.GetStartTaskOptions());
                     }
                     else
                     {
@@ -295,7 +352,8 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                             osFamilyString,
                             this.SelectedOSVersion,
                             this.MaxTasksPerComputeNode,
-                            this.Timeout);
+                            this.Timeout,
+                            this.GetStartTaskOptions());
                     }
 
                     AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
@@ -313,6 +371,21 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             {
                 Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage(e.ToString()));
             }
+        }
+
+        private StartTaskOptions GetStartTaskOptions()
+        {
+            if (HasStartTask)
+            {
+                return new StartTaskOptions
+                {
+                    CommandLine = this.StartTaskCommandLine,
+                    ResourceFiles = ResourceFileStringParser.Parse(this.StartTaskResourceFiles).Files.ToList(),
+                    RunElevated = this.StartTaskRunElevated,
+                };
+            }
+
+            return null;
         }
 
         private bool IsInputValid()
@@ -334,6 +407,20 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             {
                 Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Invalid values for Target Dedicated"));
                 return false;
+            }
+            else if (this.HasStartTask)
+            {
+                if (string.IsNullOrEmpty(this.StartTaskCommandLine))
+                {
+                    Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Start task must have a command line"));
+                    return false;
+                }
+                var resourceFiles = ResourceFileStringParser.Parse(this.StartTaskResourceFiles);
+                if (resourceFiles.HasErrors)
+                {
+                    Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage(String.Join(Environment.NewLine, resourceFiles.Errors)));
+                    return false;
+                }
             }
 
             return true;
