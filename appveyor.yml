@@ -1,0 +1,14 @@
+
+# Set up build options
+platform: Any CPU
+configuration: Release
+
+# Do not build on tags (GitHub only)
+skip_tags: true
+
+# Use a custom script to do MSBuild commands (build CSharp tree recursively)
+build_script:
+  - for /R %%f in (*.sln) do (nuget restore "%%f" & msbuild /m /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" "%%f")
+  
+# No tests for the samples at this time
+test: off
