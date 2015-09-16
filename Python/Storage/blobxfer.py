@@ -1370,7 +1370,7 @@ def parseargs():  # pragma: no cover
     parser.add_argument('container', help='name of blob container')
     parser.add_argument(
         'localresource',
-        help='name of the local file or directory if mirroring')
+        help='name of the local file or directory, if mirroring')
     parser.add_argument(
         '--autovhd', action='store_true',
         help='automatically upload files ending in .vhd as page blobs')
