@@ -1,4 +1,7 @@
-﻿//Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
+//
+// Companion project backing the code snippets found in the following article:
+// https://azure.microsoft.com/documentation/articles/batch-efficient-list-queries/
 
 using System;
 using System.Collections.Generic;
