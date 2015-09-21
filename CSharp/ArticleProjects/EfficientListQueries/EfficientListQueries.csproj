@@ -7,7 +7,7 @@
     <ProjectGuid>{1F7E4DB3-2140-46A2-B0FE-003782C79279}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>EfficientListQueries</RootNamespace>
+    <RootNamespace>Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries</RootNamespace>
     <AssemblyName>EfficientListQueries</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
