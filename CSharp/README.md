@@ -7,10 +7,10 @@ You will need VS 2013 or later to compile the projects. If you use VS 2012 or 20
 Download the samples and open the solution file for each one using Visual Studio. Right click on the solution and select "Rebuild". Visual Studio will analyze the dependencies and download the dependent binaries from [nuget.org](http://www.nuget.org/packages/Azure.Batch/).
 
 ###Preallocating Pools and Compute Nodes
-The samples require a pre-created pool with deployed compute nodes. If your tasks are not being scheduled, it is likely that there are no nodes to host their tasks; some of the samples detect this and will add 3 small nodes to the specified pool. You can use Batch Explorer to monitor this situation as well as create the pool and resize it to have some number of nodes. You can then supply this pool name to some of the samples so you don't have to wait for the nodes to become available.
+The samples require a pre-created pool with deployed compute nodes. If your tasks are not being scheduled, it is likely that there are no nodes to host the tasks; some of the samples detect this and will add 3 small nodes to the specified pool. You can use Batch Explorer to monitor this situation as well as create the pool and resize it to have some number of nodes. You can then supply this pool name to some of the samples so you don't have to wait for the nodes to become available.
 
 ###Configuring Credentials
-In order the run the samples, they must be configured with Azure Batch and Azure Storage credentials.  The credentials for each sample are gathered from the AccountSettings configuration located here [here](./Common/AccountSettings.settings).  The settings can be set via the Visual Studio settings manager.  Once you have configured your account credentials you can run any of the samples, and they will make use of the credentials provided in the AccountSettings configuration.    
+In order the run the samples, they must be configured with Azure Batch and Azure Storage credentials.  The credentials for each sample are gathered from the AccountSettings configuration located [here](./Common/AccountSettings.settings).  The settings can be set via the Visual Studio settings manager.  Once you have configured your account credentials, you can run any of the samples and they will make use of the credentials provided in the AccountSettings configuration.    
 
 ##Sample Descriptions
 
@@ -21,7 +21,7 @@ This sample demonstrates how to use the Microsoft.Azure.Management.Batch library
 Azure Batch Explorer is a GUI application to view and manage Azure Batch Service. View this [blog post](http://blogs.technet.com/b/windowshpc/archive/2015/01/20/azure-batch-explorer-sample-walkthrough.aspx) for more details.
 
 ###[GettingStarted](./GettingStarted)
-This set of samples is intended to be the first stopping point for learning Azure Batch.  It covers basic features of the service, including jobs, pools, tasks, and more.
+This set of samples is intended to be the starting point for learning the concepts behind Azure Batch and its API.  It covers basic features of the service, including jobs, pools, tasks, and more.
 
 ###[TextSearch](./TextSearch)
 This map-reduce style sample uses Azure Batch to perform parallel text processing on an input file by splitting it up into multiple sub-files and performing regular expression matching on each sub-file. The results are then rolled-up into a final report. This sample also uses a Job Manager to orchestrate the mapper and reducer tasks. It combines all 4 functions into one binary: the submission of the job, the job manager, and the mapper and reducer code.
