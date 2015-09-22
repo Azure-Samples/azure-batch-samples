@@ -112,9 +112,9 @@ namespace Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries
                 detail.SelectClause = "id,state,environmentSettings";
                 QueryTasks(batchClient, job.Id, detail);
 
-                // And finally, pull all tasks, include all standard properties, and expand the statistics (this should take even more time)
+                // And finally, pull all tasks, include all standard properties, and expand the statistics
                 detail.ExpandClause = "stats";
-                detail.SelectClause = "id,state,environmentSettings,stats";
+                detail.SelectClause = null;
                 QueryTasks(batchClient, job.Id, detail);
 
                 Console.WriteLine();
@@ -268,8 +268,6 @@ namespace Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries
                         detail.ExpandClause, 
                         detail.FilterClause, 
                         detail.SelectClause);
-
-            stopwatch.Reset();
         }
     }
 }
