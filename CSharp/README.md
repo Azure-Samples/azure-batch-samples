@@ -24,7 +24,7 @@ Azure Batch Explorer is a GUI application to view and manage Azure Batch Service
 This set of samples is intended to be the starting point for learning the concepts behind Azure Batch and its API.  It covers basic features of the service, including jobs, pools, tasks, and more.
 
 ###[TextSearch](./TextSearch)
-This map-reduce style sample uses Azure Batch to perform parallel text processing on an input file by splitting it up into multiple sub-files and performing regular expression matching on each sub-file. The results are then rolled-up into a final report. This sample also uses a Job Manager to orchestrate the mapper and reducer tasks. It combines all 4 functions into one binary: the submission of the job, the job manager, and the mapper and reducer code.
+This map-reduce style sample uses Azure Batch to perform parallel text processing on an input file by splitting it up into multiple sub-files and performing regular expression matching on each sub-file. A Job Manager task is used to orchestrate the mapper and reducer tasks with the results rolled-up into a final report. See the readme in the source directory for more information.
 
 ###[TopNWords](./TopNWords)
 This sample demonstrates how to process a set of input blobs in parallel on multiple compute nodes. In this case, there is only one blob but the code can be expanded to load more blobs and bind them to individual tasks. The task writes a list of length N to stdout that contains the words in the blob with the highest occurrence count. A run-once job is created followed by the creation of multiple tasks with each task processing its blob. The job code then waits for each of the tasks to complete and prints out the list generated for each input blob.
