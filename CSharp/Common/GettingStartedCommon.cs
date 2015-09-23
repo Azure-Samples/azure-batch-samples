@@ -156,7 +156,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
 
                 successfullyCreatedPool = true;
                 Console.WriteLine("Created pool {0} with {1} {2} nodes",
-                    pool,
+                    poolId,
                     poolTargetNodeCount,
                     poolNodeVirtualMachineSize);
             }
