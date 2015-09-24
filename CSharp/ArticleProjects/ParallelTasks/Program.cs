@@ -51,7 +51,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
                 CloudJob job = CreateJob(batchClient, pool.Id, jobId);
 
                 // The job's tasks ping localhost a random number of times between minPings and maxPings.
-                // Adjust the minPings/maxPings values above to expriment with different task durations.
+                // Adjust the minPings/maxPings values above to experiment with different task durations.
                 Random rand = new Random();
                 List<CloudTask> tasks = new List<CloudTask>();
                 for (int i = 1; i < taskCount + 1; i++)
