@@ -1,4 +1,6 @@
-﻿//Copyright (c) Microsoft Corporation
+﻿//
+// Companion project backing the code snippets found in the following article:
+// https://azure.microsoft.com/documentation/articles/batch-parallel-node-tasks/
 
 using System;
 using System.Collections.Generic;
