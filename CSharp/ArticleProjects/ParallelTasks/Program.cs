@@ -26,6 +26,11 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
             const int maxTasksPerNode = 4;
             const int taskCount       = 32;
 
+            // Ensure there are enough tasks to satisfy some wait conditions below
+            int minimumTaskCount = nodeCount * maxTasksPerNode * 2;
+            Debug.Assert(taskCount >= minimumTaskCount,
+                         string.Format("Must have at least two tasks per node core for this sample ({0} tasks in this configuration).", minimumTaskCount));
+            
             // In this sample, the tasks simply ping localhost on the compute nodes; adjust these
             // values to simulate variable task duration
             const int minPings = 30;
@@ -66,7 +71,11 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
                 }
 
                 // Pause execution until the pool is steady and its compute nodes are ready to accept jobs.
-                // NOTE: This is only for demonstration purposes and is NOT necessary within your own code.
+                // NOTE: Such a pause is not necessary within your own code. Tasks can be added to a job at any point and will be 
+                // scheduled to execute on a compute node as soon any node has reached Idle state. Because the focus of this sample 
+                // is the demonstration of running tasks in parallel on multiple compute nodes, we wait for all compute nodes to 
+                // complete initialization and reach the Idle state in order to maximize the number of compute nodes available for 
+                // parallelization.
                 WaitForPoolToReachStateAsync(batchClient, pool.Id, AllocationState.Steady, TimeSpan.FromMinutes(30)).Wait();
                 WaitForNodesToReachStateAsync(batchClient, pool.Id, ComputeNodeState.Idle, TimeSpan.FromMinutes(30)).Wait();
 
@@ -75,9 +84,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
                 // crucial if you are adding large numbers of tasks to your jobs.
                 batchClient.JobOperations.AddTask(job.Id, tasks);
 
-                // Pause again to wait until the nodes are running tasks - we do this only so that we can
-                // display concurrent tasks running on the nodes.
-                // NOTE: This is only for demonstration purposes and is NOT necessary within your own code.
+                // Pause again to wait until *all* nodes are running tasks
                 WaitForNodesToReachStateAsync(batchClient, pool.Id, ComputeNodeState.Running, TimeSpan.FromMinutes(30)).Wait();
 
                 Stopwatch stopwatch = new Stopwatch();
@@ -93,7 +100,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
                 Console.WriteLine();
                 batchClient.Utilities.CreateTaskStateMonitor().WaitAll(job.ListTasks(),
                                                                    TaskState.Completed,
-                                                                   new TimeSpan(0, 30, 0));
+                                                                   TimeSpan.FromMinutes(1));
 
                 stopwatch.Stop();
 
@@ -110,14 +117,33 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
                                                 .ToList();
 
                 // Print the completed task information
+                Console.WriteLine();
+                Console.WriteLine("Completed tasks:");
                 string lastNodeId = string.Empty;
                 foreach (CloudTask task in completedTasks)
                 {
                     if (!string.Equals(lastNodeId, task.ComputeNodeInformation.ComputeNodeId))
+                    {
+                        Console.WriteLine();
                         Console.WriteLine(task.ComputeNodeInformation.ComputeNodeId);
+                    }
 
                     lastNodeId = task.ComputeNodeInformation.ComputeNodeId;
 
+                    Console.WriteLine("\t{0}: {1}", task.Id, task.CommandLine);
+                }
+
+                // Get a collection of the uncompleted tasks which may exist if the TaskMonitor timeout is hit
+                List<CloudTask> unCompletedTasks = allTasks
+                                                   .Where(t => t.State != TaskState.Completed)
+                                                   .ToList();
+
+                // Print the list of uncompleted tasks
+                Console.WriteLine();
+                Console.WriteLine("Uncompleted tasks:");
+                Console.WriteLine();
+                foreach (CloudTask task in unCompletedTasks)
+                {
                     Console.WriteLine("\t{0}: {1}", task.Id, task.CommandLine);
                 }
 
@@ -233,7 +259,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
         /// <returns></returns>
         private static async Task WaitForPoolToReachStateAsync(BatchClient client, string poolId, AllocationState targetAllocationState, TimeSpan timeout)
         {
-            Console.WriteLine("Waiting for pool {0} to reach state {1}", poolId, targetAllocationState);
+            Console.WriteLine("Waiting for pool {0} to reach allocation state {1}", poolId, targetAllocationState);
 
             DateTime startTime = DateTime.UtcNow;
             DateTime timeoutAfterThisTimeUtc = startTime.Add(timeout);
@@ -313,7 +339,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
             {
                 Console.WriteLine(node.Id + " tasks:");
 
-                if (node.RecentTasks != null && node.RecentTasks.Count() > 0)
+                if (node.RecentTasks != null && node.RecentTasks.Any())
                 {
                     foreach (TaskInformation task in node.RecentTasks)
                     {
@@ -321,8 +347,10 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
                     }
                 }
                 else
+                {
                     // No tasks found for the node
                     Console.WriteLine("\tNone");
+                }
 
             }
         }
