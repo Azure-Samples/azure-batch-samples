@@ -26,7 +26,7 @@ blobxfer is on PyPI and can be installed via:
 If you need more fine-grained control on installing dependencies, continue
 reading this section. The blobxfer utility is a python script that can be used
 on any platform where Python 2.7, 3.3 or 3.4 is installable. Depending upon
-the desired mode of operation as listed above, the script will require the
+the desired mode of authentication with Azure, the script will require the
 following packages, some of which will automatically pull required dependent
 packages:
 
@@ -97,11 +97,11 @@ If mylocalfile.txt exists locally, then the script will attempt to upload the
 file to container0 on mystorageacct. If the file does not exist, then it will
 attempt to download the resource. If the desired behavior is to download the
 file from Azure even if the local file exists, one can override the detection
-mechanism with ``--download``. ``--upload`` is available to force the transfer to
-Azure storage. Note that specifying a particular direction does not force the
-actual operation to occur as that depends on other options specified such as
-skipping on MD5 matches. Note that you may use the ``--remoteresource`` flag to
-rename the local file as the blob name on Azure storage if uploading.
+mechanism with ``--download``. ``--upload`` is available to force the transfer
+to Azure storage. Note that specifying a particular direction does not force
+the actual operation to occur as that depends on other options specified such
+as skipping on MD5 matches. Note that you may use the ``--remoteresource`` flag
+to rename the local file as the blob name on Azure storage if uploading.
 
 If the local resource is a directory that exists, the script will attempt to
 mirror (recursively copy) the entire directory to Azure storage while
@@ -125,6 +125,22 @@ downloading it. In this case, if you want to force the download direction,
 indicate that with ``--download``. When downloading an entire container, the
 script will attempt to pre-allocate file space and recreate the sub-directory
 structure as needed.
+
+To collate files into specified virtual directories or local paths, use
+the ``--collate`` flag with the appropriate parameter. For example, the
+following commandline:
+
+::
+
+  blobxfer.py mystorageacct container0 myvhds --upload --collate vhds --autovhd
+
+If the directory ``myvhds`` had two vhd files a.vhd and subdir/b.vhd, these
+files would be uploaded into ``container0`` under the virtual directory named
+``vhds``, and b.vhd would not contain the virtual directory subdir; thus,
+flattening the directory structure. The ``--autovhd`` flag would automatically
+enable page blob uploads for these files. If you wish to collate all files
+into the container directly, you would replace ``--collate vhds`` with
+``--collate .``
 
 Performance Notes
 -----------------
@@ -151,6 +167,8 @@ Performance Notes
 Change Log
 ----------
 
+- 0.9.9.5: add file collation support, fix page alignment bug, reduce memory
+  usage
 - 0.9.9.4: improve page blob upload algorithm to skip empty max size pages.
   fix zero length file uploads. fix single file upload that's skipped.
 - 0.9.9.3: fix downloading of blobs with content length of zero
