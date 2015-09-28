@@ -288,14 +288,6 @@ def test_blobchunkworker_run(tmpdir):
     lpath = str(tmpdir.join('test.tmp'))
     with open(lpath, 'wt') as f:
         f.write(str(uuid.uuid4()))
-    exc_list = []
-    sa_in_queue = queue.Queue()
-    sa_out_queue = queue.Queue()
-    flock = threading.Lock()
-    sa_in_queue.put((True, lpath, 'blobep', 'saskey', 'container',
-                     'blob', 'blockid', 0, 4, flock, None))
-    sa_in_queue.put((False, lpath, 'blobep', 'saskey', 'container',
-                     'blob', 'blockid', 0, 4, flock, None))
     args = MagicMock()
     args.pageblob = True
     args.autovhd = False
@@ -306,17 +298,14 @@ def test_blobchunkworker_run(tmpdir):
     session.mount('mock', adapter)
 
     exc_list = []
+    flock = threading.Lock()
     sa_in_queue = queue.Queue()
     sa_out_queue = queue.Queue()
-    sa_in_queue.put((True, lpath, 'blobep', 'saskey', 'container',
-                     'blob', 'blockid', 0, 4, flock, None))
-    sa_in_queue.put((False, lpath, 'blobep', 'saskey', 'container',
-                     'blob', 'blockid', 0, 4, flock, None))
     with requests_mock.mock() as m:
         m.put('mock://blobepcontainer/blob?saskey', status_code=200)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         bcw = blobxfer.BlobChunkWorker(
-            exc_list, sa_in_queue, sa_out_queue, args, sbs)
+            exc_list, sa_in_queue, sa_out_queue, args, sbs, True)
         with pytest.raises(IOError):
             bcw.putblobdata(lpath, 'container', 'blob', 'blockid',
                             0, 4, flock, None)
@@ -326,7 +315,7 @@ def test_blobchunkworker_run(tmpdir):
         m.put('mock://blobepcontainer/blob?saskey', status_code=201)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         bcw = blobxfer.BlobChunkWorker(
-            exc_list, sa_in_queue, sa_out_queue, args, sbs)
+            exc_list, sa_in_queue, sa_out_queue, args, sbs, True)
         try:
             bcw.putblobdata(lpath, 'container', 'blob', 'blockid',
                             0, 4, flock, None)
@@ -338,10 +327,6 @@ def test_blobchunkworker_run(tmpdir):
             bcw.getblobrange(lpath, 'container', 'blob', 0, 4, flock, None)
         except Exception:
             pytest.fail('unexpected Exception raised')
-
-        m.get('mock://blobepcontainer/blob?saskey', status_code=201)
-        bcw.run()
-        assert len(exc_list) > 0
 
         # test zero-length putblob
         bcw.putblobdata(
@@ -361,6 +346,15 @@ def test_blobchunkworker_run(tmpdir):
         bcw.putblobdata(
             lpath, 'container', 'blob', 'blockid', 0, 4 * 1024,
             flock, None)
+
+    sa_in_queue.put((lpath, 'container', 'blob', 'blockid', 0, 4, flock, None))
+    with requests_mock.mock() as m:
+        sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
+        bcw = blobxfer.BlobChunkWorker(
+            exc_list, sa_in_queue, sa_out_queue, args, sbs, False)
+        m.get('mock://blobepcontainer/blob?saskey', status_code=201)
+        bcw.run()
+        assert len(exc_list) > 0
 
 
 @patch('blobxfer.azure_request', return_value=None)
@@ -452,6 +446,14 @@ def test_generate_xferspec_upload(tmpdir):
     fs, nsops, md5, fd = blobxfer.generate_xferspec_upload(
         args, sa_in_queue, sd, {}, lpath, 'rr', False)
     assert fs is None
+
+
+def test_apply_file_collation():
+    args = MagicMock()
+    args.collate = 'collatedir'
+    args.keeprootdir = False
+    rfname = blobxfer.apply_file_collation(args, 'tmpdir/file0', False)
+    assert rfname == 'collatedir/file0'
 
 
 def _mock_get_storage_account_keys(timeout=None, service_name=None):
@@ -557,7 +559,26 @@ def test_main1(patched_parseargs, tmpdir):
     with pytest.raises(ValueError):
         blobxfer.main()
 
+    args.keeprootdir = True
+    args.collate = 'collatetmp'
+    with pytest.raises(ValueError):
+        blobxfer.main()
+
+    args.keeprootdir = False
+    args.collate = None
     args.storageaccountkey = None
+    args.saskey = ''
+    with pytest.raises(ValueError):
+        blobxfer.main()
+
+    args.saskey = None
+    args.managementcert = '0'
+    args.subscriptionid = '0'
+    with pytest.raises(ValueError):
+        blobxfer.main()
+
+    args.managementcert = None
+    args.subscriptionid = None
     args.saskey = 'saskey'
     with open(lpath, 'wt') as f:
         f.write(str(uuid.uuid4()))
@@ -568,10 +589,12 @@ def test_main1(patched_parseargs, tmpdir):
     with requests_mock.mock() as m:
         m.put('https://blobep.blobep/container/blob?saskey'
               '&comp=block&blockid=00000000', status_code=201)
-        m.put('https://blobep.blobep/container/' + lpath +
+        m.put('https://blobep.blobep/container' + lpath +
               '?saskey&blockid=00000000&comp=block', status_code=201)
-        m.put('https://blobep.blobep/container/' + lpath +
+        m.put('https://blobep.blobep/container' + lpath +
               '?saskey&comp=blocklist', status_code=201)
+        m.put('https://blobep.blobep/container' + lpath +
+              '?saskey&comp=block&blockid=00000000', status_code=201)
         m.get('https://blobep.blobep/container?saskey&comp=list'
               '&restype=container&maxresults=1000',
               text='<?xml version="1.0" encoding="utf-8"?>'
@@ -721,6 +744,8 @@ def test_main2(patched_parseargs, tmpdir):
         args.createcontainer = True
         args.pageblob = False
         args.autovhd = False
+        args.keeprootdir = False
+        args.collate = None
         mock.return_value = MagicMock()
         mock.return_value.create_container = _mock_blobservice_create_container
         blobxfer.main()
