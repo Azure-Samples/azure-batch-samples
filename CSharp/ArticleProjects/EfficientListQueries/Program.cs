@@ -1,6 +1,6 @@
 ﻿// Copyright (c) Microsoft Corporation
 //
-// Companion project backing the code snippets found in the following article:
+// Companion project to the following article:
 // https://azure.microsoft.com/documentation/articles/batch-efficient-list-queries/
 
 using System;
@@ -38,8 +38,8 @@ namespace Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries
                 CloudPool pool = batchClient.PoolOperations.GetPool(poolId);
 
                 // Create a CloudJob, or obtain an existing job with the specified ID
-                CloudJob job = CreateJob(batchClient, pool.Id, jobId);
-                
+                CloudJob job = ArticleHelpers.CreateJobAsync(batchClient, poolId, jobId).Result;
+
                 // Configure the tasks we'll be querying. Each task simply echoes the node's
                 // name and then exits. We create "large" tasks by setting an environment
                 // variable for each that is 2048 bytes in size. This is done simply to
@@ -138,54 +138,6 @@ namespace Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries
                                                                    targetDedicated: 1);
 
             await GettingStartedCommon.CreatePoolIfNotExistAsync(batchClient, pool);
-        }
-
-        /// <summary>
-        /// Creates a CloudJob in the specified pool if a job with the specified ID is not found
-        /// in the pool, otherwise returns the existing job.
-        /// </summary>
-        /// <param name="batchClient">A fully initialized <see cref="BatchClient"/>.</param>
-        /// <param name="poolId">The ID of the CloudPool in which the job should be created.</param>
-        /// <param name="jobId">The ID of the CloudJob.</param>
-        /// <returns>A bound CloudJob.</returns>
-        private static CloudJob CreateJob(BatchClient batchClient, string poolId, string jobId)
-        {
-            CloudJob job = GetJobIfExist(batchClient, jobId);
-            if (job == null)
-            {
-                Console.WriteLine("Job {0} not found, creating...", jobId);
-
-                CloudJob unboundJob = batchClient.JobOperations.CreateJob(jobId, new PoolInformation() { PoolId = poolId });
-                unboundJob.Commit();
-
-                job = batchClient.JobOperations.GetJob(jobId);
-            }           
-
-            // Return the bound version of the job with all of its properties populated
-            return job;
-        }
-
-        /// <summary>
-        /// Returns an existing <see cref="CloudJob"/> if found in the Batch account.
-        /// </summary>
-        /// <param name="batchClient">A fully initialized <see cref="BatchClient"/>.</param>
-        /// <param name="jobId">The <see cref="CloudJob.Id"/> of the desired pool.</param>
-        /// <returns>A bound <see cref="CloudJob"/>, or <c>null</c> if the specified <see cref="CloudJob"/> does not exist.</returns>
-        private static CloudJob GetJobIfExist(BatchClient batchClient, string jobId)
-        {
-            Console.WriteLine("Checking for existing job {0}...", jobId);
-
-            // Construct a detail level with a filter clause that specifies the job
-            ODATADetailLevel detail = new ODATADetailLevel(filterClause: string.Format("id eq '{0}'", jobId));
-
-            foreach (CloudJob job in batchClient.JobOperations.ListJobs(detailLevel: detail))
-            {
-                Console.WriteLine("Existing job {0} found.", jobId);
-                return job;
-            }
-
-            // No existing job found
-            return null;
         }
 
         /// <summary>

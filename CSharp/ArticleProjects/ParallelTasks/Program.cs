@@ -1,21 +1,22 @@
 ﻿// Copyright (c) Microsoft Corporation
 //
-// Companion project backing the code snippets found in the following article:
+// Companion project to the following article:
 // https://azure.microsoft.com/documentation/articles/batch-parallel-node-tasks/
 
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.Azure.Batch;
-using Microsoft.Azure.Batch.Auth;
-using Microsoft.Azure.Batch.Common;
-using Microsoft.Azure.Batch.Samples.Common;
 
 namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.Linq;
+    using System.Text;
+    using System.Threading.Tasks;
+    using Microsoft.Azure.Batch;
+    using Microsoft.Azure.Batch.Auth;
+    using Microsoft.Azure.Batch.Common;
+    using Microsoft.Azure.Batch.Samples.Common;
+
     public class Program
     {
         public static void Main(string[] args)
@@ -25,11 +26,13 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
             const int nodeCount       = 4;
             const int maxTasksPerNode = 4;
             const int taskCount       = 32;
-
+            
             // Ensure there are enough tasks to satisfy some wait conditions below
-            int minimumTaskCount = nodeCount * maxTasksPerNode * 2;
-            Debug.Assert(taskCount >= minimumTaskCount,
-                         string.Format("Must have at least two tasks per node core for this sample ({0} tasks in this configuration).", minimumTaskCount));
+            const int minimumTaskCount = nodeCount * maxTasksPerNode * 2;
+            if (taskCount < minimumTaskCount)
+            {
+                throw new Exception(string.Format("Must have at least two tasks per node core for this sample ({0} tasks in this configuration).", minimumTaskCount));
+            }
             
             // In this sample, the tasks simply ping localhost on the compute nodes; adjust these
             // values to simulate variable task duration
@@ -38,6 +41,9 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
 
             const string poolId = "poolMaxTasks";
             const string jobId  = "jobMaxTasks";
+
+            // Amount of time to wait before timing out (potentially) long-running tasks
+            TimeSpan longTaskDurationLimit = TimeSpan.FromMinutes(30);
 
             // Set up access to your Batch account with a BatchClient. Configure your AccountSettings in the
             // Microsoft.Azure.Batch.Samples.Common project within this solution.
@@ -55,9 +61,8 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
                            maxTasksPerNode).Wait();
                 CloudPool pool = batchClient.PoolOperations.GetPool(poolId);
 
-                // Create a CloudJob, or obtain an existing job with the specified ID
-                CloudJob job = CreateJob(batchClient, pool.Id, jobId);
-
+                CloudJob job = ArticleHelpers.CreateJobAsync(batchClient, poolId, jobId).Result;
+                
                 // The job's tasks ping localhost a random number of times between minPings and maxPings.
                 // Adjust the minPings/maxPings values above to experiment with different task durations.
                 Random rand = new Random();
@@ -76,8 +81,8 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
                 // is the demonstration of running tasks in parallel on multiple compute nodes, we wait for all compute nodes to 
                 // complete initialization and reach the Idle state in order to maximize the number of compute nodes available for 
                 // parallelization.
-                WaitForPoolToReachStateAsync(batchClient, pool.Id, AllocationState.Steady, TimeSpan.FromMinutes(30)).Wait();
-                WaitForNodesToReachStateAsync(batchClient, pool.Id, ComputeNodeState.Idle, TimeSpan.FromMinutes(30)).Wait();
+                ArticleHelpers.WaitForPoolToReachStateAsync(batchClient, pool.Id, AllocationState.Steady, longTaskDurationLimit).Wait();
+                ArticleHelpers.WaitForNodesToReachStateAsync(batchClient, pool.Id, ComputeNodeState.Idle, longTaskDurationLimit).Wait();
 
                 // To reduce the chances of hitting Batch service throttling limits, we add the tasks in
                 // one API call as opposed to a separate AddTask call for each. Bulk task submission is
@@ -85,13 +90,14 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
                 batchClient.JobOperations.AddTask(job.Id, tasks);
 
                 // Pause again to wait until *all* nodes are running tasks
-                WaitForNodesToReachStateAsync(batchClient, pool.Id, ComputeNodeState.Running, TimeSpan.FromMinutes(30)).Wait();
+                ArticleHelpers.WaitForNodesToReachStateAsync(batchClient, pool.Id, ComputeNodeState.Running, TimeSpan.FromMinutes(2)).Wait();
 
                 Stopwatch stopwatch = new Stopwatch();
                 stopwatch.Start();
 
                 // Print out task assignment information.
                 Console.WriteLine();
+                Console.WriteLine("Current task state:");
                 PrintNodeTasks(batchClient, pool.Id);
                 Console.WriteLine();
 
@@ -100,7 +106,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
                 Console.WriteLine();
                 batchClient.Utilities.CreateTaskStateMonitor().WaitAll(job.ListTasks(),
                                                                    TaskState.Completed,
-                                                                   TimeSpan.FromMinutes(1));
+                                                                   longTaskDurationLimit);
 
                 stopwatch.Stop();
 
@@ -133,18 +139,25 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
                     Console.WriteLine("\t{0}: {1}", task.Id, task.CommandLine);
                 }
 
-                // Get a collection of the uncompleted tasks which may exist if the TaskMonitor timeout is hit
-                List<CloudTask> unCompletedTasks = allTasks
+                // Get a collection of the uncompleted tasks which may exist if the TaskMonitor timeout was hit
+                List<CloudTask> uncompletedTasks = allTasks
                                                    .Where(t => t.State != TaskState.Completed)
                                                    .ToList();
 
-                // Print the list of uncompleted tasks
+                // Print a list of uncompleted tasks, if any
                 Console.WriteLine();
                 Console.WriteLine("Uncompleted tasks:");
                 Console.WriteLine();
-                foreach (CloudTask task in unCompletedTasks)
+                if (uncompletedTasks.Any())
                 {
-                    Console.WriteLine("\t{0}: {1}", task.Id, task.CommandLine);
+                    foreach (CloudTask task in uncompletedTasks)
+                    {
+                        Console.WriteLine("\t{0}: {1}", task.Id, task.CommandLine);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("\t<none>");
                 }
 
                 // Print some summary information
@@ -202,130 +215,6 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
         }
 
         /// <summary>
-        /// Creates a CloudJob in the specified pool if a job with the specified ID is not found
-        /// in the pool, otherwise returns the existing job.
-        /// </summary>
-        /// <param name="batchClient">A fully initialized <see cref="BatchClient"/>.</param>
-        /// <param name="poolId">The ID of the CloudPool in which the job should be created.</param>
-        /// <param name="jobId">The ID of the CloudJob.</param>
-        /// <returns>A bound CloudJob.</returns>
-        private static CloudJob CreateJob(BatchClient batchClient, string poolId, string jobId)
-        {
-            CloudJob job = GetJobIfExist(batchClient, jobId);
-            if (job == null)
-            {
-                Console.WriteLine("Job {0} not found, creating...", jobId);
-
-                CloudJob unboundJob = batchClient.JobOperations.CreateJob(jobId, new PoolInformation() { PoolId = poolId });
-                unboundJob.Commit();
-
-                job = batchClient.JobOperations.GetJob(jobId);
-            }
-
-            // Return the bound version of the job with all of its properties populated
-            return job;
-        }
-
-        /// <summary>
-        /// Returns an existing <see cref="CloudJob"/> if found in the Batch account.
-        /// </summary>
-        /// <param name="batchClient">A fully initialized <see cref="BatchClient"/>.</param>
-        /// <param name="jobId">The <see cref="CloudJob.Id"/> of the desired pool.</param>
-        /// <returns>A bound <see cref="CloudJob"/>, or <c>null</c> if the specified <see cref="CloudJob"/> does not exist.</returns>
-        private static CloudJob GetJobIfExist(BatchClient batchClient, string jobId)
-        {
-            Console.WriteLine("Checking for existing job {0}...", jobId);
-
-            // Construct a detail level with a filter clause that specifies the job
-            ODATADetailLevel detail = new ODATADetailLevel(filterClause: string.Format("id eq '{0}'", jobId));
-
-            foreach (CloudJob job in batchClient.JobOperations.ListJobs(detailLevel: detail))
-            {
-                Console.WriteLine("Existing job {0} found.", jobId);
-                return job;
-            }
-
-            // No existing job found
-            return null;
-        }
-
-        /// <summary>
-        /// Asynchronous method that delays execution until the specified pool reaches the specified state.
-        /// </summary>
-        /// <param name="client">A fully intitialized <see cref="BatchClient"/>.</param>
-        /// <param name="poolId">The ID of the pool to monitor for the specified <see cref="AllocationState"/>.</param>
-        /// <param name="targetAllocationState">The allocation state to monitor.</param>
-        /// <param name="timeout">The maximum time (in seconds) to wait for the pool to reach the specified state.</param>
-        /// <returns></returns>
-        private static async Task WaitForPoolToReachStateAsync(BatchClient client, string poolId, AllocationState targetAllocationState, TimeSpan timeout)
-        {
-            Console.WriteLine("Waiting for pool {0} to reach allocation state {1}", poolId, targetAllocationState);
-
-            DateTime startTime = DateTime.UtcNow;
-            DateTime timeoutAfterThisTimeUtc = startTime.Add(timeout);
-
-            ODATADetailLevel detail = new ODATADetailLevel(selectClause: "id,allocationState");
-            CloudPool pool = await client.PoolOperations.GetPoolAsync(poolId, detail);
-
-            while (pool.AllocationState != targetAllocationState)
-            {
-                Console.Write(".");
-
-                await Task.Delay(TimeSpan.FromSeconds(10));
-                await pool.RefreshAsync(detail);
-
-                if (DateTime.UtcNow > timeoutAfterThisTimeUtc)
-                {
-                    Console.WriteLine();
-                    Console.WriteLine("Timed out waiting for pool {0} to reach state {1}", poolId, targetAllocationState);
-
-                    return;
-                }
-            }
-
-            Console.WriteLine();
-        }
-
-        /// <summary>
-        /// Asynchronous method that delays execution until the nodes within the specified pool reach the specified state.
-        /// </summary>
-        /// <param name="client">A fully intitialized <see cref="BatchClient"/>.</param>
-        /// <param name="poolId">The ID of the pool containing the nodes to monitor.</param>
-        /// <param name="targetNodeState">The node state to monitor.</param>
-        /// <param name="timeout">The maximum time (in seconds) to wait for the nodes to reach the specified state.</param>
-        /// <returns></returns>
-        private static async Task WaitForNodesToReachStateAsync(BatchClient client, string poolId, ComputeNodeState targetNodeState, TimeSpan timeout)
-        {
-            Console.WriteLine("Waiting for nodes to reach state {0}", targetNodeState);
-
-            DateTime startTime = DateTime.UtcNow;
-            DateTime timeoutAfterThisTimeUtc = startTime.Add(timeout);
-
-            CloudPool pool = await client.PoolOperations.GetPoolAsync(poolId);
-            
-            ODATADetailLevel detail = new ODATADetailLevel(selectClause: "id,state");
-            IEnumerable<ComputeNode> computeNodes = pool.ListComputeNodes(detail);
-
-            while (computeNodes.Any(computeNode => computeNode.State != targetNodeState))
-            {
-                Console.Write(".");
-                
-                await Task.Delay(TimeSpan.FromSeconds(10));
-                computeNodes = pool.ListComputeNodes(detail).ToList();
-
-                if (DateTime.UtcNow > timeoutAfterThisTimeUtc)
-                {
-                    Console.WriteLine();
-                    Console.WriteLine("Timed out waiting for compute nodes in pool {0} to reach state {1}", poolId, targetNodeState.ToString());
-
-                    return;
-                }
-            }
-
-            Console.WriteLine();
-        }
-
-        /// <summary>
         /// Prints task information to the console for each of the nodes in the specified pool.
         /// </summary>
         /// <param name="poolId">The ID of the <see cref="CloudPool"/> containing the nodes whose task information
@@ -337,6 +226,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
             // Obtain and print the task information for each of the compute nodes in the pool.
             foreach (ComputeNode node in batchClient.PoolOperations.ListComputeNodes(poolId, nodeDetail))
             {
+                Console.WriteLine();
                 Console.WriteLine(node.Id + " tasks:");
 
                 if (node.RecentTasks != null && node.RecentTasks.Any())

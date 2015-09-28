@@ -295,5 +295,28 @@ namespace Microsoft.Azure.Batch.Samples.Common
         {
             stringBuilder.AppendFormat("{0} = {1}", settingName, settingValue).AppendLine();
         }
+
+        /// <summary>
+        /// Returns an existing <see cref="CloudJob"/> if found in the Batch account.
+        /// </summary>
+        /// <param name="batchClient">A fully initialized <see cref="BatchClient"/>.</param>
+        /// <param name="jobId">The <see cref="CloudJob.Id"/> of the desired pool.</param>
+        /// <returns>A bound <see cref="CloudJob"/>, or <c>null</c> if the specified <see cref="CloudJob"/> does not exist.</returns>
+        public static CloudJob GetJobIfExist(BatchClient batchClient, string jobId)
+        {
+            Console.WriteLine("Checking for existing job {0}...", jobId);
+
+            // Construct a detail level with a filter clause that specifies the job ID
+            ODATADetailLevel detail = new ODATADetailLevel(filterClause: string.Format("id eq '{0}'", jobId));
+
+            foreach (CloudJob job in batchClient.JobOperations.ListJobs(detailLevel: detail))
+            {
+                Console.WriteLine("Existing job {0} found.", jobId);
+                return job;
+            }
+
+            // No existing job found
+            return null;
+        }
     }
 }
