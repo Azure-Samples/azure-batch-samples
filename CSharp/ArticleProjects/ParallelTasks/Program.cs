@@ -54,7 +54,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
             using (BatchClient batchClient = BatchClient.Open(cred))
             {
                 // Create a CloudPool, or obtain an existing pool with the specified ID
-                CreatePool(batchClient,
+                CreatePoolAsync(batchClient,
                            poolId,
                            nodeSize,
                            nodeCount,
@@ -197,7 +197,8 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
         /// <param name="nodeSize">The size of the nodes within the pool.</param>
         /// <param name="nodeCount">The number of nodes to create within the pool.</param>
         /// <param name="maxTasksPerNode">The maximum number of tasks to run concurrently on each node.</param>
-        private async static Task CreatePool(BatchClient batchClient, string poolId, string nodeSize, int nodeCount, int maxTasksPerNode)
+        /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
+        private async static Task CreatePoolAsync(BatchClient batchClient, string poolId, string nodeSize, int nodeCount, int maxTasksPerNode)
         {
             // Create and configure an unbound pool with the specified ID
             CloudPool pool = batchClient.PoolOperations.CreatePool(poolId: poolId,

@@ -302,21 +302,16 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// <param name="batchClient">A fully initialized <see cref="BatchClient"/>.</param>
         /// <param name="jobId">The <see cref="CloudJob.Id"/> of the desired pool.</param>
         /// <returns>A bound <see cref="CloudJob"/>, or <c>null</c> if the specified <see cref="CloudJob"/> does not exist.</returns>
-        public static CloudJob GetJobIfExist(BatchClient batchClient, string jobId)
+        public static async Task<CloudJob> GetJobIfExistAsync(BatchClient batchClient, string jobId)
         {
             Console.WriteLine("Checking for existing job {0}...", jobId);
 
-            // Construct a detail level with a filter clause that specifies the job ID
+            // Construct a detail level with a filter clause that specifies the job ID so that only
+            // a single CloudJob is returned by the Batch service (if that job exists)
             ODATADetailLevel detail = new ODATADetailLevel(filterClause: string.Format("id eq '{0}'", jobId));
-
-            foreach (CloudJob job in batchClient.JobOperations.ListJobs(detailLevel: detail))
-            {
-                Console.WriteLine("Existing job {0} found.", jobId);
-                return job;
-            }
-
-            // No existing job found
-            return null;
+            List<CloudJob> jobs = await batchClient.JobOperations.ListJobs(detailLevel: detail).ToListAsync();
+            
+            return jobs.FirstOrDefault();
         }
     }
 }

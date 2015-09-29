@@ -24,7 +24,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// <returns>A bound version of the newly created CloudJob.</returns>
         public static async Task<CloudJob> CreateJobAsync(BatchClient batchClient, string poolId, string jobId)
         {
-            CloudJob job = SampleHelpers.GetJobIfExist(batchClient, jobId);
+            CloudJob job = await SampleHelpers.GetJobIfExistAsync(batchClient, jobId);
 
             if (job == null)
             {
@@ -47,7 +47,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// <param name="poolId">The ID of the pool to monitor for the specified <see cref="AllocationState"/>.</param>
         /// <param name="targetAllocationState">The allocation state to monitor.</param>
         /// <param name="timeout">The maximum time to wait for the pool to reach the specified state.</param>
-        /// <returns></returns>
+        /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
         public static async Task WaitForPoolToReachStateAsync(BatchClient client, string poolId, AllocationState targetAllocationState, TimeSpan timeout)
         {
             Console.WriteLine("Waiting for pool {0} to reach allocation state {1}", poolId, targetAllocationState);
@@ -84,7 +84,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// <param name="poolId">The ID of the pool containing the nodes to monitor.</param>
         /// <param name="targetNodeState">The node state to monitor.</param>
         /// <param name="timeout">The maximum time to wait for the nodes to reach the specified state.</param>
-        /// <returns></returns>
+        /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
         public static async Task WaitForNodesToReachStateAsync(BatchClient client, string poolId, ComputeNodeState targetNodeState, TimeSpan timeout)
         {
             Console.WriteLine("Waiting for nodes to reach state {0}", targetNodeState);
