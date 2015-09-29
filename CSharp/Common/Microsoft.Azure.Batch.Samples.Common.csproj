@@ -96,6 +96,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AccountSettings.cs" />
+    <Compile Include="ArticleHelpers.cs" />
     <Compile Include="GettingStartedCommon.cs" />
     <Compile Include="SampleHelpers.cs" />
     <Compile Include="AccountSettings.Designer.cs">
