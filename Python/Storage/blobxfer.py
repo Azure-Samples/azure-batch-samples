@@ -66,7 +66,9 @@ import argparse
 import base64
 import errno
 import hashlib
+import mimetypes
 import os
+
 # pylint: disable=F0401
 try:
     import queue
@@ -304,7 +306,8 @@ class SasBlobService(object):
 
     def put_blob(
             self, container_name, blob_name, blob, x_ms_blob_type,
-            x_ms_blob_content_md5, x_ms_blob_content_length):
+            x_ms_blob_content_type, x_ms_blob_content_md5,
+            x_ms_blob_content_length):
         """Put blob for initializing page blobs
         Parameters:
             container_name - container name
@@ -312,6 +315,7 @@ class SasBlobService(object):
             blob - should be None for PageBlob (unused)
             x_ms_blob_type - should be 'PageBlob' or 'BlockBlob'
             x_ms_blob_content_md5 - blob MD5 hash
+            x_ms_blob_content_type - content-type of blob
             x_ms_blob_content_length - content length aligned to
                 512-byte boundary if PageBlob
         Returns:
@@ -329,6 +333,8 @@ class SasBlobService(object):
                 x_ms_blob_content_length)
         if x_ms_blob_content_md5 is not None:
             reqheaders['x-ms-blob-content-md5'] = x_ms_blob_content_md5
+        if x_ms_blob_content_type is not None:
+            reqheaders['x-ms-blob-content-type'] = x_ms_blob_content_type
         response = azure_request(
             requests.put, url=url, headers=reqheaders, timeout=self.timeout)
         response.raise_for_status()
@@ -401,7 +407,7 @@ class SasBlobService(object):
 
     def put_block_list(
             self, container_name, blob_name, block_list,
-            x_ms_blob_content_md5):
+            x_ms_blob_content_type, x_ms_blob_content_md5):
         """Put block list for blob
         Parameters:
             container_name - container name
@@ -417,6 +423,8 @@ class SasBlobService(object):
             blobep=self.blobep, container_name=container_name,
             blob_name=blob_name, saskey=self.saskey)
         reqheaders = {'x-ms-blob-content-md5': x_ms_blob_content_md5}
+        if x_ms_blob_content_type is not None:
+            reqheaders['x-ms-blob-content-type'] = x_ms_blob_content_type
         reqparams = {'comp': 'blocklist'}
         body = ['<?xml version="1.0" encoding="utf-8"?><BlockList>']
         for block in block_list:
@@ -547,7 +555,8 @@ class BlobChunkWorker(threading.Thread):
                 self.blob_service.put_blob, container_name=container,
                 blob_name=remoteresource, blob=None, x_ms_blob_type=blob_type,
                 x_ms_blob_content_md5=contentmd5,
-                x_ms_blob_content_length=bytestoxfer)
+                x_ms_blob_content_length=bytestoxfer,
+                x_ms_blob_content_type=get_mime_type(localresource))
             return
         # read the file at specified offset, must take lock
         data = None
@@ -723,6 +732,19 @@ def compute_md5_for_file_asbase64(filename, pagealign=False, blocksize=65536):
             return base64.b64encode(hasher.digest())
         else:
             return str(base64.b64encode(hasher.digest()), 'ascii')
+
+
+def get_mime_type(filename):
+    """Guess the type of a file based on its filename
+    Parameters:
+        filename - filename to guess the content-type
+    Returns:
+        A string of the form 'type/subtype',
+        usable for a MIME content-type header
+    Raises:
+        Nothing
+    """
+    return (mimetypes.guess_type(filename)[0] or 'application/octet-stream')
 
 
 def compute_md5_for_data_asbase64(data):
@@ -1211,6 +1233,7 @@ def main():
                     blob_service.put_blob(
                         container_name=args.container, blob_name=filemap[key],
                         blob=None, x_ms_blob_type='PageBlob',
+                        x_ms_blob_content_type=None,
                         x_ms_blob_content_md5=None,
                         x_ms_blob_content_length=page_align_content_length(
                             filesizes[key]))
@@ -1322,6 +1345,8 @@ def main():
                             container_name=args.container,
                             blob_name=filemap[localresource],
                             block_list=blockids[localresource],
+                            x_ms_blob_content_type=get_mime_type(
+                                localresource),
                             x_ms_blob_content_md5=md5map[localresource])
         done_ops += 1
         progress_bar(

@@ -230,14 +230,14 @@ def test_sasblobservice_putblocklist():
         m.put('mock://blobepcontainer/blob?saskey', status_code=201)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         try:
-            sbs.put_block_list('container', 'blob', ['1', '2'], 'md5')
+            sbs.put_block_list('container', 'blob', ['1', '2'], None, 'md5')
         except Exception:
             pytest.fail('unexpected Exception raised')
 
         m.put('mock://blobepcontainer/blob?saskey', text='', status_code=200)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         with pytest.raises(IOError):
-            sbs.put_block_list('container', 'blob', ['1', '2'], 'md5')
+            sbs.put_block_list('container', 'blob', ['1', '2'], None, 'md5')
 
 
 def test_sasblobservice_setblobproperties():
@@ -268,7 +268,7 @@ def test_sasblobservice_putblob():
         m.put('mock://blobepcontainer/blob?saskey', status_code=201)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         try:
-            sbs.put_blob('container', 'blob', None, 'PageBlob', 'md5', 4)
+            sbs.put_blob('container', 'blob', None, 'PageBlob', None, 'md5', 4)
         except Exception:
             pytest.fail('unexpected Exception raised')
 
@@ -276,12 +276,12 @@ def test_sasblobservice_putblob():
               status_code=200)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         with pytest.raises(IOError):
-            sbs.put_blob('container', 'blob', None, 'PageBlob', 'md5', 4)
+            sbs.put_blob('container', 'blob', None, 'PageBlob', None, 'md5', 4)
 
         m.put('mock://blobepcontainer/blob?saskey', content=b'',
               status_code=201)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
-        sbs.put_blob('container', 'blob', None, 'BlockBlob', 'md5', 0)
+        sbs.put_blob('container', 'blob', None, 'BlockBlob', None, 'md5', 0)
 
 
 def test_blobchunkworker_run(tmpdir):
