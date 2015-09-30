@@ -56,6 +56,36 @@ namespace Microsoft.Azure.Batch.Samples.Common
             Console.WriteLine("============");
         }
 
+        /// <summary>
+        /// Prints task information to the console for each of the nodes in the specified pool.
+        /// </summary>
+        /// <param name="poolId">The ID of the <see cref="CloudPool"/> containing the nodes whose task information should be printed to the console.</param>
+        /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
+        public static async Task PrintNodeTasksAsync(BatchClient batchClient, string poolId)
+        {
+            ODATADetailLevel nodeDetail = new ODATADetailLevel(selectClause: "id,recentTasks");
+            IPagedEnumerable<ComputeNode> nodes = batchClient.PoolOperations.ListComputeNodes(poolId, nodeDetail);
+            
+            await nodes.ForEachAsync(node =>
+            {
+                Console.WriteLine();
+                Console.WriteLine(node.Id + " tasks:");
+
+                if (node.RecentTasks != null && node.RecentTasks.Any())
+                {
+                    foreach (TaskInformation task in node.RecentTasks)
+                    {
+                        Console.WriteLine("\t{0}: {1}", task.TaskId, task.TaskState);
+                    }
+                }
+                else
+                {
+                    // No tasks found for the node
+                    Console.WriteLine("\tNone");
+                }
+            });
+        }
+
         public static string CreateJobId(string prefix)
         {
             // a job is uniquely identified by its ID so your account name along with a timestamp is added as suffix
