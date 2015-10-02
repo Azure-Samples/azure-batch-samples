@@ -474,7 +474,12 @@ def _mock_blobservice_create_container(timeout=None, container_name=None,
 
 
 @patch('blobxfer.parseargs')
-def test_main1(patched_parseargs, tmpdir):
+@patch('azure.servicemanagement.ServiceManagementService.'
+       'get_storage_account_keys')
+@patch('azure.servicemanagement.ServiceManagementService.'
+       'get_storage_account_properties')
+def test_main1(
+        patched_sms_saprops, patched_sms_sakeys, patched_parseargs, tmpdir):
     lpath = str(tmpdir.join('test.tmp'))
     args = MagicMock()
     args.numworkers = 0
@@ -572,12 +577,35 @@ def test_main1(patched_parseargs, tmpdir):
         blobxfer.main()
 
     args.saskey = None
+    with pytest.raises(ValueError):
+        blobxfer.main()
     args.managementcert = '0'
+    args.managementep = ''
     args.subscriptionid = '0'
     with pytest.raises(ValueError):
         blobxfer.main()
+    args.managementcert = 'test.pem'
+    with pytest.raises(ValueError):
+        blobxfer.main()
+    args.managementep = 'mep.mep'
+    ssk = MagicMock()
+    ssk.storage_service_keys = MagicMock()
+    ssk.storage_service_keys.primary = ''
+    patched_sms_sakeys.return_value = ssk
+    ssp = MagicMock()
+    ssp.storage_service_properties = MagicMock()
+    ssp.storage_service_properties.endpoints = ['blobep']
+    patched_sms_saprops.return_value = ssp
+    with pytest.raises(ValueError):
+        blobxfer.main()
+    ssk.storage_service_keys.primary = 'key1'
+    args.storageaccountkey = None
+    with pytest.raises(Exception):
+        blobxfer.main()
 
+    args.storageaccountkey = None
     args.managementcert = None
+    args.managementep = None
     args.subscriptionid = None
     args.saskey = 'saskey'
     with open(lpath, 'wt') as f:
@@ -611,6 +639,10 @@ def test_main1(patched_parseargs, tmpdir):
         args.progressbar = True
         args.download = True
         args.upload = False
+        args.remoteresource = None
+        with pytest.raises(ValueError):
+            blobxfer.main()
+
         args.remoteresource = 'blob'
         args.localresource = str(tmpdir)
         m.head('https://blobep.blobep/container/blob?saskey', headers={

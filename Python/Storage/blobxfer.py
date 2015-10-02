@@ -808,10 +808,13 @@ def get_blob_listing(blob_service, args):
     marker = None
     blobdict = {}
     while True:
-        result = azure_request(
-            blob_service.list_blobs, timeout=args.timeout,
-            container_name=args.container, marker=marker,
-            maxresults=_MAX_LISTBLOBS_RESULTS)
+        try:
+            result = azure_request(
+                blob_service.list_blobs, timeout=args.timeout,
+                container_name=args.container, marker=marker,
+                maxresults=_MAX_LISTBLOBS_RESULTS)
+        except azure.common.AzureMissingResourceHttpError:
+            break
         for blob in result:
             blobdict[blob.name] = [
                 blob.properties.content_length, blob.properties.content_md5]
@@ -1077,8 +1080,6 @@ def main():
         blobep = storage_acct.storage_service_properties.endpoints[0]
     else:
         blobep = 'https://{}.{}/'.format(args.storageaccount, args.blobep)
-    if blobep is None or len(blobep) < 1:
-        raise ValueError('invalid blob endpoint')
 
     # create master blob service
     blob_service = None
@@ -1244,11 +1245,13 @@ def main():
             blobdict = get_blob_listing(blob_service, args)
         else:
             blobdict = {args.remoteresource: [None, None]}
-        print('generating local directory structure and pre-allocating space')
-        # make the localresource directory
-        created_dirs = set()
-        create_dir_ifnotexists(args.localresource)
-        created_dirs.add(args.localresource)
+        if len(blobdict) > 0:
+            print('generating local directory structure and '
+                  'pre-allocating space')
+            # make the localresource directory
+            created_dirs = set()
+            create_dir_ifnotexists(args.localresource)
+            created_dirs.add(args.localresource)
         # generate xferspec for all blobs
         for blob in blobdict:
             if args.collate is not None:
@@ -1271,7 +1274,8 @@ def main():
                 filemap[localfile] = localfile + '.blobtmp'
                 allfilesize = allfilesize + filesize
                 nstorageops = nstorageops + ops
-        del created_dirs
+        if len(blobdict) > 0:
+            del created_dirs
 
     if nstorageops == 0:
         print('detected no actions needed to be taken, exiting...')
