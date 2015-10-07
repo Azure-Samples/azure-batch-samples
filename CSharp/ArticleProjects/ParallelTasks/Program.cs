@@ -21,11 +21,11 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
     {
         public static void Main(string[] args)
         {
-            Task asyncMain = MainAsync(args);
-
             try
             {
-                asyncMain.Wait();
+                // Call the asynchronous version of the Main() method. This is done so that we can await various
+                // calls to async methods within the "Main" method of this console application.
+                Task.Run(() => MainAsync(args)).GetAwaiter().GetResult();
             }
             catch (AggregateException ae)
             {
@@ -127,7 +127,6 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
 
                 // Print out task assignment information.
                 Console.WriteLine();
-                Console.WriteLine("Current task state:");
                 await GettingStartedCommon.PrintNodeTasksAsync(batchClient, pool.Id);
                 Console.WriteLine();
 
@@ -211,14 +210,14 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
                 string response = Console.ReadLine().ToLower();
                 if (response != "n" && response != "no")
                 {
-                    batchClient.JobOperations.DeleteJob(job.Id);
+                    await batchClient.JobOperations.DeleteJobAsync(job.Id);
                 }
 
                 Console.WriteLine("Delete pool? [yes] no");
                 response = Console.ReadLine();
                 if (response != "n" && response != "no")
                 {
-                    batchClient.PoolOperations.DeletePool(pool.Id);
+                    await batchClient.PoolOperations.DeletePoolAsync(pool.Id);
                 }
             }
         }

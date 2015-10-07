@@ -20,11 +20,11 @@ namespace Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries
     {
         public static void Main(string[] args)
         {
-            Task asyncMain = MainAsync(args);
-
             try
             {
-                asyncMain.Wait();
+                // Call the asynchronous version of the Main() method. This is done so that we can await various
+                // calls to async methods within the "Main" method of this console application.
+                Task.Run(() => MainAsync(args)).GetAwaiter().GetResult();
             }
             catch (AggregateException ae)
             {

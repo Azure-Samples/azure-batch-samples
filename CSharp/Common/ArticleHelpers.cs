@@ -38,9 +38,9 @@ namespace Microsoft.Azure.Batch.Samples.Common
             // tasks are assigned to the next node in the pool
             pool.TaskSchedulingPolicy = new TaskSchedulingPolicy(ComputeNodeFillType.Pack);
 
-            await GettingStartedCommon.CreatePoolIfNotExistAsync(batchClient, pool);
+            await GettingStartedCommon.CreatePoolIfNotExistAsync(batchClient, pool).ConfigureAwait(continueOnCapturedContext: false);
 
-            return await batchClient.PoolOperations.GetPoolAsync(poolId);
+            return await batchClient.PoolOperations.GetPoolAsync(poolId).ConfigureAwait(continueOnCapturedContext: false);
         }
 
         /// <summary>
@@ -53,17 +53,17 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// <returns>A bound version of the newly created CloudJob.</returns>
         public static async Task<CloudJob> CreateJobAsync(BatchClient batchClient, string poolId, string jobId)
         {
-            CloudJob job = await SampleHelpers.GetJobIfExistAsync(batchClient, jobId);
+            CloudJob job = await SampleHelpers.GetJobIfExistAsync(batchClient, jobId).ConfigureAwait(continueOnCapturedContext: false);
 
             if (job == null)
             {
                 Console.WriteLine("Job {0} not found, creating...", jobId);
 
                 CloudJob unboundJob = batchClient.JobOperations.CreateJob(jobId, new PoolInformation() { PoolId = poolId });
-                await unboundJob.CommitAsync();
+                await unboundJob.CommitAsync().ConfigureAwait(continueOnCapturedContext: false);
 
                 // Get the bound version of the job with all of its properties populated
-                job = await batchClient.JobOperations.GetJobAsync(jobId);
+                job = await batchClient.JobOperations.GetJobAsync(jobId).ConfigureAwait(continueOnCapturedContext: false);
             }
 
             return job;
@@ -91,8 +91,8 @@ namespace Microsoft.Azure.Batch.Samples.Common
             {
                 Console.Write(".");
 
-                await Task.Delay(TimeSpan.FromSeconds(10));
-                await pool.RefreshAsync(detail);
+                await Task.Delay(TimeSpan.FromSeconds(10)).ConfigureAwait(continueOnCapturedContext: false);
+                await pool.RefreshAsync(detail).ConfigureAwait(continueOnCapturedContext: false);
 
                 if (DateTime.UtcNow > timeoutAfterThisTimeUtc)
                 {
@@ -121,7 +121,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
             DateTime startTime = DateTime.UtcNow;
             DateTime timeoutAfterThisTimeUtc = startTime.Add(timeout);
 
-            CloudPool pool = await client.PoolOperations.GetPoolAsync(poolId);
+            CloudPool pool = await client.PoolOperations.GetPoolAsync(poolId).ConfigureAwait(continueOnCapturedContext: false);
 
             ODATADetailLevel detail = new ODATADetailLevel(selectClause: "id,state");
             IEnumerable<ComputeNode> computeNodes = pool.ListComputeNodes(detail);
@@ -130,7 +130,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
             {
                 Console.Write(".");
 
-                await Task.Delay(TimeSpan.FromSeconds(10));
+                await Task.Delay(TimeSpan.FromSeconds(10)).ConfigureAwait(continueOnCapturedContext: false);
                 computeNodes = pool.ListComputeNodes(detail).ToList();
 
                 if (DateTime.UtcNow > timeoutAfterThisTimeUtc)
