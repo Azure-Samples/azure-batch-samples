@@ -1,6 +1,7 @@
 ﻿//Copyright (c) Microsoft Corporation
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using GalaSoft.MvvmLight.Messaging;
 using Microsoft.Azure.BatchExplorer.Helpers;
@@ -60,6 +61,63 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 this.FirePropertyChangedEvent("CommandLine");
             }
         }
+
+        private bool isMultiInstanceTask;
+        public bool IsMultiInstanceTask
+        {
+            get
+            {
+                return this.isMultiInstanceTask;
+            }
+            set
+            {
+                this.isMultiInstanceTask = value;
+                this.FirePropertyChangedEvent("IsMultiInstanceTask");
+            }
+        }
+
+        private string backgroundCommand;
+        public string BackgroundCommand
+        {
+            get
+            {
+                return this.backgroundCommand;
+            }
+            set
+            {
+                this.backgroundCommand = value;
+                this.FirePropertyChangedEvent("BackgroundCommand");
+            }
+        }
+
+        private string instanceNumber;
+        public string InstanceNumber
+        {
+            get
+            {
+                return this.instanceNumber;
+            }
+            set
+            {
+                this.instanceNumber = value;
+                this.FirePropertyChangedEvent("InstanceNumber");
+            }
+        }
+
+        private string commonResourceFiles;
+        public string CommonResourceFiles
+        {
+            get
+            {
+                return this.commonResourceFiles;
+            }
+            set
+            {
+                this.commonResourceFiles = value;
+                this.FirePropertyChangedEvent("CommonResourceFiles");
+            }
+        }
+
         #endregion
 
         #region Commands
@@ -103,8 +161,16 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                     {
                         JobId = this.jobId,
                         CommandLine = this.CommandLine,
-                        TaskId = this.TaskId
+                        TaskId = this.TaskId,
+                        IsMultiInstanceTask = this.IsMultiInstanceTask,
                     };
+
+                    if (this.isMultiInstanceTask)
+                    {
+                        options.BackgroundCommand = this.BackgroundCommand;
+                        options.InstanceNumber = Int32.Parse(this.InstanceNumber);
+                        options.CommonResourceFiles = ResourceFileStringParser.Parse(this.commonResourceFiles).Files.ToList();
+                    }
 
                     await this.batchService.AddTaskAsync(options);
 
@@ -130,6 +196,27 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             {
                 Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Invalid values for Command Line"));
                 return false;
+            }
+
+            if (this.IsMultiInstanceTask)
+            {
+                if (string.IsNullOrEmpty(this.InstanceNumber))
+                {
+                    Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Invalid values for Instance Number"));
+                }
+
+                int i;
+                if (!Int32.TryParse(this.InstanceNumber, out i))
+                {
+                    Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Instance Number must be an integer"));
+                }
+
+                var resourceFiles = ResourceFileStringParser.Parse(this.CommonResourceFiles);
+                if (resourceFiles.HasErrors)
+                {
+                    Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage(String.Join(Environment.NewLine, resourceFiles.Errors)));
+                    return false;
+                }
             }
 
             return true;

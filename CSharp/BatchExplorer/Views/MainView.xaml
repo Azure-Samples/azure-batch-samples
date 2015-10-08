@@ -461,6 +461,17 @@
                                 </DataGrid.Columns>
                             </DataGrid>
                         </TabItem>
+                        <TabItem Header="Subtasks">
+                            <DataGrid ItemsSource="{Binding Path=SelectedJob.SelectedTask.Subtasks}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Id" Binding="{Binding Id}"/>
+                                    <DataGridTextColumn Header="State" Binding="{Binding State}"/>
+                                    <DataGridTextColumn Header="Node Name" Binding="{Binding NodeId}"/>
+                                    <DataGridTextColumn Header="Exit Code" Binding="{Binding ExitCode}"/>
+                                    <DataGridTextColumn Header="Task Root Directory" Binding="{Binding TaskRootDir}"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </TabItem>                        
                         <TabItem Header="Outputs">
                             <Grid>
                                 <DataGrid ItemsSource="{Binding Path=SelectedJob.SelectedTask.OutputFiles}"
@@ -624,6 +635,7 @@
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Job Id" Binding="{Binding JobId}"/>
                                     <DataGridTextColumn Header="Task Id" Binding="{Binding TaskId}"/>
+                                    <DataGridTextColumn Header="Subtask Id" Binding="{Binding SubtaskId, TargetNullValue=''}"/>
                                     <DataGridTextColumn Header="Task State" Binding="{Binding TaskState}"/>
                                     <DataGridTextColumn Header="Task URL" Binding="{Binding TaskUrl}"/>
                                     <DataGridTextColumn Header="Job Schedule Id" Binding="{Binding JobScheduleId}"/>
