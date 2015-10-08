@@ -249,6 +249,12 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
 
             foreach (Account account in accounts)
             {
+                if (String.IsNullOrEmpty(account.BatchServiceUrl) || String.IsNullOrEmpty(account.AccountName))
+                {
+                    // Skip the bad setting of old accounts
+                    continue;
+                }
+
                 //The new format requires the account name to be in the Url
                 if (!account.BatchServiceUrl.Contains(account.AccountName))
                 {

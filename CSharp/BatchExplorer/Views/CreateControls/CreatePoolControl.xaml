@@ -239,7 +239,7 @@
             Grid.Row="18"
             Grid.Column="1"
             Margin="4"
-            IsChecked="{Binding UseCommunication}"/>
+            IsChecked="{Binding InterComputeNodeCommunicationEnabled}"/>
 
         <Separator Grid.Row="19" Grid.ColumnSpan="2"/>
 
