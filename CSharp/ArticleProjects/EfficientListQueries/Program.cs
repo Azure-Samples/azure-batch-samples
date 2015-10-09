@@ -24,19 +24,17 @@ namespace Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries
             {
                 // Call the asynchronous version of the Main() method. This is done so that we can await various
                 // calls to async methods within the "Main" method of this console application.
-                Task.Run(() => MainAsync(args)).GetAwaiter().GetResult();
+                // Note: Calling Task.Wait() above async can deadlock and should be avoided except in very rare
+                // cases (such as when calling an async method from a console application’s Main() method).
+                MainAsync(args).Wait();
             }
             catch (AggregateException ae)
             {
                 Console.WriteLine();
-                Console.WriteLine("One or more exceptions occurred:");
+                Console.WriteLine("One or more exceptions occurred.");
                 Console.WriteLine();
 
                 SampleHelpers.PrintAggregateException(ae.Flatten());
-            }
-            catch (Exception)
-            {
-                throw;
             }
             finally
             {

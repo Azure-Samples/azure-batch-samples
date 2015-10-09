@@ -25,7 +25,9 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
             {
                 // Call the asynchronous version of the Main() method. This is done so that we can await various
                 // calls to async methods within the "Main" method of this console application.
-                Task.Run(() => MainAsync(args)).GetAwaiter().GetResult();
+                // Note: Calling Task.Wait() above async can deadlock and should be avoided except in very rare
+                // cases (such as when calling an async method from a console application’s Main() method).
+                MainAsync(args).Wait();
             }
             catch (AggregateException ae)
             {
@@ -34,10 +36,6 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
                 Console.WriteLine();
 
                 SampleHelpers.PrintAggregateException(ae.Flatten());
-            }
-            catch (Exception)
-            {
-                throw;
             }
             finally
             {
@@ -54,7 +52,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
             const int nodeCount       = 4;
             const int maxTasksPerNode = 4;
             const int taskCount       = 32;
-            
+
             // Ensure there are enough tasks to help avoid hitting some timeout conditions below
             const int minimumTaskCount = nodeCount * maxTasksPerNode * 2;
             if (taskCount < minimumTaskCount)
@@ -102,7 +100,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
                 for (int i = 1; i <= taskCount; i++)
                 {
                     string taskId = "task" + i.ToString().PadLeft(3, '0');
-                    string taskCommandLine = "ping -n " + rand.Next(minPings, maxPings).ToString() + " localhost";
+                    string taskCommandLine = "ping -n " + rand.Next(minPings, maxPings + 1).ToString() + " localhost";
                     CloudTask task = new CloudTask(taskId, taskCommandLine);
                     tasks.Add(task);
                 }
@@ -113,15 +111,15 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
                 // is the demonstration of running tasks in parallel on multiple compute nodes, we wait for all compute nodes to 
                 // complete initialization and reach the Idle state in order to maximize the number of compute nodes available for 
                 // parallelization.
-                ArticleHelpers.WaitForPoolToReachStateAsync(batchClient, pool.Id, AllocationState.Steady, longTaskDurationLimit).Wait();
-                ArticleHelpers.WaitForNodesToReachStateAsync(batchClient, pool.Id, ComputeNodeState.Idle, longTaskDurationLimit).Wait();
+                await ArticleHelpers.WaitForPoolToReachStateAsync(batchClient, pool.Id, AllocationState.Steady, longTaskDurationLimit);
+                await ArticleHelpers.WaitForNodesToReachStateAsync(batchClient, pool.Id, ComputeNodeState.Idle, longTaskDurationLimit);
 
                 // Add the tasks in one API call as opposed to a separate AddTask call for each. Bulk task submission
                 // helps to ensure efficient underlying API calls to the Batch service.
                 batchClient.JobOperations.AddTask(job.Id, tasks);
 
                 // Pause again to wait until *all* nodes are running tasks
-                ArticleHelpers.WaitForNodesToReachStateAsync(batchClient, pool.Id, ComputeNodeState.Running, TimeSpan.FromMinutes(2)).Wait();
+                await ArticleHelpers.WaitForNodesToReachStateAsync(batchClient, pool.Id, ComputeNodeState.Running, TimeSpan.FromMinutes(2));
 
                 Stopwatch stopwatch = Stopwatch.StartNew();
 
