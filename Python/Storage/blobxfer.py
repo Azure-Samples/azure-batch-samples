@@ -52,10 +52,19 @@ Notes:
   data if the source is not page boundary byte-aligned. This enables these
   page blobs or files to be skipped during subsequent download or upload,
   if the skiponmatch parameter is enabled.
+- Encryption is only applied to block blobs. Encrypted page have minimal value
+  stored in Azure. Thus, if uploading encrypted VHDs for storage in Azure, do
+  not enable either of the options: pageblob or autovhd.
+- If utilizing encryption, the pre-encrypted MD5 is computed and stored on
+  the server. This allows rsync-style synchronization to work in the presence
+  of encryption. Block-level MD5 is applied transparently.
+- Downloading encrypted blobs will not fully preallocate each file due to
+  padding. Script failure can result during download if there is insufficient
+  disk space.
 
 TODO list:
 - remove dependency on azure python packages
-- convert from synchronous multithreading to asyncio/trollius
+- convert from threading to multiprocessing
 """
 
 # pylint: disable=R0913,R0914
@@ -67,8 +76,8 @@ import base64
 import errno
 import hashlib
 import mimetypes
+import multiprocessing
 import os
-
 # pylint: disable=F0401
 try:
     import queue
@@ -96,6 +105,16 @@ try:
 except ImportError:  # pragma: no cover
     pass
 try:
+    import Crypto.Cipher.AES
+    import Crypto.Cipher.PKCS1_OAEP
+    import Crypto.Hash.HMAC
+    import Crypto.Hash.SHA256
+    import Crypto.PublicKey.RSA
+    import Crypto.Random
+    import Crypto.Signature.PKCS1_v1_5
+except ImportError:  # pragma: no cover
+    pass
+try:
     import requests
 except ImportError:  # pragma: no cover
     pass
@@ -113,15 +132,35 @@ except NameError:  # pragma: no cover
 # pylint: enable=W0622,C0103
 
 # global defines
-_SCRIPT_VERSION = '0.9.9.5'
-_DEFAULT_MAX_STORAGEACCOUNT_WORKERS = 64
+_SCRIPT_VERSION = '0.9.9.6'
+_PY2 = sys.version_info.major == 2
+_DEFAULT_MAX_STORAGEACCOUNT_WORKERS = multiprocessing.cpu_count() * 5
 _MAX_BLOB_CHUNK_SIZE_BYTES = 4194304
 _EMPTY_MAX_PAGE_SIZE_MD5 = 'tc+p1sj+vWGPkawoQ9UKHA=='
 _MAX_LISTBLOBS_RESULTS = 1000
 _PAGEBLOB_BOUNDARY = 512
 _DEFAULT_BLOB_ENDPOINT = 'blob.core.windows.net'
 _DEFAULT_MANAGEMENT_ENDPOINT = 'management.core.windows.net'
-_PY2 = sys.version_info.major == 2
+# encryption defines
+_AES256_KEYLENGTH_BYTES = Crypto.Cipher.AES.key_size[2]
+_AES256CBC_OVERHEAD_BYTES = (
+    Crypto.Cipher.AES.block_size + Crypto.Hash.SHA256.digest_size)
+_META_ENCRYPTION_BLOCK_CIPHER = 'encryption_block_cipher'
+_META_ENCRYPTION_INTEGRITY_METHOD = \
+    'encryption_integrity_authentication_method'
+_META_ENCRYPTION_BLOCK_STRUCTURE = 'encrypted_block_structure'
+_META_ENCRYPTION_KEY_ENC_SCHEME = 'encrypted_key_encryption_scheme'
+_META_ENCRYPTION_KEY_SIGN_SCHEME = 'encrypted_key_signature_scheme'
+_META_ENCRYPTED_BLOCK_BYTE_OFFSETS = 'encrypted_block_byte_offsets'
+_META_ENCRYPTED_SYM_KEY = 'encrypted_symmetric_key'
+_META_ENCRYPTED_SYM_KEY_SIG = 'encrypted_symmetric_key_signature'
+_META_ENCRYPTED_SIGN_KEY = 'encrypted_signing_key'
+_META_ENCRYPTED_SIGN_KEY_SIG = 'encrypted_signing_key_signature'
+_ENCRYPTION_BLOCK_CIPHER = 'AES256-CBC'
+_ENCRYPTION_INTEGRITY_METHOD = 'HMAC-SHA256'
+_ENCRYPTION_BLOCK_STRUCTURE = 'IV || EncryptedData || Signature'
+_ENCRYPTION_KEY_ENC_SCHEME = 'RSAES-OAEP'
+_ENCRYPTION_KEY_SIGN_SCHEME = 'RSASSA-PKCS1-v1_5'
 
 
 class SasBlobList(object):
@@ -143,13 +182,14 @@ class SasBlobList(object):
         """Accessor"""
         return self.blobs[index]
 
-    def add_blob(self, name, content_length, content_md5, blobtype):
+    def add_blob(self, name, content_length, content_md5, blobtype, mddict):
         """Adds a blob to the list
         Parameters:
             name - blob name
             content_length - content length
             content_md5 - content md5
             blobtype - blob type
+            mddict - metadata dictionary
         Returns:
             Nothing
         Raises:
@@ -157,6 +197,7 @@ class SasBlobList(object):
         """
         obj = type('bloblistobject', (object,), {})
         obj.name = name
+        obj.metadata = mddict
         obj.properties = type('properties', (object,), {})
         obj.properties.content_length = content_length
         if content_md5 is not None and len(content_md5) > 0:
@@ -220,7 +261,11 @@ class SasBlobService(object):
             cl = long(props.find('Content-Length').text)
             md5 = props.find('Content-MD5').text
             bt = props.find('BlobType').text
-            result.add_blob(name, cl, md5, bt)
+            metadata = blob.find('Metadata')
+            mddict = {}
+            for md in metadata:
+                mddict[md.tag] = md.text
+            result.add_blob(name, cl, md5, bt, mddict)
         try:
             result.set_next_marker(root.find('NextMarker').text)
         except Exception:
@@ -229,12 +274,13 @@ class SasBlobService(object):
 
     def list_blobs(
             self, container_name, marker=None,
-            maxresults=_MAX_LISTBLOBS_RESULTS):
+            maxresults=_MAX_LISTBLOBS_RESULTS, include=None):
         """List blobs in container
         Parameters:
             container_name - container name
             marker - marker
             maxresults - max results
+            include - optional datasets to include in response
         Returns:
             List of blobs
         Raises:
@@ -249,6 +295,8 @@ class SasBlobService(object):
             'maxresults': str(maxresults)}
         if marker is not None:
             reqparams['marker'] = marker
+        if include is not None:
+            reqparams['include'] = include
         response = azure_request(
             requests.get, url=url, params=reqparams, timeout=self.timeout)
         response.raise_for_status()
@@ -303,6 +351,36 @@ class SasBlobService(object):
                           'get_blob_properties: {}'.format(
                               response.status_code))
         return response.headers
+
+    def set_blob_metadata(
+            self, container_name, blob_name, x_ms_meta_name_values):
+        """Set blob metadata
+        Parameters:
+            container_name - container name
+            blob_name - name of blob
+            x_ms_meta_name_values - blob metadata dictionary
+        Returns:
+            Nothing
+        Raises:
+            IOError if unexpected status code
+        """
+        if x_ms_meta_name_values is None or len(x_ms_meta_name_values) == 0:
+            return
+        url = '{blobep}{container_name}/{blob_name}{saskey}'.format(
+            blobep=self.blobep, container_name=container_name,
+            blob_name=blob_name, saskey=self.saskey)
+        reqparams = {'comp': 'metadata'}
+        reqheaders = {}
+        for key in x_ms_meta_name_values:
+            reqheaders['x-ms-meta-' + key] = x_ms_meta_name_values[key]
+        response = azure_request(
+            requests.put, url=url, params=reqparams, headers=reqheaders,
+            timeout=self.timeout)
+        response.raise_for_status()
+        if response.status_code != 200:
+            raise IOError(
+                'incorrect status code returned for '
+                'set_blob_metadata: {}'.format(response.status_code))
 
     def put_blob(
             self, container_name, blob_name, blob, x_ms_blob_type,
@@ -493,6 +571,9 @@ class BlobChunkWorker(threading.Thread):
         self.blob_service = blob_service
         self.timeout = args.timeout
         self.xfertoazure = xfertoazure
+        self.rsakey = args.rsakey
+        self.symkey = args.symkey
+        self.signkey = args.signkey
 
     def run(self):
         """Thread code
@@ -504,8 +585,12 @@ class BlobChunkWorker(threading.Thread):
             Nothing
         """
         while True:
-            localresource, container, remoteresource, blockid, \
-                offset, bytestoxfer, flock, filedesc = self._in_queue.get()
+            try:
+                localresource, container, remoteresource, blockid, offset, \
+                    bytestoxfer, decmeta, flock, filedesc = \
+                    self._in_queue.get_nowait()
+            except queue.Empty:
+                break
             try:
                 if self.xfertoazure:
                     # upload block/page
@@ -516,7 +601,7 @@ class BlobChunkWorker(threading.Thread):
                     # download range
                     self.getblobrange(
                         localresource, container, remoteresource, offset,
-                        bytestoxfer, flock, filedesc)
+                        bytestoxfer, decmeta, flock, filedesc)
                 # pylint: disable=W0703
             except Exception as exc:
                 # pylint: enable=W0703
@@ -600,6 +685,9 @@ class BlobChunkWorker(threading.Thread):
                 x_ms_page_write='update', content_md5=contentmd5,
                 timeout=self.timeout)
         else:
+            # encrypt block if required
+            if self.rsakey is not None:
+                data = encrypt_block(self.symkey, self.signkey, data)
             # compute block md5
             contentmd5 = compute_md5_for_data_asbase64(data)
             azure_request(
@@ -610,7 +698,7 @@ class BlobChunkWorker(threading.Thread):
 
     def getblobrange(
             self, localresource, container, remoteresource, offset,
-            bytestoxfer, flock, filedesc):
+            bytestoxfer, decmeta, flock, filedesc):
         """Get a segment of a blob using range offset downloading
         Parameters:
             localresource - name of local resource
@@ -618,6 +706,7 @@ class BlobChunkWorker(threading.Thread):
             remoteresource - name of remote resource
             offset - file offset
             bytestoxfer - number of bytes to xfer
+            decmeta - decryption metadata [symkey, signkey, offset_mod]
             flock - file lock
             filedesc - file handle
         Returns:
@@ -630,16 +719,153 @@ class BlobChunkWorker(threading.Thread):
             self.blob_service.get_blob, timeout=self.timeout,
             container_name=container, blob_name=remoteresource,
             x_ms_range=rangestr)
+        # decrypt block if required
+        if decmeta[0] is not None:
+            blobdata = decrypt_block(decmeta[0], decmeta[1], blobdata)
         with flock:
             closefd = False
             if not filedesc:
                 filedesc = open(localresource, 'r+b')
                 closefd = True
-            filedesc.seek(offset, 0)
+            filedesc.seek(offset - (decmeta[2] or 0), 0)
             filedesc.write(blobdata)
             if closefd:
                 filedesc.close()
         del blobdata
+
+
+def pad_pkcs5(buf):
+    """Appends PKCS5_PADDING to an input buffer
+    Parameters:
+        buf - buffer to add padding
+    Returns:
+        buffer with PKCS5_PADDING
+    Raises:
+        No special exception handling
+    """
+    if _PY2:
+        return buf + (
+            (Crypto.Cipher.AES.block_size -
+             len(buf) % Crypto.Cipher.AES.block_size) *
+            chr(Crypto.Cipher.AES.block_size -
+                len(buf) % Crypto.Cipher.AES.block_size))
+    else:
+        return buf + (
+            (Crypto.Cipher.AES.block_size -
+             len(buf) % Crypto.Cipher.AES.block_size) *
+            bytes([Crypto.Cipher.AES.block_size -
+                   len(buf) % Crypto.Cipher.AES.block_size]))
+
+
+def unpad_pkcs5(buf):
+    """Removes PKCS5_PADDING from a decrypted object
+    Parameters:
+        buf - buffer to remove padding
+    Returns:
+        buffer without PKCS5_PADDING
+    Raises:
+        No special exception handling
+    """
+    if _PY2:
+        return buf[0:-ord(buf[-1])]
+    else:
+        return buf[0:-buf[-1]]
+
+
+def generate_aes256_keys():
+    """Generate AES256 symmetric key and signing key
+    Parameters:
+        None
+    Returns:
+        Tuple of symmetric key and signing key
+    Raises:
+        Nothing
+    """
+    rand = Crypto.Random.new()
+    symkey = rand.read(_AES256_KEYLENGTH_BYTES)
+    signkey = rand.read(_AES256_KEYLENGTH_BYTES)
+    return symkey, signkey
+
+
+def rsa_encrypt_key(rsakey, plainkey, asbase64=True):
+    """Encrypt a plaintext key using RSA and PKCS1_OAEP padding
+    Parameters:
+        rsakey - rsa key for encryption
+        plainkey - plaintext key
+        asbase64 - encode as base64
+    Returns:
+        Tuple of encrypted key and signature (if RSA private key is given)
+    Raises:
+        Nothing
+    """
+    cipher = Crypto.Cipher.PKCS1_OAEP.new(rsakey)
+    signer = Crypto.Signature.PKCS1_v1_5.new(rsakey)
+    if rsakey.has_private():
+        signature = signer.sign(Crypto.Hash.SHA256.new(plainkey))
+    else:
+        signature = None
+    enckey = cipher.encrypt(plainkey)
+    if asbase64:
+        return base64encode(enckey), base64encode(
+            signature) if signature is not None else signature
+    else:
+        return enckey, signature
+
+
+def rsa_decrypt_key(rsakey, enckey, signature, isbase64=True):
+    """Decrypt an RSA encrypted key and optional signature verification
+    Parameters:
+        rsakey - rsa key for decryption
+        enckey - encrypted key
+        signature - optional signature to verify encrypted data
+        isbase64 - if keys are base64 encoded
+    Returns:
+        Decrypted key
+    Raises:
+        RuntimeError if RSA signature validation fails
+    """
+    if isbase64:
+        enckey = base64.b64decode(enckey)
+    cipher = Crypto.Cipher.PKCS1_OAEP.new(rsakey)
+    deckey = cipher.decrypt(enckey)
+    if signature is not None and len(signature) > 0:
+        if isbase64:
+            signature = base64.b64decode(signature)
+        verifier = Crypto.Signature.PKCS1_v1_5.new(rsakey)
+        if not verifier.verify(Crypto.Hash.SHA256.new(deckey), signature):
+            raise RuntimeError('RSA signature validation failed')
+    return deckey
+
+
+def encrypt_block(symkey, signkey, data):
+    # create iv
+    iv = Crypto.Random.new().read(Crypto.Cipher.AES.block_size)
+    # encrypt data
+    cipher = Crypto.Cipher.AES.new(symkey, Crypto.Cipher.AES.MODE_CBC, iv)
+    encdata = cipher.encrypt(pad_pkcs5(data))
+    # sign encrypted data
+    hmacsha256 = Crypto.Hash.HMAC.new(signkey, digestmod=Crypto.Hash.SHA256)
+    hmacsha256.update(encdata)
+    sig = hmacsha256.digest()
+    return iv + encdata + sig
+
+
+def decrypt_block(symkey, signkey, encblock):
+    # retrieve iv
+    iv = encblock[:Crypto.Cipher.AES.block_size]
+    # retrieve encrypted data
+    encdata = encblock[
+        Crypto.Cipher.AES.block_size:-Crypto.Hash.SHA256.digest_size]
+    # retrieve signature
+    sig = encblock[-Crypto.Hash.SHA256.digest_size:]
+    # validate integrity of data
+    hmacsha256 = Crypto.Hash.HMAC.new(signkey, digestmod=Crypto.Hash.SHA256)
+    hmacsha256.update(encdata)
+    if hmacsha256.digest() != sig:
+        raise RuntimeError('Encrypted data integrity check failed for block')
+    # decrypt data
+    cipher = Crypto.Cipher.AES.new(symkey, Crypto.Cipher.AES.MODE_CBC, iv)
+    return unpad_pkcs5(cipher.decrypt(encdata))
 
 
 def azure_request(req, timeout=None, *args, **kwargs):
@@ -707,6 +933,34 @@ def create_dir_ifnotexists(dirname):
             raise  # pragma: no cover
 
 
+def get_mime_type(filename):
+    """Guess the type of a file based on its filename
+    Parameters:
+        filename - filename to guess the content-type
+    Returns:
+        A string of the form 'type/subtype',
+        usable for a MIME content-type header
+    Raises:
+        Nothing
+    """
+    return (mimetypes.guess_type(filename)[0] or 'application/octet-stream')
+
+
+def base64encode(obj):
+    """Encode object to base64
+    Parameters:
+        obj - object to encode
+    Returns:
+        base64 encoded string
+    Raises:
+        Nothing
+    """
+    if _PY2:
+        return base64.b64encode(obj)
+    else:
+        return str(base64.b64encode(obj), 'ascii')
+
+
 def compute_md5_for_file_asbase64(filename, pagealign=False, blocksize=65536):
     """Compute MD5 hash for file and encode as Base64
     Parameters:
@@ -730,23 +984,7 @@ def compute_md5_for_file_asbase64(filename, pagealign=False, blocksize=65536):
                 if aligned != buflen:
                     buf = buf.ljust(aligned, b'\0')
             hasher.update(buf)
-        if _PY2:
-            return base64.b64encode(hasher.digest())
-        else:
-            return str(base64.b64encode(hasher.digest()), 'ascii')
-
-
-def get_mime_type(filename):
-    """Guess the type of a file based on its filename
-    Parameters:
-        filename - filename to guess the content-type
-    Returns:
-        A string of the form 'type/subtype',
-        usable for a MIME content-type header
-    Raises:
-        Nothing
-    """
-    return (mimetypes.guess_type(filename)[0] or 'application/octet-stream')
+        return base64encode(hasher.digest())
 
 
 def compute_md5_for_data_asbase64(data):
@@ -760,10 +998,7 @@ def compute_md5_for_data_asbase64(data):
     """
     hasher = hashlib.md5()
     hasher.update(data)
-    if _PY2:
-        return base64.b64encode(hasher.digest())
-    else:
-        return str(base64.b64encode(hasher.digest()), 'ascii')
+    return base64encode(hasher.digest())
 
 
 def page_align_content_length(length):
@@ -809,17 +1044,19 @@ def get_blob_listing(blob_service, args):
     """
     marker = None
     blobdict = {}
+    include = 'metadata' if args.rsakey else None
     while True:
         try:
             result = azure_request(
                 blob_service.list_blobs, timeout=args.timeout,
                 container_name=args.container, marker=marker,
-                maxresults=_MAX_LISTBLOBS_RESULTS)
+                maxresults=_MAX_LISTBLOBS_RESULTS, include=include)
         except azure.common.AzureMissingResourceHttpError:
             break
         for blob in result:
             blobdict[blob.name] = [
-                blob.properties.content_length, blob.properties.content_md5]
+                blob.properties.content_length, blob.properties.content_md5,
+                blob.metadata]
         marker = result.next_marker
         if marker is None or len(marker) < 1:
             break
@@ -828,7 +1065,7 @@ def get_blob_listing(blob_service, args):
 
 def generate_xferspec_download(
         blob_service, args, storage_in_queue, localfile, remoteresource,
-        contentlength, contentmd5, addfd):
+        addfd, blobprop):
     """Generate an xferspec for download
     Parameters:
         blob_service - blob service
@@ -836,17 +1073,19 @@ def generate_xferspec_download(
         storage_in_queue - storage input queue
         localfile - name of local resource
         remoteresource - name of remote resource
-        contentlength - content length
-        contentmd5 - content md5
         addfd - create and add file handle
+        blobprop - blob properties list [length, md5, metadatadict]
     Returns:
         xferspec containing instructions
     Raises:
         ValueError if get_blob_properties returns an invalid result or
             contentlength is invalid
     """
+    contentlength = blobprop[0]
+    contentmd5 = blobprop[1]
+    mddict = blobprop[2]
     # get the file metadata
-    if contentlength is None or contentmd5 is None:
+    if contentlength is None or contentmd5 is None or mddict is None:
         result = azure_request(
             blob_service.get_blob_properties, timeout=args.timeout,
             container_name=args.container, blob_name=remoteresource)
@@ -856,6 +1095,11 @@ def generate_xferspec_download(
         if 'content-md5' in result:
             contentmd5 = result['content-md5']
         contentlength = long(result['content-length'])
+        # read meta values, all meta values are lowercased
+        mddict = {}
+        for res in result:
+            if res.startswith('x-ms-meta-'):
+                mddict[res[10:]] = result[res]
     if contentlength < 0:
         raise ValueError(
             'contentlength is invalid for {}'.format(remoteresource))
@@ -873,7 +1117,51 @@ def generate_xferspec_download(
             print('match, skipping download')
             return None, None, None, None
     tmpfilename = localfile + '.blobtmp'
-    nchunks = contentlength // args.chunksizebytes
+    if args.rsakey is not None and _META_ENCRYPTION_BLOCK_CIPHER in mddict:
+        chunksize = long(mddict[_META_ENCRYPTED_BLOCK_BYTE_OFFSETS])
+        offset_mod = _AES256CBC_OVERHEAD_BYTES + 1
+        # ensure known encryption metadata is set
+        if mddict[_META_ENCRYPTION_BLOCK_CIPHER] != _ENCRYPTION_BLOCK_CIPHER:
+            raise RuntimeError('Unknown block cipher {}'.format(
+                mddict[_META_ENCRYPTION_BLOCK_CIPHER]))
+        if mddict[_META_ENCRYPTION_INTEGRITY_METHOD] != \
+                _ENCRYPTION_INTEGRITY_METHOD:
+            raise RuntimeError('Unknown integrity/auth method {}'.format(
+                mddict[_META_ENCRYPTION_INTEGRITY_METHOD]))
+        if mddict[_META_ENCRYPTION_BLOCK_STRUCTURE] != \
+                _ENCRYPTION_BLOCK_STRUCTURE:
+            raise RuntimeError('Unknown encrypted block structure {}'.format(
+                mddict[_META_ENCRYPTION_BLOCK_STRUCTURE]))
+        if mddict[_META_ENCRYPTION_KEY_ENC_SCHEME] != \
+                _ENCRYPTION_KEY_ENC_SCHEME:
+            raise RuntimeError('Unknown key encryption scheme {}'.format(
+                mddict[_META_ENCRYPTION_KEY_ENC_SCHEME]))
+        if mddict[_META_ENCRYPTION_KEY_SIGN_SCHEME] != \
+                _ENCRYPTION_KEY_SIGN_SCHEME:
+            raise RuntimeError('Unknown key signature scheme {}'.format(
+                mddict[_META_ENCRYPTION_KEY_SIGN_SCHEME]))
+        # decrypt and validate symmetric key
+        symkey = rsa_decrypt_key(
+            args.rsakey, mddict[_META_ENCRYPTED_SYM_KEY],
+            mddict[_META_ENCRYPTED_SYM_KEY_SIG])
+        # decrypt and validate signing key
+        signkey = rsa_decrypt_key(
+            args.rsakey, mddict[_META_ENCRYPTED_SIGN_KEY],
+            mddict[_META_ENCRYPTED_SIGN_KEY_SIG])
+    else:
+        chunksize = args.chunksizebytes
+        offset_mod = 0
+        symkey = None
+        signkey = None
+    nchunks = contentlength // chunksize
+    # compute allocation size, if encrypted this will be an
+    # underallocation estimate
+    if contentlength > 0:
+        allocatesize = contentlength - ((nchunks + 2) * offset_mod)
+        if allocatesize < 0:
+            allocatesize = 0
+    else:
+        allocatesize = 0
     currfileoffset = 0
     nstorageops = 0
     flock = threading.Lock()
@@ -881,8 +1169,8 @@ def generate_xferspec_download(
     # preallocate file
     with flock:
         filedesc = open(tmpfilename, 'wb')
-        if contentlength > 0:
-            filedesc.seek(contentlength - 1)
+        if allocatesize > 0:
+            filedesc.seek(allocatesize - 1)
             filedesc.write(b'\0')
         filedesc.close()
         if addfd:
@@ -890,8 +1178,8 @@ def generate_xferspec_download(
             filedesc = open(tmpfilename, 'r+b')
         else:
             filedesc = None
-    for _ in xrange(nchunks + 1):
-        chunktoadd = min(args.chunksizebytes, contentlength)
+    for i in xrange(nchunks + 1):
+        chunktoadd = min(chunksize, contentlength)
         if chunktoadd + currfileoffset > contentlength:
             chunktoadd = contentlength - currfileoffset
         # on download, chunktoadd must be offset by 1 as the x-ms-range
@@ -899,7 +1187,8 @@ def generate_xferspec_download(
         # (x+1)th byte to the last bits of the (y+1)th byte. for example,
         # 0 -> 511 means byte 1 to byte 512
         xferspec = [tmpfilename, args.container, remoteresource, None,
-                    currfileoffset, chunktoadd - 1, flock, filedesc]
+                    currfileoffset, chunktoadd - 1,
+                    [symkey, signkey, i * offset_mod], flock, filedesc]
         currfileoffset = currfileoffset + chunktoadd
         nstorageops = nstorageops + 1
         storage_in_queue.put(xferspec)
@@ -961,7 +1250,7 @@ def generate_xferspec_upload(
         blockid = '{0:08d}'.format(currfileoffset // args.chunksizebytes)
         blockids[localfile].append(blockid)
         xferspec = [localfile, args.container, remoteresource, blockid,
-                    currfileoffset, chunktoadd, flock, filedesc]
+                    currfileoffset, chunktoadd, None, flock, filedesc]
         currfileoffset = currfileoffset + chunktoadd
         nstorageops = nstorageops + 1
         storage_in_queue.put(xferspec)
@@ -1116,6 +1405,25 @@ def main():
         if args.remoteresource is None:
             raise ValueError('cannot download remote file if not specified')
 
+    # import rsa key
+    args.symkey = None
+    args.signkey = None
+    rsakeyfile = args.rsakey
+    if rsakeyfile is not None:
+        args.rsakey = Crypto.PublicKey.RSA.importKey(
+            open(rsakeyfile, 'r').read(), args.rsakeypassphrase)
+        if not args.rsakey.has_private() and not xfertoazure:
+            raise ValueError('imported RSA key does not have a private key')
+        # adjust chunk size (iv, signature, min padding)
+        if xfertoazure:
+            args.chunksizebytes -= _AES256CBC_OVERHEAD_BYTES + 1
+            # generate symmetric and signature key for session
+            args.symkey, args.signkey = generate_aes256_keys()
+        # ensure chunk size is greater than overhead
+        if args.chunksizebytes <= (_AES256CBC_OVERHEAD_BYTES + 1) << 1:
+            raise ValueError('chunksizebytes {} <= encryption min {}'.format(
+                args.chunksizebytes, (_AES256CBC_OVERHEAD_BYTES + 1) << 1))
+
     # print all parameters
     print('======================================')
     print(' azure blobxfer parameters [v{}]'.format(_SCRIPT_VERSION))
@@ -1124,6 +1432,10 @@ def main():
     print('     management cert: {}'.format(args.managementcert))
     print('  transfer direction: {}'.format(
         'local->Azure' if xfertoazure else 'Azure->local'))
+    print('        RSA key file: {}'.format(rsakeyfile or 'disabled'))
+    print(' RSA key has private: {}'.format(
+        True if args.rsakey is not None and
+        args.rsakey.has_private() else False))
     print('      local resource: {}'.format(args.localresource))
     print('     remote resource: {}'.format(args.remoteresource))
     print('  max num of workers: {}'.format(args.numworkers))
@@ -1141,8 +1453,7 @@ def main():
     print(' keep mismatched MD5: {}'.format(args.keepmismatchedmd5files))
     print('    recursive if dir: {}'.format(args.recursive))
     print(' keep root dir on up: {}'.format(args.keeprootdir))
-    print('          collate to: {}'.format(
-        args.collate if args.collate is not None else 'disabled'))
+    print('          collate to: {}'.format(args.collate or 'disabled'))
     print('=======================================\n')
 
     # mark start time after init
@@ -1246,7 +1557,7 @@ def main():
                 args.container, args.localresource))
             blobdict = get_blob_listing(blob_service, args)
         else:
-            blobdict = {args.remoteresource: [None, None]}
+            blobdict = {args.remoteresource: [None, None, None]}
         if len(blobdict) > 0:
             print('generating local directory structure and '
                   'pre-allocating space')
@@ -1270,7 +1581,7 @@ def main():
             filesize, ops, md5digest, filedesc = \
                 generate_xferspec_download(
                     blob_service, args, storage_in_queue, localfile,
-                    blob, blobdict[blob][0], blobdict[blob][1], False)
+                    blob, False, blobdict[blob])
             if filesize is not None:
                 md5map[localfile] = md5digest
                 filemap[localfile] = localfile + '.blobtmp'
@@ -1308,8 +1619,29 @@ def main():
     else:
         print('performing {} range-gets'.format(nstorageops))
         progress_text = 'range-gets'
+
+    # configure encryption metadata
+    if xfertoazure and args.rsakey is not None:
+        encsymkey, symkeysig = rsa_encrypt_key(args.rsakey, args.symkey)
+        encsignkey, signkeysig = rsa_encrypt_key(args.rsakey, args.signkey)
+        encmetadata = {
+            _META_ENCRYPTION_BLOCK_CIPHER: _ENCRYPTION_BLOCK_CIPHER,
+            _META_ENCRYPTION_INTEGRITY_METHOD: _ENCRYPTION_INTEGRITY_METHOD,
+            _META_ENCRYPTION_BLOCK_STRUCTURE: _ENCRYPTION_BLOCK_STRUCTURE,
+            _META_ENCRYPTED_BLOCK_BYTE_OFFSETS: str(
+                args.chunksizebytes + _AES256CBC_OVERHEAD_BYTES + 1),
+            _META_ENCRYPTION_KEY_ENC_SCHEME: _ENCRYPTION_KEY_ENC_SCHEME,
+            _META_ENCRYPTION_KEY_SIGN_SCHEME: _ENCRYPTION_KEY_SIGN_SCHEME,
+            _META_ENCRYPTED_SYM_KEY: encsymkey,
+            _META_ENCRYPTED_SYM_KEY_SIG: symkeysig or '',
+            _META_ENCRYPTED_SIGN_KEY: encsignkey,
+            _META_ENCRYPTED_SIGN_KEY_SIG: signkeysig or '',
+        }
+
+    # spawn workers
     storage_out_queue = queue.Queue(nstorageops)
     maxworkers = min((args.numworkers, nstorageops))
+    print('spawning {} worker threads'.format(maxworkers))
     exc_list = []
     for _ in xrange(maxworkers):
         thr = BlobChunkWorker(
@@ -1354,6 +1686,14 @@ def main():
                             x_ms_blob_content_type=get_mime_type(
                                 localresource),
                             x_ms_blob_content_md5=md5map[localresource])
+                    # set blob metadata for encrypted blobs
+                    if args.rsakey is not None:
+                        azure_request(
+                            blob_service.set_blob_metadata,
+                            timeout=args.timeout,
+                            container_name=args.container,
+                            blob_name=filemap[localresource],
+                            x_ms_meta_name_values=encmetadata)
         done_ops += 1
         progress_bar(
             args.progressbar, 'xfer', progress_text, nstorageops,
@@ -1371,6 +1711,11 @@ def main():
               allfilesize / 1048576.0, endtime - storage_start,
               (8.0 * allfilesize / 1048576.0) / (endtime - storage_start)))
 
+    # join threads
+    for _ in xrange(maxworkers):
+        thr.join()
+
+    # finalize files/blobs
     if not xfertoazure:
         if args.computefilemd5:
             print('\nchecking md5 hashes and ', end='')
@@ -1433,14 +1778,15 @@ def parseargs():  # pragma: no cover
         Nothing
     """
     parser = argparse.ArgumentParser(
-        description='Transfer block blobs to/from Azure storage')
+        description='Transfer blobs to/from Azure storage')
     parser.set_defaults(
         autovhd=False, blobep=_DEFAULT_BLOB_ENDPOINT,
         chunksizebytes=_MAX_BLOB_CHUNK_SIZE_BYTES, collate=None,
         computefilemd5=True, createcontainer=True, keeprootdir=False,
         managementep=_DEFAULT_MANAGEMENT_ENDPOINT,
         numworkers=_DEFAULT_MAX_STORAGEACCOUNT_WORKERS, pageblob=False,
-        progressbar=True, recursive=True, skiponmatch=True, timeout=None)
+        progressbar=True, recursive=True, rsakey=None, rsakeypassphrase=None,
+        skiponmatch=True, timeout=None)
     parser.add_argument('storageaccount', help='name of storage account')
     parser.add_argument('container', help='name of blob container')
     parser.add_argument(
@@ -1500,6 +1846,14 @@ def parseargs():  # pragma: no cover
         '--pageblob', action='store_true',
         help='upload as page blob rather than block blob, blobs will '
         'be page-aligned in Azure storage')
+    parser.add_argument(
+        '--rsakey',
+        help='RSA public or private key file in PEM or DER/binary format. '
+        'RSA public or private key is required for uploading. RSA private '
+        'key is required for downloading.')
+    parser.add_argument(
+        '--rsakeypassphrase',
+        help='Optional passphrase for decrypting an RSA private key.')
     parser.add_argument(
         '--remoteresource',
         help='name of remote resource on Azure storage. "."=container '

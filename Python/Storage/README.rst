@@ -30,6 +30,11 @@ the desired mode of authentication with Azure, the script will require the
 following packages, some of which will automatically pull required dependent
 packages:
 
+- Base Requirements
+
+  - ``azure-common`` >= 0.20.0
+  - ``pycrypto`` >= 2.6.1
+
 - Management Certificate
 
   - ``azure-servicemanagement-legacy`` >= 0.20.0
@@ -142,13 +147,39 @@ enable page blob uploads for these files. If you wish to collate all files
 into the container directly, you would replace ``--collate vhds`` with
 ``--collate .``
 
+To encrypt or decrypt files, the option ``--rsakey`` is available. This option
+requires a file location for a PEM or DER/binary encoded RSA public or private
+key. An RSA public key can be an X.509 subjectPublicKeyInfo, PKCS#1
+RSAPublicKey, or OpenSSH textual public key. An RSA private key can be a PKCS#1
+RSAPrivateKey or PKCS#8 PrivateKeyInfo. An optional parameter,
+``--rsakeypassphrase`` is available for passphrase protected PEM keys.
+
+To encrypt and upload, only the RSA public key is required, although if the
+RSA private key is provided, the generated AES256 symmetric and signing keys
+will be signed to ensure integrity and authentication. To download and decrypt
+blobs which are encrypted, the RSA private key is required.
+
+::
+
+  blobxfer.py mystorageacct container0 myblobs --upload --rsakey myprivatekey.pem
+
+The above example commandline would encrypt and upload files contained in
+``myblobs`` using an RSA private key named ``myprivatekey.pem``. Although an
+RSA private key is not required for uploading, by providing it during
+encryption/upload, the generated AES256 symmetric and signing keys will be
+signed for additional verification checks.
+
+Please read the Encryption Notes below for more information.
+
 Performance Notes
 -----------------
 
 - Most likely, you will need to tweak the ``--numworkers`` argument that best
-  suits your environment. The default of 64 may not work properly if you are
-  attempting to run multiple blobxfer sessions in parallel from one machine or
-  IP address.
+  suits your environment. The default is the number of CPUs multiplied by 5.
+  Increasing this number (or even using the default) may not provide the
+  optimal balance between concurrency and your network conditions.
+  Additionally, this number may not work properly if you are attempting to run
+  multiple blobxfer sessions in parallel from one machine or IP address.
 - As of requests 2.6.0 and Python versions < 2.7.9 (i.e., interpreter found
   on default Ubuntu 14.04 installations), if certain packages are installed,
   as those found in ``requests[security]`` then the underlying ``urllib3``
@@ -164,9 +195,32 @@ Performance Notes
 .. _pyOpenSSL: https://urllib3.readthedocs.org/en/latest/security.html#pyopenssl
 .. _fully validated: https://urllib3.readthedocs.org/en/latest/security.html#insecureplatformwarning
 
+
+Encryption Notes
+----------------
+
+- ENCRYPTION SUPPORT IS CONSIDERED ALPHA QUALITY. DO NOT USE FOR LIVE OR
+  PRODUCTION DATA.
+- AES256 block cipher in CBC mode is applied to each individual chunk.
+- Keys for AES256 block cipher are generated once for the entire blobxfer
+  session (script invocation) for upload. These keys are encrypted using
+  RSAES-OAEP and an optional signature for the keys are generated using
+  RSASSA-PKCS1-v1_5.
+- All required information regarding the encryption process is stored on
+  each blob's metadata. This metadata is used on download to configure the
+  proper download and decryption process. Encryption metadata set by blobxfer
+  should not be modified or blobs may be unrecoverable.
+- MD5 for the pre-encrypted version of the file is stored on the blob. This
+  allows rsync-like synchronization to still be supported in the presence
+  of encryption.
+- Only files stored as block blobs can be encrypted/decrypted (as there is
+  minimal value in storing an encrypted page blob in Azure).
+
 Change Log
 ----------
 
+- 0.9.9.6: add encryption support, fix shared key upload with non-existent
+  container
 - 0.9.9.5: add file collation support, fix page alignment bug, reduce memory
   usage
 - 0.9.9.4: improve page blob upload algorithm to skip empty max size pages.

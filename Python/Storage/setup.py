@@ -27,9 +27,10 @@ setup(
         'console_scripts': 'blobxfer=blobxfer:main',
     },
     install_requires=[
-        'requests>=2.7.0',
         'azure-storage>=0.20.0',
-        'azure-servicemanagement-legacy>=0.20.0'
+        'azure-servicemanagement-legacy>=0.20.0',
+        'pycrypto>=2.6.1',
+        'requests>=2.7.0'
     ],
     tests_require=['pytest'],
     classifiers=[
