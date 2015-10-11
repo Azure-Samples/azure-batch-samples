@@ -1,6 +1,7 @@
 ﻿//Copyright (c) Microsoft Corporation
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using GalaSoft.MvvmLight.Messaging;
 using Microsoft.Azure.BatchExplorer.Helpers;
@@ -60,6 +61,21 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 this.FirePropertyChangedEvent("CommandLine");
             }
         }
+
+        private string resourceFiles;
+        public string ResourceFiles
+        {
+            get
+            {
+                return this.resourceFiles;
+            }
+            set
+            {
+                this.resourceFiles = value;
+                this.FirePropertyChangedEvent("ResourceFiles");
+            }
+        }
+
         #endregion
 
         #region Commands
@@ -103,7 +119,8 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                     {
                         JobId = this.jobId,
                         CommandLine = this.CommandLine,
-                        TaskId = this.TaskId
+                        TaskId = this.TaskId,
+                        ResourceFiles = ResourceFileStringParser.Parse(this.ResourceFiles).Files.ToList(),
                     };
 
                     await this.batchService.AddTaskAsync(options);
@@ -129,6 +146,13 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             if (string.IsNullOrEmpty(this.CommandLine))
             {
                 Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Invalid values for Command Line"));
+                return false;
+            }
+
+            var resourceFiles = ResourceFileStringParser.Parse(this.ResourceFiles);
+            if (resourceFiles.HasErrors)
+            {
+                Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage(String.Join(Environment.NewLine, resourceFiles.Errors)));
                 return false;
             }
 
