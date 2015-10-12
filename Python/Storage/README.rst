@@ -220,7 +220,7 @@ Change Log
 ----------
 
 - 0.9.9.6: add encryption support, fix shared key upload with non-existent
-  container
+  container, add file overwrite on download option
 - 0.9.9.5: add file collation support, fix page alignment bug, reduce memory
   usage
 - 0.9.9.4: improve page blob upload algorithm to skip empty max size pages.

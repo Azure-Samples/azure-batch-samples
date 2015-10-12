@@ -1735,6 +1735,14 @@ def main():
                 else:
                     print('match')
             if finalizefile:
+                # check for existing file first
+                if os.path.exists(localfile):
+                    if args.overwrite:
+                        os.remove(localfile)
+                    else:
+                        raise IOError(
+                            'cannot overwrite existing file: {}'.format(
+                                localfile))
                 # move tmp file to real file
                 os.rename(tmpfilename, localfile)
             else:
@@ -1761,7 +1769,11 @@ def progress_bar(display, sprefix, rtext, value, qsize, start):
     if not display:
         return
     done = float(qsize) / value
-    rate = float(qsize) / ((time.time() - start) / 60)
+    diff = time.time() - start
+    if diff <= 0:
+        # arbitrarily give a small delta
+        diff = 1e-6
+    rate = float(qsize) / (diff / 60)
     sys.stdout.write(
         '\r{0} progress: [{1:30s}] {2:.2f}% {3:10.2f} {4}/min    '.format(
             sprefix, '>' * int(done * 30), done * 100, rate, rtext))
@@ -1784,9 +1796,9 @@ def parseargs():  # pragma: no cover
         chunksizebytes=_MAX_BLOB_CHUNK_SIZE_BYTES, collate=None,
         computefilemd5=True, createcontainer=True, keeprootdir=False,
         managementep=_DEFAULT_MANAGEMENT_ENDPOINT,
-        numworkers=_DEFAULT_MAX_STORAGEACCOUNT_WORKERS, pageblob=False,
-        progressbar=True, recursive=True, rsakey=None, rsakeypassphrase=None,
-        skiponmatch=True, timeout=None)
+        numworkers=_DEFAULT_MAX_STORAGEACCOUNT_WORKERS, overwrite=True,
+        pageblob=False, progressbar=True, recursive=True, rsakey=None,
+        rsakeypassphrase=None, skiponmatch=True, timeout=None)
     parser.add_argument('storageaccount', help='name of storage account')
     parser.add_argument('container', help='name of blob container')
     parser.add_argument(
@@ -1829,6 +1841,9 @@ def parseargs():  # pragma: no cover
     parser.add_argument(
         '--no-createcontainer', dest='createcontainer', action='store_false',
         help='do not create container if it does not exist')
+    parser.add_argument(
+        '--no-overwrite', dest='overwrite', action='store_false',
+        help='do not overwrite local files on download')
     parser.add_argument(
         '--no-progressbar', dest='progressbar', action='store_false',
         help='disable progress bar')
