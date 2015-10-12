@@ -21,6 +21,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <TextBlock 
@@ -94,9 +95,12 @@
             Grid.Column="1"
             Text="{Binding CommandLine}"/>
         
+        <TextBlock Grid.Row="5" Grid.Column="0" Margin="8,4">Resource Files</TextBlock>
+        <TextBox Grid.Row="5" Grid.Column="1" AcceptsReturn="True" Text="{Binding StartTaskResourceFiles}" ToolTip="List of resource files in format blobSource => filePath, delimited by newlines or semicolons" Margin="0,0,0,2" />
+
         <!-- Buttons -->
         <StackPanel
-            Grid.Row="5"
+            Grid.Row="6"
             Orientation="Horizontal"
             HorizontalAlignment="Right">
             <Button

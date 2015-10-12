@@ -299,6 +299,7 @@ namespace Microsoft.Azure.BatchExplorer.Service
         public async Task AddTaskAsync(AddTaskOptions options)
         {
             CloudTask unboundTask = new CloudTask(options.TaskId, options.CommandLine);
+            unboundTask.ResourceFiles = options.ResourceFiles.ConvertAll(f => new ResourceFile(f.BlobSource, f.FilePath));
             await this.Client.JobOperations.AddTaskAsync(options.JobId, unboundTask);
         }
         #endregion
