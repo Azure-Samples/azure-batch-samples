@@ -687,7 +687,7 @@ class BlobChunkWorker(threading.Thread):
         else:
             # encrypt block if required
             if self.rsakey is not None:
-                data = encrypt_block(self.symkey, self.signkey, data)
+                data = encrypt_chunk(self.symkey, self.signkey, data)
             # compute block md5
             contentmd5 = compute_md5_for_data_asbase64(data)
             azure_request(
@@ -721,7 +721,7 @@ class BlobChunkWorker(threading.Thread):
             x_ms_range=rangestr)
         # decrypt block if required
         if decmeta[0] is not None:
-            blobdata = decrypt_block(decmeta[0], decmeta[1], blobdata)
+            blobdata = decrypt_chunk(decmeta[0], decmeta[1], blobdata)
         with flock:
             closefd = False
             if not filedesc:
@@ -837,7 +837,17 @@ def rsa_decrypt_key(rsakey, enckey, signature, isbase64=True):
     return deckey
 
 
-def encrypt_block(symkey, signkey, data):
+def encrypt_chunk(symkey, signkey, data):
+    """Encrypt a chunk of data
+    Parameters:
+        symkey - symmetric key
+        signkey - signing key
+        data - data to encrypt
+    Returns:
+        iv || encrypted data || signature
+    Raises:
+        No special exception handling
+    """
     # create iv
     iv = Crypto.Random.new().read(Crypto.Cipher.AES.block_size)
     # encrypt data
@@ -850,14 +860,24 @@ def encrypt_block(symkey, signkey, data):
     return iv + encdata + sig
 
 
-def decrypt_block(symkey, signkey, encblock):
+def decrypt_chunk(symkey, signkey, encchunk):
+    """Decrypt a chunk of data
+    Parameters:
+        symkey - symmetric key
+        signkey - signing key
+        encchunk - data to decrypt
+    Returns:
+        decrypted data
+    Raises:
+        RuntimeError if signature verification fails
+    """
     # retrieve iv
-    iv = encblock[:Crypto.Cipher.AES.block_size]
+    iv = encchunk[:Crypto.Cipher.AES.block_size]
     # retrieve encrypted data
-    encdata = encblock[
+    encdata = encchunk[
         Crypto.Cipher.AES.block_size:-Crypto.Hash.SHA256.digest_size]
     # retrieve signature
-    sig = encblock[-Crypto.Hash.SHA256.digest_size:]
+    sig = encchunk[-Crypto.Hash.SHA256.digest_size:]
     # validate integrity of data
     hmacsha256 = Crypto.Hash.HMAC.new(signkey, digestmod=Crypto.Hash.SHA256)
     hmacsha256.update(encdata)

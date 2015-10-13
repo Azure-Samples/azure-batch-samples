@@ -32,33 +32,33 @@ import blobxfer
 _RSAKEY = Crypto.PublicKey.RSA.generate(2048)
 
 
-def test_encrypt_decrypt_block():
+def test_encrypt_decrypt_chunk():
     enckey, signkey = blobxfer.generate_aes256_keys()
     assert len(enckey) == blobxfer._AES256_KEYLENGTH_BYTES
     assert len(signkey) == blobxfer._AES256_KEYLENGTH_BYTES
 
     # test random binary data, unaligned
     plaindata = os.urandom(31)
-    encdata = blobxfer.encrypt_block(enckey, signkey, plaindata)
+    encdata = blobxfer.encrypt_chunk(enckey, signkey, plaindata)
     assert encdata != plaindata
-    decdata = blobxfer.decrypt_block(enckey, signkey, encdata)
+    decdata = blobxfer.decrypt_chunk(enckey, signkey, encdata)
     assert decdata == plaindata
     with pytest.raises(RuntimeError):
         badsig = base64.b64encode(b'0')
-        blobxfer.decrypt_block(enckey, badsig, encdata)
+        blobxfer.decrypt_chunk(enckey, badsig, encdata)
 
     # test random binary data aligned on boundary
     plaindata = os.urandom(32)
-    encdata = blobxfer.encrypt_block(enckey, signkey, plaindata)
+    encdata = blobxfer.encrypt_chunk(enckey, signkey, plaindata)
     assert encdata != plaindata
-    decdata = blobxfer.decrypt_block(enckey, signkey, encdata)
+    decdata = blobxfer.decrypt_chunk(enckey, signkey, encdata)
     assert decdata == plaindata
 
     # test text data
     plaindata = b'attack at dawn!'
-    encdata = blobxfer.encrypt_block(enckey, signkey, plaindata)
+    encdata = blobxfer.encrypt_chunk(enckey, signkey, plaindata)
     assert encdata != plaindata
-    decdata = blobxfer.decrypt_block(enckey, signkey, encdata)
+    decdata = blobxfer.decrypt_chunk(enckey, signkey, encdata)
     assert decdata == plaindata
 
 
