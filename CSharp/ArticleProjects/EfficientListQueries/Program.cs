@@ -20,6 +20,36 @@ namespace Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries
     {
         public static void Main(string[] args)
         {
+            try
+            {
+                // Call the asynchronous version of the Main() method. This is done so that we can await various
+                // calls to async methods within the "Main" method of this console application.
+                MainAsync(args).Wait();
+            }
+            catch (AggregateException ae)
+            {
+                Console.WriteLine();
+                Console.WriteLine("One or more exceptions occurred.");
+                Console.WriteLine();
+
+                SampleHelpers.PrintAggregateException(ae.Flatten());
+            }
+            finally
+            {
+                Console.WriteLine();
+                Console.WriteLine("Sample complete, hit ENTER to exit...");
+                Console.ReadLine();
+            }
+        }
+
+        private static async Task MainAsync(string[] args)
+        {
+            // You may adjust these values to experiment with different compute resource scenarios.
+            const string nodeSize     = "small";
+            const int nodeCount       = 1;
+            const int maxTasksPerNode = 4;
+
+            // Adjust the task count to experiment with different list operation query durations
             const int taskCount = 5000;
 
             const string poolId = "poolEffQuery";
@@ -31,14 +61,18 @@ namespace Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries
                                                                            AccountSettings.Default.BatchAccountName,
                                                                            AccountSettings.Default.BatchAccountKey);
             
-            using (BatchClient batchClient = BatchClient.Open(cred))
+
+            using (BatchClient batchClient = await BatchClient.OpenAsync(cred))
             {
                 // Create a CloudPool, or obtain an existing pool with the specified ID
-                CreatePool(batchClient, poolId).Wait();
-                CloudPool pool = batchClient.PoolOperations.GetPool(poolId);
-
+                CloudPool pool = await ArticleHelpers.CreatePoolAsync(batchClient,
+                                                                      poolId,
+                                                                      nodeSize,
+                                                                      nodeCount,
+                                                                      maxTasksPerNode);
+                
                 // Create a CloudJob, or obtain an existing job with the specified ID
-                CloudJob job = ArticleHelpers.CreateJobAsync(batchClient, poolId, jobId).Result;
+                CloudJob job = await ArticleHelpers.CreateJobAsync(batchClient, poolId, jobId);
 
                 // Configure the tasks we'll be querying. Each task simply echoes the node's
                 // name and then exits. We create "large" tasks by setting an environment
@@ -60,13 +94,11 @@ namespace Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries
                 Console.WriteLine();
                 Console.WriteLine("Adding {0} tasks to job {1}...", taskCount, job.Id);
 
-                Stopwatch stopwatch = new Stopwatch();
-                stopwatch.Start();
+                Stopwatch stopwatch = Stopwatch.StartNew();
 
-                // To reduce the chances of hitting Batch service throttling limits, we add the tasks in
-                // one API call as opposed to a separate AddTask call for each. This is crucial if you
-                // are adding many tasks to your jobs.
-                batchClient.JobOperations.AddTask(job.Id, tasks);
+                // Add the tasks in one API call as opposed to a separate AddTask call for each. Bulk task submission
+                // helps to ensure efficient underlying API calls to the Batch service.
+                await batchClient.JobOperations.AddTaskAsync(job.Id, tasks);
 
                 stopwatch.Stop();
                 Console.WriteLine("{0} tasks added in {1}, hit ENTER to query tasks...", taskCount, stopwatch.Elapsed);
@@ -83,61 +115,45 @@ namespace Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries
                 ODATADetailLevel detail = new ODATADetailLevel();
                 detail.FilterClause = "state eq 'active'";
                 detail.SelectClause = "id,state";
-                QueryTasks(batchClient, job.Id, detail);
+                await QueryTasksAsync(batchClient, job.Id, detail);
                 detail.FilterClause = "state eq 'running'";
-                QueryTasks(batchClient, job.Id, detail);
+                await QueryTasksAsync(batchClient, job.Id, detail);
                 detail.FilterClause = "state eq 'completed'";
-                QueryTasks(batchClient, job.Id, detail);
+                await QueryTasksAsync(batchClient, job.Id, detail);
 
                 // Get all tasks, but limit the properties returned to task id and state only
                 detail.FilterClause = null;
                 detail.SelectClause = "id,state";
-                QueryTasks(batchClient, job.Id, detail);
+                await QueryTasksAsync(batchClient, job.Id, detail);
 
                 // Get all tasks, include id and state, also include the inflated environment settings property
                 detail.SelectClause = "id,state,environmentSettings";
-                QueryTasks(batchClient, job.Id, detail);
+                await QueryTasksAsync(batchClient, job.Id, detail);
 
                 // Get all tasks, include all standard properties, and expand the statistics
                 detail.ExpandClause = "stats";
                 detail.SelectClause = null;
-                QueryTasks(batchClient, job.Id, detail);
+                await QueryTasksAsync(batchClient, job.Id, detail);
 
                 Console.WriteLine();
-                Console.WriteLine("Sample complete, hit ENTER to continue...");
-                Console.ReadLine();
+                Console.WriteLine("Done!");
+                Console.WriteLine();
 
                 // Clean up the resources we've created in the Batch account
                 Console.WriteLine("Delete job? [yes] no");
                 string response = Console.ReadLine().ToLower();
                 if (response != "n" && response != "no")
                 {
-                    batchClient.JobOperations.DeleteJob(job.Id);
+                    await batchClient.JobOperations.DeleteJobAsync(job.Id);
                 }
 
                 Console.WriteLine("Delete pool? [yes] no");
                 response = Console.ReadLine().ToLower();
                 if (response != "n" && response != "no")
                 {
-                    batchClient.PoolOperations.DeletePool(pool.Id);
+                    await batchClient.PoolOperations.DeletePoolAsync(pool.Id);
                 }
             }
-        }
-
-        /// <summary>
-        /// Creates a CloudPool with a single compute node associated with the Batch account.
-        /// </summary>
-        /// <param name="batchClient">A fully initialized <see cref="BatchClient"/>.</param>
-        /// <param name="poolId">The ID of the <see cref="CloudPool"/>.</param>
-        private async static Task CreatePool(BatchClient batchClient, string poolId)
-        {
-            // Create and configure an unbound pool with the specified ID
-            CloudPool pool = batchClient.PoolOperations.CreatePool(poolId: poolId,
-                                                                   osFamily: "3",
-                                                                   virtualMachineSize: "small",
-                                                                   targetDedicated: 1);
-
-            await GettingStartedCommon.CreatePoolIfNotExistAsync(batchClient, pool);
         }
 
         /// <summary>
@@ -163,31 +179,16 @@ namespace Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries
         /// <param name="batchClient">A fully initialized <see cref="BatchClient"/>.</param>
         /// <param name="jobId">The ID of the job whose tasks should be queried.</param>
         /// <param name="detail">An <see cref="ODATADetailLevel"/> configured with one or more of expand, filter, select clauses.</param>
-        private static void QueryTasks(BatchClient batchClient, string jobId, ODATADetailLevel detail)
+        /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
+        private static async Task QueryTasksAsync(BatchClient batchClient, string jobId, ODATADetailLevel detail)
         {
             List<CloudTask> taskList = new List<CloudTask>();
 
-            Stopwatch stopwatch = new Stopwatch();
-            stopwatch.Start();
+            Stopwatch stopwatch = Stopwatch.StartNew();
 
-            try
-            {
-                taskList.AddRange(batchClient.JobOperations.ListTasks(jobId, detail).ToList());
-            }
-            catch (AggregateException ex)
-            {
-                AggregateException ax = ex.Flatten();
-
-                Console.WriteLine(ax.Message);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-            finally
-            {
-                stopwatch.Stop();
-            }
+            taskList.AddRange(await batchClient.JobOperations.ListTasks(jobId, detail).ToListAsync());
+            
+            stopwatch.Stop();
             
             Console.WriteLine("{0} tasks retrieved in {1} (ExpandClause: {2} | FilterClause: {3} | SelectClause: {4})",
                         taskList.Count, 
