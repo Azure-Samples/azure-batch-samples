@@ -27,6 +27,8 @@ namespace Microsoft.Azure.BatchExplorer.Converters
                     return new SolidColorBrush(Colors.DarkRed);
                 case TaskState.Active:
                     return new SolidColorBrush(Colors.Orange);
+                case TaskState.Preparing:
+                    return new SolidColorBrush(Colors.LightBlue);
                 case TaskState.Running:
                     return new SolidColorBrush(Colors.Blue);
                 case TaskState.Completed:
