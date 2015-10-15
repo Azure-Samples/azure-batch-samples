@@ -52,8 +52,8 @@ namespace Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries
             // Adjust the task count to experiment with different list operation query durations
             const int taskCount = 5000;
 
-            const string poolId = "poolEffQuery";
-            const string jobId  = "jobEffQuery";
+            const string poolId = "EfficientListQueriesSamplePool";
+            const string jobId  = "EfficientListQueriesSampleJob";
 
             // Set up the credentials required by the BatchClient. Configure your AccountSettings in the
             // Microsoft.Azure.Batch.Samples.Common project within this solution.

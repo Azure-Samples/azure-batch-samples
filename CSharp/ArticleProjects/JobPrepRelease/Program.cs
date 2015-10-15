@@ -43,8 +43,8 @@ namespace JobPrepRelease
 
         private static async Task MainAsync(string[] args)
         {
-            const string poolId = "poolPrepRelease";
-            const string jobId  = "jobPrepRelease";
+            const string poolId = "JobPrepReleaseSamplePool";
+            const string jobId  = "JobPrepReleaseSamplePool";
 
             // Location of the file that the job tasks will work with, a text file in the
             // node's "shared" directory.
@@ -83,14 +83,10 @@ namespace JobPrepRelease
                     CloudJob unboundJob = batchClient.JobOperations.CreateJob(jobId, new PoolInformation() { PoolId = poolId });
                     
                     // Configure and assign the job preparation task
-                    JobPreparationTask prepTask = new JobPreparationTask();
-                    prepTask.CommandLine = jobPrepCmdLine;
-                    unboundJob.JobPreparationTask = prepTask;
+                    unboundJob.JobPreparationTask = new JobPreparationTask { CommandLine = jobPrepCmdLine };
 
                     // Configure and assign the job release task
-                    JobReleaseTask releaseTask = new JobReleaseTask();
-                    releaseTask.CommandLine = jobReleaseCmdLine;
-                    unboundJob.JobReleaseTask = releaseTask;
+                    unboundJob.JobReleaseTask = new JobReleaseTask { CommandLine = jobReleaseCmdLine };
 
                     await unboundJob.CommitAsync();
 
@@ -111,7 +107,7 @@ namespace JobPrepRelease
                 // Add the tasks in one API call as opposed to a separate AddTask call for each. Bulk task
                 // submission helps to ensure efficient underlying API calls to the Batch service.
                 Console.WriteLine("Submitting tasks and awaiting completion...");
-                batchClient.JobOperations.AddTask(job.Id, tasks);
+                await batchClient.JobOperations.AddTaskAsync(job.Id, tasks);
 
                 // Wait for the tasks to complete before proceeding. The long timeout here is to allow time
                 // for the nodes within the pool to be created and started if the pool had not yet been created.
