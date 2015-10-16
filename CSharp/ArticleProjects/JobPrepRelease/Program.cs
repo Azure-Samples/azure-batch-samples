@@ -15,7 +15,7 @@ namespace JobPrepRelease
     using Microsoft.Azure.Batch.Samples.Common;
     using Microsoft.Azure.Batch.Common;
 
-    class Program
+    public class Program
     {
         public static void Main(string[] args)
         {
@@ -68,7 +68,7 @@ namespace JobPrepRelease
             using (BatchClient batchClient = await BatchClient.OpenAsync(cred))
             {
                 // Create a CloudPool (or obtain an existing pool with the specified ID)
-                CloudPool pool = await ArticleHelpers.CreatePoolAsync(batchClient,
+                CloudPool pool = await ArticleHelpers.CreatePoolIfNotExistAsync(batchClient,
                                                                       poolId,
                                                                       "small",
                                                                       2,
@@ -79,9 +79,9 @@ namespace JobPrepRelease
                 if (job == null)
                 {
                     Console.WriteLine("Job {0} not found, creating...", jobId);
-                    
+
                     CloudJob unboundJob = batchClient.JobOperations.CreateJob(jobId, new PoolInformation() { PoolId = poolId });
-                    
+
                     // Configure and assign the job preparation task
                     unboundJob.JobPreparationTask = new JobPreparationTask { CommandLine = jobPrepCmdLine };
 
@@ -116,6 +116,8 @@ namespace JobPrepRelease
                                                                    TimeSpan.FromMinutes(30)))
                 {
                     Console.WriteLine("Operation timed out while waiting for submitted tasks to reach state {0}", TaskState.Completed);
+
+                    return;
                 }
                 else
                 {

@@ -82,14 +82,14 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
             using (BatchClient batchClient = await BatchClient.OpenAsync(cred))
             {
                 // Create a CloudPool, or obtain an existing pool with the specified ID
-                CloudPool pool = await ArticleHelpers.CreatePoolAsync(batchClient,
+                CloudPool pool = await ArticleHelpers.CreatePoolIfNotExistAsync(batchClient,
                                                                       poolId,
                                                                       nodeSize,
                                                                       nodeCount,
                                                                       maxTasksPerNode);
 
                 // Create a CloudJob, or obtain an existing pool with the specified ID
-                CloudJob job = await ArticleHelpers.CreateJobAsync(batchClient, poolId, jobId);
+                CloudJob job = await ArticleHelpers.CreateJobIfNotExistAsync(batchClient, poolId, jobId);
                 
                 // The job's tasks ping localhost a random number of times between minPings and maxPings.
                 // Adjust the minPings/maxPings values above to experiment with different task durations.

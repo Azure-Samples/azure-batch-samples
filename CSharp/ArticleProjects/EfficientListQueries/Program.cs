@@ -65,14 +65,14 @@ namespace Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries
             using (BatchClient batchClient = await BatchClient.OpenAsync(cred))
             {
                 // Create a CloudPool, or obtain an existing pool with the specified ID
-                CloudPool pool = await ArticleHelpers.CreatePoolAsync(batchClient,
+                CloudPool pool = await ArticleHelpers.CreatePoolIfNotExistAsync(batchClient,
                                                                       poolId,
                                                                       nodeSize,
                                                                       nodeCount,
                                                                       maxTasksPerNode);
                 
                 // Create a CloudJob, or obtain an existing job with the specified ID
-                CloudJob job = await ArticleHelpers.CreateJobAsync(batchClient, poolId, jobId);
+                CloudJob job = await ArticleHelpers.CreateJobIfNotExistAsync(batchClient, poolId, jobId);
 
                 // Configure the tasks we'll be querying. Each task simply echoes the node's
                 // name and then exits. We create "large" tasks by setting an environment

@@ -24,7 +24,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// <param name="nodeCount">The number of nodes to create within the pool.</param>
         /// <param name="maxTasksPerNode">The maximum number of tasks to run concurrently on each node.</param>
         /// <returns>A bound <see cref="CloudPool"/> with the specified properties.</returns>
-        public async static Task<CloudPool> CreatePoolAsync(BatchClient batchClient, string poolId, string nodeSize, int nodeCount, int maxTasksPerNode)
+        public async static Task<CloudPool> CreatePoolIfNotExistAsync(BatchClient batchClient, string poolId, string nodeSize, int nodeCount, int maxTasksPerNode)
         {
             // Create and configure an unbound pool with the specified ID
             CloudPool pool = batchClient.PoolOperations.CreatePool(poolId: poolId,
@@ -51,7 +51,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// <param name="poolId">The ID of the CloudPool in which the job should be created.</param>
         /// <param name="jobId">The ID of the CloudJob.</param>
         /// <returns>A bound version of the newly created CloudJob.</returns>
-        public static async Task<CloudJob> CreateJobAsync(BatchClient batchClient, string poolId, string jobId)
+        public static async Task<CloudJob> CreateJobIfNotExistAsync(BatchClient batchClient, string poolId, string jobId)
         {
             CloudJob job = await SampleHelpers.GetJobIfExistAsync(batchClient, jobId).ConfigureAwait(continueOnCapturedContext: false);
 
@@ -96,10 +96,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
 
                 if (DateTime.UtcNow > timeoutAfterThisTimeUtc)
                 {
-                    Console.WriteLine();
-                    Console.WriteLine("Timed out waiting for pool {0} to reach state {1}", poolId, targetAllocationState);
-
-                    return;
+                    throw new TimeoutException(string.Format("Timed out waiting for pool {0} to reach state {1}", poolId, targetAllocationState));
                 }
             }
 
@@ -133,10 +130,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
 
                 if (DateTime.UtcNow > timeoutAfterThisTimeUtc)
                 {
-                    Console.WriteLine();
-                    Console.WriteLine("Timed out waiting for job {0} to reach state {1}", jobId, targetJobState);
-
-                    return;
+                    throw new TimeoutException(string.Format("Timed out waiting for job {0} to reach state {1}", jobId, targetJobState));
                 }
             }
 
@@ -172,10 +166,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
 
                 if (DateTime.UtcNow > timeoutAfterThisTimeUtc)
                 {
-                    Console.WriteLine();
-                    Console.WriteLine("Timed out waiting for compute nodes in pool {0} to reach state {1}", poolId, targetNodeState.ToString());
-
-                    return;
+                    throw new TimeoutException(string.Format("Timed out waiting for compute nodes in pool {0} to reach state {1}", poolId, targetNodeState.ToString()));
                 }
             }
 
