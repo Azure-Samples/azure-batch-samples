@@ -44,7 +44,7 @@ namespace JobPrepRelease
         private static async Task MainAsync(string[] args)
         {
             const string poolId = "JobPrepReleaseSamplePool";
-            const string jobId  = "JobPrepReleaseSamplePool";
+            const string jobId  = "JobPrepReleaseSampleJob";
 
             // Location of the file that the job tasks will work with, a text file in the
             // node's "shared" directory.
@@ -124,14 +124,20 @@ namespace JobPrepRelease
                 }
 
                 // Print the contents of the shared text file modified by the job preparation and other tasks.
-                ODATADetailLevel nodeDetail = new ODATADetailLevel(selectClause: "id");
+                ODATADetailLevel nodeDetail = new ODATADetailLevel(selectClause: "id, state");
                 IPagedEnumerable<ComputeNode> nodes = batchClient.PoolOperations.ListComputeNodes(pool.Id, nodeDetail);
                 await nodes.ForEachAsync(async (node) =>
                 {
-                    NodeFile sharedTextFile = await node.GetNodeFileAsync("shared\\job_prep_and_release.txt");
-                    Console.WriteLine("Contents of {0} on {1}:", sharedTextFile.Name, node.Id);
-                    Console.WriteLine("-------------------------------------------");
-                    Console.WriteLine(await sharedTextFile.ReadAsStringAsync());
+                    // Check to ensure that the node is Idle before attempting to pull the text file.
+                    // If the pool was just created, there is a chance that another node completed all
+                    // of the tasks prior to the other node(s) completing their startup procedure.
+                    if (node.State == ComputeNodeState.Idle)
+                    {
+                        NodeFile sharedTextFile = await node.GetNodeFileAsync("shared\\job_prep_and_release.txt");
+                        Console.WriteLine("Contents of {0} on {1}:", sharedTextFile.Name, node.Id);
+                        Console.WriteLine("-------------------------------------------");
+                        Console.WriteLine(await sharedTextFile.ReadAsStringAsync());
+                    }
                 });
 
                 // Terminate the job to mark it as Completed; this will initiate the Job Release Task on any node
