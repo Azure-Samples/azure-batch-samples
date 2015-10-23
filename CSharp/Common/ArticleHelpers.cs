@@ -24,20 +24,20 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// <param name="nodeCount">The number of nodes to create within the pool.</param>
         /// <param name="maxTasksPerNode">The maximum number of tasks to run concurrently on each node.</param>
         /// <returns>A bound <see cref="CloudPool"/> with the specified properties.</returns>
-        public async static Task<CloudPool> CreatePoolAsync(BatchClient batchClient, string poolId, string nodeSize, int nodeCount, int maxTasksPerNode)
+        public async static Task<CloudPool> CreatePoolIfNotExistAsync(BatchClient batchClient, string poolId, string nodeSize, int nodeCount, int maxTasksPerNode)
         {
             // Create and configure an unbound pool with the specified ID
             CloudPool pool = batchClient.PoolOperations.CreatePool(poolId: poolId,
                                                                    osFamily: "3",
                                                                    virtualMachineSize: nodeSize,
                                                                    targetDedicated: nodeCount);
-
+            
             pool.MaxTasksPerComputeNode = maxTasksPerNode;
 
             // We want each node to be completely filled with tasks (i.e. up to maxTasksPerNode) before
             // tasks are assigned to the next node in the pool
             pool.TaskSchedulingPolicy = new TaskSchedulingPolicy(ComputeNodeFillType.Pack);
-
+            
             await GettingStartedCommon.CreatePoolIfNotExistAsync(batchClient, pool).ConfigureAwait(continueOnCapturedContext: false);
 
             return await batchClient.PoolOperations.GetPoolAsync(poolId).ConfigureAwait(continueOnCapturedContext: false);
@@ -51,7 +51,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// <param name="poolId">The ID of the CloudPool in which the job should be created.</param>
         /// <param name="jobId">The ID of the CloudJob.</param>
         /// <returns>A bound version of the newly created CloudJob.</returns>
-        public static async Task<CloudJob> CreateJobAsync(BatchClient batchClient, string poolId, string jobId)
+        public static async Task<CloudJob> CreateJobIfNotExistAsync(BatchClient batchClient, string poolId, string jobId)
         {
             CloudJob job = await SampleHelpers.GetJobIfExistAsync(batchClient, jobId).ConfigureAwait(continueOnCapturedContext: false);
 
@@ -96,10 +96,41 @@ namespace Microsoft.Azure.Batch.Samples.Common
 
                 if (DateTime.UtcNow > timeoutAfterThisTimeUtc)
                 {
-                    Console.WriteLine();
-                    Console.WriteLine("Timed out waiting for pool {0} to reach state {1}", poolId, targetAllocationState);
+                    throw new TimeoutException(string.Format("Timed out waiting for pool {0} to reach state {1}", poolId, targetAllocationState));
+                }
+            }
 
-                    return;
+            Console.WriteLine();
+        }
+
+        /// <summary>
+        /// Asynchronous method that delays execution until the specified job reaches the specified state.
+        /// </summary>
+        /// <param name="client">A fully intitialized <see cref="BatchClient"/>.</param>
+        /// <param name="jobId">The ID of the job to monitor for the specified <see cref="JobState"/>.</param>
+        /// <param name="targetJobState">The job state to monitor.</param>
+        /// <param name="timeout">The maximum time to wait for the job to reach the specified state.</param>
+        /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
+        public static async Task WaitForJobToReachStateAsync(BatchClient client, string jobId, JobState targetJobState, TimeSpan timeout)
+        {
+            Console.WriteLine("Waiting for job {0} to reach state {1}", jobId, targetJobState);
+
+            DateTime startTime = DateTime.UtcNow;
+            DateTime timeoutAfterThisTimeUtc = startTime.Add(timeout);
+
+            ODATADetailLevel detail = new ODATADetailLevel(selectClause: "id,state");
+            CloudJob job = await client.JobOperations.GetJobAsync(jobId, detail);
+
+            while (job.State != targetJobState)
+            {
+                Console.Write(".");
+
+                await Task.Delay(TimeSpan.FromSeconds(10)).ConfigureAwait(continueOnCapturedContext: false);
+                await job.RefreshAsync(detail).ConfigureAwait(continueOnCapturedContext: false);
+
+                if (DateTime.UtcNow > timeoutAfterThisTimeUtc)
+                {
+                    throw new TimeoutException(string.Format("Timed out waiting for job {0} to reach state {1}", jobId, targetJobState));
                 }
             }
 
@@ -135,10 +166,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
 
                 if (DateTime.UtcNow > timeoutAfterThisTimeUtc)
                 {
-                    Console.WriteLine();
-                    Console.WriteLine("Timed out waiting for compute nodes in pool {0} to reach state {1}", poolId, targetNodeState.ToString());
-
-                    return;
+                    throw new TimeoutException(string.Format("Timed out waiting for compute nodes in pool {0} to reach state {1}", poolId, targetNodeState.ToString()));
                 }
             }
 

@@ -110,6 +110,7 @@
       <Link>$(TargetName).dll.config</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <None Include="app.config" />
     <None Include="packages.config" />
     <None Include="AccountSettings.settings">
       <Generator>PublicSettingsSingleFileGenerator</Generator>

@@ -67,8 +67,8 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
             const int minPings = 30;
             const int maxPings = 60;
 
-            const string poolId = "poolMaxTasks";
-            const string jobId  = "jobMaxTasks";
+            const string poolId = "ParallelTasksSamplePool";
+            const string jobId  = "ParallelTasksSampleJob";
 
             // Amount of time to wait before timing out (potentially) long-running tasks
             TimeSpan longTaskDurationLimit = TimeSpan.FromMinutes(30);
@@ -82,14 +82,14 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
             using (BatchClient batchClient = await BatchClient.OpenAsync(cred))
             {
                 // Create a CloudPool, or obtain an existing pool with the specified ID
-                CloudPool pool = await ArticleHelpers.CreatePoolAsync(batchClient,
+                CloudPool pool = await ArticleHelpers.CreatePoolIfNotExistAsync(batchClient,
                                                                       poolId,
                                                                       nodeSize,
                                                                       nodeCount,
                                                                       maxTasksPerNode);
 
                 // Create a CloudJob, or obtain an existing pool with the specified ID
-                CloudJob job = await ArticleHelpers.CreateJobAsync(batchClient, poolId, jobId);
+                CloudJob job = await ArticleHelpers.CreateJobIfNotExistAsync(batchClient, poolId, jobId);
                 
                 // The job's tasks ping localhost a random number of times between minPings and maxPings.
                 // Adjust the minPings/maxPings values above to experiment with different task durations.
@@ -114,7 +114,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
 
                 // Add the tasks in one API call as opposed to a separate AddTask call for each. Bulk task submission
                 // helps to ensure efficient underlying API calls to the Batch service.
-                batchClient.JobOperations.AddTask(job.Id, tasks);
+                await batchClient.JobOperations.AddTaskAsync(job.Id, tasks);
 
                 // Pause again to wait until *all* nodes are running tasks
                 await ArticleHelpers.WaitForNodesToReachStateAsync(batchClient, pool.Id, ComputeNodeState.Running, TimeSpan.FromMinutes(2));

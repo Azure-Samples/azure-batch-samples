@@ -52,8 +52,8 @@ namespace Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries
             // Adjust the task count to experiment with different list operation query durations
             const int taskCount = 5000;
 
-            const string poolId = "poolEffQuery";
-            const string jobId  = "jobEffQuery";
+            const string poolId = "EfficientListQueriesSamplePool";
+            const string jobId  = "EfficientListQueriesSampleJob";
 
             // Set up the credentials required by the BatchClient. Configure your AccountSettings in the
             // Microsoft.Azure.Batch.Samples.Common project within this solution.
@@ -65,14 +65,14 @@ namespace Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries
             using (BatchClient batchClient = await BatchClient.OpenAsync(cred))
             {
                 // Create a CloudPool, or obtain an existing pool with the specified ID
-                CloudPool pool = await ArticleHelpers.CreatePoolAsync(batchClient,
+                CloudPool pool = await ArticleHelpers.CreatePoolIfNotExistAsync(batchClient,
                                                                       poolId,
                                                                       nodeSize,
                                                                       nodeCount,
                                                                       maxTasksPerNode);
                 
                 // Create a CloudJob, or obtain an existing job with the specified ID
-                CloudJob job = await ArticleHelpers.CreateJobAsync(batchClient, poolId, jobId);
+                CloudJob job = await ArticleHelpers.CreateJobIfNotExistAsync(batchClient, poolId, jobId);
 
                 // Configure the tasks we'll be querying. Each task simply echoes the node's
                 // name and then exits. We create "large" tasks by setting an environment
