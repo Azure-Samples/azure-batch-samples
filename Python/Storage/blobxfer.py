@@ -29,42 +29,12 @@
 """
 Code sample to show data transfer to/from Azure blob storage
 
-Notes:
-- Script does not take any leases on blobs or containers. It is up to
-  the user to ensure that blobs are not modified while download/uploads
-  are being performed.
-- Script does not perform any validation regarding container and file
-  naming and length restrictions
-- Script will attempt to download from blob storage as-is. If the source
-  filename is incompatible with the destination operating system, then
-  failure may result
-- When using SAS, the SAS key must be a container-level SAS if performing
-  recursive directory upload or container download
-- If uploading via SAS, the container must already be created in blob
-  storage prior to upload. This is a limitation of SAS keys. The script
-  will force disable container creation if a SAS key is specified.
-- For non-SAS requests, timeouts may not be properly honored due to
-  limitations of the Azure Python SDK.
-- In order to skip download/upload matching files via MD5, the
-  computefilemd5 flag must be enabled (it is enabled by default).
-- When uploading files as page blobs, the content is page boundary
-  byte-aligned. The MD5 for the blob is computed using the final aligned
-  data if the source is not page boundary byte-aligned. This enables these
-  page blobs or files to be skipped during subsequent download or upload,
-  if the skiponmatch parameter is enabled.
-- Encryption is only applied to block blobs. Encrypted page have minimal value
-  stored in Azure. Thus, if uploading encrypted VHDs for storage in Azure, do
-  not enable either of the options: pageblob or autovhd.
-- If utilizing encryption, the pre-encrypted MD5 is computed and stored on
-  the server. This allows rsync-style synchronization to work in the presence
-  of encryption. Block-level MD5 is applied transparently.
-- Downloading encrypted blobs will not fully preallocate each file due to
-  padding. Script failure can result during download if there is insufficient
-  disk space.
+See notes in the README.rst file.
 
 TODO list:
-- remove dependency on azure python packages
 - convert from threading to multiprocessing
+- convert to fully use azure storage for sas
+- move instruction queue data to class
 """
 
 # pylint: disable=R0913,R0914
@@ -75,6 +45,7 @@ import argparse
 import base64
 import errno
 import hashlib
+import json
 import mimetypes
 import multiprocessing
 import os
@@ -145,22 +116,281 @@ _DEFAULT_MANAGEMENT_ENDPOINT = 'management.core.windows.net'
 _AES256_KEYLENGTH_BYTES = Crypto.Cipher.AES.key_size[2]
 _AES256CBC_OVERHEAD_BYTES = (
     Crypto.Cipher.AES.block_size + Crypto.Hash.SHA256.digest_size)
-_META_ENCRYPTION_BLOCK_CIPHER = 'encryption_block_cipher'
-_META_ENCRYPTION_INTEGRITY_METHOD = \
-    'encryption_integrity_authentication_method'
-_META_ENCRYPTION_BLOCK_STRUCTURE = 'encrypted_block_structure'
-_META_ENCRYPTION_KEY_ENC_SCHEME = 'encrypted_key_encryption_scheme'
-_META_ENCRYPTION_KEY_SIGN_SCHEME = 'encrypted_key_signature_scheme'
-_META_ENCRYPTED_BLOCK_BYTE_OFFSETS = 'encrypted_block_byte_offsets'
-_META_ENCRYPTED_SYM_KEY = 'encrypted_symmetric_key'
-_META_ENCRYPTED_SYM_KEY_SIG = 'encrypted_symmetric_key_signature'
-_META_ENCRYPTED_SIGN_KEY = 'encrypted_signing_key'
-_META_ENCRYPTED_SIGN_KEY_SIG = 'encrypted_signing_key_signature'
-_ENCRYPTION_BLOCK_CIPHER = 'AES256-CBC'
-_ENCRYPTION_INTEGRITY_METHOD = 'HMAC-SHA256'
-_ENCRYPTION_BLOCK_STRUCTURE = 'IV || EncryptedData || Signature'
-_ENCRYPTION_KEY_ENC_SCHEME = 'RSAES-OAEP'
-_ENCRYPTION_KEY_SIGN_SCHEME = 'RSASSA-PKCS1-v1_5'
+_ENCRYPTION_MODE_FULLBLOB = 'FullBlob'
+_ENCRYPTION_MODE_CHUNKEDBLOB = 'ChunkedBlob'
+_DEFAULT_ENCRYPTION_MODE = _ENCRYPTION_MODE_FULLBLOB
+_ENCRYPTION_PROTOCOL_VERSION = '1.0'
+_ENCRYPTION_ALGORITHM = 'AES_CBC_256'
+_ENCRYPTION_INTEGRITY_AUTH_ALGORITHM = 'HMAC-SHA256'
+_ENCRYPTION_CHUNKSTRUCTURE = 'IV || EncryptedData || Signature'
+_ENCRYPTION_ENCRYPTED_KEY_SCHEME = 'RSA-OAEP'
+_ENCRYPTION_ENCRYPTED_KEY_SIGNATURE_SCHEME = 'RSASSA-PKCS1-v1_5'
+_ENCRYPTION_METADATA_NAME = 'encryptiondata'
+_ENCRYPTION_METADATA_MODE = 'EncryptionMode'
+_ENCRYPTION_METADATA_ALGORITHM = 'Algorithm'
+_ENCRYPTION_METADATA_LAYOUT = 'EncryptedDataLayout'
+_ENCRYPTION_METADATA_CHUNKOFFSETS = 'ChunkByteOffsets'
+_ENCRYPTION_METADATA_CHUNKSTRUCTURE = 'ChunkStructure'
+_ENCRYPTION_METADATA_AGENT = 'EncryptionAgent'
+_ENCRYPTION_METADATA_PROTOCOL = 'Protocol'
+_ENCRYPTION_METADATA_ENCRYPTION_ALGORITHM = 'EncryptionAlgorithm'
+_ENCRYPTION_METADATA_INTEGRITY_AUTH = 'EncryptionIntegrityAndAuthentication'
+_ENCRYPTION_METADATA_INTEGRITY_AUTH_MAC = 'MessageAuthenticationCode'
+_ENCRYPTION_METADATA_WRAPPEDCONTENTKEY = 'WrappedContentKey'
+_ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY = 'WrappedSigningKey'
+_ENCRYPTION_METADATA_KEYSIGNATURESCHEME = 'EncryptedKeySignatureScheme'
+_ENCRYPTION_METADATA_ENCRYPTEDKEY = 'EncryptedKey'
+_ENCRYPTION_METADATA_ENCRYPTEDKEYSIGNATURE = 'EncryptedKeySignature'
+_ENCRYPTION_METADATA_CONTENT_IV = 'ContentEncryptionIV'
+_ENCRYPTION_METADATA_KEYID = 'KeyId'
+_ENCRYPTION_METADATA_PREENCRYPTED_MD5 = 'PreEncryptedContentMD5'
+
+
+class EncryptionMetadataJson(object):
+    """Class for handling encryption metadata json"""
+    def __init__(
+            self, args, symkey, signkey, iv, encdata_signature,
+            preencrypted_md5, symkeyid=None, signkeyid=None):
+        """Ctor for EncryptionMetadataJson
+        Parameters:
+            args - program arguments
+            symkey - symmetric key
+            signkey - signing key
+            iv - initialization vector
+            encdata_signature - encrypted data signature (MAC)
+            preencrypted_md5 - pre-encrypted md5 hash
+            symkeyid - symmetric key id
+            signkeyid - signing key id
+        Returns:
+            Nothing
+        Raises:
+            Nothing
+        """
+        self.encmode = args.encmode
+        self.rsakey = args.rsakey
+        self.chunksizebytes = args.chunksizebytes
+        self.symkey = symkey
+        self.signkey = signkey
+        if symkeyid is None:
+            self.symkeyid = 'private:key1'
+        else:
+            self.symkeyid = symkeyid
+        if signkeyid is None:
+            self.signkeyid = 'signing:key1'
+        else:
+            self.signkeyid = signkeyid
+        self.iv = iv
+        self.hmac = encdata_signature
+        self.md5 = preencrypted_md5
+
+    def construct_metadata_json(self):
+        """Constructs encryptiondata metadata"""
+        encsymkey, symkeysig = rsa_encrypt_key(self.rsakey, self.symkey)
+        encsignkey, signkeysig = rsa_encrypt_key(self.rsakey, self.signkey)
+        ret = {
+            _ENCRYPTION_METADATA_MODE: self.encmode,
+            _ENCRYPTION_METADATA_WRAPPEDCONTENTKEY: {
+                _ENCRYPTION_METADATA_KEYID: self.symkeyid,
+                _ENCRYPTION_METADATA_ENCRYPTEDKEY: encsymkey,
+                _ENCRYPTION_METADATA_ALGORITHM:
+                _ENCRYPTION_ENCRYPTED_KEY_SCHEME,
+            },
+            _ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY: {
+                _ENCRYPTION_METADATA_KEYID: self.signkeyid,
+                _ENCRYPTION_METADATA_ENCRYPTEDKEY: encsignkey,
+                _ENCRYPTION_METADATA_ALGORITHM:
+                _ENCRYPTION_ENCRYPTED_KEY_SCHEME,
+            },
+            _ENCRYPTION_METADATA_AGENT: {
+                _ENCRYPTION_METADATA_PROTOCOL: _ENCRYPTION_PROTOCOL_VERSION,
+                _ENCRYPTION_METADATA_ENCRYPTION_ALGORITHM:
+                _ENCRYPTION_ALGORITHM
+            },
+            _ENCRYPTION_METADATA_INTEGRITY_AUTH: {
+                _ENCRYPTION_METADATA_ALGORITHM:
+                _ENCRYPTION_INTEGRITY_AUTH_ALGORITHM,
+            },
+            'KeyWrappingMetadata': {},
+        }
+        if self.md5 is not None:
+            ret[_ENCRYPTION_METADATA_PREENCRYPTED_MD5] = self.md5
+        if symkeysig is not None:
+            ret[_ENCRYPTION_METADATA_WRAPPEDCONTENTKEY][
+                _ENCRYPTION_METADATA_ENCRYPTEDKEYSIGNATURE] = symkeysig
+            ret[_ENCRYPTION_METADATA_WRAPPEDCONTENTKEY][
+                _ENCRYPTION_METADATA_KEYSIGNATURESCHEME] = \
+                _ENCRYPTION_ENCRYPTED_KEY_SIGNATURE_SCHEME
+        if signkeysig is not None:
+            ret[_ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY][
+                _ENCRYPTION_METADATA_ENCRYPTEDKEYSIGNATURE] = signkeysig
+            ret[_ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY][
+                _ENCRYPTION_METADATA_KEYSIGNATURESCHEME] = \
+                _ENCRYPTION_ENCRYPTED_KEY_SIGNATURE_SCHEME
+        if self.encmode == _ENCRYPTION_MODE_FULLBLOB:
+            ret[_ENCRYPTION_METADATA_CONTENT_IV] = base64encode(self.iv)
+            ret[_ENCRYPTION_METADATA_INTEGRITY_AUTH][
+                _ENCRYPTION_METADATA_INTEGRITY_AUTH_MAC] = base64encode(
+                    self.hmac)
+        elif self.encmode == _ENCRYPTION_MODE_CHUNKEDBLOB:
+            ret[_ENCRYPTION_METADATA_LAYOUT] = {}
+            ret[_ENCRYPTION_METADATA_LAYOUT][
+                _ENCRYPTION_METADATA_CHUNKOFFSETS] = \
+                self.chunksizebytes + _AES256CBC_OVERHEAD_BYTES + 1
+            ret[_ENCRYPTION_METADATA_LAYOUT][
+                _ENCRYPTION_METADATA_CHUNKSTRUCTURE] = \
+                _ENCRYPTION_CHUNKSTRUCTURE
+        else:
+            raise RuntimeError(
+                'Unknown encryption mode: {}'.format(self.encmode))
+        return {_ENCRYPTION_METADATA_NAME: json.dumps(ret)}
+
+    def parse_metadata_json(self, rsakey, mddict):
+        """Parses a meta data dictionary containing the encryptiondata
+        metadata
+        Parameters:
+            rsakey - RSA key
+            mddict - metadata dictionary
+        Returns:
+            Nothing
+        Raises:
+            RuntimeError if encryptiondata metadata contains invalid or
+                unknown fields
+        """
+        if _ENCRYPTION_METADATA_NAME not in mddict:
+            return
+        # json parse internal dict
+        meta = json.loads(mddict[_ENCRYPTION_METADATA_NAME])
+        # populate preencryption md5
+        if _ENCRYPTION_METADATA_PREENCRYPTED_MD5 in meta:
+            self.md5 = meta[_ENCRYPTION_METADATA_PREENCRYPTED_MD5]
+        else:
+            self.md5 = None
+        # if RSA key is not present return
+        if rsakey is None:
+            return
+        # check for required metadata fields
+        if (_ENCRYPTION_METADATA_MODE not in meta or
+                _ENCRYPTION_METADATA_AGENT not in meta):
+            return
+        # populate encryption mode
+        self.encmode = meta[_ENCRYPTION_METADATA_MODE]
+        # validate known encryption metadata is set to proper values
+        if self.encmode == _ENCRYPTION_MODE_CHUNKEDBLOB:
+            chunkstructure = meta[_ENCRYPTION_METADATA_LAYOUT][
+                _ENCRYPTION_METADATA_CHUNKSTRUCTURE]
+            if chunkstructure != _ENCRYPTION_CHUNKSTRUCTURE:
+                raise RuntimeError(
+                    'Unknown encrypted chunk structure {}'.format(
+                        chunkstructure))
+        protocol = meta[_ENCRYPTION_METADATA_AGENT][
+            _ENCRYPTION_METADATA_PROTOCOL]
+        if protocol != _ENCRYPTION_PROTOCOL_VERSION:
+            raise RuntimeError('Unknown encryption protocol: {}'.format(
+                protocol))
+        blockcipher = meta[_ENCRYPTION_METADATA_AGENT][
+            _ENCRYPTION_METADATA_ENCRYPTION_ALGORITHM]
+        if blockcipher != _ENCRYPTION_ALGORITHM:
+            raise RuntimeError('Unknown block cipher: {}'.format(blockcipher))
+        if _ENCRYPTION_METADATA_INTEGRITY_AUTH in meta:
+            intauth = meta[_ENCRYPTION_METADATA_INTEGRITY_AUTH][
+                _ENCRYPTION_METADATA_ALGORITHM]
+            if intauth != _ENCRYPTION_INTEGRITY_AUTH_ALGORITHM:
+                raise RuntimeError('Unknown integrity/auth method: {}'.format(
+                    intauth))
+        symkeyalg = meta[_ENCRYPTION_METADATA_WRAPPEDCONTENTKEY][
+            _ENCRYPTION_METADATA_ALGORITHM]
+        if symkeyalg != _ENCRYPTION_ENCRYPTED_KEY_SCHEME:
+            raise RuntimeError('Unknown key encryption scheme: {}'.format(
+                symkeyalg))
+        if _ENCRYPTION_METADATA_KEYSIGNATURESCHEME in meta[
+                _ENCRYPTION_METADATA_WRAPPEDCONTENTKEY]:
+            symkeysigsch = meta[_ENCRYPTION_METADATA_WRAPPEDCONTENTKEY][
+                _ENCRYPTION_METADATA_KEYSIGNATURESCHEME]
+            if symkeysigsch != _ENCRYPTION_ENCRYPTED_KEY_SIGNATURE_SCHEME:
+                raise RuntimeError(
+                    'Unknown encrypted key signature scheme: {}'.format(
+                        symkeysigsch))
+        # validate signing key params
+        if _ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY in meta:
+            signkeyalg = meta[_ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY][
+                _ENCRYPTION_METADATA_ALGORITHM]
+            if signkeyalg != _ENCRYPTION_ENCRYPTED_KEY_SCHEME:
+                raise RuntimeError('Unknown key signature scheme: {}'.format(
+                    signkeyalg))
+            if _ENCRYPTION_METADATA_KEYSIGNATURESCHEME in meta[
+                    _ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY]:
+                signkeysigsch = meta[_ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY][
+                    _ENCRYPTION_METADATA_KEYSIGNATURESCHEME]
+                if signkeysigsch != _ENCRYPTION_ENCRYPTED_KEY_SIGNATURE_SCHEME:
+                    raise RuntimeError(
+                        'Unknown signing key signature scheme: {}'.format(
+                            signkeysigsch))
+        # populate iv and hmac
+        if self.encmode == _ENCRYPTION_MODE_FULLBLOB:
+            self.iv = base64.b64decode(meta[_ENCRYPTION_METADATA_CONTENT_IV])
+            # don't base64 decode hmac
+            if _ENCRYPTION_METADATA_INTEGRITY_AUTH in meta:
+                self.hmac = meta[_ENCRYPTION_METADATA_INTEGRITY_AUTH][
+                    _ENCRYPTION_METADATA_INTEGRITY_AUTH_MAC]
+            else:
+                self.hmac = None
+        # populate chunksize
+        if self.encmode == _ENCRYPTION_MODE_CHUNKEDBLOB:
+            self.chunksizebytes = long(
+                meta[_ENCRYPTION_METADATA_LAYOUT][
+                    _ENCRYPTION_METADATA_CHUNKOFFSETS])
+        # if RSA key is a public key, stop here as keys cannot be decrypted
+        if not rsakey.has_private():
+            return
+        # decrypt and validate symmetric key
+        if _ENCRYPTION_METADATA_ENCRYPTEDKEYSIGNATURE in meta[
+                _ENCRYPTION_METADATA_WRAPPEDCONTENTKEY]:
+            symkeysig = meta[_ENCRYPTION_METADATA_WRAPPEDCONTENTKEY][
+                _ENCRYPTION_METADATA_ENCRYPTEDKEYSIGNATURE]
+        else:
+            symkeysig = None
+        self.symkey = rsa_decrypt_key(
+            rsakey,
+            meta[_ENCRYPTION_METADATA_WRAPPEDCONTENTKEY][
+                _ENCRYPTION_METADATA_ENCRYPTEDKEY],
+            symkeysig)
+        # decrypt and validate signing key
+        if _ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY in meta:
+            if _ENCRYPTION_METADATA_ENCRYPTEDKEYSIGNATURE in meta[
+                    _ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY]:
+                signkeysig = meta[_ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY][
+                    _ENCRYPTION_METADATA_ENCRYPTEDKEYSIGNATURE]
+            else:
+                signkeysig = None
+            if _ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY in meta:
+                self.signkey = rsa_decrypt_key(
+                    rsakey,
+                    meta[_ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY][
+                        _ENCRYPTION_METADATA_ENCRYPTEDKEY],
+                    signkeysig)
+        else:
+            # fallback to the wrapped content key as the signing key if the
+            # integrity section is specified
+            if _ENCRYPTION_METADATA_INTEGRITY_AUTH in meta:
+                self.signkey = self.symkey
+            else:
+                self.signkey = None
+
+
+class PqTupleSort(tuple):
+    """Priority Queue tuple sorter: handles priority collisions.
+    0th item in the tuple is the priority number."""
+    def __lt__(self, rhs):
+        return self[0] < rhs[0]
+
+    def __gt__(self, rhs):
+        return self[0] > rhs[0]
+
+    def __le__(self, rhs):
+        return self[0] <= rhs[0]
+
+    def __ge__(self, rhs):
+        return self[0] >= rhs[0]
 
 
 class SasBlobList(object):
@@ -572,8 +802,7 @@ class BlobChunkWorker(threading.Thread):
         self.timeout = args.timeout
         self.xfertoazure = xfertoazure
         self.rsakey = args.rsakey
-        self.symkey = args.symkey
-        self.signkey = args.signkey
+        self.encmode = args.encmode
 
     def run(self):
         """Thread code
@@ -586,33 +815,45 @@ class BlobChunkWorker(threading.Thread):
         """
         while True:
             try:
-                localresource, container, remoteresource, blockid, offset, \
-                    bytestoxfer, decmeta, flock, filedesc = \
+                pri, (localresource, container, remoteresource, blockid,
+                      offset, bytestoxfer, encparam, flock, filedesc) = \
                     self._in_queue.get_nowait()
             except queue.Empty:
                 break
             try:
                 if self.xfertoazure:
+                    # if iv is not ready for this chunk, re-add back to queue
+                    if (self.rsakey is not None and
+                            self.encmode == _ENCRYPTION_MODE_FULLBLOB):
+                        _iblockid = int(blockid)
+                        if _iblockid not in encparam[2]:
+                            self._in_queue.put(
+                                PqTupleSort((
+                                    pri,
+                                    (localresource, container, remoteresource,
+                                     blockid, offset, bytestoxfer, encparam,
+                                     flock, filedesc))))
+                            continue
                     # upload block/page
                     self.putblobdata(
                         localresource, container, remoteresource, blockid,
-                        offset, bytestoxfer, flock, filedesc)
+                        offset, bytestoxfer, encparam, flock, filedesc)
                 else:
                     # download range
                     self.getblobrange(
-                        localresource, container, remoteresource, offset,
-                        bytestoxfer, decmeta, flock, filedesc)
+                        localresource, container, remoteresource, blockid,
+                        offset, bytestoxfer, encparam, flock, filedesc)
                 # pylint: disable=W0703
             except Exception as exc:
                 # pylint: enable=W0703
                 self._exc.append(exc)
-            self._out_queue.put(localresource)
+            self._out_queue.put((localresource, encparam))
             if len(self._exc) > 0:
                 break
 
     def putblobdata(
             self, localresource, container, remoteresource, blockid, offset,
-            bytestoxfer, flock, filedesc):
+            bytestoxfer, encparam, flock, filedesc):
         """Puts data (blob or page) into Azure storage
         Parameters:
             localresource - name of local resource
@@ -621,6 +862,7 @@ class BlobChunkWorker(threading.Thread):
             blockid - block id (ignored for page blobs)
             offset - file offset
             bytestoxfer - number of bytes to xfer
+            encparam - encryption metadata: (symkey, signkey, ivmap, pad)
             flock - file lock
             filedesc - file handle
         Returns:
@@ -687,7 +929,29 @@ class BlobChunkWorker(threading.Thread):
         else:
             # encrypt block if required
             if self.rsakey is not None:
-                data = encrypt_chunk(self.symkey, self.signkey, data)
+                symkey = encparam[0]
+                signkey = encparam[1]
+                if self.encmode == _ENCRYPTION_MODE_FULLBLOB:
+                    _blkid = int(blockid)
+                    iv = encparam[2][_blkid]
+                    pad = encparam[3]
+                else:
+                    iv = None
+                    pad = True
+                data = encrypt_chunk(
+                    symkey, signkey, data, self.encmode, iv=iv, pad=pad)
+                with flock:
+                    if self.encmode == _ENCRYPTION_MODE_FULLBLOB:
+                        # compute hmac for chunk
+                        if _blkid == 0:
+                            encparam[2]['hmac'].update(iv + data)
+                        else:
+                            encparam[2]['hmac'].update(data)
+                        # store iv for next chunk
+                        encparam[2][_blkid + 1] = data[
+                            len(data) - Crypto.Cipher.AES.block_size:]
+                    # compute md5 for encrypted data chunk
+                    encparam[2]['md5'].update(data)
             # compute block md5
             contentmd5 = compute_md5_for_data_asbase64(data)
             azure_request(
@@ -697,16 +961,18 @@ class BlobChunkWorker(threading.Thread):
         del data
 
     def getblobrange(
-            self, localresource, container, remoteresource, offset,
-            bytestoxfer, decmeta, flock, filedesc):
+            self, localresource, container, remoteresource, blockid, offset,
+            bytestoxfer, encparam, flock, filedesc):
         """Get a segment of a blob using range offset downloading
         Parameters:
             localresource - name of local resource
             container - blob container
             remoteresource - name of remote resource
+            blockid - block id (integral)
             offset - file offset
             bytestoxfer - number of bytes to xfer
-            decmeta - decryption metadata [symkey, signkey, offset_mod]
+            encparam - decryption metadata:
+                (symkey, signkey, offset_mod, encmode, ivmap, unpad)
             flock - file lock
             filedesc - file handle
         Returns:
@@ -714,20 +980,61 @@ class BlobChunkWorker(threading.Thread):
         Raises:
             Nothing
         """
-        rangestr = 'bytes={}-{}'.format(offset, offset + bytestoxfer)
+        if (encparam[0] is not None and
+                encparam[3] == _ENCRYPTION_MODE_FULLBLOB):
+            if offset == 0:
+                rangestr = 'bytes={}-{}'.format(offset, offset + bytestoxfer)
+            else:
+                # retrieve block size data prior for IV
+                rangestr = 'bytes={}-{}'.format(
+                    offset - Crypto.Cipher.AES.block_size,
+                    offset + bytestoxfer)
+        else:
+            rangestr = 'bytes={}-{}'.format(offset, offset + bytestoxfer)
         blobdata = azure_request(
             self.blob_service.get_blob, timeout=self.timeout,
             container_name=container, blob_name=remoteresource,
             x_ms_range=rangestr)
         # decrypt block if required
-        if decmeta[0] is not None:
-            blobdata = decrypt_chunk(decmeta[0], decmeta[1], blobdata)
+        if encparam[0] is not None:
+            if encparam[3] == _ENCRYPTION_MODE_FULLBLOB:
+                if offset == 0:
+                    iv = encparam[4][0]
+                else:
+                    iv = blobdata[:Crypto.Cipher.AES.block_size]
+                    blobdata = blobdata[Crypto.Cipher.AES.block_size:]
+                unpad = encparam[5]
+                # update any buffered data to hmac
+                hmac = encparam[4]['hmac']
+                if hmac['hmac'] is not None:
+                    # grab file lock to manipulate hmac
+                    with flock:
+                        # include iv in first hmac calculation
+                        if offset == 0:
+                            hmac['buffered'][blockid] = iv + blobdata
+                        else:
+                            hmac['buffered'][blockid] = blobdata
+                        # try to process hmac data
+                        while True:
+                            curr = hmac['curr']
+                            if curr in hmac['buffered']:
+                                hmac['hmac'].update(hmac['buffered'][curr])
+                                hmac['buffered'].pop(curr)
+                                hmac['curr'] = curr + 1
+                            else:
+                                break
+            else:
+                iv = None
+                unpad = True
+            blobdata = decrypt_chunk(
+                encparam[0], encparam[1], blobdata, encparam[3], iv=iv,
+                unpad=unpad)
         with flock:
             closefd = False
             if not filedesc:
                 filedesc = open(localresource, 'r+b')
                 closefd = True
-            filedesc.seek(offset - (decmeta[2] or 0), 0)
+            filedesc.seek(offset - (encparam[2] or 0), 0)
             filedesc.write(blobdata)
             if closefd:
                 filedesc.close()
@@ -837,55 +1144,81 @@ def rsa_decrypt_key(rsakey, enckey, signature, isbase64=True):
     return deckey
 
 
-def encrypt_chunk(symkey, signkey, data):
+def encrypt_chunk(symkey, signkey, data, encmode, iv=None, pad=False):
     """Encrypt a chunk of data
     Parameters:
         symkey - symmetric key
         signkey - signing key
         data - data to encrypt
+        encmode - encryption mode
+        iv - initialization vector
+        pad - pad data
     Returns:
-        iv || encrypted data || signature
+        iv and hmac not specified: iv || encrypted data || signature
+        else: encrypted data
     Raises:
         No special exception handling
     """
     # create iv
-    iv = Crypto.Random.new().read(Crypto.Cipher.AES.block_size)
+    if encmode == _ENCRYPTION_MODE_CHUNKEDBLOB:
+        iv = Crypto.Random.new().read(Crypto.Cipher.AES.block_size)
+        # force padding on since this will be an individual encrypted chunk
+        pad = True
     # encrypt data
     cipher = Crypto.Cipher.AES.new(symkey, Crypto.Cipher.AES.MODE_CBC, iv)
-    encdata = cipher.encrypt(pad_pkcs5(data))
+    if pad:
+        encdata = cipher.encrypt(pad_pkcs5(data))
+    else:
+        encdata = cipher.encrypt(data)
     # sign encrypted data
-    hmacsha256 = Crypto.Hash.HMAC.new(signkey, digestmod=Crypto.Hash.SHA256)
-    hmacsha256.update(encdata)
-    sig = hmacsha256.digest()
-    return iv + encdata + sig
+    if encmode == _ENCRYPTION_MODE_CHUNKEDBLOB:
+        hmac = Crypto.Hash.HMAC.new(signkey, digestmod=Crypto.Hash.SHA256)
+        hmac.update(iv + encdata)
+        return iv + encdata + hmac.digest()
+    else:
+        return encdata
 
 
-def decrypt_chunk(symkey, signkey, encchunk):
+def decrypt_chunk(
+        symkey, signkey, encchunk, encmode, iv=None, unpad=False):
     """Decrypt a chunk of data
     Parameters:
         symkey - symmetric key
         signkey - signing key
         encchunk - data to decrypt
+        encmode - encryption mode
+        blockid - block id
+        iv - initialization vector
+        unpad - unpad data
     Returns:
         decrypted data
     Raises:
         RuntimeError if signature verification fails
     """
-    # retrieve iv
-    iv = encchunk[:Crypto.Cipher.AES.block_size]
-    # retrieve encrypted data
-    encdata = encchunk[
-        Crypto.Cipher.AES.block_size:-Crypto.Hash.SHA256.digest_size]
-    # retrieve signature
-    sig = encchunk[-Crypto.Hash.SHA256.digest_size:]
-    # validate integrity of data
-    hmacsha256 = Crypto.Hash.HMAC.new(signkey, digestmod=Crypto.Hash.SHA256)
-    hmacsha256.update(encdata)
-    if hmacsha256.digest() != sig:
-        raise RuntimeError('Encrypted data integrity check failed for block')
+    # if chunked blob, then preprocess for iv and signature
+    if encmode == _ENCRYPTION_MODE_CHUNKEDBLOB:
+        # retrieve iv
+        iv = encchunk[:Crypto.Cipher.AES.block_size]
+        # retrieve encrypted data
+        encdata = encchunk[
+            Crypto.Cipher.AES.block_size:-Crypto.Hash.SHA256.digest_size]
+        # retrieve signature
+        sig = encchunk[-Crypto.Hash.SHA256.digest_size:]
+        # validate integrity of data
+        hmac = Crypto.Hash.HMAC.new(signkey, digestmod=Crypto.Hash.SHA256)
+        # compute hmac over iv + encdata
+        hmac.update(encchunk[:-Crypto.Hash.SHA256.digest_size])
+        if hmac.digest() != sig:
+            raise RuntimeError(
+                'Encrypted data integrity check failed for chunk')
+    else:
+        encdata = encchunk
     # decrypt data
     cipher = Crypto.Cipher.AES.new(symkey, Crypto.Cipher.AES.MODE_CBC, iv)
-    return unpad_pkcs5(cipher.decrypt(encdata))
+    if unpad:
+        return unpad_pkcs5(cipher.decrypt(encdata))
+    else:
+        return cipher.decrypt(encdata)
 
 
 def azure_request(req, timeout=None, *args, **kwargs):
@@ -909,16 +1242,16 @@ def azure_request(req, timeout=None, *args, **kwargs):
         except requests.Timeout as exc:
             pass
         except requests.HTTPError as exc:
-            if exc.response.status_code < 500 or \
-                    exc.response.status_code == 501 or \
-                    exc.response.status_code == 505:
+            if (exc.response.status_code < 500 or
+                    exc.response.status_code == 501 or
+                    exc.response.status_code == 505):
                 raise
         except socket.error as exc:
-            if exc.errno != errno.ETIMEDOUT and \
-                    exc.errno != errno.ECONNRESET and \
-                    exc.errno != errno.ECONNREFUSED and \
-                    exc.errno != errno.ECONNABORTED and \
-                    exc.errno != errno.ENETRESET:
+            if (exc.errno != errno.ETIMEDOUT and
+                    exc.errno != errno.ECONNRESET and
+                    exc.errno != errno.ECONNREFUSED and
+                    exc.errno != errno.ECONNABORTED and
+                    exc.errno != errno.ENETRESET):
                 raise
         except Exception as exc:
             try:
@@ -933,7 +1266,7 @@ def azure_request(req, timeout=None, *args, **kwargs):
             raise IOError(
                 'waited for {} for request {}, exceeded timeout of {}'.format(
                     time.clock() - start, req.__name__, timeout))
-        time.sleep(random.randint(2, 5))
+        time.sleep(random.randint(1, 5))
 
 
 def create_dir_ifnotexists(dirname):
@@ -1058,25 +1391,32 @@ def get_blob_listing(blob_service, args):
         blob_service - blob service
         args - program arguments
     Returns:
-        dictionary of blob -> list [content length, content md5]
+        dictionary of blob -> list [content length, content md5, enc metadata]
     Raises:
         Nothing
     """
     marker = None
     blobdict = {}
-    include = 'metadata' if args.rsakey else None
     while True:
         try:
             result = azure_request(
                 blob_service.list_blobs, timeout=args.timeout,
                 container_name=args.container, marker=marker,
-                maxresults=_MAX_LISTBLOBS_RESULTS, include=include)
+                maxresults=_MAX_LISTBLOBS_RESULTS, include='metadata')
         except azure.common.AzureMissingResourceHttpError:
             break
         for blob in result:
             blobdict[blob.name] = [
-                blob.properties.content_length, blob.properties.content_md5,
-                blob.metadata]
+                blob.properties.content_length,
+                blob.properties.content_md5, None]
+            if (blob.metadata is not None and
+                    _ENCRYPTION_METADATA_NAME in blob.metadata):
+                encmeta = EncryptionMetadataJson(
+                    args, None, None, None, None, None)
+                encmeta.parse_metadata_json(args.rsakey, blob.metadata)
+                blobdict[blob.name][1] = encmeta.md5
+                if args.rsakey is not None:
+                    blobdict[blob.name][2] = encmeta
         marker = result.next_marker
         if marker is None or len(marker) < 1:
             break
@@ -1103,9 +1443,10 @@ def generate_xferspec_download(
     """
     contentlength = blobprop[0]
     contentmd5 = blobprop[1]
-    mddict = blobprop[2]
+    encmeta = blobprop[2]
     # get the file metadata
-    if contentlength is None or contentmd5 is None or mddict is None:
+    if (contentlength is None or contentmd5 is None or
+            (args.rsakey is not None and encmeta is None)):
         result = azure_request(
             blob_service.get_blob_properties, timeout=args.timeout,
             container_name=args.container, blob_name=remoteresource)
@@ -1120,9 +1461,16 @@ def generate_xferspec_download(
         for res in result:
             if res.startswith('x-ms-meta-'):
                 mddict[res[10:]] = result[res]
+        if args.rsakey is not None and _ENCRYPTION_METADATA_NAME in mddict:
+            encmeta = EncryptionMetadataJson(
+                args, None, None, None, None, None)
+            encmeta.parse_metadata_json(args.rsakey, mddict)
     if contentlength < 0:
         raise ValueError(
             'contentlength is invalid for {}'.format(remoteresource))
+    # overwrite content md5 if encryption metadata exists
+    if encmeta is not None:
+        contentmd5 = encmeta.md5
     print('remote file {} length: {} bytes, md5: {}'.format(
         remoteresource, contentlength, contentmd5))
     # check if download is needed
@@ -1137,47 +1485,47 @@ def generate_xferspec_download(
             print('match, skipping download')
             return None, None, None, None
     tmpfilename = localfile + '.blobtmp'
-    if args.rsakey is not None and _META_ENCRYPTION_BLOCK_CIPHER in mddict:
-        chunksize = long(mddict[_META_ENCRYPTED_BLOCK_BYTE_OFFSETS])
-        offset_mod = _AES256CBC_OVERHEAD_BYTES + 1
-        # ensure known encryption metadata is set
-        if mddict[_META_ENCRYPTION_BLOCK_CIPHER] != _ENCRYPTION_BLOCK_CIPHER:
-            raise RuntimeError('Unknown block cipher {}'.format(
-                mddict[_META_ENCRYPTION_BLOCK_CIPHER]))
-        if mddict[_META_ENCRYPTION_INTEGRITY_METHOD] != \
-                _ENCRYPTION_INTEGRITY_METHOD:
-            raise RuntimeError('Unknown integrity/auth method {}'.format(
-                mddict[_META_ENCRYPTION_INTEGRITY_METHOD]))
-        if mddict[_META_ENCRYPTION_BLOCK_STRUCTURE] != \
-                _ENCRYPTION_BLOCK_STRUCTURE:
-            raise RuntimeError('Unknown encrypted block structure {}'.format(
-                mddict[_META_ENCRYPTION_BLOCK_STRUCTURE]))
-        if mddict[_META_ENCRYPTION_KEY_ENC_SCHEME] != \
-                _ENCRYPTION_KEY_ENC_SCHEME:
-            raise RuntimeError('Unknown key encryption scheme {}'.format(
-                mddict[_META_ENCRYPTION_KEY_ENC_SCHEME]))
-        if mddict[_META_ENCRYPTION_KEY_SIGN_SCHEME] != \
-                _ENCRYPTION_KEY_SIGN_SCHEME:
-            raise RuntimeError('Unknown key signature scheme {}'.format(
-                mddict[_META_ENCRYPTION_KEY_SIGN_SCHEME]))
-        # decrypt and validate symmetric key
-        symkey = rsa_decrypt_key(
-            args.rsakey, mddict[_META_ENCRYPTED_SYM_KEY],
-            mddict[_META_ENCRYPTED_SYM_KEY_SIG])
-        # decrypt and validate signing key
-        signkey = rsa_decrypt_key(
-            args.rsakey, mddict[_META_ENCRYPTED_SIGN_KEY],
-            mddict[_META_ENCRYPTED_SIGN_KEY_SIG])
+    if encmeta is not None:
+        chunksize = encmeta.chunksizebytes
+        symkey = encmeta.symkey
+        signkey = encmeta.signkey
+        if encmeta.encmode == _ENCRYPTION_MODE_FULLBLOB:
+            ivmap = {
+                0: encmeta.iv,
+                'hmac': {
+                    'hmac': None,
+                    'buffered': {},
+                    'curr': 0,
+                    'sig': encmeta.hmac,
+                }
+            }
+            if signkey is not None:
+                ivmap['hmac']['hmac'] = Crypto.Hash.HMAC.new(
+                    signkey, digestmod=Crypto.Hash.SHA256)
+            offset_mod = 0
+        elif encmeta.encmode == _ENCRYPTION_MODE_CHUNKEDBLOB:
+            ivmap = None
+            offset_mod = _AES256CBC_OVERHEAD_BYTES + 1
+        else:
+            raise RuntimeError('Unknown encryption mode: {}'.format(
+                encmeta.encmode))
     else:
         chunksize = args.chunksizebytes
         offset_mod = 0
         symkey = None
         signkey = None
+        ivmap = None
     nchunks = contentlength // chunksize
     # compute allocation size, if encrypted this will be an
     # underallocation estimate
     if contentlength > 0:
-        allocatesize = contentlength - ((nchunks + 2) * offset_mod)
+        if encmeta is not None:
+            if encmeta.encmode == _ENCRYPTION_MODE_CHUNKEDBLOB:
+                allocatesize = contentlength - ((nchunks + 2) * offset_mod)
+            else:
+                allocatesize = contentlength - Crypto.Cipher.AES.block_size
+        else:
+            allocatesize = contentlength
         if allocatesize < 0:
             allocatesize = 0
     else:
@@ -1206,13 +1554,16 @@ def generate_xferspec_download(
         # header expects it that way. x -> y bytes means first bits of the
         # (x+1)th byte to the last bits of the (y+1)th byte. for example,
         # 0 -> 511 means byte 1 to byte 512
-        xferspec = [tmpfilename, args.container, remoteresource, None,
-                    currfileoffset, chunktoadd - 1,
-                    [symkey, signkey, i * offset_mod], flock, filedesc]
+        encparam = [
+            symkey, signkey, i * offset_mod,
+            encmeta.encmode if encmeta is not None else None, ivmap, False]
+        xferspec = (tmpfilename, args.container, remoteresource, i,
+                    currfileoffset, chunktoadd - 1, encparam, flock, filedesc)
         currfileoffset = currfileoffset + chunktoadd
         nstorageops = nstorageops + 1
-        storage_in_queue.put(xferspec)
+        storage_in_queue.put(PqTupleSort((i, xferspec)))
         if currfileoffset >= contentlength:
+            encparam[5] = True
             break
     return contentlength, nstorageops, contentmd5, filedesc
 
@@ -1263,18 +1614,37 @@ def generate_xferspec_upload(
     if addfd:
         with flock:
             filedesc = open(localfile, 'rb')
-    for _ in xrange(nchunks + 1):
+    symkey = None
+    signkey = None
+    ivmap = None
+    for i in xrange(nchunks + 1):
         chunktoadd = min(args.chunksizebytes, filesize)
         if chunktoadd + currfileoffset > filesize:
             chunktoadd = filesize - currfileoffset
         blockid = '{0:08d}'.format(currfileoffset // args.chunksizebytes)
+        # generate the ivmap for the first block
+        if args.rsakey is not None and currfileoffset == 0:
+            # generate sym/signing keys
+            symkey, signkey = generate_aes256_keys()
+            if args.encmode == _ENCRYPTION_MODE_FULLBLOB:
+                ivmap = {
+                    i: Crypto.Random.new().read(
+                        Crypto.Cipher.AES.block_size),
+                    'hmac': Crypto.Hash.HMAC.new(
+                        signkey, digestmod=Crypto.Hash.SHA256),
+                }
+            else:
+                ivmap = {}
+            ivmap['md5'] = hashlib.md5()
         blockids[localfile].append(blockid)
-        xferspec = [localfile, args.container, remoteresource, blockid,
-                    currfileoffset, chunktoadd, None, flock, filedesc]
+        encparam = [symkey, signkey, ivmap, False]
+        xferspec = (localfile, args.container, remoteresource, blockid,
+                    currfileoffset, chunktoadd, encparam, flock, filedesc)
         currfileoffset = currfileoffset + chunktoadd
         nstorageops = nstorageops + 1
-        storage_in_queue.put(xferspec)
+        storage_in_queue.put(PqTupleSort((i, xferspec)))
         if currfileoffset >= filesize:
+            encparam[3] = True
             break
     return filesize, nstorageops, md5digest, filedesc
 
@@ -1379,7 +1749,8 @@ def main():
         args.remoteresource = args.remoteresource.strip(os.path.sep)
 
     # set chunk size
-    if args.chunksizebytes is None or args.chunksizebytes < 64:
+    if (args.chunksizebytes is None or args.chunksizebytes < 64 or
+            args.chunksizebytes > _MAX_BLOB_CHUNK_SIZE_BYTES):
         args.chunksizebytes = _MAX_BLOB_CHUNK_SIZE_BYTES
 
     # set blob ep
@@ -1426,19 +1797,35 @@ def main():
             raise ValueError('cannot download remote file if not specified')
 
     # import rsa key
-    args.symkey = None
-    args.signkey = None
     rsakeyfile = args.rsakey
     if rsakeyfile is not None:
+        # check for conflicting options
+        if args.autovhd or args.pageblob:
+            raise ValueError(
+                'cannot operate in auto vhd or page blob mode with '
+                'encryption enabled')
+        # check for supported encryption modes
+        if (args.encmode != _ENCRYPTION_MODE_FULLBLOB and
+                args.encmode != _ENCRYPTION_MODE_CHUNKEDBLOB):
+            raise RuntimeError(
+                'Unknown encryption mode: {}'.format(args.encmode))
+        # only allow full blob encryption mode for now due to
+        # possible compatibility issues
+        if args.encmode == _ENCRYPTION_MODE_CHUNKEDBLOB:
+            raise RuntimeError(
+                '{} encryption mode not allowed'.format(args.encmode))
         args.rsakey = Crypto.PublicKey.RSA.importKey(
             open(rsakeyfile, 'r').read(), args.rsakeypassphrase)
         if not args.rsakey.has_private() and not xfertoazure:
             raise ValueError('imported RSA key does not have a private key')
-        # adjust chunk size (iv, signature, min padding)
+        # adjust chunk size for padding for chunked mode
         if xfertoazure:
-            args.chunksizebytes -= _AES256CBC_OVERHEAD_BYTES + 1
-            # generate symmetric and signature key for session
-            args.symkey, args.signkey = generate_aes256_keys()
+            if args.encmode == _ENCRYPTION_MODE_CHUNKEDBLOB:
+                args.chunksizebytes -= _AES256CBC_OVERHEAD_BYTES + 1
+            elif args.encmode == _ENCRYPTION_MODE_FULLBLOB:
+                nchunks = args.chunksizebytes // _AES256CBC_OVERHEAD_BYTES
+                args.chunksizebytes = (nchunks - 1) * _AES256CBC_OVERHEAD_BYTES
+                del nchunks
         # ensure chunk size is greater than overhead
         if args.chunksizebytes <= (_AES256CBC_OVERHEAD_BYTES + 1) << 1:
             raise ValueError('chunksizebytes {} <= encryption min {}'.format(
@@ -1452,10 +1839,6 @@ def main():
     print('     management cert: {}'.format(args.managementcert))
     print('  transfer direction: {}'.format(
         'local->Azure' if xfertoazure else 'Azure->local'))
-    print('        RSA key file: {}'.format(rsakeyfile or 'disabled'))
-    print(' RSA key has private: {}'.format(
-        True if args.rsakey is not None and
-        args.rsakey.has_private() else False))
     print('      local resource: {}'.format(args.localresource))
     print('     remote resource: {}'.format(args.remoteresource))
     print('  max num of workers: {}'.format(args.numworkers))
@@ -1474,6 +1857,13 @@ def main():
     print('    recursive if dir: {}'.format(args.recursive))
     print(' keep root dir on up: {}'.format(args.keeprootdir))
     print('          collate to: {}'.format(args.collate or 'disabled'))
+    print('     local overwrite: {}'.format(args.overwrite))
+    print('     encryption mode: {}'.format(
+        args.encmode or 'disabled' if xfertoazure else 'file dependent'))
+    print('        RSA key file: {}'.format(rsakeyfile or 'disabled'))
+    print(' RSA key has private: {}'.format(
+        True if args.rsakey is not None and
+        args.rsakey.has_private() else False))
     print('=======================================\n')
 
     # mark start time after init
@@ -1482,7 +1872,7 @@ def main():
 
     # populate instruction queues
     allfilesize = 0
-    storage_in_queue = queue.Queue()
+    storage_in_queue = queue.PriorityQueue()
     nstorageops = 0
     blockids = {}
     completed_blockids = {}
@@ -1640,24 +2030,6 @@ def main():
         print('performing {} range-gets'.format(nstorageops))
         progress_text = 'range-gets'
 
-    # configure encryption metadata
-    if xfertoazure and args.rsakey is not None:
-        encsymkey, symkeysig = rsa_encrypt_key(args.rsakey, args.symkey)
-        encsignkey, signkeysig = rsa_encrypt_key(args.rsakey, args.signkey)
-        encmetadata = {
-            _META_ENCRYPTION_BLOCK_CIPHER: _ENCRYPTION_BLOCK_CIPHER,
-            _META_ENCRYPTION_INTEGRITY_METHOD: _ENCRYPTION_INTEGRITY_METHOD,
-            _META_ENCRYPTION_BLOCK_STRUCTURE: _ENCRYPTION_BLOCK_STRUCTURE,
-            _META_ENCRYPTED_BLOCK_BYTE_OFFSETS: str(
-                args.chunksizebytes + _AES256CBC_OVERHEAD_BYTES + 1),
-            _META_ENCRYPTION_KEY_ENC_SCHEME: _ENCRYPTION_KEY_ENC_SCHEME,
-            _META_ENCRYPTION_KEY_SIGN_SCHEME: _ENCRYPTION_KEY_SIGN_SCHEME,
-            _META_ENCRYPTED_SYM_KEY: encsymkey,
-            _META_ENCRYPTED_SYM_KEY_SIG: symkeysig or '',
-            _META_ENCRYPTED_SIGN_KEY: encsignkey,
-            _META_ENCRYPTED_SIGN_KEY_SIG: signkeysig or '',
-        }
-
     # spawn workers
     storage_out_queue = queue.Queue(nstorageops)
     maxworkers = min((args.numworkers, nstorageops))
@@ -1671,12 +2043,13 @@ def main():
         thr.start()
 
     done_ops = 0
+    hmacs = {}
     storage_start = time.time()
     progress_bar(
         args.progressbar, 'xfer', progress_text, nstorageops,
         done_ops, storage_start)
     while True:
-        localresource = storage_out_queue.get()
+        localresource, encparam = storage_out_queue.get()
         if len(exc_list) > 0:
             for exc in exc_list:
                 print(exc)
@@ -1697,6 +2070,10 @@ def main():
                 else:
                     # only perform put block list on non-zero byte files
                     if filesizes[localresource] > 0:
+                        if args.rsakey is not None:
+                            md5 = base64encode(encparam[2]['md5'].digest())
+                        else:
+                            md5 = md5map[localresource]
                         azure_request(
                             blob_service.put_block_list,
                             timeout=args.timeout,
@@ -1705,15 +2082,33 @@ def main():
                             block_list=blockids[localresource],
                             x_ms_blob_content_type=get_mime_type(
                                 localresource),
-                            x_ms_blob_content_md5=md5map[localresource])
+                            x_ms_blob_content_md5=md5)
                     # set blob metadata for encrypted blobs
                     if args.rsakey is not None:
+                        if args.encmode == _ENCRYPTION_MODE_FULLBLOB:
+                            encmetadata = EncryptionMetadataJson(
+                                args, encparam[0], encparam[1], encparam[2][0],
+                                encparam[2]['hmac'].digest(),
+                                md5map[localresource]
+                            ).construct_metadata_json()
+                        else:
+                            encmetadata = EncryptionMetadataJson(
+                                args, encparam[0], encparam[1], None, None,
+                                md5map[localresource]
+                            ).construct_metadata_json()
                         azure_request(
                             blob_service.set_blob_metadata,
                             timeout=args.timeout,
                             container_name=args.container,
                             blob_name=filemap[localresource],
                             x_ms_meta_name_values=encmetadata)
+        else:
+            if (args.rsakey is not None and
+                    encparam[3] == _ENCRYPTION_MODE_FULLBLOB and
+                    not as_page_blob(
+                        args.pageblob, args.autovhd, localresource) and
+                    encparam[4]['hmac']['hmac'] is not None):
+                hmacs[localresource] = encparam[4]['hmac']
         done_ops += 1
         progress_bar(
             args.progressbar, 'xfer', progress_text, nstorageops,
@@ -1737,23 +2132,53 @@ def main():
 
     # finalize files/blobs
     if not xfertoazure:
-        if args.computefilemd5:
-            print('\nchecking md5 hashes and ', end='')
-        print('finalizing files')
+        print('\nperforming finalization (if applicable): {}: {}, '
+              'MD5: {}'.format(
+                  _ENCRYPTION_INTEGRITY_AUTH_ALGORITHM,
+                  args.rsakey is not None, args.computefilemd5))
         for localfile in filemap:
             tmpfilename = filemap[localfile]
             finalizefile = True
-            # compare md5 hash
-            if args.computefilemd5:
-                lmd5 = compute_md5_for_file_asbase64(tmpfilename)
-                print('{}: local {} remote {} ->'.format(
-                    localfile, lmd5, md5map[localfile]), end='')
-                if lmd5 != md5map[localfile]:
-                    print('MISMATCH')
-                    if not args.keepmismatchedmd5files:
+            skipmd5 = False
+            # check hmac
+            if (args.rsakey is not None and
+                    args.encmode == _ENCRYPTION_MODE_FULLBLOB):
+                if tmpfilename in hmacs:
+                    hmac = hmacs[tmpfilename]
+                    # process any remaining hmac data
+                    while len(hmac['buffered']) > 0:
+                        curr = hmac['curr']
+                        if curr in hmac['buffered']:
+                            hmac['hmac'].update(hmac['buffered'][curr])
+                            hmac['buffered'].pop(curr)
+                            hmac['curr'] = curr + 1
+                        else:
+                            break
+                    digest = base64encode(hmac['hmac'].digest())
+                    res = 'OK'
+                    if digest != hmac['sig']:
+                        res = 'MISMATCH'
                         finalizefile = False
+                    else:
+                        skipmd5 = True
+                    print('[{}: {}, {}] {} <L..R> {}'.format(
+                        _ENCRYPTION_INTEGRITY_AUTH_ALGORITHM, res, localfile,
+                        digest, hmac['sig']))
+            # compare md5 hash
+            if args.computefilemd5 and not skipmd5:
+                if md5map[localfile] is None:
+                    print('[MD5: SKIPPED, {}] {} <L..R> {}'.format(
+                        localfile, None, md5map[localfile]))
                 else:
-                    print('match')
+                    lmd5 = compute_md5_for_file_asbase64(tmpfilename)
+                    if lmd5 != md5map[localfile]:
+                        res = 'MISMATCH'
+                        if not args.keepmismatchedmd5files:
+                            finalizefile = False
+                    else:
+                        res = 'OK'
+                    print('[MD5: {}, {}] {} <L..R> {}'.format(
+                        res, localfile, lmd5, md5map[localfile]))
             if finalizefile:
                 # check for existing file first
                 if os.path.exists(localfile):
@@ -1767,6 +2192,7 @@ def main():
                 os.rename(tmpfilename, localfile)
             else:
                 os.remove(tmpfilename)
+        print('finalization complete.')
 
     print('\nscript elapsed time: {} sec'.format(time.time() - start))
     print('script end time: {}'.format(time.strftime("%Y-%m-%d %H:%M:%S")))
@@ -1814,7 +2240,8 @@ def parseargs():  # pragma: no cover
     parser.set_defaults(
         autovhd=False, blobep=_DEFAULT_BLOB_ENDPOINT,
         chunksizebytes=_MAX_BLOB_CHUNK_SIZE_BYTES, collate=None,
-        computefilemd5=True, createcontainer=True, keeprootdir=False,
+        computefilemd5=True, createcontainer=True,
+        encmode=_DEFAULT_ENCRYPTION_MODE, keeprootdir=False,
         managementep=_DEFAULT_MANAGEMENT_ENDPOINT,
         numworkers=_DEFAULT_MAX_STORAGEACCOUNT_WORKERS, overwrite=True,
         pageblob=False, progressbar=True, recursive=True, rsakey=None,
@@ -1841,6 +2268,9 @@ def parseargs():  # pragma: no cover
     parser.add_argument(
         '--download', action='store_true',
         help='force transfer direction to download from Azure')
+    parser.add_argument(
+        '--encmode',
+        help='encryption mode [{}]'.format(_DEFAULT_ENCRYPTION_MODE))
     parser.add_argument(
         '--keepmismatchedmd5files', action='store_true',
         help='keep files with MD5 mismatches')

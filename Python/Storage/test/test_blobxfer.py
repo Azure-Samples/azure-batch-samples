@@ -3,7 +3,9 @@
 
 # stdlib imports
 import base64
+import copy
 import errno
+import json
 import math
 import os
 try:
@@ -38,27 +40,50 @@ def test_encrypt_decrypt_chunk():
     assert len(signkey) == blobxfer._AES256_KEYLENGTH_BYTES
 
     # test random binary data, unaligned
+    iv = os.urandom(16)
     plaindata = os.urandom(31)
-    encdata = blobxfer.encrypt_chunk(enckey, signkey, plaindata)
+    encdata = blobxfer.encrypt_chunk(
+        enckey, signkey, plaindata, blobxfer._ENCRYPTION_MODE_CHUNKEDBLOB,
+        pad=True)
     assert encdata != plaindata
-    decdata = blobxfer.decrypt_chunk(enckey, signkey, encdata)
+    decdata = blobxfer.decrypt_chunk(
+        enckey, signkey, encdata, blobxfer._ENCRYPTION_MODE_CHUNKEDBLOB,
+        unpad=True)
     assert decdata == plaindata
     with pytest.raises(RuntimeError):
         badsig = base64.b64encode(b'0')
-        blobxfer.decrypt_chunk(enckey, badsig, encdata)
+        blobxfer.decrypt_chunk(
+            enckey, badsig, encdata, blobxfer._ENCRYPTION_MODE_CHUNKEDBLOB,
+            unpad=True)
+
+    encdata = blobxfer.encrypt_chunk(
+        enckey, signkey, plaindata, blobxfer._ENCRYPTION_MODE_FULLBLOB,
+        iv=iv, pad=True)
+    decdata = blobxfer.decrypt_chunk(
+        enckey, signkey, encdata, blobxfer._ENCRYPTION_MODE_FULLBLOB,
+        iv=iv, unpad=True)
+    assert decdata == plaindata
 
     # test random binary data aligned on boundary
     plaindata = os.urandom(32)
-    encdata = blobxfer.encrypt_chunk(enckey, signkey, plaindata)
+    encdata = blobxfer.encrypt_chunk(
+        enckey, signkey, plaindata, blobxfer._ENCRYPTION_MODE_FULLBLOB,
+        iv=iv, pad=True)
     assert encdata != plaindata
-    decdata = blobxfer.decrypt_chunk(enckey, signkey, encdata)
+    decdata = blobxfer.decrypt_chunk(
+        enckey, signkey, encdata, blobxfer._ENCRYPTION_MODE_FULLBLOB,
+        iv=iv, unpad=True)
     assert decdata == plaindata
 
     # test text data
     plaindata = b'attack at dawn!'
-    encdata = blobxfer.encrypt_chunk(enckey, signkey, plaindata)
+    encdata = blobxfer.encrypt_chunk(
+        enckey, signkey, plaindata, blobxfer._ENCRYPTION_MODE_FULLBLOB,
+        iv, pad=True)
     assert encdata != plaindata
-    decdata = blobxfer.decrypt_chunk(enckey, signkey, encdata)
+    decdata = blobxfer.decrypt_chunk(
+        enckey, signkey, encdata, blobxfer._ENCRYPTION_MODE_FULLBLOB,
+        iv, unpad=True)
     assert decdata == plaindata
 
 
@@ -376,7 +401,7 @@ def test_blobchunkworker_run(tmpdir):
 
     exc_list = []
     flock = threading.Lock()
-    sa_in_queue = queue.Queue()
+    sa_in_queue = queue.PriorityQueue()
     sa_out_queue = queue.Queue()
     with requests_mock.mock() as m:
         m.put('mock://blobepcontainer/blob?saskey', status_code=200)
@@ -385,7 +410,7 @@ def test_blobchunkworker_run(tmpdir):
             exc_list, sa_in_queue, sa_out_queue, args, sbs, True)
         with pytest.raises(IOError):
             bcw.putblobdata(lpath, 'container', 'blob', 'blockid',
-                            0, 4, flock, None)
+                            0, 4, None, flock, None)
 
     args.pageblob = False
     with requests_mock.mock() as m:
@@ -394,33 +419,33 @@ def test_blobchunkworker_run(tmpdir):
         bcw = blobxfer.BlobChunkWorker(
             exc_list, sa_in_queue, sa_out_queue, args, sbs, True)
         bcw.putblobdata(lpath, 'container', 'blob', 'blockid',
-                        0, 4, flock, None)
+                        0, 4, None, flock, None)
 
         m.get('mock://blobepcontainer/blob?saskey', status_code=200)
-        bcw.getblobrange(lpath, 'container', 'blob', 0, 4,
-                         [None, None, None], flock, None)
+        bcw.getblobrange(lpath, 'container', 'blob', 0, 0, 4,
+                         [None, None, None, None, None, False], flock, None)
 
         # test zero-length putblob
         bcw.putblobdata(
-            lpath, 'container', 'blob', 'blockid', 0, 0, flock, None)
+            lpath, 'container', 'blob', 'blockid', 0, 0, None, flock, None)
         bcw._pageblob = True
         bcw.putblobdata(
-            lpath, 'container', 'blob', 'blockid', 0, 0, flock, None)
+            lpath, 'container', 'blob', 'blockid', 0, 0, None, flock, None)
 
         # test empty page
         with open(lpath, 'wb') as f:
             f.write(b'\0' * 4 * 1024 * 1024)
         bcw.putblobdata(
             lpath, 'container', 'blob', 'blockid', 0, 4 * 1024 * 1024,
-            flock, None)
+            None, flock, None)
         with open(lpath, 'wb') as f:
             f.write(b'\0' * 4 * 1024)
         bcw.putblobdata(
             lpath, 'container', 'blob', 'blockid', 0, 4 * 1024,
-            flock, None)
+            None, flock, None)
 
-    sa_in_queue.put((lpath, 'container', 'blob', 'blockid', 0, 4,
-                     [None, None, None], flock, None))
+    sa_in_queue.put((0, (lpath, 'container', 'blob', 'blockid', 0, 4,
+                         [None, None, None, None], flock, None)))
     with requests_mock.mock() as m:
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         bcw = blobxfer.BlobChunkWorker(
@@ -438,7 +463,7 @@ def test_generate_xferspec_download_invalid(patched_azure_request):
     args.storageaccountkey = 'saskey'
     args.chunksizebytes = 5
     args.timeout = None
-    sa_in_queue = queue.Queue()
+    sa_in_queue = queue.PriorityQueue()
 
     with requests_mock.mock() as m:
         m.head('mock://blobepcontainer/blob?saskey', headers={
@@ -459,7 +484,7 @@ def test_generate_xferspec_download(tmpdir):
     args.storageaccountkey = 'saskey'
     args.chunksizebytes = 5
     args.timeout = None
-    sa_in_queue = queue.Queue()
+    sa_in_queue = queue.PriorityQueue()
 
     session = requests.Session()
     adapter = requests_mock.Adapter()
@@ -500,21 +525,31 @@ def test_generate_xferspec_download(tmpdir):
         assert cl is None
         assert sa_in_queue.qsize() == 4
 
-        sa_in_queue = queue.Queue()
+        sa_in_queue = queue.PriorityQueue()
         args.rsakey = _RSAKEY
         symkey, signkey = blobxfer.generate_aes256_keys()
-        symkey, symkeysig = blobxfer.rsa_encrypt_key(_RSAKEY, symkey)
-        signkey, signkeysig = blobxfer.rsa_encrypt_key(_RSAKEY, signkey)
+        args.encmode = blobxfer._ENCRYPTION_MODE_CHUNKEDBLOB
+        metajson = blobxfer.EncryptionMetadataJson(
+            args, symkey, signkey, iv=b'0', encdata_signature=b'0',
+            preencrypted_md5=None)
+        encmeta = metajson.construct_metadata_json()
+        goodencjson = json.loads(encmeta[blobxfer._ENCRYPTION_METADATA_NAME])
+        metajson2 = blobxfer.EncryptionMetadataJson(
+            args, None, None, None, None, None)
+        metajson2.parse_metadata_json(args.rsakey, encmeta)
+        assert metajson2.symkey == symkey
+        assert metajson2.signkey == signkey
+        assert metajson2.encmode == args.encmode
+        assert metajson2.chunksizebytes == \
+            args.chunksizebytes + blobxfer._AES256CBC_OVERHEAD_BYTES + 1
+        encjson = json.loads(encmeta[blobxfer._ENCRYPTION_METADATA_NAME])
+        encjson[blobxfer._ENCRYPTION_METADATA_LAYOUT][
+            blobxfer._ENCRYPTION_METADATA_CHUNKSTRUCTURE] = 'X'
         headers = {
             'content-length': '64',
             'content-md5': 'md5',
-            'x-ms-meta-' + blobxfer._META_ENCRYPTION_BLOCK_CIPHER:
-            blobxfer._ENCRYPTION_BLOCK_CIPHER + 'X',
-            'x-ms-meta-' + blobxfer._META_ENCRYPTED_BLOCK_BYTE_OFFSETS: '6',
-            'x-ms-meta-' + blobxfer._META_ENCRYPTED_SYM_KEY: symkey,
-            'x-ms-meta-' + blobxfer._META_ENCRYPTED_SYM_KEY_SIG: symkeysig,
-            'x-ms-meta-' + blobxfer._META_ENCRYPTED_SIGN_KEY: signkey,
-            'x-ms-meta-' + blobxfer._META_ENCRYPTED_SIGN_KEY_SIG: signkeysig,
+            'x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME:
+            json.dumps(encjson)
         }
         m.head('mock://blobepcontainer/blob?saskey', headers=headers)
         with pytest.raises(RuntimeError):
@@ -522,53 +557,101 @@ def test_generate_xferspec_download(tmpdir):
                 sbs, args, sa_in_queue, lpath, 'blob', False,
                 [None, None, None])
 
-        headers['x-ms-meta-' + blobxfer._META_ENCRYPTION_BLOCK_CIPHER] = \
-            blobxfer._ENCRYPTION_BLOCK_CIPHER
-        headers['x-ms-meta-' + blobxfer._META_ENCRYPTION_INTEGRITY_METHOD] = \
-            blobxfer._ENCRYPTION_INTEGRITY_METHOD + 'X'
+        encjson = copy.deepcopy(goodencjson)
+        encjson[blobxfer._ENCRYPTION_METADATA_AGENT][
+            blobxfer._ENCRYPTION_METADATA_PROTOCOL] = 'X'
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME] = \
+            json.dumps(encjson)
         m.head('mock://blobepcontainer/blob?saskey', headers=headers)
         with pytest.raises(RuntimeError):
             blobxfer.generate_xferspec_download(
                 sbs, args, sa_in_queue, lpath, 'blob', False,
                 [None, None, None])
 
-        headers['x-ms-meta-' + blobxfer._META_ENCRYPTION_INTEGRITY_METHOD] = \
-            blobxfer._ENCRYPTION_INTEGRITY_METHOD
-        headers['x-ms-meta-' + blobxfer._META_ENCRYPTION_BLOCK_STRUCTURE] = \
-            blobxfer._ENCRYPTION_BLOCK_STRUCTURE + 'X'
+        encjson = copy.deepcopy(goodencjson)
+        encjson[blobxfer._ENCRYPTION_METADATA_AGENT][
+            blobxfer._ENCRYPTION_METADATA_ENCRYPTION_ALGORITHM] = 'X'
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME] = \
+            json.dumps(encjson)
         m.head('mock://blobepcontainer/blob?saskey', headers=headers)
         with pytest.raises(RuntimeError):
             blobxfer.generate_xferspec_download(
                 sbs, args, sa_in_queue, lpath, 'blob', False,
                 [None, None, None])
 
-        headers['x-ms-meta-' + blobxfer._META_ENCRYPTION_BLOCK_STRUCTURE] = \
-            blobxfer._ENCRYPTION_BLOCK_STRUCTURE
-        headers['x-ms-meta-' + blobxfer._META_ENCRYPTION_KEY_ENC_SCHEME] = \
-            blobxfer._ENCRYPTION_KEY_ENC_SCHEME + 'X'
+        encjson = copy.deepcopy(goodencjson)
+        encjson[blobxfer._ENCRYPTION_METADATA_INTEGRITY_AUTH][
+            blobxfer._ENCRYPTION_METADATA_ALGORITHM] = 'X'
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME] = \
+            json.dumps(encjson)
         m.head('mock://blobepcontainer/blob?saskey', headers=headers)
         with pytest.raises(RuntimeError):
             blobxfer.generate_xferspec_download(
                 sbs, args, sa_in_queue, lpath, 'blob', False,
                 [None, None, None])
 
-        headers['x-ms-meta-' + blobxfer._META_ENCRYPTION_KEY_ENC_SCHEME] = \
-            blobxfer._ENCRYPTION_KEY_ENC_SCHEME
-        headers['x-ms-meta-' + blobxfer._META_ENCRYPTION_KEY_SIGN_SCHEME] = \
-            blobxfer._ENCRYPTION_KEY_SIGN_SCHEME + 'X'
+        encjson = copy.deepcopy(goodencjson)
+        encjson[blobxfer._ENCRYPTION_METADATA_WRAPPEDCONTENTKEY][
+            blobxfer._ENCRYPTION_METADATA_ALGORITHM] = 'X'
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME] = \
+            json.dumps(encjson)
         m.head('mock://blobepcontainer/blob?saskey', headers=headers)
         with pytest.raises(RuntimeError):
             blobxfer.generate_xferspec_download(
                 sbs, args, sa_in_queue, lpath, 'blob', False,
                 [None, None, None])
 
-        headers['x-ms-meta-' + blobxfer._META_ENCRYPTION_KEY_SIGN_SCHEME] = \
-            blobxfer._ENCRYPTION_KEY_SIGN_SCHEME
+        encjson = copy.deepcopy(goodencjson)
+        encjson[blobxfer._ENCRYPTION_METADATA_WRAPPEDCONTENTKEY][
+            blobxfer._ENCRYPTION_METADATA_KEYSIGNATURESCHEME] = 'X'
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME] = \
+            json.dumps(encjson)
+        m.head('mock://blobepcontainer/blob?saskey', headers=headers)
+        with pytest.raises(RuntimeError):
+            blobxfer.generate_xferspec_download(
+                sbs, args, sa_in_queue, lpath, 'blob', False,
+                [None, None, None])
+
+        encjson = copy.deepcopy(goodencjson)
+        encjson[blobxfer._ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY][
+            blobxfer._ENCRYPTION_METADATA_ALGORITHM] = 'X'
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME] = \
+            json.dumps(encjson)
+        m.head('mock://blobepcontainer/blob?saskey', headers=headers)
+        with pytest.raises(RuntimeError):
+            blobxfer.generate_xferspec_download(
+                sbs, args, sa_in_queue, lpath, 'blob', False,
+                [None, None, None])
+
+        encjson = copy.deepcopy(goodencjson)
+        encjson[blobxfer._ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY][
+            blobxfer._ENCRYPTION_METADATA_KEYSIGNATURESCHEME] = 'X'
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME] = \
+            json.dumps(encjson)
+        m.head('mock://blobepcontainer/blob?saskey', headers=headers)
+        with pytest.raises(RuntimeError):
+            blobxfer.generate_xferspec_download(
+                sbs, args, sa_in_queue, lpath, 'blob', False,
+                [None, None, None])
+
+        args.chunksizebytes = 5
+        metajson.chunksizebytes = args.chunksizebytes
+        metajson.md5 = headers['content-md5']
+        args.encmode = blobxfer._ENCRYPTION_MODE_FULLBLOB
+        encjson = copy.deepcopy(goodencjson)
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME] = \
+            json.dumps(encjson)
+        hcl = int(headers['content-length'])
         cl, nsops, md5, fd = blobxfer.generate_xferspec_download(
-            sbs, args, sa_in_queue, lpath, 'blob', False, [None, None, None])
-        assert 64 == cl
-        assert 11 == nsops
-        assert 'md5' == md5
+            sbs, args, sa_in_queue, lpath, 'blob', False,
+            [hcl, headers['content-md5'], metajson])
+        assert hcl == cl
+        calcops = hcl // args.chunksizebytes
+        hclmod = hcl % args.chunksizebytes
+        if hclmod > 0:
+            calcops += 1
+        assert calcops == nsops
+        assert headers['content-md5'] == md5
         assert fd is None
         assert sa_in_queue.qsize() == nsops
         data = sa_in_queue.get()
@@ -587,7 +670,7 @@ def test_generate_xferspec_upload(tmpdir):
     args.skiponmatch = False
     args.pageblob = False
     args.autovhd = False
-    sa_in_queue = queue.Queue()
+    sa_in_queue = queue.PriorityQueue()
     fs, nsops, md5, fd = blobxfer.generate_xferspec_upload(
         args, sa_in_queue, {}, {}, lpath, 'rr', True)
     stat = os.stat(lpath)
@@ -759,6 +842,7 @@ def test_main1(
     ssk.storage_service_keys.primary = 'key1'
     args.storageaccountkey = None
     args.rsakey = ''
+    args.encmode = blobxfer._ENCRYPTION_MODE_FULLBLOB
     with pytest.raises(IOError):
         blobxfer.main()
 

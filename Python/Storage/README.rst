@@ -25,14 +25,17 @@ blobxfer is on PyPI and can be installed via:
 
 If you need more fine-grained control on installing dependencies, continue
 reading this section. The blobxfer utility is a python script that can be used
-on any platform where Python 2.7, 3.3 or 3.4 is installable. Depending upon
-the desired mode of authentication with Azure, the script will require the
-following packages, some of which will automatically pull required dependent
-packages:
+on any platform where Python 2.7, 3.3, 3.4 or 3.5 is installable. Depending
+upon the desired mode of authentication with Azure and options, the script
+will require the following packages, some of which will automatically pull
+required dependent packages:
 
 - Base Requirements
 
   - ``azure-common`` >= 0.20.0
+
+- Encryption Support
+
   - ``pycrypto`` >= 2.6.1
 
 - Management Certificate
@@ -169,7 +172,37 @@ RSA private key is not required for uploading, by providing it during
 encryption/upload, the generated AES256 symmetric and signing keys will be
 signed for additional verification checks.
 
+Currently only the ``FullBlob`` encryption mode is supported for the
+parameter ``--encmode``. The ``FullBlob`` encryption mode either uploads or
+downloads Azure Storage .NET/Java compatible client-side encrypted block blobs.
+
 Please read the Encryption Notes below for more information.
+
+General Notes
+-------------
+
+- blobxfer does not take any leases on blobs or containers. It is up to
+  the user to ensure that blobs are not modified while download/uploads
+  are being performed.
+- No validation is performed regarding container and file naming and length
+  restrictions.
+- blobxfer will attempt to download from blob storage as-is. If the source
+  filename is incompatible with the destination operating system, then
+  failure may result.
+- When using SAS, the SAS key must be a container-level SAS if performing
+  recursive directory upload or container download.
+- If uploading via SAS, the container must already be created in blob
+  storage prior to upload. This is a limitation of SAS keys. The script
+  will force disable container creation if a SAS key is specified.
+- For non-SAS requests, timeouts may not be properly honored due to
+  limitations of the Azure Python SDK.
+- In order to skip download/upload matching files via MD5, the
+  computefilemd5 flag must be enabled (it is enabled by default).
+- When uploading files as page blobs, the content is page boundary
+  byte-aligned. The MD5 for the blob is computed using the final aligned
+  data if the source is not page boundary byte-aligned. This enables these
+  page blobs or files to be skipped during subsequent download or upload,
+  if the skiponmatch parameter is enabled.
 
 Performance Notes
 -----------------
@@ -180,6 +213,9 @@ Performance Notes
   optimal balance between concurrency and your network conditions.
   Additionally, this number may not work properly if you are attempting to run
   multiple blobxfer sessions in parallel from one machine or IP address.
+  Futhermore, this number may be defaulted to be set too high if encryption
+  is enabled and the machine cannot handle processing multiple threads in
+  parallel.
 - As of requests 2.6.0 and Python versions < 2.7.9 (i.e., interpreter found
   on default Ubuntu 14.04 installations), if certain packages are installed,
   as those found in ``requests[security]`` then the underlying ``urllib3``
@@ -199,28 +235,43 @@ Performance Notes
 Encryption Notes
 ----------------
 
-- ENCRYPTION SUPPORT IS CONSIDERED ALPHA QUALITY. DO NOT USE FOR LIVE OR
-  PRODUCTION DATA.
-- AES256 block cipher in CBC mode is applied to each individual chunk.
-- Keys for AES256 block cipher are generated once for the entire blobxfer
-  session (script invocation) for upload. These keys are encrypted using
-  RSAES-OAEP and an optional signature for the keys are generated using
-  RSASSA-PKCS1-v1_5.
+- ENCRYPTION SUPPORT IS CONSIDERED ALPHA QUALITY. BREAKING CHANGES MAY BE
+  APPLIED TO BLOBXFER DURING ALPHA TESTING RENDERING ENCRYPTED DATA
+  UNRECOVERABLE. DO NOT USE FOR LIVE OR PRODUCTION DATA.
+- Keys for AES256 block cipher are generated on a per-blob basis. These keys
+  are encrypted using RSAES-OAEP and an optional signature for the keys are
+  generated using RSASSA-PKCS1-v1_5.
 - All required information regarding the encryption process is stored on
-  each blob's metadata. This metadata is used on download to configure the
-  proper download and decryption process. Encryption metadata set by blobxfer
-  should not be modified or blobs may be unrecoverable.
-- MD5 for the pre-encrypted version of the file is stored on the blob. This
-  allows rsync-like synchronization to still be supported in the presence
-  of encryption.
-- Only files stored as block blobs can be encrypted/decrypted (as there is
-  minimal value in storing an encrypted page blob in Azure).
+  each blob's ``encryptiondata`` metadata. This metadata is used on download
+  to configure the proper download and decryption process. Encryption metadata
+  set by blobxfer (or the Azure Storage .NET/Java client library) should not
+  be modified or blobs may be unrecoverable.
+- MD5 for both the pre-encrypted and encrypted version of the file is stored
+  on the blob. Rsync-like synchronization is still supported transparently
+  with encrypted blobs.
+- Whole file MD5 checks are skipped if a message authentication code is found
+  to validate the integrity of the encrypted data.
+- Uploading the same file as an encrypted blob with a different encryption
+  mode will not occur if the file content MD5 is the same. Additionally,
+  if one wishes to apply encryption to a blob already uploaded to Storage
+  that has not changed, the upload will not occur since the underlying
+  Content MD5 has not changed; this behavior can be overriden by including
+  the option ``--no-skiponmatch``.
+- Encryption is only applied to block blobs. Encrypted page blobs appear to
+  be of minimal value stored in Azure. Thus, if uploading encrypted VHDs for
+  storage in Azure, do not enable either of the options: ``--pageblob`` or
+  ``--autovhd`` as the script will fail.
+- Downloading encrypted blobs may not fully preallocate each file due to
+  padding. Script failure can result during transfer if there is insufficient
+  disk space.
+- Zero-byte (empty) files are not encrypted.
 
 Change Log
 ----------
 
 - 0.9.9.6: add encryption support, fix shared key upload with non-existent
-  container, add file overwrite on download option
+  container, add file overwrite on download option, add auto-detection of file
+  mimetype
 - 0.9.9.5: add file collation support, fix page alignment bug, reduce memory
   usage
 - 0.9.9.4: improve page blob upload algorithm to skip empty max size pages.
