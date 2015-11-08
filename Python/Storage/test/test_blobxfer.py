@@ -722,7 +722,9 @@ def test_main1(
         patched_sms_saprops, patched_sms_sakeys, patched_parseargs, tmpdir):
     lpath = str(tmpdir.join('test.tmp'))
     args = MagicMock()
+    args.delete = False
     args.rsakey = None
+    args.rsakeypassphrase = None
     args.numworkers = 0
     args.localresource = ''
     args.storageaccount = 'blobep'
@@ -867,6 +869,8 @@ def test_main1(
               '?saskey&comp=blocklist', status_code=201)
         m.put('https://blobep.blobep/container' + lpath +
               '?saskey&comp=block&blockid=00000000', status_code=201)
+        m.put('https://blobep.blobep/container' + lpath +
+              '?saskey&comp=metadata', status_code=200)
         m.get('https://blobep.blobep/container?saskey&comp=list'
               '&restype=container&maxresults=1000',
               text='<?xml version="1.0" encoding="utf-8"?>'
@@ -894,6 +898,18 @@ def test_main1(
         m.get('https://blobep.blobep/container/blob?saskey', content=b'012345')
         blobxfer.main()
 
+        args.pageblob = False
+        args.autovhd = False
+        args.skiponmatch = False
+        pempath = str(tmpdir.join('rsa.pem'))
+        with open(pempath, 'wb') as f:
+            f.write(_RSAKEY.exportKey())
+        args.rsakey = pempath
+        blobxfer.main()
+        os.remove(pempath)
+
+        args.rsakey = None
+        args.skiponmatch = True
         args.remoteresource = '.'
         args.keepmismatchedmd5files = False
         m.get('https://blobep.blobep/container?saskey&comp=list'
@@ -927,6 +943,7 @@ def test_main1(
     notmp_lpath = '/'.join(lpath.strip('/').split('/')[1:])
 
     with requests_mock.mock() as m:
+        args.delete = True
         args.download = False
         args.upload = True
         args.remoteresource = None
@@ -943,6 +960,16 @@ def test_main1(
               '?saskey&comp=block&blockid=00000000', status_code=200)
         m.put('https://blobep.blobep/container/' + notmp_lpath +
               '?saskey&comp=blocklist', status_code=201)
+        m.get('https://blobep.blobep/container?saskey&comp=list'
+              '&restype=container&maxresults=1000',
+              text='<?xml version="1.0" encoding="utf-8"?>'
+              '<EnumerationResults ContainerName="https://blobep.blobep/'
+              'container"><Blobs><Blob><Name>blob</Name><Properties>'
+              '<Content-Length>6</Content-Length><Content-MD5>md5'
+              '</Content-MD5><BlobType>BlockBlob</BlobType></Properties>'
+              '<Metadata/></Blob></Blobs></EnumerationResults>')
+        m.delete('https://blobep.blobep/container/blob?saskey',
+                 status_code=202)
         with pytest.raises(SystemExit):
             blobxfer.main()
 
@@ -1013,6 +1040,7 @@ def test_main2(patched_parseargs, tmpdir):
     lpath = str(tmpdir.join('test.tmp'))
     args = MagicMock()
     patched_parseargs.return_value = args
+    args.delete = False
     args.rsakey = None
     args.numworkers = 64
     args.storageaccount = 'blobep'

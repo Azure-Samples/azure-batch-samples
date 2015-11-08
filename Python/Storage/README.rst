@@ -203,6 +203,9 @@ General Notes
   data if the source is not page boundary byte-aligned. This enables these
   page blobs or files to be skipped during subsequent download or upload,
   if the skiponmatch parameter is enabled.
+- If ``--delete`` is specified, any remote files found that have no
+  corresponding local file in directory upload mode will be deleted. Deletion
+  occurs prior to any transfers, analogous to the delete-before rsync option.
 
 Performance Notes
 -----------------
@@ -271,7 +274,7 @@ Change Log
 
 - 0.9.9.6: add encryption support, fix shared key upload with non-existent
   container, add file overwrite on download option, add auto-detection of file
-  mimetype
+  mimetype, add remote delete option
 - 0.9.9.5: add file collation support, fix page alignment bug, reduce memory
   usage
 - 0.9.9.4: improve page blob upload algorithm to skip empty max size pages.

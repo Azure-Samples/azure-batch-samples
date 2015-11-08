@@ -773,6 +773,28 @@ class SasBlobService(object):
                           'set_blob_properties: {}'.format(
                               response.status_code))
 
+    def delete_blob(
+            self, container_name, blob_name):
+        """Deletes a blob
+        Parameters:
+            container_name - container name
+            blob_name - name of blob
+        Returns:
+            Nothing
+        Raises:
+            IOError if unexpected status code
+        """
+        url = '{blobep}{container_name}/{blob_name}{saskey}'.format(
+            blobep=self.blobep, container_name=container_name,
+            blob_name=blob_name, saskey=self.saskey)
+        response = azure_request(
+            requests.delete, url=url, timeout=self.timeout)
+        response.raise_for_status()
+        if response.status_code != 202:
+            raise IOError(
+                'incorrect status code returned for delete_blob: {}'.format(
+                    response.status_code))
+
 
 class BlobChunkWorker(threading.Thread):
     """Chunk worker for a Blob"""
@@ -1385,11 +1407,12 @@ def as_page_blob(pageblob, autovhd, name):
     return False
 
 
-def get_blob_listing(blob_service, args):
+def get_blob_listing(blob_service, args, metadata=True):
     """Convenience method for generating a blob listing of a container
     Parameters:
         blob_service - blob service
         args - program arguments
+        metadata - include metadata
     Returns:
         dictionary of blob -> list [content length, content md5, enc metadata]
     Raises:
@@ -1397,12 +1420,13 @@ def get_blob_listing(blob_service, args):
     """
     marker = None
     blobdict = {}
+    incl = 'metadata' if metadata else None
     while True:
         try:
             result = azure_request(
                 blob_service.list_blobs, timeout=args.timeout,
                 container_name=args.container, marker=marker,
-                maxresults=_MAX_LISTBLOBS_RESULTS, include='metadata')
+                maxresults=_MAX_LISTBLOBS_RESULTS, include=incl)
         except azure.common.AzureMissingResourceHttpError:
             break
         for blob in result:
@@ -1856,6 +1880,7 @@ def main():
     print(' keep mismatched MD5: {}'.format(args.keepmismatchedmd5files))
     print('    recursive if dir: {}'.format(args.recursive))
     print(' keep root dir on up: {}'.format(args.keeprootdir))
+    print('       remote delete: {}'.format(args.delete))
     print('          collate to: {}'.format(args.collate or 'disabled'))
     print('     local overwrite: {}'.format(args.overwrite))
     print('     encryption mode: {}'.format(
@@ -1878,6 +1903,7 @@ def main():
     completed_blockids = {}
     filemap = {}
     filesizes = {}
+    delblobs = None
     md5map = {}
     filedesc = None
     if xfertoazure:
@@ -1887,6 +1913,7 @@ def main():
         else:
             blobskipdict = {}
         if os.path.isdir(args.localresource):
+            _remotefiles = set()
             # mirror directory
             if args.recursive:
                 for root, _, files in os.walk(args.localresource):
@@ -1894,6 +1921,7 @@ def main():
                         fname = os.path.join(root, dirfile)
                         remotefname = apply_file_collation(
                             args, fname, apply_keeproot=True)
+                        _remotefiles.add(remotefname)
                         filesize, ops, md5digest, filedesc = \
                             generate_xferspec_upload(
                                 args, storage_in_queue, blobskipdict,
@@ -1914,6 +1942,7 @@ def main():
                     remotefname = apply_file_collation(
                         args, lfile if not args.keeprootdir else fname,
                         apply_keeproot=False)
+                    _remotefiles.add(remotefname)
                     filesize, ops, md5digest, filedesc = \
                         generate_xferspec_upload(
                             args, storage_in_queue, blobskipdict,
@@ -1925,6 +1954,14 @@ def main():
                         filesizes[fname] = filesize
                         allfilesize = allfilesize + filesize
                         nstorageops = nstorageops + ops
+            # fill deletion list
+            if args.delete:
+                # get blob skip dict if it hasn't been populated
+                if len(blobskipdict) == 0:
+                    blobskipdict = get_blob_listing(
+                        blob_service, args, metadata=False)
+                delblobs = [x for x in blobskipdict if x not in _remotefiles]
+            del _remotefiles
         else:
             # upload single file
             if not args.remoteresource:
@@ -1941,6 +1978,7 @@ def main():
                 filemap[args.localresource] = args.remoteresource
                 filesizes[args.localresource] = filesize
                 allfilesize = allfilesize + filesize
+        del blobskipdict
         # create container if needed
         if args.createcontainer:
             try:
@@ -1999,9 +2037,19 @@ def main():
                 nstorageops = nstorageops + ops
         if len(blobdict) > 0:
             del created_dirs
+        del blobdict
+
+    # delete any remote blobs if specified
+    if xfertoazure and delblobs is not None:
+        print('deleting {} remote blobs'.format(len(delblobs)))
+        for blob in delblobs:
+            azure_request(
+                blob_service.delete_blob, timeout=args.timeout,
+                container_name=args.container, blob_name=blob)
+        print('deletion complete.')
 
     if nstorageops == 0:
-        print('detected no actions needed to be taken, exiting...')
+        print('detected no transfer actions needed to be taken, exiting...')
         sys.exit(0)
 
     if xfertoazure:
@@ -2122,7 +2170,7 @@ def main():
         args.progressbar, 'xfer', progress_text, nstorageops,
         done_ops, storage_start)
     print('\n\n{} MiB transfered, elapsed {} sec. '
-          'Throughput = {} Mbit/sec'.format(
+          'Throughput = {} Mbit/sec\n'.format(
               allfilesize / 1048576.0, endtime - storage_start,
               (8.0 * allfilesize / 1048576.0) / (endtime - storage_start)))
 
@@ -2132,7 +2180,7 @@ def main():
 
     # finalize files/blobs
     if not xfertoazure:
-        print('\nperforming finalization (if applicable): {}: {}, '
+        print('performing finalization (if applicable): {}: {}, '
               'MD5: {}'.format(
                   _ENCRYPTION_INTEGRITY_AUTH_ALGORITHM,
                   args.rsakey is not None, args.computefilemd5))
@@ -2194,6 +2242,7 @@ def main():
                 os.remove(tmpfilename)
         print('finalization complete.')
 
+    # output final log lines
     print('\nscript elapsed time: {} sec'.format(time.time() - start))
     print('script end time: {}'.format(time.strftime("%Y-%m-%d %H:%M:%S")))
 
@@ -2240,7 +2289,7 @@ def parseargs():  # pragma: no cover
     parser.set_defaults(
         autovhd=False, blobep=_DEFAULT_BLOB_ENDPOINT,
         chunksizebytes=_MAX_BLOB_CHUNK_SIZE_BYTES, collate=None,
-        computefilemd5=True, createcontainer=True,
+        computefilemd5=True, createcontainer=True, delete=False,
         encmode=_DEFAULT_ENCRYPTION_MODE, keeprootdir=False,
         managementep=_DEFAULT_MANAGEMENT_ENDPOINT,
         numworkers=_DEFAULT_MAX_STORAGEACCOUNT_WORKERS, overwrite=True,
@@ -2265,6 +2314,10 @@ def parseargs():  # pragma: no cover
         '--chunksizebytes', type=int,
         help='maximum chunk size to transfer in bytes [{}]'.format(
             _MAX_BLOB_CHUNK_SIZE_BYTES))
+    parser.add_argument(
+        '--delete', action='store_true',
+        help='delete extraneous remote blobs that have no corresponding '
+        'local file when uploading directories')
     parser.add_argument(
         '--download', action='store_true',
         help='force transfer direction to download from Azure')
