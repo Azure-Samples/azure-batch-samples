@@ -1495,19 +1495,22 @@ def generate_xferspec_download(
     # overwrite content md5 if encryption metadata exists
     if encmeta is not None:
         contentmd5 = encmeta.md5
-    print('remote file {} length: {} bytes, md5: {}'.format(
-        remoteresource, contentlength, contentmd5))
     # check if download is needed
-    if args.skiponmatch and contentmd5 is not None and \
-            os.path.exists(localfile):
+    if (args.skiponmatch and contentmd5 is not None and
+            os.path.exists(localfile)):
+        print('computing file md5 on: {} length: {}'.format(
+            localfile, contentlength))
         lmd5 = compute_md5_for_file_asbase64(localfile)
-        print('{}: local {} remote {} ->'.format(
-            localfile, lmd5, contentmd5), end='')
+        print('  >> {} <L..R> {} {} '.format(
+            lmd5, contentmd5, remoteresource), end='')
         if lmd5 != contentmd5:
-            print('MISMATCH, re-downloading')
+            print('MISMATCH: re-download')
         else:
-            print('match, skipping download')
+            print('match: skip')
             return None, None, None, None
+    else:
+        print('remote blob: {} length: {} bytes, md5: {}'.format(
+            remoteresource, contentlength, contentmd5))
     tmpfilename = localfile + '.blobtmp'
     if encmeta is not None:
         chunksize = encmeta.chunksizebytes
@@ -1612,19 +1615,21 @@ def generate_xferspec_upload(
     # compute md5 hash
     md5digest = None
     if args.computefilemd5:
+        print('computing file md5 on: {}'.format(localfile))
         md5digest = compute_md5_for_file_asbase64(
             localfile, as_page_blob(args.pageblob, args.autovhd, localfile))
-        print('{} md5: {}'.format(localfile, md5digest))
         # check if upload is needed
         if args.skiponmatch and remoteresource in blobskipdict:
-            print('{}->{}: local {} remote {} ->'.format(
-                localfile, remoteresource, md5digest,
-                blobskipdict[remoteresource][1]), end='')
+            print('  >> {} <L..R> {} {} '.format(
+                md5digest, blobskipdict[remoteresource][1],
+                remoteresource), end='')
             if md5digest != blobskipdict[remoteresource][1]:
-                print('MISMATCH, re-uploading')
+                print('MISMATCH: re-upload')
             else:
-                print('match, skipping upload')
+                print('match: skip')
                 return None, 0, None, None
+        else:
+            print('  >> md5: {}'.format(md5digest))
     # create blockids entry
     if localfile not in blockids:
         blockids[localfile] = []
@@ -1717,8 +1722,15 @@ def main():
     if len(args.blobep) < 1:
         raise ValueError('blob endpoint is invalid')
     if args.upload and args.download:
-        raise ValueError('cannot force transfer direction of download '
-                         'and upload in the same command')
+        raise ValueError(
+            'cannot specify both download and upload transfer direction '
+            'within the same invocation')
+    if args.subscriptionid is not None and args.managementcert is None:
+        raise ValueError(
+            'cannot specify subscription id without a management cert')
+    if args.subscriptionid is None and args.managementcert is not None:
+        raise ValueError(
+            'cannot specify a management cert without a subscription id')
     if args.storageaccountkey is not None and args.saskey is not None:
         raise ValueError('cannot use both a sas key and storage account key')
     if args.pageblob and args.autovhd:
@@ -1734,8 +1746,8 @@ def main():
         if len(args.saskey) < 1:
             raise ValueError('invalid sas key specified')
     elif args.storageaccountkey is None:
-        if args.managementcert is not None and \
-                args.subscriptionid is not None:
+        if (args.managementcert is not None and
+                args.subscriptionid is not None):
             # check to ensure management cert is valid
             if len(args.managementcert) == 0 or \
                     args.managementcert.split('.')[-1].lower() != 'pem':
@@ -1753,8 +1765,7 @@ def main():
                 service_name=args.storageaccount)
             args.storageaccountkey = service_keys.storage_service_keys.primary
         else:
-            raise ValueError('management cert/subscription id not '
-                             'specified without storage account key')
+            raise ValueError('could not determine authentication to use')
 
     # check storage account key validity
     if args.storageaccountkey is not None and \
@@ -2367,8 +2378,10 @@ def parseargs():  # pragma: no cover
     parser.add_argument(
         '--rsakey',
         help='RSA public or private key file in PEM or DER/binary format. '
-        'RSA public or private key is required for uploading. RSA private '
-        'key is required for downloading.')
+        'Specifying an RSA key will turn on encryption or decryption. An RSA '
+        'public or private key is required for uploading and encrypting '
+        'blobs. An RSA private key is required for downloading encrypted '
+        'blobs.')
     parser.add_argument(
         '--rsakeypassphrase',
         help='Optional passphrase for decrypting an RSA private key.')
