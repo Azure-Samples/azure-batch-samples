@@ -34,9 +34,8 @@ namespace Microsoft.Azure.BatchExplorer.Converters
                 case TaskState.Completed:
                     return new SolidColorBrush(Colors.LimeGreen);
                 case TaskState.Unmapped:
-                    return new SolidColorBrush(Colors.DarkGray);
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    return new SolidColorBrush(Colors.DarkGray);
             }
         }
 
