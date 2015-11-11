@@ -22,6 +22,7 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
     public class BatchAccountManagementSample
     {
         private const string BatchNameSpace = "Microsoft.Batch";
+        private const string BatchAccountResourceType = "batchAccounts";
         private const string ResourceGroupName = "AccountMgmtSampleGroup";
 
         public static void Main(string[] args)
@@ -98,8 +99,8 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
                 subscriptionId = SelectSubscription(subscriptionClient);
             }
             
-            // Now that we have the ID of the subscription to use, we can create an AzureSubscription
-            // that is used in initializing the AzureContext..
+            // Now that we have the id of the subscription to use, we can create an AzureSubscription
+            // that is used in initializing the AzureContext.
             AzureSubscription azureSubscription = new AzureSubscription();
             azureSubscription.Id = new Guid(subscriptionId);
             azureSubscription.Properties = new Dictionary<AzureSubscription.Property, string>();
@@ -141,13 +142,14 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
         /// Obtains a list of locations via the specified <see cref="Microsoft.Azure.Management.Resources.ResourceManagementClient"/>
         /// and prompts the user to select a location from the list.
         /// </summary>
-        /// <param name="resourceManagementClient"></param>
+        /// <param name="resourceManagementClient">The <see cref="Microsoft.Azure.Management.Resources.IResourceManagementClient"/> 
+        /// to use when obtaining a list of datacenter locations.</param>
         /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
-        private static async Task<string> PromptUserForLocationAsync(ResourceManagementClient resourceManagementClient)
+        private static async Task<string> PromptUserForLocationAsync(IResourceManagementClient resourceManagementClient)
         {
             // Obtain the list of available datacenter locations for Batch accounts supported by this subscription
             ProviderGetResult batchProvider = await resourceManagementClient.Providers.GetAsync(BatchNameSpace);
-            ProviderResourceType batchResource = batchProvider.Provider.ResourceTypes.Where(p => p.Name == "batchAccounts").First();
+            ProviderResourceType batchResource = batchProvider.Provider.ResourceTypes.Where(p => p.Name == BatchAccountResourceType).First();
             string[] locations = batchResource.Locations.ToArray();
 
             // Ask the user where they would like to create the resource group and account
@@ -173,7 +175,7 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
             Console.WriteLine();
             
             int number = 0;
-            if (!int.TryParse(numberText, out number) || number < 0 || number > choices.Length)
+            if (!int.TryParse(numberText, out number) || number <= 0 || number > choices.Length)
             {
                 throw new ArgumentException("Supplied value not a valid number from the list.");
             }
@@ -202,7 +204,7 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
         /// to use when creating the resource group.</param>
         /// <param name="location">The location where the resource group will be created.</param>
         /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
-        private static async Task CreateResourceGroupAsync(ResourceManagementClient resourceManagementClient, string location)
+        private static async Task CreateResourceGroupAsync(IResourceManagementClient resourceManagementClient, string location)
         {
             ResourceGroupExistsResult existsResult = await resourceManagementClient.ResourceGroups.CheckExistenceAsync(ResourceGroupName);
             if (!existsResult.Exists)
@@ -220,7 +222,7 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
         /// <param name="resourceManagementClient">The <see cref="Microsoft.Azure.Management.Resources.IResourceManagementClient"/> 
         /// to use when deleting the resource group.</param>
         /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
-        private static async Task DeleteResourceGroupAsync(ResourceManagementClient resourceManagementClient)
+        private static async Task DeleteResourceGroupAsync(IResourceManagementClient resourceManagementClient)
         {
             Console.Write("Hit ENTER to delete resource group {0}: ", ResourceGroupName);
             Console.ReadLine();
