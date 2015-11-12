@@ -36,9 +36,8 @@ namespace Microsoft.Azure.BatchExplorer.Converters
                     return new SolidColorBrush(Colors.DarkRed);
                 case JobScheduleState.Invalid:
                 case JobScheduleState.Unmapped:
-                    return new SolidColorBrush(Colors.Gray);
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    return new SolidColorBrush(Colors.Gray);
             }
         }
 

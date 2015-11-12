@@ -3,6 +3,7 @@
 namespace Microsoft.Azure.BatchExplorer.Views
 {
     using System;
+    using System.IO;
     using System.Windows;
     using System.Windows.Controls;
     using System.Windows.Input;
@@ -372,9 +373,10 @@ namespace Microsoft.Azure.BatchExplorer.Views
                         });
                 });
             }
-            catch (System.Reflection.ReflectionTypeLoadException ex)
+            catch (Exception e)
             {
-                System.IO.File.WriteAllText(@"c:\temp\ex.txt", ex.LoaderExceptions[0].ToString());
+                // Record the exception before throwing
+                File.WriteAllText(Path.Combine(Path.GetTempPath(), "batchexplorerexception.txt"), e.ToString());
                 throw;
             }
         }

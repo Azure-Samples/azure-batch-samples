@@ -109,7 +109,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
                 asyncTasks.Add(UploadFileToBlobAsync(cloudStorageAccount, containerName, fileName));
             }
 
-            await Task.WhenAll(asyncTasks); //Wait for all the uploads to finish.
+            await Task.WhenAll(asyncTasks).ConfigureAwait(continueOnCapturedContext: false); //Wait for all the uploads to finish.
         }
 
         /// <summary>
@@ -125,7 +125,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
             await SampleHelpers.UploadResourcesAsync(
                 cloudStorageAccount,
                 blobContainerName,
-                filePaths);
+                filePaths).ConfigureAwait(continueOnCapturedContext: false);
 
             // Generate resource file references to the blob we just uploaded
             string containerSas = SampleHelpers.ConstructContainerSas(cloudStorageAccount, blobContainerName);
@@ -154,13 +154,13 @@ namespace Microsoft.Azure.Batch.Samples.Common
                 CloudBlockBlob blob = container.GetBlockBlobReference(fileName);
                 
                 //Create the container if it doesn't exist.
-                await container.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Off, null, null); //Forbid public access
+                await container.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Off, null, null).ConfigureAwait(continueOnCapturedContext: false); //Forbid public access
 
                 Console.WriteLine("Uploading {0} to {1}", filePath, blob.Uri);
                 using (FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
                 {
                     //Upload the file to the specified container.
-                    await blob.UploadFromStreamAsync(fileStream);
+                    await blob.UploadFromStreamAsync(fileStream).ConfigureAwait(continueOnCapturedContext: false);
                 }
                 Console.WriteLine("Done uploading {0}", filePath);
             }
@@ -211,7 +211,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
             CloudBlobContainer container = blobClient.GetContainerReference(containerName);
             CloudBlockBlob blob = container.GetBlockBlobReference(blobName);
 
-            string text = await blob.DownloadTextAsync();
+            string text = await blob.DownloadTextAsync().ConfigureAwait(continueOnCapturedContext: false);
 
             return text;
         }
@@ -233,7 +233,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
 
             CloudBlockBlob blob = blobContainer.GetBlockBlobReference(blobName);
 
-            await blob.UploadTextAsync(text);
+            await blob.UploadTextAsync(text).ConfigureAwait(continueOnCapturedContext: false);
         }
 
         /// <summary>
@@ -250,7 +250,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
                 CloudBlobContainer container = cloudBlobClient.GetContainerReference(blobContainerName);
                 Console.WriteLine("Deleting container: {0}", blobContainerName);
 
-                await container.DeleteAsync();
+                await container.DeleteAsync().ConfigureAwait(continueOnCapturedContext: false);
             }
         }
 
@@ -281,19 +281,37 @@ namespace Microsoft.Azure.Batch.Samples.Common
             foreach (string jobId in jobIds)
             {
                 Console.WriteLine("Deleting job: {0}", jobId);
-                await batchClient.JobOperations.DeleteJobAsync(jobId);
+                await batchClient.JobOperations.DeleteJobAsync(jobId).ConfigureAwait(continueOnCapturedContext: false);
             }
 
             foreach (string poolId in poolIds)
             {
                 Console.WriteLine("Deleting pool: {0}", poolId);
-                await batchClient.PoolOperations.DeletePoolAsync(poolId);
+                await batchClient.PoolOperations.DeletePoolAsync(poolId).ConfigureAwait(continueOnCapturedContext: false);
             }
         }
 
         public static void AddSetting(StringBuilder stringBuilder, string settingName, object settingValue)
         {
             stringBuilder.AppendFormat("{0} = {1}", settingName, settingValue).AppendLine();
+        }
+
+        /// <summary>
+        /// Returns an existing <see cref="CloudJob"/> if found in the Batch account.
+        /// </summary>
+        /// <param name="batchClient">A fully initialized <see cref="BatchClient"/>.</param>
+        /// <param name="jobId">The <see cref="CloudJob.Id"/> of the desired pool.</param>
+        /// <returns>A bound <see cref="CloudJob"/>, or <c>null</c> if the specified <see cref="CloudJob"/> does not exist.</returns>
+        public static async Task<CloudJob> GetJobIfExistAsync(BatchClient batchClient, string jobId)
+        {
+            Console.WriteLine("Checking for existing job {0}...", jobId);
+
+            // Construct a detail level with a filter clause that specifies the job ID so that only
+            // a single CloudJob is returned by the Batch service (if that job exists)
+            ODATADetailLevel detail = new ODATADetailLevel(filterClause: string.Format("id eq '{0}'", jobId));
+            List<CloudJob> jobs = await batchClient.JobOperations.ListJobs(detailLevel: detail).ToListAsync().ConfigureAwait(continueOnCapturedContext: false);
+            
+            return jobs.FirstOrDefault();
         }
     }
 }

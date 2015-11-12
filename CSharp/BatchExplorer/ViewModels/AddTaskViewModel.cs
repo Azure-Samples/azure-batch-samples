@@ -118,6 +118,20 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
+        private string resourceFiles;
+        public string ResourceFiles
+        {
+            get
+            {
+                return this.resourceFiles;
+            }
+            set
+            {
+                this.resourceFiles = value;
+                this.FirePropertyChangedEvent("ResourceFiles");
+            }
+        }
+
         #endregion
 
         #region Commands
@@ -163,6 +177,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         CommandLine = this.CommandLine,
                         TaskId = this.TaskId,
                         IsMultiInstanceTask = this.IsMultiInstanceTask,
+                        ResourceFiles = ResourceFileStringParser.Parse(this.ResourceFiles).Files.ToList(),
                     };
 
                     if (this.isMultiInstanceTask)
@@ -211,12 +226,19 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                     Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Instance Number must be an integer"));
                 }
 
-                var resourceFiles = ResourceFileStringParser.Parse(this.CommonResourceFiles);
-                if (resourceFiles.HasErrors)
+                var commonResourceFiles = ResourceFileStringParser.Parse(this.CommonResourceFiles);
+                if (commonResourceFiles.HasErrors)
                 {
-                    Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage(String.Join(Environment.NewLine, resourceFiles.Errors)));
+                    Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage(String.Join(Environment.NewLine, commonResourceFiles.Errors)));
                     return false;
                 }
+            }
+
+            var resourceFiles = ResourceFileStringParser.Parse(this.ResourceFiles);
+            if (resourceFiles.HasErrors)
+            {
+                Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage(String.Join(Environment.NewLine, resourceFiles.Errors)));
+                return false;
             }
 
             return true;

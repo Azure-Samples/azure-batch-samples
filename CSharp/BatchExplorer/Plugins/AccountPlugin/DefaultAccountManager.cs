@@ -251,6 +251,7 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
             {
                 if (String.IsNullOrEmpty(account.BatchServiceUrl) || String.IsNullOrEmpty(account.AccountName))
                 {
+                    // Skip the bad setting of old accounts
                     continue;
                 }
 
