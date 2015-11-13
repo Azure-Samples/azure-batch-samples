@@ -151,6 +151,8 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         public const string GetRdp = "GetRdp";
         public const string GetFile = "GetFile";
         public const string CreateUser = "CreateUser";
+        public const string DisableScheduling = "DisableScheduling";
+        public const string EnableScheduling = "EnableScheduling";
 
         private readonly string poolId;
         private readonly string nodeId;

@@ -555,6 +555,12 @@
                                     <MenuItem Header="Reimage"
                                         Command="{Binding ReimageComputeNode}"
                                         CommandParameter="{Binding SelectedComputeNode}"/>
+                                    <MenuItem Header="DisableScheduling"
+                                        Command="{Binding DisableSchedulingComputeNode}"
+                                        CommandParameter="{Binding SelectedComputeNode}"/>
+                                    <MenuItem Header="EnableScheduling"
+                                        Command="{Binding EnableSchedulingComputeNode}"
+                                        CommandParameter="{Binding SelectedComputeNode}"/>
                                     <MenuItem Header="Add User"
                                         Command="{Binding AddComputeNodeUser}"
                                         CommandParameter="{Binding SelectedComputeNode}"/>
