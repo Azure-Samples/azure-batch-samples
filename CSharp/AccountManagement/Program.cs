@@ -23,18 +23,18 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
         // Batch Management and Resource Management clients.
 
         // These endpoints are used during authentication and authorization with AAD.
-        private const string authorityUri = "https://login.windows.net/common";     // Azure Active Directory "common" endpoint
-        private const string resourceUri  = "https://management.core.windows.net/"; // Azure service management endpoint
+        private const string AuthorityUri = "https://login.windows.net/common";     // Azure Active Directory "common" endpoint
+        private const string ResourceUri  = "https://management.core.windows.net/"; // Azure service management endpoint
 
         // Specify the unique identifier (the "Client ID") for your application. This is required so that your
         // native client application (i.e. this sample) can access the Microsoft Azure AD Graph API. For information
         // about registering an application in Azure Active Directory, please see "Adding an Application" here:
         // https://azure.microsoft.com/documentation/articles/active-directory-integrating-applications/
-        private const string clientId = "[specify-your-client-id-here]";
+        private const string ClientId = "[specify-your-client-id-here]";
 
         // The URI to which Azure AD will redirect in response to an OAuth 2.0 request. This value is
         // specified by you when you register an application with AAD (see comment above).
-        private const string redirectUri = "[specify-your-redirect-uri-here]";
+        private const string RedirectUri = "[specify-your-redirect-uri-here]";
 
         // These constants are used by the ResourceManagementClient when querying AAD and for resource group creation.
         private const string BatchNameSpace = "Microsoft.Batch";
@@ -70,17 +70,17 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
             // Obtain an access token using the "common" AAD endpoint. This allows the application
             // to query AAD for information that lies outside the application's tenant (such as for
             // querying subscription information in your account).
-            AuthenticationContext authContext = new AuthenticationContext(authorityUri);
-            AuthenticationResult authResult = await authContext.AcquireTokenAsync(resourceUri,
-                                                                                  clientId,
-                                                                                  new Uri(redirectUri),
+            AuthenticationContext authContext = new AuthenticationContext(AuthorityUri);
+            AuthenticationResult authResult = await authContext.AcquireTokenAsync(ResourceUri,
+                                                                                  ClientId,
+                                                                                  new Uri(RedirectUri),
                                                                                   new PlatformParameters(PromptBehavior.Auto, null));
             
             // The first credential object is used when querying for subscriptions, and is therefore
             // not associated with a specific subscription.
             TokenCloudCredentials subscriptionCreds = new TokenCloudCredentials(authResult.AccessToken);
 
-            string subscriptionId = "";
+            string subscriptionId = String.Empty;
             using (SubscriptionClient subClient = new SubscriptionClient(subscriptionCreds))
             {
                 // Ask the user to select a subscription. We'll use the selected subscription's
@@ -136,7 +136,7 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
         }
 
         /// <summary>
-        /// Obtains a list of locations via the specified <see cref="Microsoft.Azure.Management.Resources.ResourceManagementClient"/>
+        /// Obtains a list of locations via the specified <see cref="Microsoft.Azure.Management.Resources.IResourceManagementClient"/>
         /// and prompts the user to select a location from the list.
         /// </summary>
         /// <param name="resourceManagementClient">The <see cref="Microsoft.Azure.Management.Resources.IResourceManagementClient"/> 
@@ -232,8 +232,8 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
         /// <summary>
         /// Performs various Batch account operations using the Batch Management library.
         /// </summary>
-        /// <param name="context">The <see cref="Microsoft.Azure.Common.Authentication.Models.AzureContext"/> containing information
-        /// about the user's Azure account and subscription.</param>
+        /// <param name="creds">The <see cref="Microsoft.Azure.TokenCloudCredentials"/> containing information about the user's
+        /// Azure account and subscription.</param>
         /// <param name="location">The location where the Batch account will be created.</param>
         /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
         private static async Task PerformBatchAccountOperationsAsync(TokenCloudCredentials creds, string location)
