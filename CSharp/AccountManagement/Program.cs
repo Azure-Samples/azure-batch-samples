@@ -8,9 +8,6 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
     using System.Threading.Tasks;
     using Microsoft.Azure;
     using Microsoft.Azure.Batch.Samples.Common;
-    using Microsoft.Azure.Common.Authentication;
-    using Microsoft.Azure.Common.Authentication.Factories;
-    using Microsoft.Azure.Common.Authentication.Models;
     using Microsoft.Azure.Management.Batch;
     using Microsoft.Azure.Management.Batch.Models;
     using Microsoft.Azure.Management.Resources;
@@ -21,6 +18,25 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
 
     public class BatchAccountManagementSample
     {
+        // This sample uses the Active Directory Authentication Library (ADAL) to discover
+        // subscriptions in your account and obtain TokenCloudCredentials required by the
+        // Batch Management and Resource Management clients.
+
+        // These endpoints are used during authentication and authorization with AAD.
+        private const string authorityUri = "https://login.windows.net/common";     // Azure Active Directory "common" endpoint
+        private const string resourceUri  = "https://management.core.windows.net/"; // Azure service management endpoint
+
+        // Specify the unique identifier (the "Client ID") for your application. This is required so that
+        // your application (i.e. this sample) can access the Microsoft Azure AD Graph API. For information
+        // about registering an application in Azure Active Directory, please see "Adding an Application" here:
+        // https://azure.microsoft.com/documentation/articles/active-directory-integrating-applications/
+        private const string clientId = "266cb62a-34d8-41aa-a504-3a1118e53e71";
+
+        // The URI to which Azure AD will redirect in response to an OAuth 2.0 request. This value is
+        // specified by you when you register an application with AAD (see comment above).
+        private const string redirectUri = "http://AccountManagementSample/";
+
+        // These constants are used by the ResourceManagementClient when querying AAD and for resource group creation.
         private const string BatchNameSpace = "Microsoft.Batch";
         private const string BatchAccountResourceType = "batchAccounts";
         private const string ResourceGroupName = "AccountMgmtSampleGroup";
@@ -51,66 +67,47 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
 
         private static async Task MainAsync()
         {
-            AzureContext azureContext = GetAzureContext();
+            // Obtain an access token using the "common" AAD endpoint. This allows the application
+            // to query AAD for information that lies outside the application's tenant (such as for
+            // querying subscription information in your account).
+            AuthenticationContext authContext = new AuthenticationContext(authorityUri);
+            AuthenticationResult authResult = await authContext.AcquireTokenAsync(resourceUri,
+                                                                                  clientId,
+                                                                                  new Uri(redirectUri),
+                                                                                  new PlatformParameters(PromptBehavior.Auto, null));
+            
+            // The first credential object is used when querying for subscriptions, and is therefore
+            // not associated with a specific subscription.
+            TokenCloudCredentials subscriptionCreds = new TokenCloudCredentials(authResult.AccessToken);
 
-            using (ResourceManagementClient resourceManagementClient =
-                   AzureSession.ClientFactory.CreateClient<ResourceManagementClient>(azureContext, AzureEnvironment.Endpoint.ResourceManager))
+            string subscriptionId = "";
+            using (SubscriptionClient subClient = new SubscriptionClient(subscriptionCreds))
+            {
+                // Ask the user to select a subscription. We'll use the selected subscription's
+                // ID when constructing another credential object used in initializing the management
+                // clients for the remainder of the sample.
+                subscriptionId = SelectSubscription(subClient);
+            }
+
+            // These credentials are associated with a subscription, and can therefore be used when
+            // creating Resource and Batch management clients for use in manipulating entities within
+            // the subscription (e.g. resource groups and Batch accounts).
+            TokenCloudCredentials creds = new TokenCloudCredentials(subscriptionId, authResult.AccessToken);
+
+            // With the ResourceManagementClient, we create a resource group in which to create the Batch account.
+            using (ResourceManagementClient resourceManagementClient = new ResourceManagementClient(creds))
             {
                 // Register with the Batch resource provider; this only needs to be performed once per subscription.
                 resourceManagementClient.Providers.Register(BatchNameSpace);
-
+                
                 string location = await PromptUserForLocationAsync(resourceManagementClient);
                 
                 await CreateResourceGroupAsync(resourceManagementClient, location);
 
-                await PerformBatchAccountOperationsAsync(azureContext, location);
+                await PerformBatchAccountOperationsAsync(creds, location);
 
                 await DeleteResourceGroupAsync(resourceManagementClient);
             }
-        }
-
-        /// <summary>
-        /// Gets the user's Azure account and subscription information
-        /// </summary>
-        /// <returns>An <see cref="Microsoft.Azure.Common.Authentication.Models.AzureContext"/> instance containing 
-        /// information about the user's Azure account and subscription.</returns>
-        private static AzureContext GetAzureContext()
-        {
-            AzureAccount azureAccount = new AzureAccount() { Type = AzureAccount.AccountType.User };
-            AzureEnvironment environment = AzureEnvironment.PublicEnvironments[EnvironmentName.AzureCloud];
-            
-            // Create an access token for use in initializing the SubscriptionClient
-            IAccessToken accessToken = AzureSession.AuthenticationFactory.Authenticate(
-                azureAccount,
-                environment,
-                AuthenticationFactory.CommonAdTenant,
-                null,
-                ShowDialog.Auto,  // Auto will use cached credentials if available - set this parameter to ShowDialog.Always to always get a login prompt.
-                TokenCache.DefaultShared);
-
-            // Use a SubscriptionClient to obtain a list of subscriptions in the Azure account, and
-            // ask the user to select a subscription if the account owns more than one subscription.
-            string subscriptionId = null;
-            using (SubscriptionClient subscriptionClient = AzureSession.ClientFactory.CreateCustomClient<SubscriptionClient>(
-                   new TokenCloudCredentials(accessToken.AccessToken),
-                   environment.GetEndpointAsUri(AzureEnvironment.Endpoint.ResourceManager)))
-            {
-                
-                subscriptionId = SelectSubscription(subscriptionClient);
-            }
-            
-            // Now that we have the id of the subscription to use, we can create an AzureSubscription
-            // that is used in initializing the AzureContext.
-            AzureSubscription azureSubscription = new AzureSubscription();
-            azureSubscription.Id = new Guid(subscriptionId);
-            azureSubscription.Properties = new Dictionary<AzureSubscription.Property, string>();
-            azureSubscription.Properties.Add(AzureSubscription.Property.Tenants, accessToken.TenantId);
-            
-            azureAccount.Properties[AzureAccount.Property.Tenants] = accessToken.TenantId;
-
-            AzureContext context = new AzureContext(azureSubscription, azureAccount, environment);
-
-            return context;
         }
 
         /// <summary>
@@ -239,10 +236,9 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
         /// about the user's Azure account and subscription.</param>
         /// <param name="location">The location where the Batch account will be created.</param>
         /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
-        private static async Task PerformBatchAccountOperationsAsync(AzureContext context, string location)
+        private static async Task PerformBatchAccountOperationsAsync(TokenCloudCredentials creds, string location)
         {
-            using (BatchManagementClient batchManagementClient =
-                AzureSession.ClientFactory.CreateClient<BatchManagementClient>(context, AzureEnvironment.Endpoint.ResourceManager))
+            using (BatchManagementClient batchManagementClient = new BatchManagementClient(creds))
             {
 				// Get the account quota for the subscription
                 SubscriptionQuotasGetResponse quotaResponse = await batchManagementClient.Subscriptions.GetSubscriptionQuotasAsync(location);
@@ -292,7 +288,7 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
                 // Print subscription quota information
                 BatchAccountListResponse listResponse = await batchManagementClient.Accounts.ListAsync(new AccountListParameters());
                 IList<AccountResource> accounts = listResponse.Accounts;
-                Console.WriteLine("Total number of Batch accounts under subscription id {0}:  {1}", context.Subscription.Id, accounts.Count);
+                Console.WriteLine("Total number of Batch accounts under subscription id {0}:  {1}", creds.SubscriptionId, accounts.Count);
 
                 // Determine how many additional accounts can be created in the target region
                 int numAccountsInRegion = accounts.Count(o => o.Location == account.Location);
@@ -301,7 +297,7 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
                 Console.WriteLine();
 
                 // List accounts in the subscription
-                Console.WriteLine("Listing all Batch accounts under subscription id {0}...", context.Subscription.Id);
+                Console.WriteLine("Listing all Batch accounts under subscription id {0}...", creds.SubscriptionId);
                 foreach (AccountResource acct in accounts)
                 {
                     Console.WriteLine("  {0} - {1} | Location: {2}", accounts.IndexOf(acct) + 1, acct.Name, acct.Location);
