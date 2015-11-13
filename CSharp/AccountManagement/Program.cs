@@ -26,15 +26,15 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
         private const string authorityUri = "https://login.windows.net/common";     // Azure Active Directory "common" endpoint
         private const string resourceUri  = "https://management.core.windows.net/"; // Azure service management endpoint
 
-        // Specify the unique identifier (the "Client ID") for your application. This is required so that
-        // your application (i.e. this sample) can access the Microsoft Azure AD Graph API. For information
+        // Specify the unique identifier (the "Client ID") for your application. This is required so that your
+        // native client application (i.e. this sample) can access the Microsoft Azure AD Graph API. For information
         // about registering an application in Azure Active Directory, please see "Adding an Application" here:
         // https://azure.microsoft.com/documentation/articles/active-directory-integrating-applications/
-        private const string clientId = "266cb62a-34d8-41aa-a504-3a1118e53e71";
+        private const string clientId = "[specify-your-client-id-here]";
 
         // The URI to which Azure AD will redirect in response to an OAuth 2.0 request. This value is
         // specified by you when you register an application with AAD (see comment above).
-        private const string redirectUri = "http://AccountManagementSample/";
+        private const string redirectUri = "[specify-your-redirect-uri-here]";
 
         // These constants are used by the ResourceManagementClient when querying AAD and for resource group creation.
         private const string BatchNameSpace = "Microsoft.Batch";
