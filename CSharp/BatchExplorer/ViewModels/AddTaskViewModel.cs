@@ -62,6 +62,20 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
+        private bool runElevated;
+        public bool RunElevated
+        {
+            get
+            {
+                return this.runElevated;
+            }
+            set
+            {
+                this.runElevated = value;
+                this.FirePropertyChangedEvent("runElevated");
+            }
+        }
+
         private bool isMultiInstanceTask;
         public bool IsMultiInstanceTask
         {
@@ -178,6 +192,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         TaskId = this.TaskId,
                         IsMultiInstanceTask = this.IsMultiInstanceTask,
                         ResourceFiles = ResourceFileStringParser.Parse(this.ResourceFiles).Files.ToList(),
+                        RunElevated = this.RunElevated
                     };
 
                     if (this.isMultiInstanceTask)
