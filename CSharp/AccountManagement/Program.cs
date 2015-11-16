@@ -23,8 +23,8 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
         // Batch Management and Resource Management clients.
 
         // These endpoints are used during authentication and authorization with AAD.
-        private const string AuthorityUri = "https://login.windows.net/common";     // Azure Active Directory "common" endpoint
-        private const string ResourceUri  = "https://management.core.windows.net/"; // Azure service management endpoint
+        private const string AuthorityUri = "https://login.microsoftonline.com/common"; // Azure Active Directory "common" endpoint
+        private const string ResourceUri  = "https://management.core.windows.net/";     // Azure service management resource
 
         // Specify the unique identifier (the "Client ID") for your application. This is required so that your
         // native client application (i.e. this sample) can access the Microsoft Azure AD Graph API. For information
@@ -35,7 +35,7 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
         // The URI to which Azure AD will redirect in response to an OAuth 2.0 request. This value is
         // specified by you when you register an application with AAD (see comment above).
         private const string RedirectUri = "[specify-your-redirect-uri-here]";
-
+        
         // These constants are used by the ResourceManagementClient when querying AAD and for resource group creation.
         private const string BatchNameSpace = "Microsoft.Batch";
         private const string BatchAccountResourceType = "batchAccounts";
@@ -67,15 +67,15 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
 
         private static async Task MainAsync()
         {
-            // Obtain an access token using the "common" AAD endpoint. This allows the application
+            // Obtain an access token using the "common" AAD resource. This allows the application
             // to query AAD for information that lies outside the application's tenant (such as for
-            // querying subscription information in your account).
+            // querying subscription information in your Azure account).
             AuthenticationContext authContext = new AuthenticationContext(AuthorityUri);
-            AuthenticationResult authResult = await authContext.AcquireTokenAsync(ResourceUri,
-                                                                                  ClientId,
-                                                                                  new Uri(RedirectUri),
-                                                                                  new PlatformParameters(PromptBehavior.Auto, null));
-            
+            AuthenticationResult authResult = authContext.AcquireToken(ResourceUri,
+                                                                       ClientId,
+                                                                       new Uri(RedirectUri),
+                                                                       PromptBehavior.Auto);
+
             // The first credential object is used when querying for subscriptions, and is therefore
             // not associated with a specific subscription.
             TokenCloudCredentials subscriptionCreds = new TokenCloudCredentials(authResult.AccessToken);
@@ -86,7 +86,7 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
                 // Ask the user to select a subscription. We'll use the selected subscription's
                 // ID when constructing another credential object used in initializing the management
                 // clients for the remainder of the sample.
-                subscriptionId = SelectSubscription(subClient);
+                subscriptionId = await SelectSubscriptionAsync(subClient);
             }
 
             // These credentials are associated with a subscription, and can therefore be used when
@@ -115,24 +115,33 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
         /// </summary>
         /// <param name="client">The <see cref="Microsoft.Azure.Subscriptions.SubscriptionClient"/> to use to get all the subscriptions 
         /// under the user's Azure account.</param>
-        /// <returns>The subscription id to use in the rest of the sample.</returns>
+        /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
         /// <remarks>If the user has 1 subscription under their Azure account, it is chosen automatically. If the user has more than
         /// one, they are prompted to make a selection.</remarks>
-        private static string SelectSubscription(SubscriptionClient client)
+        private static async Task<string> SelectSubscriptionAsync(SubscriptionClient client)
         {
-            IList<Subscription> subscriptions = client.Subscriptions.List().Subscriptions;
-            
-            Subscription selectedSub = subscriptions.First();
+            SubscriptionListResult subs = await client.Subscriptions.ListAsync();
 
-            // If there is more than 1 subscription under the Azure account, prompt the user for the subscription to use.
-            if (subscriptions.Count > 1)
+            if (subs.Subscriptions.Any())
             {
-                string[] subscriptionNames = subscriptions.Select(s => s.DisplayName).ToArray();
-                string selectedSubscription = PromptForSelectionFromCollection(subscriptionNames, "Enter the number of the Azure subscription to use: ");
-                selectedSub = subscriptions.First(s => s.DisplayName.Equals(selectedSubscription));
+                if (subs.Subscriptions.Count > 1)
+                {
+                    // More than 1 subscription found under the Azure account, prompt the user for the subscription to use
+                    string[] subscriptionNames = subs.Subscriptions.Select(s => s.DisplayName).ToArray();
+                    string selectedSubscription = PromptForSelectionFromCollection(subscriptionNames, "Enter the number of the Azure subscription to use: ");
+                    Subscription selectedSub = subs.Subscriptions.First(s => s.DisplayName.Equals(selectedSubscription));
+                    return selectedSub.SubscriptionId;
+                }
+                else
+                {
+                    // Only one subscription found, use that one
+                    return subs.Subscriptions.First().SubscriptionId;
+                }
             }
-
-            return selectedSub.SubscriptionId;
+            else
+            {
+                throw new InvalidOperationException("No subscriptions found in account. Please create at least one subscription within your Azure account.");
+            }
         }
 
         /// <summary>
@@ -240,7 +249,7 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
         {
             using (BatchManagementClient batchManagementClient = new BatchManagementClient(creds))
             {
-				// Get the account quota for the subscription
+                // Get the account quota for the subscription
                 SubscriptionQuotasGetResponse quotaResponse = await batchManagementClient.Subscriptions.GetSubscriptionQuotasAsync(location);
                 Console.WriteLine("Your subscription can create {0} account(s) in the {1} region.", quotaResponse.AccountQuota, location);
                 Console.WriteLine();
