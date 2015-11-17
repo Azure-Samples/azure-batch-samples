@@ -549,13 +549,15 @@ class BlobChunkWorker(threading.Thread):
             contentmd5 = compute_md5_for_data_asbase64(b'')
             if as_page_blob(self._pageblob, self._autovhd, localresource):
                 blob_type = 'PageBlob'
+                contentlength = bytestoxfer
             else:
                 blob_type = 'BlockBlob'
+                contentlength = None
             azure_request(
                 self.blob_service.put_blob, container_name=container,
                 blob_name=remoteresource, blob=None, x_ms_blob_type=blob_type,
                 x_ms_blob_content_md5=contentmd5,
-                x_ms_blob_content_length=bytestoxfer,
+                x_ms_blob_content_length=contentlength,
                 x_ms_blob_content_type=get_mime_type(localresource))
             return
         # read the file at specified offset, must take lock
