@@ -488,6 +488,8 @@ def test_main1(
     args.container = 'container'
     args.storageaccountkey = 'saskey'
     args.chunksizebytes = 5
+    args.info = False
+    args.include = None
     args.pageblob = False
     args.autovhd = False
     patched_parseargs.return_value = args
@@ -754,6 +756,8 @@ def test_main2(patched_parseargs, tmpdir):
     args.localresource = lpath
     args.blobep = '.blobep'
     args.timeout = 10
+    args.info = False
+    args.include = None
     args.pageblob = False
     args.autovhd = False
     args.managementep = None

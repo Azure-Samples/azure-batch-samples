@@ -80,6 +80,7 @@ import socket
 import sys
 import threading
 import time
+import fnmatch
 import xml.etree.ElementTree as ET
 # non-stdlib imports
 try:
@@ -995,6 +996,10 @@ def apply_file_collation(args, fname, apply_keeproot=False):
     return remotefname
 
 
+def filter_include(fname, pattern):
+    return fnmatch.fnmatch(fname, pattern)
+
+
 def main():
     """Main function
     Parameters:
@@ -1126,6 +1131,7 @@ def main():
         'local->Azure' if xfertoazure else 'Azure->local'))
     print('      local resource: {}'.format(args.localresource))
     print('     remote resource: {}'.format(args.remoteresource))
+    print('           blob info: {}'.format(args.info))
     print('  max num of workers: {}'.format(args.numworkers))
     print('             timeout: {}'.format(args.timeout))
     print('     storage account: {}'.format(args.storageaccount))
@@ -1140,10 +1146,25 @@ def main():
     print('    create container: {}'.format(args.createcontainer))
     print(' keep mismatched MD5: {}'.format(args.keepmismatchedmd5files))
     print('    recursive if dir: {}'.format(args.recursive))
+    print('     include pattern: {}'.format(args.include))
     print(' keep root dir on up: {}'.format(args.keeprootdir))
     print('          collate to: {}'.format(
         args.collate if args.collate is not None else 'disabled'))
     print('=======================================\n')
+
+    if args.info:
+        try:
+            blob_info = blob_service.get_blob_properties(args.container,
+                                                         args.remoteresource)
+            print('======================================')
+            print('Properties for blob: {}'.format(args.remoteresource))
+            print('======================================')
+            for key, value in blob_info.iteritems():
+                print(' {0:<20} : {1}'.format(key, value))
+            exit(0)
+        except requests.exceptions.HTTPError as e:
+            print(e)
+            exit(1)
 
     # mark start time after init
     print('script start time: {}'.format(time.strftime("%Y-%m-%d %H:%M:%S")))
@@ -1171,6 +1192,9 @@ def main():
                 for root, _, files in os.walk(args.localresource):
                     for dirfile in files:
                         fname = os.path.join(root, dirfile)
+                        if args.include and not filter_include(fname,
+                                                               args.include):
+                                continue
                         remotefname = apply_file_collation(
                             args, fname, apply_keeproot=True)
                         filesize, ops, md5digest, filedesc = \
@@ -1190,6 +1214,9 @@ def main():
                     fname = os.path.join(args.localresource, lfile)
                     if os.path.isdir(fname):
                         continue
+                    if args.include and not filter_include(fname,
+                                                           args.include):
+                            continue
                     remotefname = apply_file_collation(
                         args, lfile if not args.keeprootdir else fname,
                         apply_keeproot=False)
@@ -1446,7 +1473,7 @@ def parseargs():  # pragma: no cover
     parser.add_argument(
         'localresource',
         help='name of the local file or directory, if mirroring. "."=use '
-        'current directory')
+        'current directory', nargs='?', default=os.getcwd())
     parser.add_argument(
         '--autovhd', action='store_true',
         help='automatically upload files ending in .vhd as page blobs')
@@ -1505,6 +1532,9 @@ def parseargs():  # pragma: no cover
         help='name of remote resource on Azure storage. "."=container '
         'copy recursive implied')
     parser.add_argument(
+        '--include', type=str,
+        help='Unix style filename pattern to include files')
+    parser.add_argument(
         '--saskey',
         help='SAS key to use, if recursive upload or container download, '
         'this must be a container SAS')
@@ -1518,6 +1548,9 @@ def parseargs():  # pragma: no cover
     parser.add_argument(
         '--upload', action='store_true',
         help='force transfer direction to upload to Azure')
+    parser.add_argument(
+        '--info', action='store_true', default=False,
+        help='Show remote blob properties and exit')
     parser.add_argument('--version', action='version', version=_SCRIPT_VERSION)
     return parser.parse_args()
 
