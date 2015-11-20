@@ -734,24 +734,6 @@
                             </TreeView.CommandBindings>
                         </TreeView>
                     </TabItem>
-                    <TabItem Header="Start Task Info">
-                        <Grid>
-                            <Grid Visibility="{Binding SelectedComputeNode.HasStartTaskInfo, Converter={StaticResource BVC}, FallbackValue=Hidden}">
-                                <DataGrid 
-                                        ItemsSource="{Binding SelectedComputeNode.StartTaskInfo}">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="State" Binding="{Binding SelectedCompute.StartTaskInfo.State}"/>
-                                        <DataGridTextColumn Header="Retry Count" Binding="{Binding SelectedCompute.StartTaskInfo.RetryCount}"/>
-                                        <DataGridTextColumn Header="Exit Code" Binding="{Binding SelectedCompute.StartTaskInfo.ExitCode}"/>
-                                        <DataGridTextColumn Header="End Time" Binding="{Binding SelectedCompute.StartTaskInfo.EndTime}"/>
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                            </Grid>
-                            <TextBlock Text="No Start Task"
-                                           Visibility="{Binding SelectedComputeNode.HasStartTaskInfo, Converter={StaticResource IBVC}, FallbackValue=Hidden}"
-                                           VerticalAlignment="Top"/>
-                        </Grid>
-                    </TabItem>
                     <TabItem Header="Recent Tasks">
                         <Grid>
                             <DataGrid 
