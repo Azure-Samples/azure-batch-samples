@@ -30,6 +30,7 @@
             <Setter Property="VerticalAlignment" Value="Top"/>
             <Setter Property="RowHeaderWidth" Value="0"/>
             <Setter Property="GridLinesVisibility" Value="None"/>
+            <Setter Property="BorderThickness" Value="0"/>
         </Style>
         <Style TargetType="DataGridCell">
             <Setter Property="BorderThickness" Value="0"/>
@@ -37,7 +38,39 @@
         <Style TargetType="TextBlock">
             <Setter Property="TextAlignment" Value="Left"/>
         </Style>
+        <Style TargetType="{x:Type Button}">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="Foreground" Value="Black" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
 
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border CornerRadius="0" Background="{TemplateBinding Background}" x:Name="Content">
+                            <Grid>
+                                <ContentPresenter x:Name="MyContentPresenter" Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,0" />
+                            </Grid>
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="DarkGray" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="LightBlue" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+
+                            <Trigger Property="IsEnabled" Value="false">
+                                <Setter TargetName="Content" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <ResourceDictionary x:Key="TreeViewTemplates">
             <DataTemplate DataType="{x:Type models:SimplePropertyModel}">
                 <TextBlock>
@@ -191,7 +224,40 @@
             <TabControl x:Name="LeftHandTab" >
                 <TabItem Header="{Binding JobScheduleTabTitle}" IsSelected="{Binding JobScheduleTabIsSelected}">
                     <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <StackPanel
+                            Grid.Row="0"
+                            Orientation="Horizontal">
+                            <Button
+                                Margin="4"
+                                Width="48"
+                                Command="{Binding CreateJobSchedule}"
+                                IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
+                                <Button.Content>
+                                    <StackPanel>
+                                        <Image Source="../Images/add.png" Height="36"/>
+                                        <TextBlock HorizontalAlignment="Center" Text="Add" FontSize="12" Foreground="Black" />
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>
+                            <Button
+                                Margin="4"
+                                Width="48"
+                                Command="{Binding RefreshJobSchedules}"
+                                IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
+                                <Button.Content>
+                                    <StackPanel>
+                                        <Image Source="../Images/refresh.png" Height="36"/>
+                                        <TextBlock HorizontalAlignment="Center" Text="Refresh" FontSize="12" Foreground="Black" />
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>
+                        </StackPanel>
                         <DataGrid
+                            Grid.Row="1"
                             ItemsSource="{Binding JobSchedules}"
                             SelectedItem="{Binding SelectedJobSchedule}">
                             <DataGrid.ContextMenu>
@@ -239,7 +305,40 @@
                 </TabItem>
                 <TabItem Header="{Binding JobTabTitle}" IsSelected="{Binding JobTabIsSelected}">
                     <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <StackPanel
+                            Grid.Row="0"
+                            Orientation="Horizontal">
+                            <Button
+                                Margin="4"
+                                Width="48"
+                                Command="{Binding CreateJob}"
+                                IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
+                                <Button.Content>
+                                    <StackPanel>
+                                        <Image Source="../Images/add.png" Height="36"/>
+                                        <TextBlock HorizontalAlignment="Center" Text="Add" FontSize="12" Foreground="Black" />
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>
+                            <Button
+                                Margin="4"
+                                Width="48"
+                                Command="{Binding RefreshJobs}"
+                                IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
+                                <Button.Content>
+                                    <StackPanel>
+                                        <Image Source="../Images/refresh.png" Height="36"/>
+                                        <TextBlock HorizontalAlignment="Center" Text="Refresh" FontSize="12" Foreground="Black" />
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>
+                        </StackPanel>
                         <DataGrid
+                            Grid.Row="1"
                             ItemsSource="{Binding Jobs}"
                             SelectedItem="{Binding SelectedJob}">
                             <DataGrid.ContextMenu>
@@ -299,46 +398,83 @@
 
                 </TabItem>
                 <TabItem Header="{Binding PoolTabTitle}" IsSelected="{Binding PoolTabIsSelected}">
-                    <DataGrid ItemsSource="{Binding Pools}"
-                              SelectedItem="{Binding SelectedPool}">
-                        <DataGrid.InputBindings>
-                            <KeyBinding Command="{Binding RefreshPools}" Key="F5" />
-                        </DataGrid.InputBindings>
-                        <DataGrid.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Header="Refresh"
-                                          Command="{Binding RefreshItem}"
-                                          CommandParameter="{Binding SelectedPool}" />
-                                <MenuItem Header="Resize"
-                                          Command="{Binding ResizePool}"
-                                          CommandParameter="{Binding SelectedPool}" />
-                                <MenuItem Header="Delete"
-                                          Command="{Binding Delete}"
-                                          CommandParameter="{Binding SelectedPool}"/>
-                                <MenuItem Header="Show heat map"
-                                          Command="{Binding ShowHeatMap}"
-                                          CommandParameter="{Binding SelectedPool}"/>
-                            </ContextMenu>
-                        </DataGrid.ContextMenu>
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Id" Binding="{Binding Id}"/>
-                            <DataGridTextColumn Header="State" Binding="{Binding State}"/>
-                            <DataGridTextColumn Header="Current Dedicated" Binding="{Binding CurrentDedicated}"/>
-                            <DataGridTextColumn Header="Allocation State" Binding="{Binding AllocationState}">
-                                <DataGridTextColumn.CellStyle>
-                                    <Style TargetType="DataGridCell">
-                                        <Setter Property="Foreground" Value="{Binding AllocationState, Converter={StaticResource PoolAllocationStateColorConverter}}"/>
-                                        <Setter Property="FontWeight" Value="Bold"/>
-                                        <Setter Property="Background" Value="White"/>
-                                    </Style>
-                                </DataGridTextColumn.CellStyle>
-                            </DataGridTextColumn>
-                            <DataGridTextColumn Header="VM Size" Binding="{Binding VirtualMachineSize}"/>
-                            
-                            <DataGridTextColumn Header="" Width="*" 
-                                                CanUserReorder="False" CanUserSort="False"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <StackPanel
+                            Grid.Row="0"
+                            Orientation="Horizontal">
+                            <Button
+                                Margin="4"
+                                Width="48"
+                                Command="{Binding CreatePool}"
+                                IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
+                                <Button.Content>
+                                    <StackPanel>
+                                        <Image Source="../Images/add.png" Height="36"/>
+                                        <TextBlock HorizontalAlignment="Center" Text="Add" FontSize="12" Foreground="Black" />
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>
+                            <Button
+                                Margin="4"
+                                Width="48"
+                                Command="{Binding RefreshPools}"
+                                IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
+                                <Button.Content>
+                                    <StackPanel>
+                                        <Image Source="../Images/refresh.png" Height="36"/>
+                                        <TextBlock HorizontalAlignment="Center" Text="Refresh" FontSize="12" Foreground="Black" />
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>
+                        </StackPanel>
+                        <DataGrid
+                            Grid.Row="1"
+                            ItemsSource="{Binding Pools}"
+                            SelectedItem="{Binding SelectedPool}">
+                            <DataGrid.InputBindings>
+                                <KeyBinding Command="{Binding RefreshPools}" Key="F5" />
+                            </DataGrid.InputBindings>
+                            <DataGrid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Refresh"
+                                              Command="{Binding RefreshItem}"
+                                              CommandParameter="{Binding SelectedPool}" />
+                                    <MenuItem Header="Resize"
+                                              Command="{Binding ResizePool}"
+                                              CommandParameter="{Binding SelectedPool}" />
+                                    <MenuItem Header="Delete"
+                                              Command="{Binding Delete}"
+                                              CommandParameter="{Binding SelectedPool}"/>
+                                    <MenuItem Header="Show heat map"
+                                              Command="{Binding ShowHeatMap}"
+                                              CommandParameter="{Binding SelectedPool}"/>
+                                </ContextMenu>
+                            </DataGrid.ContextMenu>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Id" Binding="{Binding Id}"/>
+                                <DataGridTextColumn Header="State" Binding="{Binding State}"/>
+                                <DataGridTextColumn Header="Current Dedicated" Binding="{Binding CurrentDedicated}"/>
+                                <DataGridTextColumn Header="Allocation State" Binding="{Binding AllocationState}">
+                                    <DataGridTextColumn.CellStyle>
+                                        <Style TargetType="DataGridCell">
+                                            <Setter Property="Foreground" Value="{Binding AllocationState, Converter={StaticResource PoolAllocationStateColorConverter}}"/>
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                            <Setter Property="Background" Value="White"/>
+                                        </Style>
+                                    </DataGridTextColumn.CellStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="VM Size" Binding="{Binding VirtualMachineSize}"/>
+
+                                <DataGridTextColumn Header="" Width="*" 
+                                                    CanUserReorder="False" CanUserSort="False"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                    
                 </TabItem>
             </TabControl>
             <toolkit:BusyIndicator IsBusy="{Binding LeftSpinnerIsVisible}"/>
@@ -684,6 +820,9 @@
             BorderBrush="Transparent"
             Margin="1"
             VerticalAlignment="Top">
+            <DataGrid.InputBindings>
+                <MouseBinding Gesture="LeftDoubleClick" Command="{Binding ViewAsyncOperationDetails}"/>
+            </DataGrid.InputBindings>
             <DataGrid.ContextMenu>
                 <ContextMenu>
                     <MenuItem Header="Details" Command="{Binding ViewAsyncOperationDetails}"/>
