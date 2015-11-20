@@ -172,7 +172,7 @@
                         </Button.Content>
                     </Button>
                 </StackPanel>
-                <TextBlock HorizontalAlignment="Center" Text="Pool Commands" FontSize="12" Foreground="Gray" />
+                <TextBlock HorizontalAlignment="Center" Text="Pool Commands" FontSize="12" Foreground="Gray" FontWeight="Bold" />
             </StackPanel>
         </ControlTemplate>
 
@@ -206,7 +206,7 @@
                         </Button.Content>
                     </Button>
                 </StackPanel>
-                <TextBlock HorizontalAlignment="Center" Text="Node Commands" FontSize="12" Foreground="Gray" />
+                <TextBlock HorizontalAlignment="Center" Text="Node Commands" FontSize="12" Foreground="Gray" FontWeight="Bold" />
             </StackPanel>
         </ControlTemplate>
 
@@ -276,7 +276,7 @@
                         </Button.Content>
                     </Button>
                 </StackPanel>
-                <TextBlock HorizontalAlignment="Center" Text="Job Commands" FontSize="12" Foreground="Gray" />
+                <TextBlock HorizontalAlignment="Center" Text="Job Commands" FontSize="12" Foreground="Gray" FontWeight="Bold" />
             </StackPanel>
             
         </ControlTemplate>
@@ -311,7 +311,7 @@
                         </Button.Content>
                     </Button>
                 </StackPanel>
-                <TextBlock HorizontalAlignment="Center" Text="Task Commands" FontSize="12" Foreground="Gray" />
+                <TextBlock HorizontalAlignment="Center" Text="Task Commands" FontSize="12" Foreground="Gray" FontWeight="Bold" />
             </StackPanel>
         </ControlTemplate>
 
@@ -369,7 +369,7 @@
                         </Button.Content>
                     </Button>
                 </StackPanel>
-                <TextBlock HorizontalAlignment="Center" Text="Job Schedule Commands" FontSize="12" Foreground="Gray" />
+                <TextBlock HorizontalAlignment="Center" Text="Job Schedule Commands" FontSize="12" Foreground="Gray" FontWeight="Bold"/>
             </StackPanel>
                 
         </ControlTemplate>
