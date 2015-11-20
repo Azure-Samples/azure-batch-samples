@@ -1004,11 +1004,41 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         var castItem = (item as ModelBase);
                         if (castItem != null)
                         {
+                            string objectType = string.Empty;
+                            string objectName = string.Empty;
+                            string diaglogMessageFormat = "Are you sure you want to delete {0} '{1}'?";
+                            var itemType = item.GetType();
+                            if (itemType == typeof(PoolModel))
+                            {
+                                PoolModel pool = item as PoolModel;
+                                objectType = "Pool";
+                                objectName = pool.Id;
+
+                                diaglogMessageFormat += "\n\nThis is a non-reversible operation which will remove all nodes and data on those nodes from your account";
+                            }
+                            else if (itemType == typeof(TaskModel))
+                            {
+                                TaskModel taskModel = item as TaskModel;
+
+                                objectType = "Task";
+                                objectName = taskModel.Id;
+                            }
+                            else if (itemType == typeof(JobModel))
+                            {
+                                JobModel jobModel = item as JobModel;
+
+                                objectType = "Job";
+                                objectName = jobModel.Id;
+                            }
+                            else if (itemType == typeof(ComputeNodeModel))
+                            {
+                                throw new NotImplementedException("Not implemented");
+                            }
+
                             Messenger.Default.Register<MultibuttonDialogReturnMessage>(this, (message) =>
                                 {
                                     if (message.MessageBoxResult == MessageBoxResult.Yes)
                                     {
-                                        var itemType = item.GetType();
                                         if (itemType == typeof(PoolModel))
                                         {
                                             PoolModel pool = item as PoolModel;
@@ -1029,7 +1059,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                             Messenger.Default.Send<LaunchMultibuttonDialogMessage>(new LaunchMultibuttonDialogMessage()
                                 {
                                     Caption = "Confirm delete",
-                                    DialogMessage = "Do you want to delete this item?",
+                                    DialogMessage = string.Format(diaglogMessageFormat, objectType, objectName),
                                     MessageBoxButton = MessageBoxButton.YesNo
                                 });
                         }
