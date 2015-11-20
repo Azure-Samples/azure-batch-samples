@@ -331,6 +331,27 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
+        private TaskModel selectedTask;
+        public TaskModel SelectedTask
+        {
+            get
+            {
+                return this.selectedTask;
+                if (this.selectedTask != null)
+                {
+                    if (!this.selectedTask.HasLoadedChildren)
+                    {
+                        this.selectedTask.RefreshAsync(ModelRefreshType.Children);
+                    }
+                }
+            }
+            set
+            {
+                this.selectedTask = value;
+                this.FirePropertyChangedEvent("SelectedTask");
+            }
+        }
+
         public string TitleString
         {
             get

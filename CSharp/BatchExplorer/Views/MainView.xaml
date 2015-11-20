@@ -19,6 +19,7 @@
         <converters:PoolAllocationStateColorConverter x:Key="PoolAllocationStateColorConverter"/>
         <converters:NullToVisibilityConverter x:Key="NVC"/>
         <converters:BoolToVisibilityConverter x:Key="BVC"/>
+        <converters:IsNotNullToBooleanConverter x:Key="IsNotNullToBooleanConverter"/>
         <converters:InvertedBoolToVisibilityConverter x:Key="IBVC"/>
         <converters:BooleanAndConverter x:Key="BAC"/>
         <Style TargetType="DataGrid">
@@ -112,6 +113,266 @@
                                     RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=MenuItem, AncestorLevel=2}}"/>
             <Setter Property="CommandParameter" Value="{Binding}"/>
         </Style>
+
+        <ControlTemplate x:Key="PoolCommands">
+            <StackPanel
+                Orientation="Vertical">
+                <StackPanel
+                    Orientation="Horizontal">
+                    <Button
+                        Margin="4"
+                        Width="48"
+                        Command="{Binding RefreshItem}"
+                        CommandParameter="{Binding SelectedPool}"
+                        IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
+                        <Button.Content>
+                            <StackPanel>
+                                <Image Source="../Images/refresh.png" Height="36"/>
+                                <TextBlock HorizontalAlignment="Center" Text="Refresh" FontSize="12" Foreground="Black" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                    <Button
+                        Margin="4"
+                        Width="48"
+                        Command="{Binding ResizePool}"
+                        CommandParameter="{Binding SelectedPool}"
+                        IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
+                        <Button.Content>
+                            <StackPanel>
+                                <Image Source="../Images/feature.settings.png" Height="36"/>
+                                <TextBlock HorizontalAlignment="Center" Text="Resize" FontSize="12" Foreground="Black" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                    <Button
+                        Margin="4"
+                        Width="48"
+                        Command="{Binding ShowHeatMap}"
+                        CommandParameter="{Binding SelectedPool}"
+                        IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
+                        <Button.Content>
+                            <StackPanel>
+                                <Image Source="../Images/feature.heatmap.png" Height="36"/>
+                                <TextBlock HorizontalAlignment="Center" Text="Heatmap" FontSize="12" Foreground="Black" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                    <Button
+                        Margin="4"
+                        Width="48"
+                        Command="{Binding Delete}"
+                        CommandParameter="{Binding SelectedPool}"
+                        IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
+                        <Button.Content>
+                            <StackPanel>
+                                <Image Source="../Images/delete.png" Height="36"/>
+                                <TextBlock HorizontalAlignment="Center" Text="Delete" FontSize="12" Foreground="Black" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                </StackPanel>
+                <TextBlock HorizontalAlignment="Center" Text="Pool Commands" FontSize="12" Foreground="Gray" />
+            </StackPanel>
+        </ControlTemplate>
+
+        <ControlTemplate x:Key="ComputeNodeCommands">
+            <StackPanel
+                Orientation="Vertical">
+                <StackPanel
+                    Orientation="Horizontal">
+                    <Button
+                        Margin="4"
+                        Width="48"
+                        Command="{Binding OpenRDP}"
+                        CommandParameter="{Binding SelectedComputeNode}">
+                        <Button.Content>
+                            <StackPanel>
+                                <Image Source="../Images/share.png" Height="36"/>
+                                <TextBlock HorizontalAlignment="Center" Text="Connect" FontSize="12" Foreground="Black" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                    <Button
+                        Margin="4"
+                        Width="48"
+                        Command="{Binding AddComputeNodeUser}"
+                        CommandParameter="{Binding SelectedComputeNode}">
+                        <Button.Content>
+                            <StackPanel>
+                                <Image Source="../Images/add.png" Height="36"/>
+                                <TextBlock HorizontalAlignment="Center" Text="Add User" FontSize="12" Foreground="Black" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                </StackPanel>
+                <TextBlock HorizontalAlignment="Center" Text="Node Commands" FontSize="12" Foreground="Gray" />
+            </StackPanel>
+        </ControlTemplate>
+
+        <ControlTemplate x:Key="JobCommands">
+            <StackPanel
+                Orientation="Vertical">
+                <StackPanel
+                    Orientation="Horizontal">
+                    <Button
+                        Margin="4"
+                        Width="48"
+                        Command="{Binding RefreshItem}"
+                        CommandParameter="{Binding SelectedJob}">
+                        <Button.Content>
+                            <StackPanel>
+                                <Image Source="../Images/refresh.png" Height="36"/>
+                                <TextBlock HorizontalAlignment="Center" Text="Refresh" FontSize="12" Foreground="Black" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                    <Button
+                        Margin="4"
+                        Width="48"
+                        Command="{Binding SelectedJob.EnableJob}"
+                        CommandParameter="{Binding SelectedJob}">
+                        <Button.Content>
+                            <StackPanel>
+                                <Image Source="../Images/check.png" Height="36"/>
+                                <TextBlock HorizontalAlignment="Center" Text="Enable" FontSize="12" Foreground="Black" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                    <Button
+                        Margin="4"
+                        Width="48"
+                        Command="{Binding SelectedJob.DisableJob}"
+                        CommandParameter="{Binding SelectedJob}">
+                        <Button.Content>
+                            <StackPanel>
+                                <Image Source="../Images/cancel.png" Height="36"/>
+                                <TextBlock HorizontalAlignment="Center" Text="Disable" FontSize="12" Foreground="Black" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                    <Button
+                        Margin="4"
+                        Width="48"
+                        Command="{Binding SelectedJob.AddTask}"
+                        CommandParameter="{Binding SelectedJob}">
+                        <Button.Content>
+                            <StackPanel>
+                                <Image Source="../Images/add.png" Height="36"/>
+                                <TextBlock HorizontalAlignment="Center" Text="Add Task" FontSize="12" Foreground="Black" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                    <Button
+                        Margin="4"
+                        Width="48"
+                        Command="{Binding Delete}"
+                        CommandParameter="{Binding SelectedJob}">
+                        <Button.Content>
+                            <StackPanel>
+                                <Image Source="../Images/delete.png" Height="36"/>
+                                <TextBlock HorizontalAlignment="Center" Text="Delete" FontSize="12" Foreground="Black" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                </StackPanel>
+                <TextBlock HorizontalAlignment="Center" Text="Job Commands" FontSize="12" Foreground="Gray" />
+            </StackPanel>
+            
+        </ControlTemplate>
+
+        <ControlTemplate x:Key="TaskCommands">
+            <StackPanel
+                Orientation="Vertical">
+                <StackPanel
+                    Orientation="Horizontal">
+                    <Button
+                        Margin="4"
+                        Width="52"
+                        Command="{Binding Terminate}"
+                        CommandParameter="{Binding SelectedTask}">
+                        <Button.Content>
+                            <StackPanel>
+                                <Image Source="../Images/cancel.png" Height="36"/>
+                                <TextBlock HorizontalAlignment="Center" Text="Terminate" FontSize="12" Foreground="Black" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                    <Button
+                        Margin="4"
+                        Width="48"
+                        Command="{Binding Delete}"
+                        CommandParameter="{Binding SelectedTask}">
+                        <Button.Content>
+                            <StackPanel>
+                                <Image Source="../Images/delete.png" Height="36"/>
+                                <TextBlock HorizontalAlignment="Center" Text="Delete" FontSize="12" Foreground="Black" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                </StackPanel>
+                <TextBlock HorizontalAlignment="Center" Text="Task Commands" FontSize="12" Foreground="Gray" />
+            </StackPanel>
+        </ControlTemplate>
+
+        <ControlTemplate x:Key="JobScheduleCommands">
+            <StackPanel
+                Orientation="Vertical">
+                <StackPanel
+                    Orientation="Horizontal">
+                    <Button
+                        Margin="4"
+                        Width="48"
+                        Command="{Binding RefreshItem}"
+                        CommandParameter="{Binding SelectedJobSchedule}">
+                        <Button.Content>
+                            <StackPanel>
+                                <Image Source="../Images/refresh.png" Height="36"/>
+                                <TextBlock HorizontalAlignment="Center" Text="Refresh" FontSize="12" Foreground="Black" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                    <Button
+                        Margin="4"
+                        Width="48"
+                        Command="{Binding SelectedJobSchedule.EnableJobSchedule}"
+                        CommandParameter="{Binding SelectedJobSchedule}">
+                        <Button.Content>
+                            <StackPanel>
+                                <Image Source="../Images/check.png" Height="36"/>
+                                <TextBlock HorizontalAlignment="Center" Text="Enable" FontSize="12" Foreground="Black" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                    <Button
+                        Margin="4"
+                        Width="48"
+                        Command="{Binding SelectedJobSchedule.DisableJobSchedule}"
+                        CommandParameter="{Binding SelectedJob}">
+                        <Button.Content>
+                            <StackPanel>
+                                <Image Source="../Images/cancel.png" Height="36"/>
+                                <TextBlock HorizontalAlignment="Center" Text="Disable" FontSize="12" Foreground="Black" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                    <Button
+                        Margin="4"
+                        Width="48"
+                        Command="{Binding SelectedJobSchedule.Delete}"
+                        CommandParameter="{Binding SelectedJobSchedule}">
+                        <Button.Content>
+                            <StackPanel>
+                                <Image Source="../Images/delete.png" Height="36"/>
+                                <TextBlock HorizontalAlignment="Center" Text="Delete" FontSize="12" Foreground="Black" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                </StackPanel>
+                <TextBlock HorizontalAlignment="Center" Text="Job Schedule Commands" FontSize="12" Foreground="Gray" />
+            </StackPanel>
+                
+        </ControlTemplate>
     </Window.Resources>
     <Grid x:Name="MainGrid">
         <Grid.RowDefinitions>
@@ -485,14 +746,28 @@
                 </Grid.RowDefinitions>
                 <TabControl>
                     <TabItem Header="Job Schedule Details" IsSelected="{Binding JobScheduleDetailTabIsSelected}">
-                        <TreeView 
-                            ItemsSource="{Binding SelectedJobSchedule.PropertyModel}"
-                            Resources="{StaticResource TreeViewTemplates}"
-                            ItemContainerStyle="{StaticResource TreeViewItemStyle}">
-                            <TreeView.CommandBindings>
-                                <StaticResource ResourceKey="TreeViewCopyCommand"/>
-                            </TreeView.CommandBindings>
-                        </TreeView>
+
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <StackPanel
+                                Orientation="Horizontal">
+                                <ContentControl
+                                    IsEnabled="{Binding SelectedJobSchedule, Converter={StaticResource IsNotNullToBooleanConverter}}"
+                                    Template="{StaticResource JobScheduleCommands}"/>
+                            </StackPanel>
+                            <TreeView 
+                                Grid.Row="1"
+                                ItemsSource="{Binding SelectedJobSchedule.PropertyModel}"
+                                Resources="{StaticResource TreeViewTemplates}"
+                                ItemContainerStyle="{StaticResource TreeViewItemStyle}">
+                                <TreeView.CommandBindings>
+                                    <StaticResource ResourceKey="TreeViewCopyCommand"/>
+                                </TreeView.CommandBindings>
+                            </TreeView>
+                        </Grid>
                     </TabItem>
                 </TabControl>
                 <toolkit:BusyIndicator IsBusy="{Binding UpperRightSpinnerIsVisible}"/>
@@ -504,21 +779,57 @@
                 </Grid.RowDefinitions>
                 <TabControl>
                     <TabItem Header="Job Details">
-                        <TreeView 
-                            ItemsSource="{Binding SelectedJob.PropertyModel}"
-                            Resources="{StaticResource TreeViewTemplates}"
-                            ItemContainerStyle="{StaticResource TreeViewItemStyle}">
-                            <TreeView.CommandBindings>
-                                <StaticResource ResourceKey="TreeViewCopyCommand"/>
-                            </TreeView.CommandBindings>
-                        </TreeView>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <StackPanel
+                                Orientation="Horizontal">
+                                <ContentControl
+                                    IsEnabled="{Binding SelectedJob, Converter={StaticResource IsNotNullToBooleanConverter}}"
+                                    Template="{StaticResource JobCommands}"/>    
+                            </StackPanel>
+
+                            <TreeView 
+                                Grid.Row="1"
+                                ItemsSource="{Binding SelectedJob.PropertyModel}"
+                                Resources="{StaticResource TreeViewTemplates}"
+                                ItemContainerStyle="{StaticResource TreeViewItemStyle}">
+                                <TreeView.CommandBindings>
+                                    <StaticResource ResourceKey="TreeViewCopyCommand"/>
+                                </TreeView.CommandBindings>
+                            </TreeView>
+                        </Grid>
                     </TabItem>
                     <TabItem>
                         <TabItem.Header>
                             <TextBlock Text="{Binding Path=TasksTabTitle}"></TextBlock>
                         </TabItem.Header>
-                        <DataGrid ItemsSource="{Binding Path=SelectedJob.TaskCollection}"
-                                  SelectedItem="{Binding Path=SelectedJob.SelectedTask}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <StackPanel
+                                Orientation="Horizontal">
+                                <ContentControl
+                                    IsEnabled="{Binding SelectedJob, Converter={StaticResource IsNotNullToBooleanConverter}}"
+                                    Template="{StaticResource JobCommands}"/>
+                                <Rectangle
+                                    Margin="8"
+                                    VerticalAlignment="Stretch"
+                                    Width="1"
+                                    Fill="Black"/>
+                                <ContentControl
+                                    Grid.Row="0"
+                                    IsEnabled="{Binding SelectedTask, Converter={StaticResource IsNotNullToBooleanConverter}}"
+                                    Template="{StaticResource TaskCommands}"/>
+                            </StackPanel>
+                            <DataGrid 
+                                Grid.Row="1"
+                                ItemsSource="{Binding Path=SelectedJob.TaskCollection}"
+                                SelectedItem="{Binding Path=SelectedTask}">
                             <DataGrid.InputBindings>
                                 <KeyBinding Command="{Binding RefreshItem}" CommandParameter="{Binding SelectedJob}" Key="F5" />
                             </DataGrid.InputBindings>
@@ -526,16 +837,16 @@
                                 <ContextMenu>
                                     <MenuItem Header="Refresh"
                                               Command="{Binding RefreshItem}"
-                                              CommandParameter="{Binding Path=SelectedJob.SelectedTask}"/>
+                                              CommandParameter="{Binding Path=SelectedTask}"/>
                                     <MenuItem Header="Refresh All Tasks"
                                               Command="{Binding RefreshTasks}"
-                                              CommandParameter="{Binding Path=SelectedJob.SelectedTask.ParentJob}"/>
+                                              CommandParameter="{Binding Path=SelectedTask.ParentJob}"/>
                                     <MenuItem Header="Delete"
                                               Command="{Binding Delete}"
-                                              CommandParameter="{Binding Path=SelectedJob.SelectedTask}"/>
+                                              CommandParameter="{Binding Path=SelectedTask}"/>
                                     <MenuItem Header="Terminate"
                                               Command="{Binding Terminate}"
-                                              CommandParameter="{Binding Path=SelectedJob.SelectedTask}"/>
+                                              CommandParameter="{Binding Path=SelectedTask}"/>
                                 </ContextMenu>
                             </DataGrid.ContextMenu>
                             <DataGrid.Columns>
@@ -554,14 +865,16 @@
                                                     CanUserSort="False" CanUserReorder="False"/>
                             </DataGrid.Columns>
                         </DataGrid>
+                        </Grid>
+                        
                     </TabItem>
 
                 </TabControl>
                 <toolkit:BusyIndicator IsBusy="{Binding UpperRightSpinnerIsVisible}"/>
-                <Grid Grid.Row="1" Visibility="{Binding Path=SelectedJob.SelectedTask, Converter={StaticResource NVC}}">
+                <Grid Grid.Row="1" Visibility="{Binding Path=SelectedTask, Converter={StaticResource NVC}}">
                     <TabControl >
                         <TabControl.InputBindings>
-                            <KeyBinding Command="{Binding RefreshItem}" CommandParameter="{Binding Path=SelectedJob.SelectedTask}" Key="F5" />
+                            <KeyBinding Command="{Binding RefreshItem}" CommandParameter="{Binding Path=SelectedTask}" Key="F5" />
                         </TabControl.InputBindings>
                         <TabControl.Resources>
                             <Style TargetType="ListView">
@@ -581,7 +894,7 @@
                         </TabControl.Resources>
                         <TabItem Header="Task Details">
                             <TreeView 
-                                ItemsSource="{Binding SelectedJob.SelectedTask.PropertyModel}"
+                                ItemsSource="{Binding SelectedTask.PropertyModel}"
                                 Resources="{StaticResource TreeViewTemplates}"
                                 ItemContainerStyle="{StaticResource TreeViewItemStyle}">
                                 <TreeView.CommandBindings>
@@ -590,7 +903,7 @@
                             </TreeView>
                         </TabItem>
                         <TabItem Header="Resources">
-                            <DataGrid ItemsSource="{Binding Path=SelectedJob.SelectedTask.ResourceFiles}">
+                            <DataGrid ItemsSource="{Binding Path=SelectedTask.ResourceFiles}">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="File Path" Binding="{Binding FilePath}"/>
                                     <DataGridTextColumn Header="Blob Source" Binding="{Binding BlobSource}"/>
@@ -599,9 +912,9 @@
                         </TabItem>
                         <TabItem Header="Outputs">
                             <Grid>
-                                <DataGrid ItemsSource="{Binding Path=SelectedJob.SelectedTask.OutputFiles}"
-                                          SelectedItem="{Binding Path=SelectedJob.SelectedTask.SelectedTaskFile}"
-                                          Visibility="{Binding Path=SelectedJob.SelectedTask.HasOutputFiles, Converter={StaticResource BVC}, FallbackValue=Hidden}">
+                                <DataGrid ItemsSource="{Binding Path=SelectedTask.OutputFiles}"
+                                          SelectedItem="{Binding Path=SelectedTask.SelectedTaskFile}"
+                                          Visibility="{Binding Path=SelectedTask.HasOutputFiles, Converter={StaticResource BVC}, FallbackValue=Hidden}">
                                     <DataGrid.ContextMenu>
                                         <ContextMenu>
                                             <MenuItem Header="Open File"
@@ -619,13 +932,13 @@
                                     </DataGrid.Columns>
                                 </DataGrid>
                                 <TextBlock Text="No outputs available. Try refreshing the Task." Margin="0,10,0,0"
-                                           Visibility="{Binding Path=SelectedJob.SelectedTask.HasOutputFiles, Converter={StaticResource IBVC}, FallbackValue=Hidden}"/>
+                                           Visibility="{Binding Path=SelectedTask.HasOutputFiles, Converter={StaticResource IBVC}, FallbackValue=Hidden}"/>
                                 <toolkit:BusyIndicator IsBusy="{Binding LowerRightSpinnerIsVisible}"/>
                             </Grid>
                         </TabItem>
                         <TabItem Header="Environment">
                             <Grid>
-                                <DataGrid ItemsSource="{Binding Path=SelectedJob.SelectedTask.EnvironmentSettings}">
+                                <DataGrid ItemsSource="{Binding Path=SelectedTask.EnvironmentSettings}">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Name" Binding="{Binding Name}"/>
                                         <DataGridTextColumn Header="Value" Binding="{Binding Value}"/>
@@ -645,61 +958,101 @@
                 </Grid.RowDefinitions>
                 <TabControl>
                     <TabItem Header="Pool Details">
-                        <TreeView 
-                            ItemsSource="{Binding SelectedPool.PropertyModel}"
-                            Resources="{StaticResource TreeViewTemplates}"
-                            ItemContainerStyle="{StaticResource TreeViewItemStyle}">
-                            <TreeView.CommandBindings>
-                                <StaticResource ResourceKey="TreeViewCopyCommand"/>
-                            </TreeView.CommandBindings>
-                        </TreeView>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <StackPanel
+                                Orientation="Horizontal">
+                                <ContentControl
+                                    Grid.Row="0"
+                                    IsEnabled="{Binding SelectedPool, Converter={StaticResource IsNotNullToBooleanConverter}}"
+                                    Template="{StaticResource PoolCommands}"/>
+                            </StackPanel>
+                            <TreeView 
+                                Grid.Row="1"
+                                ItemsSource="{Binding SelectedPool.PropertyModel}"
+                                Resources="{StaticResource TreeViewTemplates}"
+                                ItemContainerStyle="{StaticResource TreeViewItemStyle}">
+                                <TreeView.CommandBindings>
+                                    <StaticResource ResourceKey="TreeViewCopyCommand"/>
+                                </TreeView.CommandBindings>
+                            </TreeView>
+                        </Grid>
                     </TabItem>
                     <TabItem Header="{Binding ComputeNodesTabTitle}" IsSelected="True">
-                        <DataGrid ItemsSource="{Binding SelectedPool.ComputeNodeCollection}"
-                                  SelectedItem="{Binding SelectedComputeNode}">
-                            <DataGrid.InputBindings>
-                                <KeyBinding Command="{Binding RefreshItem}" CommandParameter="{Binding SelectedComputeNode.ParentPool}" Key="F5" />
-                            </DataGrid.InputBindings>
-                            <DataGrid.ContextMenu>
-                                <ContextMenu>
-                                    <MenuItem Header="Refresh"
-                                        Command="{Binding RefreshItem}"
-                                        CommandParameter="{Binding SelectedComputeNode}"/>
-                                    <MenuItem Header="Refresh All Compute Nodes"
-                                        Command="{Binding RefreshItem}"
-                                        CommandParameter="{Binding SelectedComputeNode.ParentPool}"/>
-                                    <MenuItem Header="Download RDP File"
-                                        Command="{Binding DownloadRDP}"
-                                        CommandParameter="{Binding SelectedComputeNode}"/>
-                                    <MenuItem Header="Open RDP File"
-                                        Command="{Binding OpenRDP}"
-                                        CommandParameter="{Binding SelectedComputeNode}"/>
-                                    <MenuItem Header="Reboot"
-                                        Command="{Binding RebootComputeNode}"
-                                        CommandParameter="{Binding SelectedComputeNode}"/>
-                                    <MenuItem Header="Reimage"
-                                        Command="{Binding ReimageComputeNode}"
-                                        CommandParameter="{Binding SelectedComputeNode}"/>
-                                    <MenuItem Header="Add User"
-                                        Command="{Binding AddComputeNodeUser}"
-                                        CommandParameter="{Binding SelectedComputeNode}"/>
-                                    <MenuItem Header="Edit User" IsEnabled="False"
-                                        Command="{Binding EditUserOnComputeNode}"
-                                        CommandParameter="{Binding SelectedComputeNode}"/>
-                                    <MenuItem Header="Delete User" IsEnabled="False"
-                                        Command="{Binding DeleteUserFromComputeNode}"
-                                        CommandParameter="{Binding SelectedComputeNode}"/>
-                                </ContextMenu>
-                            </DataGrid.ContextMenu>
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Id" Binding="{Binding Id}"/>
-                                <DataGridTextColumn Header="Compute Node Allocation Time" Binding="{Binding CreationTime}"/>
-                                <DataGridTextColumn Header="Status" Binding="{Binding State}"/>
-                                <DataGridTextColumn Header="Pool" Binding="{Binding ParentPool.Id}"/>
-                                <DataGridTextColumn Header="" Width="*" 
-                                                CanUserReorder="False" CanUserSort="False"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <StackPanel
+                                Orientation="Horizontal">
+                                <ContentControl
+                                    Grid.Row="0"
+                                    IsEnabled="{Binding SelectedPool, Converter={StaticResource IsNotNullToBooleanConverter}}"
+                                    Template="{StaticResource PoolCommands}"/>
+                                <Rectangle
+                                    Margin="8"
+                                    VerticalAlignment="Stretch"
+                                    Width="1"
+                                    Fill="Black"/>
+                                <ContentControl
+                                    Grid.Row="0"
+                                    IsEnabled="{Binding SelectedComputeNode, Converter={StaticResource IsNotNullToBooleanConverter}}"
+                                    Template="{StaticResource ComputeNodeCommands}"/>
+                            </StackPanel>
+                            
+                            <DataGrid 
+                                Grid.Row="1"
+                                ItemsSource="{Binding SelectedPool.ComputeNodeCollection}"
+                                SelectedItem="{Binding SelectedComputeNode}">
+                                <DataGrid.InputBindings>
+                                    <KeyBinding Command="{Binding RefreshItem}" CommandParameter="{Binding SelectedComputeNode.ParentPool}" Key="F5" />
+                                </DataGrid.InputBindings>
+                                <DataGrid.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Refresh"
+                                            Command="{Binding RefreshItem}"
+                                            CommandParameter="{Binding SelectedComputeNode}"/>
+                                        <MenuItem Header="Refresh All Compute Nodes"
+                                            Command="{Binding RefreshItem}"
+                                            CommandParameter="{Binding SelectedComputeNode.ParentPool}"/>
+                                        <MenuItem Header="Download RDP File"
+                                            Command="{Binding DownloadRDP}"
+                                            CommandParameter="{Binding SelectedComputeNode}"/>
+                                        <MenuItem Header="Open RDP File"
+                                            Command="{Binding OpenRDP}"
+                                            CommandParameter="{Binding SelectedComputeNode}"/>
+                                        <MenuItem Header="Reboot"
+                                            Command="{Binding RebootComputeNode}"
+                                            CommandParameter="{Binding SelectedComputeNode}"/>
+                                        <MenuItem Header="Reimage"
+                                            Command="{Binding ReimageComputeNode}"
+                                            CommandParameter="{Binding SelectedComputeNode}"/>
+                                        <MenuItem Header="Add User"
+                                            Command="{Binding AddComputeNodeUser}"
+                                            CommandParameter="{Binding SelectedComputeNode}"/>
+                                        <MenuItem Header="Edit User" IsEnabled="False"
+                                            Command="{Binding EditUserOnComputeNode}"
+                                            CommandParameter="{Binding SelectedComputeNode}"/>
+                                        <MenuItem Header="Delete User" IsEnabled="False"
+                                            Command="{Binding DeleteUserFromComputeNode}"
+                                            CommandParameter="{Binding SelectedComputeNode}"/>
+                                    </ContextMenu>
+                                </DataGrid.ContextMenu>
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Id" Binding="{Binding Id}"/>
+                                    <DataGridTextColumn Header="Compute Node Allocation Time" Binding="{Binding CreationTime}"/>
+                                    <DataGridTextColumn Header="Status" Binding="{Binding State}"/>
+                                    <DataGridTextColumn Header="Pool" Binding="{Binding ParentPool.Id}"/>
+                                    <DataGridTextColumn Header="" Width="*" 
+                                                    CanUserReorder="False" CanUserSort="False"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                        
                     </TabItem>
                 </TabControl>
                 <GridSplitter Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
