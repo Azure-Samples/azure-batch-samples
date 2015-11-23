@@ -405,24 +405,19 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Images\azure.png" />
+    
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Images\search.ico" />
+    <Resource Include="Images\batchExplorer.ico" />
   </ItemGroup>
   <ItemGroup>
+    <Resource Include="Images\azure.png" />    
     <Resource Include="Images\RightArrow.png" />
-  </ItemGroup>
-  <ItemGroup>
     <Resource Include="Images\LeftArrow.png" />
-  </ItemGroup>
-  <ItemGroup>
     <Resource Include="Assets\Icons\add_all_24.png" />
     <Resource Include="Assets\Icons\add_incremental_24.png" />
     <Resource Include="Assets\Icons\refresh_24.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Images\batchExplorer.ico" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="readme.txt" />
@@ -431,18 +426,10 @@
     <Resource Include="Images\add.png" />
     <Resource Include="Images\delete.png" />
     <Resource Include="Images\refresh.png" />
-  </ItemGroup>
-  <ItemGroup>
     <Resource Include="Images\feature.settings.png" />
-  </ItemGroup>
-  <ItemGroup>
     <Resource Include="Images\feature.heatmap.png" />
-  </ItemGroup>
-  <ItemGroup>
     <Resource Include="Images\cancel.png" />
     <Resource Include="Images\check.png" />
-  </ItemGroup>
-  <ItemGroup>
     <Resource Include="Images\share.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
