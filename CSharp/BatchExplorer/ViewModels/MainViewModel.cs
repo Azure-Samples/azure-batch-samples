@@ -322,7 +322,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                     }
                     else
                     {
-                        this.selectedJob.SelectedTask = this.selectedJob.Tasks.Count > 0 ? this.selectedJob.Tasks[0] : null;
+                        this.SelectedTask = this.selectedJob.Tasks.Count > 0 ? this.selectedJob.Tasks[0] : null;
                         FirePropertyChangedEvent("SelectedJob");
                         FirePropertyChangedEvent("TasksTabTitle");
                     }
@@ -874,7 +874,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         try
                         {
                             AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.DownloadFileAsync(
-                            this.SelectedJob.SelectedTask.SelectedTaskFile.Name, Path.GetTempPath(), false));
+                            this.SelectedTask.SelectedTaskFile.Name, Path.GetTempPath(), false));
                         }
                         catch (Exception e)
                         {
@@ -895,7 +895,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         try
                         {
                             AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.DownloadFileAsync(
-                            this.SelectedJob.SelectedTask.SelectedTaskFile.Name, isNodeFile: false));
+                            this.SelectedTask.SelectedTaskFile.Name, isNodeFile: false));
                         }
                         catch (Exception e)
                         {
@@ -1436,7 +1436,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         }
                         else
                         {
-                            await this.SelectedJob.SelectedTask.GetTaskFileAsync(file, destStream);
+                            await this.SelectedTask.GetTaskFileAsync(file, destStream);
                         }
                     }
 
