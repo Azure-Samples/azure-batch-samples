@@ -57,25 +57,9 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// </summary>
         [ChangeTracked(ModelRefreshType.Children)]
         public ICollectionView TaskCollection { get; private set; }
-        
-        private TaskModel selectedTask;
-        public TaskModel SelectedTask
-        {
-            get
-            {
-                return this.selectedTask;
-            }
-            set
-            {
-                this.selectedTask = value;
-                this.FirePropertyChangedEvent("SelectedTask");
-            }
-        }
-        
         #endregion
 
         #region Commands
-
 
         /// <summary>
         /// Enable the selected job

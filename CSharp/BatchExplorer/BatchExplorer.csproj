@@ -156,7 +156,9 @@
     <Compile Include="Converters\BooleanAndConverter.cs" />
     <Compile Include="Converters\InvertedBooleanConverter.cs" />
     <Compile Include="Converters\InvertedBoolToVisibilityConverter.cs" />
+    <Compile Include="Converters\IsNotNullToBooleanConverter.cs" />
     <Compile Include="Converters\JobScheduleStateColorConverter.cs" />
+    <Compile Include="Converters\IsNullToBooleanConverter.cs" />
     <Compile Include="Converters\NullToVisibilityConverter.cs" />
     <Compile Include="Converters\JobStateColorConverter.cs" />
     <Compile Include="Converters\PoolAllocationStateColorConverter.cs" />
@@ -403,27 +405,32 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Images\azure.png" />
+    
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Images\search.ico" />
+    <Resource Include="Images\batchExplorer.ico" />
   </ItemGroup>
   <ItemGroup>
+    <Resource Include="Images\azure.png" />    
     <Resource Include="Images\RightArrow.png" />
-  </ItemGroup>
-  <ItemGroup>
     <Resource Include="Images\LeftArrow.png" />
-  </ItemGroup>
-  <ItemGroup>
     <Resource Include="Assets\Icons\add_all_24.png" />
     <Resource Include="Assets\Icons\add_incremental_24.png" />
     <Resource Include="Assets\Icons\refresh_24.png" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Images\batchExplorer.ico" />
+    <Resource Include="readme.txt" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="readme.txt" />
+    <Resource Include="Images\add.png" />
+    <Resource Include="Images\delete.png" />
+    <Resource Include="Images\refresh.png" />
+    <Resource Include="Images\feature.settings.png" />
+    <Resource Include="Images\feature.heatmap.png" />
+    <Resource Include="Images\cancel.png" />
+    <Resource Include="Images\check.png" />
+    <Resource Include="Images\share.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="packages\Microsoft.Bcl.Build.1.0.14\tools\Microsoft.Bcl.Build.targets" Condition="Exists('packages\Microsoft.Bcl.Build.1.0.14\tools\Microsoft.Bcl.Build.targets')" />
