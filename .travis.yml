@@ -22,7 +22,7 @@ env:
 script:
   - cd $TEST_DIR
   - flake8 blobxfer.py
-  - PYTHONPATH=. py.test --cov-config ../.coveragerc --cov-report term-missing --cov blobxfer test/test_blobxfer.py
+  - PYTHONPATH=. py.test -l --cov-config ../.coveragerc --cov-report term-missing --cov blobxfer test/test_blobxfer.py
 after_success:
   - coveralls --rcfile=../.coveragerc --verbose
 

@@ -688,12 +688,34 @@ def test_generate_xferspec_upload(tmpdir):
     assert fs is None
 
 
-def test_apply_file_collation():
+def test_apply_file_collation_and_strip():
     args = MagicMock()
     args.collate = 'collatedir'
-    args.keeprootdir = False
-    rfname = blobxfer.apply_file_collation(args, 'tmpdir/file0', False)
+    rfname = blobxfer.apply_file_collation_and_strip(
+        args, 'tmpdir/file0')
     assert rfname == 'collatedir/file0'
+
+    args.collate = None
+    args.stripcomponents = 0
+    rfname = blobxfer.apply_file_collation_and_strip(
+        args, 'tmpdir/file0')
+    assert rfname == 'tmpdir/file0'
+    args.stripcomponents = 1
+    rfname = blobxfer.apply_file_collation_and_strip(
+        args, 'tmpdir/file0')
+    assert rfname == 'file0'
+    args.stripcomponents = 2
+    rfname = blobxfer.apply_file_collation_and_strip(
+        args, 'tmpdir/file0')
+    assert rfname == 'file0'
+    args.stripcomponents = 1
+    rfname = blobxfer.apply_file_collation_and_strip(
+        args, '/tmpdir/tmpdir2/file0')
+    assert rfname == 'tmpdir2/file0'
+    args.stripcomponents = 2
+    rfname = blobxfer.apply_file_collation_and_strip(
+        args, 'tmpdir/tmpdir2/file0')
+    assert rfname == 'file0'
 
 
 def _mock_get_storage_account_keys(timeout=None, service_name=None):
@@ -722,6 +744,7 @@ def test_main1(
         patched_sms_saprops, patched_sms_sakeys, patched_parseargs, tmpdir):
     lpath = str(tmpdir.join('test.tmp'))
     args = MagicMock()
+    args.stripcomponents = 0
     args.delete = False
     args.rsakey = None
     args.rsakeypassphrase = None
@@ -807,12 +830,10 @@ def test_main1(
     with pytest.raises(ValueError):
         blobxfer.main()
 
-    args.keeprootdir = True
     args.collate = 'collatetmp'
     with pytest.raises(ValueError):
         blobxfer.main()
 
-    args.keeprootdir = False
     args.collate = None
     args.storageaccountkey = None
     args.saskey = ''
@@ -880,7 +901,6 @@ def test_main1(
               '<Content-MD5>md5</Content-MD5><BlobType>BlockBlob</BlobType>'
               '</Properties><Metadata/></Blob></Blobs></EnumerationResults>')
         args.progressbar = False
-        args.keeprootdir = False
         args.skiponmatch = True
         blobxfer.main()
 
@@ -935,7 +955,6 @@ def test_main1(
         blobxfer.main()
 
         tmplpath = str(tmpdir.join('test', 'test2', 'test3'))
-        print(tmplpath)
         args.localresource = tmplpath
         blobxfer.main()
 
@@ -985,6 +1004,8 @@ def test_main1(
         with pytest.raises(SystemExit):
             blobxfer.main()
 
+        args.stripcomponents = None
+        args.collate = '.'
         args.pageblob = True
         args.upload = True
         args.download = False
@@ -999,19 +1020,24 @@ def test_main1(
         m.put('https://blobep.blobep/container/blob?saskey', status_code=201)
         with pytest.raises(IOError):
             blobxfer.main()
+
+        args.stripcomponents = None
         m.put('https://blobep.blobep/container/blobsaskey', status_code=200)
         with pytest.raises(IOError):
             blobxfer.main()
 
+        args.stripcomponents = None
+        args.pageblob = False
         m.put('https://blobep.blobep/container/' + notmp_lpath +
               '?saskey&comp=blocklist', status_code=201)
         m.put('https://blobep.blobep/container/blob?saskey', status_code=201)
-        args.pageblob = False
         blobxfer.main()
 
+        args.stripcomponents = None
         args.autovhd = True
         blobxfer.main()
 
+        args.stripcomponents = None
         args.pageblob = False
         args.autovhd = False
         pempath = str(tmpdir.join('rsa.pem'))
@@ -1040,6 +1066,7 @@ def test_main2(patched_parseargs, tmpdir):
     lpath = str(tmpdir.join('test.tmp'))
     args = MagicMock()
     patched_parseargs.return_value = args
+    args.stripcomponents = 1
     args.delete = False
     args.rsakey = None
     args.numworkers = 64
@@ -1071,7 +1098,6 @@ def test_main2(patched_parseargs, tmpdir):
         args.createcontainer = True
         args.pageblob = False
         args.autovhd = False
-        args.keeprootdir = False
         args.collate = None
         mock.return_value = MagicMock()
         mock.return_value.create_container = _mock_blobservice_create_container

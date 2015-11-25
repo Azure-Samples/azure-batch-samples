@@ -1678,28 +1678,26 @@ def generate_xferspec_upload(
     return filesize, nstorageops, md5digest, filedesc
 
 
-def apply_file_collation(args, fname, apply_keeproot=False):
-    """Apply collation path to a remote filename
+def apply_file_collation_and_strip(args, fname):
+    """Apply collation path or component strip to a remote filename
     Parameters:
         args - arguments
         fname - file name
-        apply_keeproot - apply keep rootdir transformation
     Returns:
         remote filename
     Raises:
         No special exception handling
     """
     remotefname = fname.strip(os.path.sep)
-    if apply_keeproot and not args.keeprootdir:
-        rtmp = remotefname.split(os.path.sep)
-        if len(rtmp) > 1:
-            remotefname = os.path.sep.join(rtmp[1:])
     if args.collate is not None:
-        remotefname = remotefname.split(
-            os.path.sep)[-1]
+        remotefname = remotefname.split(os.path.sep)[-1]
         if args.collate != '.':
-            remotefname = os.path.sep.join(
-                (args.collate, remotefname))
+            remotefname = os.path.sep.join((args.collate, remotefname))
+    elif args.stripcomponents > 0:
+        rtmp = remotefname.split(os.path.sep)
+        nsc = min((len(rtmp) - 1, args.stripcomponents))
+        if nsc > 0:
+            remotefname = os.path.sep.join(rtmp[nsc:])
     return remotefname
 
 
@@ -1716,8 +1714,8 @@ def main():
     args = parseargs()
 
     # check some parameters
-    if len(args.localresource) < 1 or len(args.storageaccount) < 1 or \
-            len(args.container) < 1:
+    if (len(args.localresource) < 1 or len(args.storageaccount) < 1 or
+            len(args.container) < 1):
         raise ValueError('invalid positional arguments')
     if len(args.blobep) < 1:
         raise ValueError('blob endpoint is invalid')
@@ -1735,8 +1733,15 @@ def main():
         raise ValueError('cannot use both a sas key and storage account key')
     if args.pageblob and args.autovhd:
         raise ValueError('cannot specify both pageblob and autovhd parameters')
-    if args.keeprootdir and args.collate is not None:
-        raise ValueError('cannot specify both keeprootdir and collate path')
+    if args.collate is not None and args.stripcomponents is not None:
+        raise ValueError(
+            'cannot specify collate and non-default component '
+            'strip: {}'.format(args.stripcomponents))
+    if args.stripcomponents is None:
+        args.stripcomponents = 1
+    if args.stripcomponents < 0:
+        raise ValueError('invalid component strip number: {}'.format(
+            args.stripcomponents))
     if args.timeout is not None and args.timeout <= 0:
         args.timeout = None
 
@@ -1870,34 +1875,34 @@ def main():
     print('======================================')
     print(' azure blobxfer parameters [v{}]'.format(_SCRIPT_VERSION))
     print('======================================')
-    print('     subscription id: {}'.format(args.subscriptionid))
-    print('     management cert: {}'.format(args.managementcert))
-    print('  transfer direction: {}'.format(
+    print('      subscription id: {}'.format(args.subscriptionid))
+    print('      management cert: {}'.format(args.managementcert))
+    print('   transfer direction: {}'.format(
         'local->Azure' if xfertoazure else 'Azure->local'))
-    print('      local resource: {}'.format(args.localresource))
-    print('     remote resource: {}'.format(args.remoteresource))
-    print('  max num of workers: {}'.format(args.numworkers))
-    print('             timeout: {}'.format(args.timeout))
-    print('     storage account: {}'.format(args.storageaccount))
-    print('             use SAS: {}'.format(True if args.saskey else False))
-    print(' upload as page blob: {}'.format(args.pageblob))
-    print(' auto vhd->page blob: {}'.format(args.autovhd))
-    print('           container: {}'.format(args.container))
-    print('  blob container URI: {}'.format(blobep + args.container))
-    print('    compute file MD5: {}'.format(args.computefilemd5))
-    print('   skip on MD5 match: {}'.format(args.skiponmatch))
-    print('  chunk size (bytes): {}'.format(args.chunksizebytes))
-    print('    create container: {}'.format(args.createcontainer))
-    print(' keep mismatched MD5: {}'.format(args.keepmismatchedmd5files))
-    print('    recursive if dir: {}'.format(args.recursive))
-    print(' keep root dir on up: {}'.format(args.keeprootdir))
-    print('       remote delete: {}'.format(args.delete))
-    print('          collate to: {}'.format(args.collate or 'disabled'))
-    print('     local overwrite: {}'.format(args.overwrite))
-    print('     encryption mode: {}'.format(
+    print('       local resource: {}'.format(args.localresource))
+    print('      remote resource: {}'.format(args.remoteresource))
+    print('   max num of workers: {}'.format(args.numworkers))
+    print('              timeout: {}'.format(args.timeout))
+    print('      storage account: {}'.format(args.storageaccount))
+    print('              use SAS: {}'.format(True if args.saskey else False))
+    print('  upload as page blob: {}'.format(args.pageblob))
+    print('  auto vhd->page blob: {}'.format(args.autovhd))
+    print('            container: {}'.format(args.container))
+    print('   blob container URI: {}'.format(blobep + args.container))
+    print('     compute file MD5: {}'.format(args.computefilemd5))
+    print('    skip on MD5 match: {}'.format(args.skiponmatch))
+    print('   chunk size (bytes): {}'.format(args.chunksizebytes))
+    print('     create container: {}'.format(args.createcontainer))
+    print('  keep mismatched MD5: {}'.format(args.keepmismatchedmd5files))
+    print('     recursive if dir: {}'.format(args.recursive))
+    print('component strip on up: {}'.format(args.stripcomponents))
+    print('        remote delete: {}'.format(args.delete))
+    print('           collate to: {}'.format(args.collate or 'disabled'))
+    print('      local overwrite: {}'.format(args.overwrite))
+    print('      encryption mode: {}'.format(
         args.encmode or 'disabled' if xfertoazure else 'file dependent'))
-    print('        RSA key file: {}'.format(rsakeyfile or 'disabled'))
-    print(' RSA key has private: {}'.format(
+    print('         RSA key file: {}'.format(rsakeyfile or 'disabled'))
+    print('  RSA key has private: {}'.format(
         True if args.rsakey is not None and
         args.rsakey.has_private() else False))
     print('=======================================\n')
@@ -1930,8 +1935,8 @@ def main():
                 for root, _, files in os.walk(args.localresource):
                     for dirfile in files:
                         fname = os.path.join(root, dirfile)
-                        remotefname = apply_file_collation(
-                            args, fname, apply_keeproot=True)
+                        remotefname = apply_file_collation_and_strip(
+                            args, fname)
                         _remotefiles.add(remotefname)
                         filesize, ops, md5digest, filedesc = \
                             generate_xferspec_upload(
@@ -1950,9 +1955,7 @@ def main():
                     fname = os.path.join(args.localresource, lfile)
                     if os.path.isdir(fname):
                         continue
-                    remotefname = apply_file_collation(
-                        args, lfile if not args.keeprootdir else fname,
-                        apply_keeproot=False)
+                    remotefname = apply_file_collation_and_strip(args, fname)
                     _remotefiles.add(remotefname)
                     filesize, ops, md5digest, filedesc = \
                         generate_xferspec_upload(
@@ -1977,8 +1980,8 @@ def main():
             # upload single file
             if not args.remoteresource:
                 args.remoteresource = args.localresource
-            args.remoteresource = apply_file_collation(
-                args, args.remoteresource, apply_keeproot=False)
+            args.remoteresource = apply_file_collation_and_strip(
+                args, args.remoteresource)
             filesize, nstorageops, md5digest, filedesc = \
                 generate_xferspec_upload(
                     args, storage_in_queue, blobskipdict, blockids,
@@ -2301,11 +2304,12 @@ def parseargs():  # pragma: no cover
         autovhd=False, blobep=_DEFAULT_BLOB_ENDPOINT,
         chunksizebytes=_MAX_BLOB_CHUNK_SIZE_BYTES, collate=None,
         computefilemd5=True, createcontainer=True, delete=False,
-        encmode=_DEFAULT_ENCRYPTION_MODE, keeprootdir=False,
+        encmode=_DEFAULT_ENCRYPTION_MODE,
         managementep=_DEFAULT_MANAGEMENT_ENDPOINT,
         numworkers=_DEFAULT_MAX_STORAGEACCOUNT_WORKERS, overwrite=True,
         pageblob=False, progressbar=True, recursive=True, rsakey=None,
-        rsakeypassphrase=None, skiponmatch=True, timeout=None)
+        rsakeypassphrase=None, skiponmatch=True, stripcomponents=None,
+        timeout=None)
     parser.add_argument('storageaccount', help='name of storage account')
     parser.add_argument('container', help='name of blob container')
     parser.add_argument(
@@ -2338,10 +2342,6 @@ def parseargs():  # pragma: no cover
     parser.add_argument(
         '--keepmismatchedmd5files', action='store_true',
         help='keep files with MD5 mismatches')
-    parser.add_argument(
-        '--keeprootdir', action='store_true',
-        help='keeps the root directory as a virtual directory in '
-        'directory upload')
     parser.add_argument(
         '--managementcert',
         help='path to management certificate .pem file')
@@ -2396,6 +2396,9 @@ def parseargs():  # pragma: no cover
     parser.add_argument(
         '--storageaccountkey',
         help='storage account shared key')
+    parser.add_argument(
+        '--strip-components', dest='stripcomponents', type=int,
+        help='strip N leading components from path on upload [1]')
     parser.add_argument('--subscriptionid', help='subscription id')
     parser.add_argument(
         '--timeout', type=float,

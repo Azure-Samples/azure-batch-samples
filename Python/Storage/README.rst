@@ -71,12 +71,14 @@ with various transfer optimizations, built-in retries, and user-specified
 timeouts.
 
 Program parameters and command-line options can be listed via the ``-h``
-switch. At the minimum, three positional arguments are required: storage
-account name, container name, local resource. Additionally, one of the
-following authentication switches must be supplied: ``--subscriptionid`` with
-``--managementcert``, ``--storageaccountkey``, or ``--saskey``. It is
-recommended to use SAS keys wherever possible; only HTTPS transport is used in
-the script.
+switch. Please invoke this first if you are unfamiliar with blobxfer operation
+as not all options are explained below. At the minimum, three positional
+arguments are required: storage account name, container name, local resource.
+Additionally, one of the following authentication switches must be supplied:
+``--subscriptionid`` with ``--managementcert``, ``--storageaccountkey``,
+or ``--saskey``. Do not combine different authentication schemes together. It
+is generally recommended to use SAS keys wherever possible; only HTTPS
+transport is used in the script.
 
 Please remember when using SAS keys that only container-level SAS keys will
 allow for entire directory uploading or container downloading. The container
@@ -149,6 +151,11 @@ flattening the directory structure. The ``--autovhd`` flag would automatically
 enable page blob uploads for these files. If you wish to collate all files
 into the container directly, you would replace ``--collate vhds`` with
 ``--collate .``
+
+To strip leading components of a path on upload, use ``--strip-components``
+with a number argument which will act similarly to tar's
+``--strip-components=NUMBER`` parameter. This parameter is only applied
+during an upload.
 
 To encrypt or decrypt files, the option ``--rsakey`` is available. This option
 requires a file location for a PEM or DER/binary encoded RSA public or private
@@ -274,7 +281,8 @@ Change Log
 
 - 0.9.9.6: add encryption support, fix shared key upload with non-existent
   container, add file overwrite on download option, add auto-detection of file
-  mimetype, add remote delete option
+  mimetype, add remote delete option, fix zero-byte blob download issue,
+  replace keeprootdir with strip-components option
 - 0.9.9.5: add file collation support, fix page alignment bug, reduce memory
   usage
 - 0.9.9.4: improve page blob upload algorithm to skip empty max size pages.
