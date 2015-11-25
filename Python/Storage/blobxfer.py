@@ -44,6 +44,7 @@ from __future__ import print_function
 import argparse
 import base64
 import errno
+import fnmatch
 import hashlib
 import json
 import mimetypes
@@ -1880,6 +1881,7 @@ def main():
     print('   transfer direction: {}'.format(
         'local->Azure' if xfertoazure else 'Azure->local'))
     print('       local resource: {}'.format(args.localresource))
+    print('      include pattern: {}'.format(args.include))
     print('      remote resource: {}'.format(args.remoteresource))
     print('   max num of workers: {}'.format(args.numworkers))
     print('              timeout: {}'.format(args.timeout))
@@ -1935,6 +1937,9 @@ def main():
                 for root, _, files in os.walk(args.localresource):
                     for dirfile in files:
                         fname = os.path.join(root, dirfile)
+                        if args.include is not None and not fnmatch.fnmatch(
+                                fname, args.include):
+                            continue
                         remotefname = apply_file_collation_and_strip(
                             args, fname)
                         _remotefiles.add(remotefname)
@@ -1953,7 +1958,9 @@ def main():
                 # copy just directory contents, non-recursively
                 for lfile in os.listdir(args.localresource):
                     fname = os.path.join(args.localresource, lfile)
-                    if os.path.isdir(fname):
+                    if os.path.isdir(fname) or (
+                            args.include is not None and not fnmatch.fnmatch(
+                                fname, args.include)):
                         continue
                     remotefname = apply_file_collation_and_strip(args, fname)
                     _remotefiles.add(remotefname)
@@ -2304,7 +2311,7 @@ def parseargs():  # pragma: no cover
         autovhd=False, blobep=_DEFAULT_BLOB_ENDPOINT,
         chunksizebytes=_MAX_BLOB_CHUNK_SIZE_BYTES, collate=None,
         computefilemd5=True, createcontainer=True, delete=False,
-        encmode=_DEFAULT_ENCRYPTION_MODE,
+        encmode=_DEFAULT_ENCRYPTION_MODE, include=None,
         managementep=_DEFAULT_MANAGEMENT_ENDPOINT,
         numworkers=_DEFAULT_MAX_STORAGEACCOUNT_WORKERS, overwrite=True,
         pageblob=False, progressbar=True, recursive=True, rsakey=None,
@@ -2339,6 +2346,9 @@ def parseargs():  # pragma: no cover
     parser.add_argument(
         '--encmode',
         help='encryption mode [{}]'.format(_DEFAULT_ENCRYPTION_MODE))
+    parser.add_argument(
+        '--include', type=str,
+        help='include pattern (Unix shell-style wildcards)')
     parser.add_argument(
         '--keepmismatchedmd5files', action='store_true',
         help='keep files with MD5 mismatches')

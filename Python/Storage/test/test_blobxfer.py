@@ -744,6 +744,7 @@ def test_main1(
         patched_sms_saprops, patched_sms_sakeys, patched_parseargs, tmpdir):
     lpath = str(tmpdir.join('test.tmp'))
     args = MagicMock()
+    args.include = None
     args.stripcomponents = 0
     args.delete = False
     args.rsakey = None
@@ -1038,6 +1039,16 @@ def test_main1(
         blobxfer.main()
 
         args.stripcomponents = None
+        args.include = 'nofiles'
+        with pytest.raises(SystemExit):
+            blobxfer.main()
+
+        args.stripcomponents = None
+        args.include = '*'
+        blobxfer.main()
+
+        args.include = None
+        args.stripcomponents = None
         args.pageblob = False
         args.autovhd = False
         pempath = str(tmpdir.join('rsa.pem'))
@@ -1060,12 +1071,25 @@ def test_main1(
               status_code=200)
         blobxfer.main()
 
+        args.stripcomponents = None
+        args.download = True
+        args.upload = False
+        args.rsakey = pempath
+        args.remoteresource = 'blob'
+        args.localresource = str(tmpdir)
+        m.head('https://blobep.blobep/container/blob?saskey', headers={
+            'content-length': '6', 'content-md5': '1qmpM8iq/FHlWsBmK25NSg=='})
+        m.get('https://blobep.blobep/container/blob?saskey', content=b'012345')
+        # TODO add encrypted data json
+        blobxfer.main()
+
 
 @patch('blobxfer.parseargs')
 def test_main2(patched_parseargs, tmpdir):
     lpath = str(tmpdir.join('test.tmp'))
     args = MagicMock()
     patched_parseargs.return_value = args
+    args.include = None
     args.stripcomponents = 1
     args.delete = False
     args.rsakey = None

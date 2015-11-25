@@ -93,6 +93,11 @@ sample explanations.
 Example Usage
 -------------
 
+The following examples show how to invoke the script with commonly used
+options. Note that the authentication parameters are missing from the below
+examples. One will need to select a preferred method of authenticating with
+Azure and add the authentication switches as noted above.
+
 The script will attempt to perform a smart transfer, by detecting if the local
 resource exists. For example:
 
@@ -118,6 +123,17 @@ mirror (recursively copy) the entire directory to Azure storage while
 maintaining subdirectories as virtual directories in Azure storage. You can
 disable the recursive copy (i.e., upload only the files in the directory)
 using the ``--no-recursive`` flag.
+
+To upload a directory with files only matching a Unix-style shell wildcard
+pattern, an example commandline would be:
+
+::
+
+  blobxfer.py mystorageacct container0 mylocaldir --upload --include **/*.txt
+
+This would attempt to recursively upload the contents of mylocaldir
+to container0 for any file matching the wildcard pattern ``*.txt`` within
+all subdirectories.
 
 To download an entire container from your storage account, an example
 commandline would be:
@@ -213,6 +229,8 @@ General Notes
 - If ``--delete`` is specified, any remote files found that have no
   corresponding local file in directory upload mode will be deleted. Deletion
   occurs prior to any transfers, analogous to the delete-before rsync option.
+  Please note that this parameter will interact with ``--include`` and any
+  file not included from the include pattern will be deleted.
 
 Performance Notes
 -----------------
@@ -282,7 +300,7 @@ Change Log
 - 0.9.9.6: add encryption support, fix shared key upload with non-existent
   container, add file overwrite on download option, add auto-detection of file
   mimetype, add remote delete option, fix zero-byte blob download issue,
-  replace keeprootdir with strip-components option
+  replace keeprootdir with strip-components option, add include option
 - 0.9.9.5: add file collation support, fix page alignment bug, reduce memory
   usage
 - 0.9.9.4: improve page blob upload algorithm to skip empty max size pages.
