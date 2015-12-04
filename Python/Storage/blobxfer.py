@@ -2107,6 +2107,10 @@ def main():
             created_dirs.add(args.localresource)
         # generate xferspec for all blobs
         for blob in blobdict:
+            # filter results
+            if args.include is not None and not fnmatch.fnmatch(
+                    blob, args.include):
+                continue
             if args.collate is not None:
                 localfile = os.path.join(
                     args.localresource, args.collate, blob)

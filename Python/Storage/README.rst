@@ -129,11 +129,14 @@ pattern, an example commandline would be:
 
 ::
 
-  blobxfer.py mystorageacct container0 mylocaldir --upload --include **/*.txt
+  blobxfer.py mystorageacct container0 mylocaldir --upload --include '**/*.txt'
 
 This would attempt to recursively upload the contents of mylocaldir
 to container0 for any file matching the wildcard pattern ``*.txt`` within
-all subdirectories.
+all subdirectories. Include patterns can be applied for uploads as well as
+downloads. Note that you will need to prevent globbing in your shell such
+that wildcard expansion does not take place before script interprets the
+argument.
 
 To download an entire container from your storage account, an example
 commandline would be:
@@ -229,6 +232,11 @@ General Notes
   occurs prior to any transfers, analogous to the delete-before rsync option.
   Please note that this parameter will interact with ``--include`` and any
   file not included from the include pattern will be deleted.
+- ``--include`` has no effect when specifying a single file to upload or
+  blob to download. When specifying ``--include`` on container download,
+  the pattern will be applied to the blob name without the container name.
+  Globbing of wildcards must be disabled such that the script can read
+  the include pattern without the shell expanding the wildcards, if specified.
 
 Performance Notes
 -----------------
