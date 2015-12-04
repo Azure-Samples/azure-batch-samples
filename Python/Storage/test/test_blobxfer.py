@@ -540,8 +540,8 @@ def test_generate_xferspec_download(tmpdir):
         assert metajson2.symkey == symkey
         assert metajson2.signkey == signkey
         assert metajson2.encmode == args.encmode
-        assert metajson2.chunksizebytes == \
-            args.chunksizebytes + blobxfer._AES256CBC_OVERHEAD_BYTES + 1
+        assert metajson2.chunksizebytes == args.chunksizebytes + \
+            blobxfer._AES256CBC_HMACSHA256_OVERHEAD_BYTES + 1
         encjson = json.loads(encmeta[blobxfer._ENCRYPTION_METADATA_NAME])
         encjson[blobxfer._ENCRYPTION_METADATA_LAYOUT][
             blobxfer._ENCRYPTION_METADATA_CHUNKSTRUCTURE] = 'X'

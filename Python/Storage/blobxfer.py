@@ -114,9 +114,9 @@ _PAGEBLOB_BOUNDARY = 512
 _DEFAULT_BLOB_ENDPOINT = 'blob.core.windows.net'
 _DEFAULT_MANAGEMENT_ENDPOINT = 'management.core.windows.net'
 # encryption defines
-_AES256_KEYLENGTH_BYTES = Crypto.Cipher.AES.key_size[2]
-_AES256CBC_OVERHEAD_BYTES = (
-    Crypto.Cipher.AES.block_size + Crypto.Hash.SHA256.digest_size)
+_AES256_KEYLENGTH_BYTES = 32
+# 16 bytes AES block size + 32 bytes SHA256 digest size
+_AES256CBC_HMACSHA256_OVERHEAD_BYTES = 48
 _ENCRYPTION_MODE_FULLBLOB = 'FullBlob'
 _ENCRYPTION_MODE_CHUNKEDBLOB = 'ChunkedBlob'
 _DEFAULT_ENCRYPTION_MODE = _ENCRYPTION_MODE_FULLBLOB
@@ -236,7 +236,7 @@ class EncryptionMetadataJson(object):
             ret[_ENCRYPTION_METADATA_LAYOUT] = {}
             ret[_ENCRYPTION_METADATA_LAYOUT][
                 _ENCRYPTION_METADATA_CHUNKOFFSETS] = \
-                self.chunksizebytes + _AES256CBC_OVERHEAD_BYTES + 1
+                self.chunksizebytes + _AES256CBC_HMACSHA256_OVERHEAD_BYTES + 1
             ret[_ENCRYPTION_METADATA_LAYOUT][
                 _ENCRYPTION_METADATA_CHUNKSTRUCTURE] = \
                 _ENCRYPTION_CHUNKSTRUCTURE
@@ -1533,7 +1533,7 @@ def generate_xferspec_download(
             offset_mod = 0
         elif encmeta.encmode == _ENCRYPTION_MODE_CHUNKEDBLOB:
             ivmap = None
-            offset_mod = _AES256CBC_OVERHEAD_BYTES + 1
+            offset_mod = _AES256CBC_HMACSHA256_OVERHEAD_BYTES + 1
         else:
             raise RuntimeError('Unknown encryption mode: {}'.format(
                 encmeta.encmode))
@@ -1637,6 +1637,10 @@ def generate_xferspec_upload(
     # partition local file into chunks
     filesize = os.path.getsize(localfile)
     nchunks = filesize // args.chunksizebytes
+    if nchunks >= 50000:
+        raise RuntimeError(
+            '{} chunks for file {} exceeds Azure Storage limits for a '
+            'single blob'.format(nchunks, localfile))
     currfileoffset = 0
     nstorageops = 0
     flock = threading.Lock()
@@ -1862,15 +1866,19 @@ def main():
         # adjust chunk size for padding for chunked mode
         if xfertoazure:
             if args.encmode == _ENCRYPTION_MODE_CHUNKEDBLOB:
-                args.chunksizebytes -= _AES256CBC_OVERHEAD_BYTES + 1
+                args.chunksizebytes -= _AES256CBC_HMACSHA256_OVERHEAD_BYTES + 1
             elif args.encmode == _ENCRYPTION_MODE_FULLBLOB:
-                nchunks = args.chunksizebytes // _AES256CBC_OVERHEAD_BYTES
-                args.chunksizebytes = (nchunks - 1) * _AES256CBC_OVERHEAD_BYTES
+                nchunks = args.chunksizebytes // \
+                    _AES256CBC_HMACSHA256_OVERHEAD_BYTES
+                args.chunksizebytes = (nchunks - 1) * \
+                    _AES256CBC_HMACSHA256_OVERHEAD_BYTES
                 del nchunks
         # ensure chunk size is greater than overhead
-        if args.chunksizebytes <= (_AES256CBC_OVERHEAD_BYTES + 1) << 1:
+        if args.chunksizebytes <= (
+                _AES256CBC_HMACSHA256_OVERHEAD_BYTES + 1) << 1:
             raise ValueError('chunksizebytes {} <= encryption min {}'.format(
-                args.chunksizebytes, (_AES256CBC_OVERHEAD_BYTES + 1) << 1))
+                args.chunksizebytes,
+                (_AES256CBC_HMACSHA256_OVERHEAD_BYTES + 1) << 1))
 
     # print all parameters
     print('======================================')
@@ -1902,7 +1910,8 @@ def main():
     print('           collate to: {}'.format(args.collate or 'disabled'))
     print('      local overwrite: {}'.format(args.overwrite))
     print('      encryption mode: {}'.format(
-        args.encmode or 'disabled' if xfertoazure else 'file dependent'))
+        (args.encmode or 'disabled' if xfertoazure else 'file dependent')
+        if args.rsakey else 'disabled'))
     print('         RSA key file: {}'.format(rsakeyfile or 'disabled'))
     print('  RSA key has private: {}'.format(
         True if args.rsakey is not None and
