@@ -20,7 +20,10 @@ import uuid
 import azure
 import azure.common
 import azure.storage.blob
-import Crypto.PublicKey.RSA
+import cryptography.exceptions
+import cryptography.hazmat.backends
+import cryptography.hazmat.primitives.asymmetric.rsa
+import cryptography.hazmat.primitives.serialization
 from mock import (MagicMock, Mock, patch)
 import pytest
 import requests
@@ -31,7 +34,9 @@ import blobxfer
 
 
 # global defines
-_RSAKEY = Crypto.PublicKey.RSA.generate(2048)
+_RSAKEY = cryptography.hazmat.primitives.asymmetric.rsa.generate_private_key(
+    public_exponent=65537, key_size=2048,
+    backend=cryptography.hazmat.backends.default_backend())
 
 
 def test_encrypt_decrypt_chunk():
@@ -89,23 +94,25 @@ def test_encrypt_decrypt_chunk():
 
 def test_rsa_keys():
     symkey = os.urandom(32)
-    enckey, sig = blobxfer.rsa_encrypt_key(_RSAKEY, symkey, asbase64=False)
+    enckey, sig = blobxfer.rsa_encrypt_key(
+        _RSAKEY, None, symkey, asbase64=False)
     assert enckey is not None
     assert sig is not None
     plainkey = blobxfer.rsa_decrypt_key(_RSAKEY, enckey, sig, isbase64=False)
     assert symkey == plainkey
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(cryptography.exceptions.InvalidSignature):
         badsig = base64.b64encode(b'0')
         blobxfer.rsa_decrypt_key(_RSAKEY, enckey, badsig, isbase64=False)
 
-    enckey, sig = blobxfer.rsa_encrypt_key(_RSAKEY, symkey, asbase64=True)
+    enckey, sig = blobxfer.rsa_encrypt_key(
+        _RSAKEY, None, symkey, asbase64=True)
     assert enckey is not None
     assert sig is not None
     plainkey = blobxfer.rsa_decrypt_key(_RSAKEY, enckey, sig, isbase64=True)
     assert symkey == plainkey
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(cryptography.exceptions.InvalidSignature):
         badsig = base64.b64encode(b'0')
         blobxfer.rsa_decrypt_key(_RSAKEY, enckey, badsig, isbase64=True)
 
@@ -526,7 +533,8 @@ def test_generate_xferspec_download(tmpdir):
         assert sa_in_queue.qsize() == 4
 
         sa_in_queue = queue.PriorityQueue()
-        args.rsakey = _RSAKEY
+        args.rsaprivatekey = _RSAKEY
+        args.rsapublickey = None
         symkey, signkey = blobxfer.generate_aes256_keys()
         args.encmode = blobxfer._ENCRYPTION_MODE_CHUNKEDBLOB
         metajson = blobxfer.EncryptionMetadataJson(
@@ -536,7 +544,8 @@ def test_generate_xferspec_download(tmpdir):
         goodencjson = json.loads(encmeta[blobxfer._ENCRYPTION_METADATA_NAME])
         metajson2 = blobxfer.EncryptionMetadataJson(
             args, None, None, None, None, None)
-        metajson2.parse_metadata_json(args.rsakey, encmeta)
+        metajson2.parse_metadata_json(
+            args.rsaprivatekey, args.rsapublickey, encmeta)
         assert metajson2.symkey == symkey
         assert metajson2.signkey == signkey
         assert metajson2.encmode == args.encmode
@@ -747,7 +756,8 @@ def test_main1(
     args.include = None
     args.stripcomponents = 0
     args.delete = False
-    args.rsakey = None
+    args.rsaprivatekey = None
+    args.rsapublickey = None
     args.rsakeypassphrase = None
     args.numworkers = 0
     args.localresource = ''
@@ -865,12 +875,17 @@ def test_main1(
         blobxfer.main()
     ssk.storage_service_keys.primary = 'key1'
     args.storageaccountkey = None
-    args.rsakey = ''
+    args.rsaprivatekey = ''
+    args.rsapublickey = ''
+    with pytest.raises(ValueError):
+        blobxfer.main()
+    args.rsaprivatekey = ''
+    args.rsapublickey = None
     args.encmode = blobxfer._ENCRYPTION_MODE_FULLBLOB
     with pytest.raises(IOError):
         blobxfer.main()
 
-    args.rsakey = None
+    args.rsaprivatekey = None
     args.storageaccountkey = None
     args.managementcert = None
     args.managementep = None
@@ -922,14 +937,21 @@ def test_main1(
         args.pageblob = False
         args.autovhd = False
         args.skiponmatch = False
+        pemcontents = _RSAKEY.private_bytes(
+            encoding=cryptography.hazmat.primitives.serialization.
+            Encoding.PEM,
+            format=cryptography.hazmat.primitives.serialization.
+            PrivateFormat.PKCS8,
+            encryption_algorithm=cryptography.hazmat.primitives.
+            serialization.NoEncryption())
         pempath = str(tmpdir.join('rsa.pem'))
         with open(pempath, 'wb') as f:
-            f.write(_RSAKEY.exportKey())
-        args.rsakey = pempath
+            f.write(pemcontents)
+        args.rsaprivatekey = pempath
         blobxfer.main()
         os.remove(pempath)
 
-        args.rsakey = None
+        args.rsaprivatekey = None
         args.skiponmatch = True
         args.remoteresource = '.'
         args.keepmismatchedmd5files = False
@@ -1053,8 +1075,8 @@ def test_main1(
         args.autovhd = False
         pempath = str(tmpdir.join('rsa.pem'))
         with open(pempath, 'wb') as f:
-            f.write(_RSAKEY.exportKey())
-        args.rsakey = pempath
+            f.write(pemcontents)
+        args.rsaprivatekey = pempath
         m.put('https://blobep.blobep/container/rsa.pem?saskey&comp=block'
               '&blockid=00000000', status_code=201)
         m.put('https://blobep.blobep/container/rsa.pem?saskey&comp=blocklist',
@@ -1074,7 +1096,7 @@ def test_main1(
         args.stripcomponents = None
         args.download = True
         args.upload = False
-        args.rsakey = pempath
+        args.rsaprivatekey = pempath
         args.remoteresource = 'blob'
         args.localresource = str(tmpdir)
         m.head('https://blobep.blobep/container/blob?saskey', headers={
@@ -1092,7 +1114,8 @@ def test_main2(patched_parseargs, tmpdir):
     args.include = None
     args.stripcomponents = 1
     args.delete = False
-    args.rsakey = None
+    args.rsaprivatekey = None
+    args.rsapublickey = None
     args.numworkers = 64
     args.storageaccount = 'blobep'
     args.container = 'container'

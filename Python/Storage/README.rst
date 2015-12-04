@@ -36,7 +36,7 @@ required dependent packages:
 
 - Encryption Support
 
-  - ``pycrypto`` >= 2.6.1
+  - ``cryptography`` >= 1.1.1
 
 - Management Certificate
 
@@ -173,12 +173,10 @@ with a number argument which will act similarly to tar's
 ``--strip-components=NUMBER`` parameter. This parameter is only applied
 during an upload.
 
-To encrypt or decrypt files, the option ``--rsakey`` is available. This option
-requires a file location for a PEM or DER/binary encoded RSA public or private
-key. An RSA public key can be an X.509 subjectPublicKeyInfo, PKCS#1
-RSAPublicKey, or OpenSSH textual public key. An RSA private key can be a PKCS#1
-RSAPrivateKey or PKCS#8 PrivateKeyInfo. An optional parameter,
-``--rsakeypassphrase`` is available for passphrase protected PEM keys.
+To encrypt or decrypt files, the option ``--rsapublickey`` and
+``--rsaprivatekey`` is available. This option requires a file location for a
+PEM encoded RSA public or private key. An optional parameter,
+``--rsakeypassphrase`` is available for passphrase protected RSA private keys.
 
 To encrypt and upload, only the RSA public key is required, although if the
 RSA private key is provided, the generated AES256 symmetric and signing keys
@@ -187,7 +185,7 @@ blobs which are encrypted, the RSA private key is required.
 
 ::
 
-  blobxfer.py mystorageacct container0 myblobs --upload --rsakey myprivatekey.pem
+  blobxfer.py mystorageacct container0 myblobs --upload --rsaprivatekey myprivatekey.pem
 
 The above example commandline would encrypt and upload files contained in
 ``myblobs`` using an RSA private key named ``myprivatekey.pem``. Although an
@@ -268,7 +266,7 @@ Encryption Notes
   UNRECOVERABLE. DO NOT USE FOR LIVE OR PRODUCTION DATA.
 - Keys for AES256 block cipher are generated on a per-blob basis. These keys
   are encrypted using RSAES-OAEP and an optional signature for the keys are
-  generated using RSASSA-PKCS1-v1_5.
+  generated using RSASSA-PSS.
 - All required information regarding the encryption process is stored on
   each blob's ``encryptiondata`` metadata. This metadata is used on download
   to configure the proper download and decryption process. Encryption metadata
@@ -279,11 +277,13 @@ Encryption Notes
   with encrypted blobs.
 - Whole file MD5 checks are skipped if a message authentication code is found
   to validate the integrity of the encrypted data.
-- Uploading the same file as an encrypted blob with a different encryption
-  mode will not occur if the file content MD5 is the same. Additionally,
-  if one wishes to apply encryption to a blob already uploaded to Storage
-  that has not changed, the upload will not occur since the underlying
-  Content MD5 has not changed; this behavior can be overriden by including
+- Attempting to upload the same file as an encrypted blob with a different RSA
+  key or under a different encryption mode will not occur if the file content
+  MD5 is the same. This behavior can be overridden by including the option
+  ``--no-skiponmatch``.
+- If one wishes to apply encryption to a blob already uploaded to Storage
+  that has not changed, the upload will not occur since the underlying file
+  content MD5 has not changed; this behavior can be overriden by including
   the option ``--no-skiponmatch``.
 - Encryption is only applied to block blobs. Encrypted page blobs appear to
   be of minimal value stored in Azure. Thus, if uploading encrypted VHDs for

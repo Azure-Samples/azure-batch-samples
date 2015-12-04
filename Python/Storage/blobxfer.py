@@ -46,6 +46,7 @@ import base64
 import errno
 import fnmatch
 import hashlib
+import hmac
 import json
 import mimetypes
 import multiprocessing
@@ -61,6 +62,7 @@ import socket
 import sys
 import threading
 import time
+import traceback
 import xml.etree.ElementTree as ET
 # non-stdlib imports
 try:
@@ -77,13 +79,16 @@ try:
 except ImportError:  # pragma: no cover
     pass
 try:
-    import Crypto.Cipher.AES
-    import Crypto.Cipher.PKCS1_OAEP
-    import Crypto.Hash.HMAC
-    import Crypto.Hash.SHA256
-    import Crypto.PublicKey.RSA
-    import Crypto.Random
-    import Crypto.Signature.PKCS1_v1_5
+    import cryptography.hazmat.backends
+    import cryptography.hazmat.primitives.asymmetric.padding
+    import cryptography.hazmat.primitives.asymmetric.rsa
+    import cryptography.hazmat.primitives.ciphers
+    import cryptography.hazmat.primitives.ciphers.algorithms
+    import cryptography.hazmat.primitives.ciphers.modes
+    import cryptography.hazmat.primitives.constant_time
+    import cryptography.hazmat.primitives.hashes
+    import cryptography.hazmat.primitives.padding
+    import cryptography.hazmat.primitives.serialization
 except ImportError:  # pragma: no cover
     pass
 try:
@@ -115,8 +120,10 @@ _DEFAULT_BLOB_ENDPOINT = 'blob.core.windows.net'
 _DEFAULT_MANAGEMENT_ENDPOINT = 'management.core.windows.net'
 # encryption defines
 _AES256_KEYLENGTH_BYTES = 32
-# 16 bytes AES block size + 32 bytes SHA256 digest size
-_AES256CBC_HMACSHA256_OVERHEAD_BYTES = 48
+_AES256_BLOCKSIZE_BYTES = 16
+_HMACSHA256_DIGESTSIZE_BYTES = 32
+_AES256CBC_HMACSHA256_OVERHEAD_BYTES = _AES256_BLOCKSIZE_BYTES + \
+    _HMACSHA256_DIGESTSIZE_BYTES
 _ENCRYPTION_MODE_FULLBLOB = 'FullBlob'
 _ENCRYPTION_MODE_CHUNKEDBLOB = 'ChunkedBlob'
 _DEFAULT_ENCRYPTION_MODE = _ENCRYPTION_MODE_FULLBLOB
@@ -125,7 +132,7 @@ _ENCRYPTION_ALGORITHM = 'AES_CBC_256'
 _ENCRYPTION_INTEGRITY_AUTH_ALGORITHM = 'HMAC-SHA256'
 _ENCRYPTION_CHUNKSTRUCTURE = 'IV || EncryptedData || Signature'
 _ENCRYPTION_ENCRYPTED_KEY_SCHEME = 'RSA-OAEP'
-_ENCRYPTION_ENCRYPTED_KEY_SIGNATURE_SCHEME = 'RSASSA-PKCS1-v1_5'
+_ENCRYPTION_ENCRYPTED_KEY_SIGNATURE_SCHEME = 'RSASSA-PSS'
 _ENCRYPTION_METADATA_NAME = 'encryptiondata'
 _ENCRYPTION_METADATA_MODE = 'EncryptionMode'
 _ENCRYPTION_METADATA_ALGORITHM = 'Algorithm'
@@ -168,7 +175,8 @@ class EncryptionMetadataJson(object):
             Nothing
         """
         self.encmode = args.encmode
-        self.rsakey = args.rsakey
+        self.rsaprivatekey = args.rsaprivatekey
+        self.rsapublickey = args.rsapublickey
         self.chunksizebytes = args.chunksizebytes
         self.symkey = symkey
         self.signkey = signkey
@@ -186,8 +194,10 @@ class EncryptionMetadataJson(object):
 
     def construct_metadata_json(self):
         """Constructs encryptiondata metadata"""
-        encsymkey, symkeysig = rsa_encrypt_key(self.rsakey, self.symkey)
-        encsignkey, signkeysig = rsa_encrypt_key(self.rsakey, self.signkey)
+        encsymkey, symkeysig = rsa_encrypt_key(
+            self.rsaprivatekey, self.rsapublickey, self.symkey)
+        encsignkey, signkeysig = rsa_encrypt_key(
+            self.rsaprivatekey, self.rsapublickey, self.signkey)
         ret = {
             _ENCRYPTION_METADATA_MODE: self.encmode,
             _ENCRYPTION_METADATA_WRAPPEDCONTENTKEY: {
@@ -245,11 +255,12 @@ class EncryptionMetadataJson(object):
                 'Unknown encryption mode: {}'.format(self.encmode))
         return {_ENCRYPTION_METADATA_NAME: json.dumps(ret)}
 
-    def parse_metadata_json(self, rsakey, mddict):
+    def parse_metadata_json(self, rsaprivatekey, rsapublickey, mddict):
         """Parses a meta data dictionary containing the encryptiondata
         metadata
         Parameters:
-            rsakey - RSA key
+            rsaprivatekey - RSA private key
+            rsapublickey - RSA public key
             mddict - metadata dictionary
         Returns:
             Nothing
@@ -267,7 +278,7 @@ class EncryptionMetadataJson(object):
         else:
             self.md5 = None
         # if RSA key is not present return
-        if rsakey is None:
+        if rsaprivatekey is None and rsapublickey is None:
             return
         # check for required metadata fields
         if (_ENCRYPTION_METADATA_MODE not in meta or
@@ -341,7 +352,7 @@ class EncryptionMetadataJson(object):
                 meta[_ENCRYPTION_METADATA_LAYOUT][
                     _ENCRYPTION_METADATA_CHUNKOFFSETS])
         # if RSA key is a public key, stop here as keys cannot be decrypted
-        if not rsakey.has_private():
+        if rsaprivatekey is None:
             return
         # decrypt and validate symmetric key
         if _ENCRYPTION_METADATA_ENCRYPTEDKEYSIGNATURE in meta[
@@ -351,7 +362,7 @@ class EncryptionMetadataJson(object):
         else:
             symkeysig = None
         self.symkey = rsa_decrypt_key(
-            rsakey,
+            rsaprivatekey,
             meta[_ENCRYPTION_METADATA_WRAPPEDCONTENTKEY][
                 _ENCRYPTION_METADATA_ENCRYPTEDKEY],
             symkeysig)
@@ -365,7 +376,7 @@ class EncryptionMetadataJson(object):
                 signkeysig = None
             if _ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY in meta:
                 self.signkey = rsa_decrypt_key(
-                    rsakey,
+                    rsaprivatekey,
                     meta[_ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY][
                         _ENCRYPTION_METADATA_ENCRYPTEDKEY],
                     signkeysig)
@@ -824,7 +835,8 @@ class BlobChunkWorker(threading.Thread):
         self.blob_service = blob_service
         self.timeout = args.timeout
         self.xfertoazure = xfertoazure
-        self.rsakey = args.rsakey
+        self.rsaprivatekey = args.rsaprivatekey
+        self.rsapublickey = args.rsapublickey
         self.encmode = args.encmode
 
     def run(self):
@@ -846,7 +858,8 @@ class BlobChunkWorker(threading.Thread):
             try:
                 if self.xfertoazure:
                     # if iv is not ready for this chunk, re-add back to queue
-                    if (self.rsakey is not None and
+                    if ((self.rsaprivatekey is not None or
+                         self.rsapublickey is not None) and
                             self.encmode == _ENCRYPTION_MODE_FULLBLOB):
                         _iblockid = int(blockid)
                         if _iblockid not in encparam[2]:
@@ -867,9 +880,9 @@ class BlobChunkWorker(threading.Thread):
                         localresource, container, remoteresource, blockid,
                         offset, bytestoxfer, encparam, flock, filedesc)
                 # pylint: disable=W0703
-            except Exception as exc:
+            except Exception:
                 # pylint: enable=W0703
-                self._exc.append(exc)
+                self._exc.append(traceback.format_exc())
             self._out_queue.put((localresource, encparam))
             if len(self._exc) > 0:
                 break
@@ -951,7 +964,9 @@ class BlobChunkWorker(threading.Thread):
                 timeout=self.timeout)
         else:
             # encrypt block if required
-            if self.rsakey is not None:
+            if (encparam is not None and
+                    (self.rsaprivatekey is not None or
+                     self.rsapublickey is not None)):
                 symkey = encparam[0]
                 signkey = encparam[1]
                 if self.encmode == _ENCRYPTION_MODE_FULLBLOB:
@@ -972,7 +987,7 @@ class BlobChunkWorker(threading.Thread):
                             encparam[2]['hmac'].update(data)
                         # store iv for next chunk
                         encparam[2][_blkid + 1] = data[
-                            len(data) - Crypto.Cipher.AES.block_size:]
+                            len(data) - _AES256_BLOCKSIZE_BYTES:]
                     # compute md5 for encrypted data chunk
                     encparam[2]['md5'].update(data)
             # compute block md5
@@ -1010,7 +1025,7 @@ class BlobChunkWorker(threading.Thread):
             else:
                 # retrieve block size data prior for IV
                 rangestr = 'bytes={}-{}'.format(
-                    offset - Crypto.Cipher.AES.block_size,
+                    offset - _AES256_BLOCKSIZE_BYTES,
                     offset + bytestoxfer)
         else:
             rangestr = 'bytes={}-{}'.format(offset, offset + bytestoxfer)
@@ -1024,26 +1039,27 @@ class BlobChunkWorker(threading.Thread):
                 if offset == 0:
                     iv = encparam[4][0]
                 else:
-                    iv = blobdata[:Crypto.Cipher.AES.block_size]
-                    blobdata = blobdata[Crypto.Cipher.AES.block_size:]
+                    iv = blobdata[:_AES256_BLOCKSIZE_BYTES]
+                    blobdata = blobdata[_AES256_BLOCKSIZE_BYTES:]
                 unpad = encparam[5]
                 # update any buffered data to hmac
-                hmac = encparam[4]['hmac']
-                if hmac['hmac'] is not None:
+                hmacdict = encparam[4]['hmac']
+                if hmacdict['hmac'] is not None:
                     # grab file lock to manipulate hmac
                     with flock:
                         # include iv in first hmac calculation
                         if offset == 0:
-                            hmac['buffered'][blockid] = iv + blobdata
+                            hmacdict['buffered'][blockid] = iv + blobdata
                         else:
-                            hmac['buffered'][blockid] = blobdata
+                            hmacdict['buffered'][blockid] = blobdata
                         # try to process hmac data
                         while True:
-                            curr = hmac['curr']
-                            if curr in hmac['buffered']:
-                                hmac['hmac'].update(hmac['buffered'][curr])
-                                hmac['buffered'].pop(curr)
-                                hmac['curr'] = curr + 1
+                            curr = hmacdict['curr']
+                            if curr in hmacdict['buffered']:
+                                hmacdict['hmac'].update(
+                                    hmacdict['buffered'][curr])
+                                hmacdict['buffered'].pop(curr)
+                                hmacdict['curr'] = curr + 1
                             else:
                                 break
             else:
@@ -1064,42 +1080,34 @@ class BlobChunkWorker(threading.Thread):
         del blobdata
 
 
-def pad_pkcs5(buf):
-    """Appends PKCS5_PADDING to an input buffer
+def pad_pkcs7(buf):
+    """Appends PKCS7 padding to an input buffer.
     Parameters:
         buf - buffer to add padding
     Returns:
-        buffer with PKCS5_PADDING
+        buffer with PKCS7_PADDING
     Raises:
         No special exception handling
     """
-    if _PY2:
-        return buf + (
-            (Crypto.Cipher.AES.block_size -
-             len(buf) % Crypto.Cipher.AES.block_size) *
-            chr(Crypto.Cipher.AES.block_size -
-                len(buf) % Crypto.Cipher.AES.block_size))
-    else:
-        return buf + (
-            (Crypto.Cipher.AES.block_size -
-             len(buf) % Crypto.Cipher.AES.block_size) *
-            bytes([Crypto.Cipher.AES.block_size -
-                   len(buf) % Crypto.Cipher.AES.block_size]))
+    padder = cryptography.hazmat.primitives.padding.PKCS7(
+        cryptography.hazmat.primitives.ciphers.
+        algorithms.AES.block_size).padder()
+    return padder.update(buf) + padder.finalize()
 
 
-def unpad_pkcs5(buf):
-    """Removes PKCS5_PADDING from a decrypted object
+def unpad_pkcs7(buf):
+    """Removes PKCS7 padding a decrypted object.
     Parameters:
         buf - buffer to remove padding
     Returns:
-        buffer without PKCS5_PADDING
+        buffer without PKCS7_PADDING
     Raises:
         No special exception handling
     """
-    if _PY2:
-        return buf[0:-ord(buf[-1])]
-    else:
-        return buf[0:-buf[-1]]
+    unpadder = cryptography.hazmat.primitives.padding.PKCS7(
+        cryptography.hazmat.primitives.ciphers.
+        algorithms.AES.block_size).unpadder()
+    return unpadder.update(buf) + unpadder.finalize()
 
 
 def generate_aes256_keys():
@@ -1111,16 +1119,16 @@ def generate_aes256_keys():
     Raises:
         Nothing
     """
-    rand = Crypto.Random.new()
-    symkey = rand.read(_AES256_KEYLENGTH_BYTES)
-    signkey = rand.read(_AES256_KEYLENGTH_BYTES)
+    symkey = os.urandom(_AES256_KEYLENGTH_BYTES)
+    signkey = os.urandom(_AES256_KEYLENGTH_BYTES)
     return symkey, signkey
 
 
-def rsa_encrypt_key(rsakey, plainkey, asbase64=True):
+def rsa_encrypt_key(rsaprivatekey, rsapublickey, plainkey, asbase64=True):
     """Encrypt a plaintext key using RSA and PKCS1_OAEP padding
     Parameters:
-        rsakey - rsa key for encryption
+        rsaprivatekey - rsa private key for encryption
+        rsapublickey - rsa public key for encryption
         plainkey - plaintext key
         asbase64 - encode as base64
     Returns:
@@ -1128,13 +1136,26 @@ def rsa_encrypt_key(rsakey, plainkey, asbase64=True):
     Raises:
         Nothing
     """
-    cipher = Crypto.Cipher.PKCS1_OAEP.new(rsakey)
-    signer = Crypto.Signature.PKCS1_v1_5.new(rsakey)
-    if rsakey.has_private():
-        signature = signer.sign(Crypto.Hash.SHA256.new(plainkey))
-    else:
+    if rsapublickey is None:
+        rsapublickey = rsaprivatekey.public_key()
+    if rsaprivatekey is None:
         signature = None
-    enckey = cipher.encrypt(plainkey)
+    else:
+        signer = rsaprivatekey.signer(
+            cryptography.hazmat.primitives.asymmetric.padding.PSS(
+                mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1(
+                    cryptography.hazmat.primitives.hashes.SHA256()),
+                salt_length=cryptography.hazmat.primitives.asymmetric.
+                padding.PSS.MAX_LENGTH),
+            cryptography.hazmat.primitives.hashes.SHA256())
+        signer.update(plainkey)
+        signature = signer.finalize()
+    enckey = rsapublickey.encrypt(
+        plainkey, cryptography.hazmat.primitives.asymmetric.padding.OAEP(
+            mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1(
+                algorithm=cryptography.hazmat.primitives.hashes.SHA1()),
+            algorithm=cryptography.hazmat.primitives.hashes.SHA1(),
+            label=None))
     if asbase64:
         return base64encode(enckey), base64encode(
             signature) if signature is not None else signature
@@ -1142,10 +1163,10 @@ def rsa_encrypt_key(rsakey, plainkey, asbase64=True):
         return enckey, signature
 
 
-def rsa_decrypt_key(rsakey, enckey, signature, isbase64=True):
+def rsa_decrypt_key(rsaprivatekey, enckey, signature, isbase64=True):
     """Decrypt an RSA encrypted key and optional signature verification
     Parameters:
-        rsakey - rsa key for decryption
+        rsaprivatekey - rsa private key for decryption
         enckey - encrypted key
         signature - optional signature to verify encrypted data
         isbase64 - if keys are base64 encoded
@@ -1156,14 +1177,25 @@ def rsa_decrypt_key(rsakey, enckey, signature, isbase64=True):
     """
     if isbase64:
         enckey = base64.b64decode(enckey)
-    cipher = Crypto.Cipher.PKCS1_OAEP.new(rsakey)
-    deckey = cipher.decrypt(enckey)
+    deckey = rsaprivatekey.decrypt(
+        enckey, cryptography.hazmat.primitives.asymmetric.padding.OAEP(
+            mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1(
+                algorithm=cryptography.hazmat.primitives.hashes.SHA1()),
+            algorithm=cryptography.hazmat.primitives.hashes.SHA1(),
+            label=None))
     if signature is not None and len(signature) > 0:
+        rsapublickey = rsaprivatekey.public_key()
         if isbase64:
             signature = base64.b64decode(signature)
-        verifier = Crypto.Signature.PKCS1_v1_5.new(rsakey)
-        if not verifier.verify(Crypto.Hash.SHA256.new(deckey), signature):
-            raise RuntimeError('RSA signature validation failed')
+        verifier = rsapublickey.verifier(
+            signature, cryptography.hazmat.primitives.asymmetric.padding.PSS(
+                mgf=cryptography.hazmat.primitives.asymmetric.padding.MGF1(
+                    cryptography.hazmat.primitives.hashes.SHA256()),
+                salt_length=cryptography.hazmat.primitives.asymmetric.
+                padding.PSS.MAX_LENGTH),
+            cryptography.hazmat.primitives.hashes.SHA256())
+        verifier.update(deckey)
+        verifier.verify()
     return deckey
 
 
@@ -1184,20 +1216,23 @@ def encrypt_chunk(symkey, signkey, data, encmode, iv=None, pad=False):
     """
     # create iv
     if encmode == _ENCRYPTION_MODE_CHUNKEDBLOB:
-        iv = Crypto.Random.new().read(Crypto.Cipher.AES.block_size)
+        iv = os.urandom(_AES256_BLOCKSIZE_BYTES)
         # force padding on since this will be an individual encrypted chunk
         pad = True
     # encrypt data
-    cipher = Crypto.Cipher.AES.new(symkey, Crypto.Cipher.AES.MODE_CBC, iv)
+    cipher = cryptography.hazmat.primitives.ciphers.Cipher(
+        cryptography.hazmat.primitives.ciphers.algorithms.AES(symkey),
+        cryptography.hazmat.primitives.ciphers.modes.CBC(iv),
+        backend=cryptography.hazmat.backends.default_backend()).encryptor()
     if pad:
-        encdata = cipher.encrypt(pad_pkcs5(data))
+        encdata = cipher.update(pad_pkcs7(data)) + cipher.finalize()
     else:
-        encdata = cipher.encrypt(data)
+        encdata = cipher.update(data) + cipher.finalize()
     # sign encrypted data
     if encmode == _ENCRYPTION_MODE_CHUNKEDBLOB:
-        hmac = Crypto.Hash.HMAC.new(signkey, digestmod=Crypto.Hash.SHA256)
-        hmac.update(iv + encdata)
-        return iv + encdata + hmac.digest()
+        hmacsha256 = hmac.new(signkey, digestmod=hashlib.sha256)
+        hmacsha256.update(iv + encdata)
+        return iv + encdata + hmacsha256.digest()
     else:
         return encdata
 
@@ -1221,27 +1256,32 @@ def decrypt_chunk(
     # if chunked blob, then preprocess for iv and signature
     if encmode == _ENCRYPTION_MODE_CHUNKEDBLOB:
         # retrieve iv
-        iv = encchunk[:Crypto.Cipher.AES.block_size]
+        iv = encchunk[:_AES256_BLOCKSIZE_BYTES]
         # retrieve encrypted data
         encdata = encchunk[
-            Crypto.Cipher.AES.block_size:-Crypto.Hash.SHA256.digest_size]
+            _AES256_BLOCKSIZE_BYTES:-_HMACSHA256_DIGESTSIZE_BYTES]
         # retrieve signature
-        sig = encchunk[-Crypto.Hash.SHA256.digest_size:]
+        sig = encchunk[-_HMACSHA256_DIGESTSIZE_BYTES:]
         # validate integrity of data
-        hmac = Crypto.Hash.HMAC.new(signkey, digestmod=Crypto.Hash.SHA256)
+        hmacsha256 = hmac.new(signkey, digestmod=hashlib.sha256)
         # compute hmac over iv + encdata
-        hmac.update(encchunk[:-Crypto.Hash.SHA256.digest_size])
-        if hmac.digest() != sig:
+        hmacsha256.update(encchunk[:-_HMACSHA256_DIGESTSIZE_BYTES])
+        if not cryptography.hazmat.primitives.constant_time.bytes_eq(
+                hmacsha256.digest(), sig):
             raise RuntimeError(
                 'Encrypted data integrity check failed for chunk')
     else:
         encdata = encchunk
     # decrypt data
-    cipher = Crypto.Cipher.AES.new(symkey, Crypto.Cipher.AES.MODE_CBC, iv)
+    cipher = cryptography.hazmat.primitives.ciphers.Cipher(
+        cryptography.hazmat.primitives.ciphers.algorithms.AES(symkey),
+        cryptography.hazmat.primitives.ciphers.modes.CBC(iv),
+        backend=cryptography.hazmat.backends.default_backend()).decryptor()
+    decrypted = cipher.update(encdata) + cipher.finalize()
     if unpad:
-        return unpad_pkcs5(cipher.decrypt(encdata))
+        return unpad_pkcs7(decrypted)
     else:
-        return cipher.decrypt(encdata)
+        return decrypted
 
 
 def azure_request(req, timeout=None, *args, **kwargs):
@@ -1438,9 +1478,11 @@ def get_blob_listing(blob_service, args, metadata=True):
                     _ENCRYPTION_METADATA_NAME in blob.metadata):
                 encmeta = EncryptionMetadataJson(
                     args, None, None, None, None, None)
-                encmeta.parse_metadata_json(args.rsakey, blob.metadata)
+                encmeta.parse_metadata_json(
+                    args.rsaprivatekey, args.rsapublickey, blob.metadata)
                 blobdict[blob.name][1] = encmeta.md5
-                if args.rsakey is not None:
+                if (args.rsaprivatekey is not None or
+                        args.rsapublickey is not None):
                     blobdict[blob.name][2] = encmeta
         marker = result.next_marker
         if marker is None or len(marker) < 1:
@@ -1471,7 +1513,7 @@ def generate_xferspec_download(
     encmeta = blobprop[2]
     # get the file metadata
     if (contentlength is None or contentmd5 is None or
-            (args.rsakey is not None and encmeta is None)):
+            (args.rsaprivatekey is not None and encmeta is None)):
         result = azure_request(
             blob_service.get_blob_properties, timeout=args.timeout,
             container_name=args.container, blob_name=remoteresource)
@@ -1486,10 +1528,12 @@ def generate_xferspec_download(
         for res in result:
             if res.startswith('x-ms-meta-'):
                 mddict[res[10:]] = result[res]
-        if args.rsakey is not None and _ENCRYPTION_METADATA_NAME in mddict:
+        if (args.rsaprivatekey is not None and
+                _ENCRYPTION_METADATA_NAME in mddict):
             encmeta = EncryptionMetadataJson(
                 args, None, None, None, None, None)
-            encmeta.parse_metadata_json(args.rsakey, mddict)
+            encmeta.parse_metadata_json(
+                args.rsaprivatekey, args.rsapublickey, mddict)
     if contentlength < 0:
         raise ValueError(
             'contentlength is invalid for {}'.format(remoteresource))
@@ -1528,8 +1572,8 @@ def generate_xferspec_download(
                 }
             }
             if signkey is not None:
-                ivmap['hmac']['hmac'] = Crypto.Hash.HMAC.new(
-                    signkey, digestmod=Crypto.Hash.SHA256)
+                ivmap['hmac']['hmac'] = hmac.new(
+                    signkey, digestmod=hashlib.sha256)
             offset_mod = 0
         elif encmeta.encmode == _ENCRYPTION_MODE_CHUNKEDBLOB:
             ivmap = None
@@ -1551,7 +1595,7 @@ def generate_xferspec_download(
             if encmeta.encmode == _ENCRYPTION_MODE_CHUNKEDBLOB:
                 allocatesize = contentlength - ((nchunks + 2) * offset_mod)
             else:
-                allocatesize = contentlength - Crypto.Cipher.AES.block_size
+                allocatesize = contentlength - _AES256_BLOCKSIZE_BYTES
         else:
             allocatesize = contentlength
         if allocatesize < 0:
@@ -1657,15 +1701,14 @@ def generate_xferspec_upload(
             chunktoadd = filesize - currfileoffset
         blockid = '{0:08d}'.format(currfileoffset // args.chunksizebytes)
         # generate the ivmap for the first block
-        if args.rsakey is not None and currfileoffset == 0:
+        if (args.rsaprivatekey is not None or
+                args.rsapublickey is not None) and currfileoffset == 0:
             # generate sym/signing keys
             symkey, signkey = generate_aes256_keys()
             if args.encmode == _ENCRYPTION_MODE_FULLBLOB:
                 ivmap = {
-                    i: Crypto.Random.new().read(
-                        Crypto.Cipher.AES.block_size),
-                    'hmac': Crypto.Hash.HMAC.new(
-                        signkey, digestmod=Crypto.Hash.SHA256),
+                    i: os.urandom(_AES256_BLOCKSIZE_BYTES),
+                    'hmac': hmac.new(signkey, digestmod=hashlib.sha256),
                 }
             else:
                 ivmap = {}
@@ -1747,6 +1790,10 @@ def main():
     if args.stripcomponents < 0:
         raise ValueError('invalid component strip number: {}'.format(
             args.stripcomponents))
+    if args.rsaprivatekey is not None and args.rsapublickey is not None:
+        raise ValueError('cannot specify both RSA private and public keys')
+    if args.rsapublickey is not None and args.rsakeypassphrase is not None:
+        raise ValueError('cannot specify an RSA public key and passphrase')
     if args.timeout is not None and args.timeout <= 0:
         args.timeout = None
 
@@ -1842,7 +1889,12 @@ def main():
             raise ValueError('cannot download remote file if not specified')
 
     # import rsa key
-    rsakeyfile = args.rsakey
+    if args.rsaprivatekey is not None:
+        rsakeyfile = args.rsaprivatekey
+    elif args.rsapublickey is not None:
+        rsakeyfile = args.rsapublickey
+    else:
+        rsakeyfile = None
     if rsakeyfile is not None:
         # check for conflicting options
         if args.autovhd or args.pageblob:
@@ -1859,9 +1911,18 @@ def main():
         if args.encmode == _ENCRYPTION_MODE_CHUNKEDBLOB:
             raise RuntimeError(
                 '{} encryption mode not allowed'.format(args.encmode))
-        args.rsakey = Crypto.PublicKey.RSA.importKey(
-            open(rsakeyfile, 'r').read(), args.rsakeypassphrase)
-        if not args.rsakey.has_private() and not xfertoazure:
+        with open(rsakeyfile, 'rb') as keyfile:
+            if args.rsaprivatekey is not None:
+                args.rsaprivatekey = cryptography.hazmat.primitives.\
+                    serialization.load_pem_private_key(
+                        keyfile.read(), args.rsakeypassphrase,
+                        backend=cryptography.hazmat.backends.default_backend())
+            else:
+                args.rsapublickey = cryptography.hazmat.primitives.\
+                    serialization.load_pem_public_key(
+                        keyfile.read(),
+                        backend=cryptography.hazmat.backends.default_backend())
+        if args.rsaprivatekey is None and not xfertoazure:
             raise ValueError('imported RSA key does not have a private key')
         # adjust chunk size for padding for chunked mode
         if xfertoazure:
@@ -1911,11 +1972,12 @@ def main():
     print('      local overwrite: {}'.format(args.overwrite))
     print('      encryption mode: {}'.format(
         (args.encmode or 'disabled' if xfertoazure else 'file dependent')
-        if args.rsakey else 'disabled'))
+        if args.rsaprivatekey is not None or args.rsapublickey is not None
+        else 'disabled'))
     print('         RSA key file: {}'.format(rsakeyfile or 'disabled'))
-    print('  RSA key has private: {}'.format(
-        True if args.rsakey is not None and
-        args.rsakey.has_private() else False))
+    print('         RSA key type: {}'.format(
+        'private' if args.rsaprivatekey is not None else 'public'
+        if args.rsapublickey is not None else 'disabled'))
     print('=======================================\n')
 
     # mark start time after init
@@ -2148,7 +2210,8 @@ def main():
                 else:
                     # only perform put block list on non-zero byte files
                     if filesizes[localresource] > 0:
-                        if args.rsakey is not None:
+                        if (args.rsaprivatekey is not None or
+                                args.rsapublickey is not None):
                             md5 = base64encode(encparam[2]['md5'].digest())
                         else:
                             md5 = md5map[localresource]
@@ -2161,27 +2224,29 @@ def main():
                             x_ms_blob_content_type=get_mime_type(
                                 localresource),
                             x_ms_blob_content_md5=md5)
-                    # set blob metadata for encrypted blobs
-                    if args.rsakey is not None:
-                        if args.encmode == _ENCRYPTION_MODE_FULLBLOB:
-                            encmetadata = EncryptionMetadataJson(
-                                args, encparam[0], encparam[1], encparam[2][0],
-                                encparam[2]['hmac'].digest(),
-                                md5map[localresource]
-                            ).construct_metadata_json()
-                        else:
-                            encmetadata = EncryptionMetadataJson(
-                                args, encparam[0], encparam[1], None, None,
-                                md5map[localresource]
-                            ).construct_metadata_json()
-                        azure_request(
-                            blob_service.set_blob_metadata,
-                            timeout=args.timeout,
-                            container_name=args.container,
-                            blob_name=filemap[localresource],
-                            x_ms_meta_name_values=encmetadata)
+                        # set blob metadata for encrypted blobs
+                        if (args.rsaprivatekey is not None or
+                                args.rsapublickey is not None):
+                            if args.encmode == _ENCRYPTION_MODE_FULLBLOB:
+                                encmetadata = EncryptionMetadataJson(
+                                    args, encparam[0], encparam[1],
+                                    encparam[2][0],
+                                    encparam[2]['hmac'].digest(),
+                                    md5map[localresource]
+                                ).construct_metadata_json()
+                            else:
+                                encmetadata = EncryptionMetadataJson(
+                                    args, encparam[0], encparam[1], None,
+                                    None, md5map[localresource]
+                                ).construct_metadata_json()
+                            azure_request(
+                                blob_service.set_blob_metadata,
+                                timeout=args.timeout,
+                                container_name=args.container,
+                                blob_name=filemap[localresource],
+                                x_ms_meta_name_values=encmetadata)
         else:
-            if (args.rsakey is not None and
+            if (args.rsaprivatekey is not None and
                     encparam[3] == _ENCRYPTION_MODE_FULLBLOB and
                     not as_page_blob(
                         args.pageblob, args.autovhd, localresource) and
@@ -2213,35 +2278,35 @@ def main():
         print('performing finalization (if applicable): {}: {}, '
               'MD5: {}'.format(
                   _ENCRYPTION_INTEGRITY_AUTH_ALGORITHM,
-                  args.rsakey is not None, args.computefilemd5))
+                  args.rsaprivatekey is not None, args.computefilemd5))
         for localfile in filemap:
             tmpfilename = filemap[localfile]
             finalizefile = True
             skipmd5 = False
             # check hmac
-            if (args.rsakey is not None and
+            if (args.rsaprivatekey is not None and
                     args.encmode == _ENCRYPTION_MODE_FULLBLOB):
                 if tmpfilename in hmacs:
-                    hmac = hmacs[tmpfilename]
+                    hmacdict = hmacs[tmpfilename]
                     # process any remaining hmac data
-                    while len(hmac['buffered']) > 0:
-                        curr = hmac['curr']
-                        if curr in hmac['buffered']:
-                            hmac['hmac'].update(hmac['buffered'][curr])
-                            hmac['buffered'].pop(curr)
-                            hmac['curr'] = curr + 1
+                    while len(hmacdict['buffered']) > 0:
+                        curr = hmacdict['curr']
+                        if curr in hmacdict['buffered']:
+                            hmacdict['hmac'].update(hmacdict['buffered'][curr])
+                            hmacdict['buffered'].pop(curr)
+                            hmacdict['curr'] = curr + 1
                         else:
                             break
-                    digest = base64encode(hmac['hmac'].digest())
+                    digest = base64encode(hmacdict['hmac'].digest())
                     res = 'OK'
-                    if digest != hmac['sig']:
+                    if digest != hmacdict['sig']:
                         res = 'MISMATCH'
                         finalizefile = False
                     else:
                         skipmd5 = True
                     print('[{}: {}, {}] {} <L..R> {}'.format(
                         _ENCRYPTION_INTEGRITY_AUTH_ALGORITHM, res, localfile,
-                        digest, hmac['sig']))
+                        digest, hmacdict['sig']))
             # compare md5 hash
             if args.computefilemd5 and not skipmd5:
                 if md5map[localfile] is None:
@@ -2323,9 +2388,9 @@ def parseargs():  # pragma: no cover
         encmode=_DEFAULT_ENCRYPTION_MODE, include=None,
         managementep=_DEFAULT_MANAGEMENT_ENDPOINT,
         numworkers=_DEFAULT_MAX_STORAGEACCOUNT_WORKERS, overwrite=True,
-        pageblob=False, progressbar=True, recursive=True, rsakey=None,
-        rsakeypassphrase=None, skiponmatch=True, stripcomponents=None,
-        timeout=None)
+        pageblob=False, progressbar=True, recursive=True, rsaprivatekey=None,
+        rsapublickey=None, rsakeypassphrase=None, skiponmatch=True,
+        stripcomponents=None, timeout=None)
     parser.add_argument('storageaccount', help='name of storage account')
     parser.add_argument('container', help='name of blob container')
     parser.add_argument(
@@ -2395,12 +2460,16 @@ def parseargs():  # pragma: no cover
         help='upload as page blob rather than block blob, blobs will '
         'be page-aligned in Azure storage')
     parser.add_argument(
-        '--rsakey',
-        help='RSA public or private key file in PEM or DER/binary format. '
-        'Specifying an RSA key will turn on encryption or decryption. An RSA '
-        'public or private key is required for uploading and encrypting '
-        'blobs. An RSA private key is required for downloading encrypted '
-        'blobs.')
+        '--rsaprivatekey',
+        help='RSA private key file in PEM format. Specifying an RSA key '
+        'will turn on encryption or decryption. An RSA private key is '
+        'required for downloading encrypted blobs and is optional for '
+        'uploading encrypted blobs.')
+    parser.add_argument(
+        '--rsapublickey',
+        help='RSA public key file in PEM format. Specifying an RSA key '
+        'will turn on encryption or decryption. An RSA public key can '
+        'only be used for uplaoding encrypted blobs.')
     parser.add_argument(
         '--rsakeypassphrase',
         help='Optional passphrase for decrypting an RSA private key.')

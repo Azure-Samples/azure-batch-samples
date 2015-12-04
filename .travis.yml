@@ -5,15 +5,16 @@ python:
   - 3.3
   - 3.4
   - 3.5
-  - pypy
+  # disable pypy until cryptography is supported
+  #- pypy
   # disable pypy3 until 3.3 compliance
   #- pypy3
 install:
   - pip install azure-servicemanagement-legacy
   - pip install azure-storage
   - pip install coveralls
+  - pip install cryptography
   - pip install flake8
-  - pip install pycrypto
   - pip install pytest-cov
   - pip install requests
   - pip install requests_mock
