@@ -1,6 +1,6 @@
 ﻿// Copyright (c) Microsoft Corporation
 
-namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
+namespace Microsoft.Azure.Batch.Samples.DotNetTutorial.TaskApplication
 {
     using System;
     using System.Collections.Generic;
@@ -39,17 +39,17 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
             // The third argument should be the shared access signature for the container in Azure Storage
             // to which this task application will upload its output. This shared access signature should
             // provide WRITE access to the container.
-            string containerSas = args[2];
+            string outputContainerSas = args[2];
 
             // Read all of the text contained in the input file
             string content = File.ReadAllText(inputFile);
-            string[] words = content.Split( new char[] { ' ', '\n' } );
+            string[] words = content.Split(null as char[], StringSplitOptions.RemoveEmptyEntries);
             
             // Get the word counts, pulling the top N words
             var topNWords = words
                 .Where(word => word.Length > 0)
-                .GroupBy(word => word, (key, group) => new KeyValuePair<String, long>(key, group.LongCount()))
-                .OrderByDescending(x => x.Value)
+                .GroupBy(word => word, (word, count) => new { Word = word, Count = count.Count() })
+                .OrderByDescending(x => x.Count)
                 .Take(numTopN)
                 .ToList();
 
@@ -58,10 +58,10 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
             using (System.IO.StreamWriter file = new System.IO.StreamWriter(outputFile))
             {
                 file.WriteLine("Count\tWord");
-
-                foreach (var pair in topNWords)
+                
+                foreach (var topWord in topNWords)
                 {
-                    file.WriteLine("{0}\t\t{1}", pair.Value.ToString().PadLeft(3, ' '), pair.Key);
+                    file.WriteLine("{0}\t\t{1}", topWord.Count.ToString().PadLeft(3), topWord.Word);
                 }
 
                 // Write out some task information using some of the node's environment variables
@@ -73,7 +73,7 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
             }
             
             // Upload the output file to blob container in Azure Storage
-            UploadFileToContainer(outputFile, containerSas);
+            UploadFileToContainer(outputFile, outputContainerSas);
         }
 
         /// <summary>
@@ -104,6 +104,11 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
                 Console.WriteLine("Write operation failed for SAS URL " + containerSas);
                 Console.WriteLine("Additional error information: " + e.Message);
                 Console.WriteLine();
+
+                // Indicate that a failure has occurred so that when the Batch service sets the
+                // CloudTask.ExecutionInformation.ExitCode for the task that executed this application,
+                // it properly indicates that there was a problem with the task.
+                Environment.ExitCode = -1;
             }
         }
     }

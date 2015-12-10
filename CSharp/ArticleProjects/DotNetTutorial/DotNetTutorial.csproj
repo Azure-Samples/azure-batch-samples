@@ -8,7 +8,7 @@
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Microsoft.Azure.Batch.Samples.DotNetTutorial</RootNamespace>
-    <AssemblyName>00_DotNET_Tutorial</AssemblyName>
+    <AssemblyName>DotNetTutorial</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -121,6 +121,12 @@
     <Content Include="taskdata1.txt" />
     <Content Include="taskdata2.txt" />
     <Content Include="taskdata3.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="TaskApplication\TaskApplication.csproj">
+      <Project>{90b219de-7129-4048-b1a2-9ef712f3cd8d}</Project>
+      <Name>TaskApplication</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="packages\Microsoft.Bcl.Build.1.0.14\tools\Microsoft.Bcl.Build.targets" Condition="Exists('packages\Microsoft.Bcl.Build.1.0.14\tools\Microsoft.Bcl.Build.targets')" />
