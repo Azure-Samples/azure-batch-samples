@@ -39,7 +39,7 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
             if (String.IsNullOrEmpty(BatchAccountName) || String.IsNullOrEmpty(BatchAccountKey) || String.IsNullOrEmpty(BatchAccountUrl) ||
                 String.IsNullOrEmpty(StorageAccountName) || String.IsNullOrEmpty(StorageAccountKey))
             {
-                throw new Exception("One ore more account credential strings have not been populated. Please ensure that your Batch and Storage account credentials have been specified.");
+                throw new InvalidOperationException("One ore more account credential strings have not been populated. Please ensure that your Batch and Storage account credentials have been specified.");
             }
 
             try
@@ -139,10 +139,12 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
                 // Download the task output files from the output Storage container to a local directory
                 await DownloadBlobsFromContainerAsync(blobClient, outputContainerName, Environment.GetEnvironmentVariable("TEMP"));
 
-                // Delete the output files from the output container
-                await DeleteBlobsFromContainerAsync(blobClient, outputContainerName);
+                // Clean up Storage resources
+                await DeleteContainerAsync(blobClient, appContainerName);
+                await DeleteContainerAsync(blobClient, inputContainerName);
+                await DeleteContainerAsync(blobClient, outputContainerName);
 
-                // Clean up the resources we've created in the Batch account if the user so chooses
+                // Clean up Batch resources (if the user so chooses)
                 Console.WriteLine();
                 Console.WriteLine("Delete job? [yes] no");
                 string response = Console.ReadLine().ToLower();
@@ -277,9 +279,9 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
             // Batch service. This CloudPool instance is therefore considered "unbound," and we can modify its properties.
             CloudPool pool = batchClient.PoolOperations.CreatePool(
                 poolId: poolId,
-                targetDedicated: 1,
-                virtualMachineSize: "small",
-                osFamily: "4");
+                targetDedicated: 3,             // 3 compute nodes
+                virtualMachineSize: "small",    // single-core, 1.75 GB memory, 225 GB disk
+                osFamily: "4");                 // Windows Server 2012 R2
 
             // Create and assign the StartTask that will be executed when compute nodes join the pool.
             // In this case, we copy the StartTask's resource files (that will be automatically downloaded
@@ -291,7 +293,7 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
                 // of pre-defined environment variables that can be referenced by commands or applications
                 // run by tasks.
                 
-                // Since a successful execution of robocopy return a non-zero exit code (e.g. 1 when one or
+                // Since a successful execution of robocopy can return a non-zero exit code (e.g. 1 when one or
                 // more files were succesfully copied) we need to manually exit with a 0 for Batch to recognize
                 // StartTask execution success.
                 CommandLine = "cmd /c (robocopy %AZ_BATCH_TASK_WORKING_DIR% %AZ_BATCH_NODE_SHARED_DIR%) ^& IF %ERRORLEVEL% LEQ 1 exit 0",
@@ -460,7 +462,7 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
                 // Retrieve reference to the current blob
                 CloudBlob blob = (CloudBlob)item;
 
-                // Save blob contents to a file in the %TEMP% folder
+                // Save blob contents to a file in the specified folder
                 string localOutputFile = Path.Combine(directoryPath, blob.Name);
                 await blob.DownloadToFileAsync(localOutputFile, FileMode.Create);
             }
@@ -469,26 +471,22 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
         }
 
         /// <summary>
-        /// Deletes all blobs (files) from the specified Storage container.
+        /// Deletes the container with the specified name from Blob storage, unless a container with that name does not exist.
         /// </summary>
-        /// <param name="blobClient">A <see cref="CloudBlobClient"/>.</param>
-        /// <param name="containerName">The name of the storage container whose contents should be deleted.</param>
+        /// <param name="blobClient">A <see cref="Microsoft.WindowsAzure.Storage.Blob.CloudBlobClient"/>.</param>
+        /// <param name="containerName">The name of the container to delete.</param>
         /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
-        private static async Task DeleteBlobsFromContainerAsync(CloudBlobClient blobClient, string containerName)
+        private static async Task DeleteContainerAsync(CloudBlobClient blobClient, string containerName)
         {
-            Console.WriteLine("Deleting all files from container [{0}]...", containerName);
-
-            // Retrieve a reference to the container
             CloudBlobContainer container = blobClient.GetContainerReference(containerName);
 
-            // Get a flat listing of all of the blobs within the container
-            foreach (IListBlobItem item in container.ListBlobs(prefix: null, useFlatBlobListing: true))
+            if (await container.DeleteIfExistsAsync())
             {
-                // Retrieve a reference to the current blob
-                CloudBlob blob = (CloudBlob)item;
-
-                // Delete the blob
-                await blob.DeleteAsync();
+                Console.WriteLine("Container [{0}] deleted.", containerName);
+            }
+            else
+            {
+                Console.WriteLine("Container [{0}] does not exist, skipping deletion.", containerName);
             }
         }
 

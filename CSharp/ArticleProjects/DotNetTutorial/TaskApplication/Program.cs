@@ -48,7 +48,7 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial.TaskApplication
             // Get the word counts, pulling the top N words
             var topNWords = words
                 .Where(word => word.Length > 0)
-                .GroupBy(word => word, (word, count) => new { Word = word, Count = count.Count() })
+                .GroupBy(word => word, (word, group) => new { Word = word, Count = group.Count() })
                 .OrderByDescending(x => x.Count)
                 .Take(numTopN)
                 .ToList();
