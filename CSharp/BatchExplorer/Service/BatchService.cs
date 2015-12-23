@@ -299,6 +299,13 @@ namespace Microsoft.Azure.BatchExplorer.Service
         public async Task AddTaskAsync(AddTaskOptions options)
         {
             CloudTask unboundTask = new CloudTask(options.TaskId, options.CommandLine);
+            if (options.IsMultiInstanceTask)
+            {
+                unboundTask.MultiInstanceSettings = new MultiInstanceSettings(options.InstanceNumber);
+                unboundTask.MultiInstanceSettings.CoordinationCommandLine = options.BackgroundCommand;
+                unboundTask.MultiInstanceSettings.CommonResourceFiles = options.CommonResourceFiles.ConvertAll(f => new ResourceFile(f.BlobSource, f.FilePath));
+            }
+            unboundTask.RunElevated = options.RunElevated;
             unboundTask.ResourceFiles = options.ResourceFiles.ConvertAll(f => new ResourceFile(f.BlobSource, f.FilePath));
             await this.Client.JobOperations.AddTaskAsync(options.JobId, unboundTask);
         }

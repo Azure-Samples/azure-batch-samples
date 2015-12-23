@@ -51,8 +51,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>packages\Hyak.Common.1.0.2\lib\net45\Hyak.Common.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.Azure.Batch">
-      <HintPath>packages\Azure.Batch.2.0.2\lib\net45\Microsoft.Azure.Batch.dll</HintPath>
+    <Reference Include="Microsoft.Azure.Batch, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>packages\Azure.Batch.3.0.0\lib\net45\Microsoft.Azure.Batch.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Azure.Common, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -174,6 +175,7 @@
     <Compile Include="Helpers\Operations.cs" />
     <Compile Include="Helpers\ResourceFileStringParser.cs" />
     <Compile Include="Helpers\WaitSpinnerPanel.cs" />
+    <Compile Include="Messages\EnableSchedulingComputeNodeMessage.cs" />
     <Compile Include="Messages\HeatMapPollIntervalUpdatedMessage.cs" />
     <Compile Include="Messages\CloseGenericMessage.cs" />
     <Compile Include="Messages\ConfirmAccountAddMessage.cs" />
@@ -183,6 +185,8 @@
     <Compile Include="Messages\CloseGenericPopup.cs" />
     <Compile Include="Messages\AsyncOperationListChangedMessage.cs" />
     <Compile Include="Messages\ModelNotFoundAfterRefresh.cs" />
+    <Compile Include="Messages\DisableSchedulingComputeNodeConfirmationMessage.cs" />
+    <Compile Include="Messages\DisableSchedulingComputeNodeMessage.cs" />
     <Compile Include="Messages\ShowAddTaskWindow.cs" />
     <Compile Include="Messages\ShowCreateJobWindow.cs" />
     <Compile Include="Messages\ShowResizePoolWindow.cs" />
@@ -215,6 +219,7 @@
     <Compile Include="Models\PropertyDisplayModel.cs" />
     <Compile Include="Models\ResourceFileInfo.cs" />
     <Compile Include="Models\StartTaskOptions.cs" />
+    <Compile Include="Models\SubtaskModel.cs" />
     <Compile Include="PluginInterfaces\AccountPlugin\AccountManagementAddOperation.cs" />
     <Compile Include="PluginInterfaces\AccountPlugin\AccountManagementEditOperation.cs" />
     <Compile Include="PluginInterfaces\AccountPlugin\AccountManagementOperation.cs" />
