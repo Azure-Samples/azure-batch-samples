@@ -15,7 +15,7 @@ In order the run the samples, they must be configured with Azure Batch and Azure
 ## Sample Descriptions
 
 ### [AccountManagement](./AccountManagement)
-This sample demonstrates how to use the Microsoft.Azure.Management.Batch library to perform basic operations related to Batch accounts.
+This sample demonstrates the use of the [Microsoft.Azure.Management.Batch](https://msdn.microsoft.com/library/azure/mt463120.aspx) library to perform basic operations related to Batch accounts. View the [companion article](https://azure.microsoft.com/documentation/articles/batch-management-dotnet/) for more information.
 
 ### [ArticleProjects](./ArticleProjects)
 These projects contain the sample code backing various articles in [Batch documentation](http://azure.microsoft.com/documentation/services/batch/), and are intended not as end-to-end API usage samples, but rather to demonstrate a specific feature of the Batch service.
