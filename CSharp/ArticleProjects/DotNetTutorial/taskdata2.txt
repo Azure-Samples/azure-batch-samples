@@ -1,0 +1,1 @@
+﻿Develop, package, and deploy powerful applications and services to the cloud with Azure Cloud Services and the click of a button. Scale from 1 to 1000 in minutes. Once your application is deployed, that’s it: from provisioning, to load-balancing, to health monitoring, Azure handles the rest. Your application is backed by an industry-leading 99.95% monthly SLA.
