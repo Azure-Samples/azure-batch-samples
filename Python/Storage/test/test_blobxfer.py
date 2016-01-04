@@ -542,10 +542,12 @@ def test_generate_xferspec_download(tmpdir):
             preencrypted_md5=None)
         encmeta = metajson.construct_metadata_json()
         goodencjson = json.loads(encmeta[blobxfer._ENCRYPTION_METADATA_NAME])
+        goodauthjson = json.loads(
+            encmeta[blobxfer._ENCRYPTION_METADATA_AUTH_NAME])
         metajson2 = blobxfer.EncryptionMetadataJson(
             args, None, None, None, None, None)
         metajson2.parse_metadata_json(
-            args.rsaprivatekey, args.rsapublickey, encmeta)
+            'blob', args.rsaprivatekey, args.rsapublickey, encmeta)
         assert metajson2.symkey == symkey
         assert metajson2.signkey == signkey
         assert metajson2.encmode == args.encmode
@@ -558,13 +560,29 @@ def test_generate_xferspec_download(tmpdir):
             'content-length': '64',
             'content-md5': 'md5',
             'x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME:
-            json.dumps(encjson)
+            json.dumps(encjson),
+            'x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_AUTH_NAME:
+            json.dumps(goodauthjson),
         }
         m.head('mock://blobepcontainer/blob?saskey', headers=headers)
         with pytest.raises(RuntimeError):
             blobxfer.generate_xferspec_download(
                 sbs, args, sa_in_queue, lpath, 'blob', False,
                 [None, None, None])
+
+        # switch to full blob mode tests
+        args.encmode = blobxfer._ENCRYPTION_MODE_FULLBLOB
+        metajson = blobxfer.EncryptionMetadataJson(
+            args, symkey, signkey, iv=b'0', encdata_signature=b'0',
+            preencrypted_md5=None)
+        encmeta = metajson.construct_metadata_json()
+        goodencjson = json.loads(encmeta[blobxfer._ENCRYPTION_METADATA_NAME])
+        goodauthjson = json.loads(
+            encmeta[blobxfer._ENCRYPTION_METADATA_AUTH_NAME])
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME] = \
+            json.dumps(goodencjson)
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_AUTH_NAME] = \
+            json.dumps(goodauthjson)
 
         encjson = copy.deepcopy(goodencjson)
         encjson[blobxfer._ENCRYPTION_METADATA_AGENT][
@@ -610,33 +628,51 @@ def test_generate_xferspec_download(tmpdir):
                 sbs, args, sa_in_queue, lpath, 'blob', False,
                 [None, None, None])
 
-        encjson = copy.deepcopy(goodencjson)
-        encjson[blobxfer._ENCRYPTION_METADATA_WRAPPEDCONTENTKEY][
-            blobxfer._ENCRYPTION_METADATA_KEYSIGNATURESCHEME] = 'X'
+        authjson = copy.deepcopy(goodauthjson)
+        authjson.pop(blobxfer._ENCRYPTION_METADATA_AUTH_METAAUTH, None)
         headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME] = \
-            json.dumps(encjson)
+            json.dumps(goodencjson)
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_AUTH_NAME] = \
+            json.dumps(authjson)
         m.head('mock://blobepcontainer/blob?saskey', headers=headers)
         with pytest.raises(RuntimeError):
             blobxfer.generate_xferspec_download(
                 sbs, args, sa_in_queue, lpath, 'blob', False,
                 [None, None, None])
 
-        encjson = copy.deepcopy(goodencjson)
-        encjson[blobxfer._ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY][
+        authjson = copy.deepcopy(goodauthjson)
+        authjson[blobxfer._ENCRYPTION_METADATA_AUTH_METAAUTH].pop(
+            blobxfer._ENCRYPTION_METADATA_AUTH_ENCODING, None)
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME] = \
+            json.dumps(goodencjson)
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_AUTH_NAME] = \
+            json.dumps(authjson)
+        m.head('mock://blobepcontainer/blob?saskey', headers=headers)
+        with pytest.raises(RuntimeError):
+            blobxfer.generate_xferspec_download(
+                sbs, args, sa_in_queue, lpath, 'blob', False,
+                [None, None, None])
+
+        authjson = copy.deepcopy(goodauthjson)
+        authjson[blobxfer._ENCRYPTION_METADATA_AUTH_METAAUTH][
             blobxfer._ENCRYPTION_METADATA_ALGORITHM] = 'X'
         headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME] = \
-            json.dumps(encjson)
+            json.dumps(goodencjson)
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_AUTH_NAME] = \
+            json.dumps(authjson)
         m.head('mock://blobepcontainer/blob?saskey', headers=headers)
         with pytest.raises(RuntimeError):
             blobxfer.generate_xferspec_download(
                 sbs, args, sa_in_queue, lpath, 'blob', False,
                 [None, None, None])
 
-        encjson = copy.deepcopy(goodencjson)
-        encjson[blobxfer._ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY][
-            blobxfer._ENCRYPTION_METADATA_KEYSIGNATURESCHEME] = 'X'
+        authjson = copy.deepcopy(goodauthjson)
+        authjson[blobxfer._ENCRYPTION_METADATA_AUTH_METAAUTH][
+            blobxfer._ENCRYPTION_METADATA_MAC] = blobxfer.base64encode(b'X')
         headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME] = \
-            json.dumps(encjson)
+            json.dumps(goodencjson)
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_AUTH_NAME] = \
+            json.dumps(authjson)
         m.head('mock://blobepcontainer/blob?saskey', headers=headers)
         with pytest.raises(RuntimeError):
             blobxfer.generate_xferspec_download(
@@ -650,6 +686,8 @@ def test_generate_xferspec_download(tmpdir):
         encjson = copy.deepcopy(goodencjson)
         headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME] = \
             json.dumps(encjson)
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_AUTH_NAME] = \
+            json.dumps(goodauthjson)
         hcl = int(headers['content-length'])
         cl, nsops, md5, fd = blobxfer.generate_xferspec_download(
             sbs, args, sa_in_queue, lpath, 'blob', False,

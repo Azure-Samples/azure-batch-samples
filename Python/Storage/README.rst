@@ -134,7 +134,7 @@ pattern, an example commandline would be:
 This would attempt to recursively upload the contents of mylocaldir
 to container0 for any file matching the wildcard pattern ``*.txt`` within
 all subdirectories. Include patterns can be applied for uploads as well as
-downloads. Note that you will need to prevent globbing in your shell such
+downloads. Note that you will need to prevent globbing by your shell such
 that wildcard expansion does not take place before script interprets the
 argument.
 
@@ -181,26 +181,33 @@ To encrypt or decrypt files, the option ``--rsapublickey`` and
 PEM encoded RSA public or private key. An optional parameter,
 ``--rsakeypassphrase`` is available for passphrase protected RSA private keys.
 
-To encrypt and upload, only the RSA public key is required, although if the
-RSA private key is provided, the generated AES256 symmetric and signing keys
-will be signed to ensure integrity and authentication. To download and decrypt
-blobs which are encrypted, the RSA private key is required.
+To encrypt and upload, only the RSA public key is required although an RSA
+private key may be specified. To download and decrypt blobs which are
+encrypted, the RSA private key is required.
 
 ::
 
-  blobxfer.py mystorageacct container0 myblobs --upload --rsaprivatekey myprivatekey.pem
+  blobxfer.py mystorageacct container0 myblobs --upload --rsapublickey mypublickey.pem
 
 The above example commandline would encrypt and upload files contained in
-``myblobs`` using an RSA private key named ``myprivatekey.pem``. Although an
-RSA private key is not required for uploading, by providing it during
-encryption/upload, the generated AES256 symmetric and signing keys will be
-signed for additional verification checks.
+``myblobs`` using an RSA public key named ``mypublickey.pem``. An RSA private
+key may be specified instead for uploading (public parts will be used).
+
+::
+
+  blobxfer.py mystorageacct container0 myblobs --remoteresouorce . --download --rsaprivatekey myprivatekey.pem
+
+The above example commandline would download and decrypt all blobs in the
+container ``container0`` using an RSA private key named ``myprivatekey.pem``.
+An RSA private key must be specified for downloading and decryption of
+encrypted blobs.
 
 Currently only the ``FullBlob`` encryption mode is supported for the
 parameter ``--encmode``. The ``FullBlob`` encryption mode either uploads or
 downloads Azure Storage .NET/Java compatible client-side encrypted block blobs.
 
-Please read the Encryption Notes below for more information.
+Please read important points in the Encryption Notes below for more
+information.
 
 General Notes
 -------------
@@ -242,7 +249,7 @@ Performance Notes
 -----------------
 
 - Most likely, you will need to tweak the ``--numworkers`` argument that best
-  suits your environment. The default is the number of CPUs multiplied by 5.
+  suits your environment. The default is the number of CPUs multiplied by 4.
   Increasing this number (or even using the default) may not provide the
   optimal balance between concurrency and your network conditions.
   Additionally, this number may not work properly if you are attempting to run
@@ -269,17 +276,19 @@ Performance Notes
 Encryption Notes
 ----------------
 
-- ENCRYPTION SUPPORT IS CONSIDERED ALPHA QUALITY. BREAKING CHANGES MAY BE
-  APPLIED TO BLOBXFER DURING ALPHA TESTING RENDERING ENCRYPTED DATA
-  UNRECOVERABLE. DO NOT USE FOR LIVE OR PRODUCTION DATA.
+- **ENCRYPTION SUPPORT IS CONSIDERED BETA QUALITY. BREAKING CHANGES MAY BE
+  APPLIED TO BLOBXFER PRIOR TO RELEASE CANDIDATE STATUS RENDERING ENCRYPTED
+  DATA WITH PRIOR VERSIONS OF BLOBXFER UNRECOVERABLE. DO NOT USE ENCRYPTION
+  OPTIONS FOR PRODUCTION DATA.**
 - Keys for AES256 block cipher are generated on a per-blob basis. These keys
-  are encrypted using RSAES-OAEP and an optional signature for the keys are
-  generated using RSASSA-PSS.
+  are encrypted using RSAES-OAEP.
 - All required information regarding the encryption process is stored on
-  each blob's ``encryptiondata`` metadata. This metadata is used on download
-  to configure the proper download and decryption process. Encryption metadata
-  set by blobxfer (or the Azure Storage .NET/Java client library) should not
-  be modified or blobs may be unrecoverable.
+  each blob's ``encryptiondata`` and ``encryptiondata_authentication``
+  metadata. These metadata entries are used on download to configure the proper
+  download and parameters for the decryption process as well as to authenticate
+  the encryption. Encryption metadata set by blobxfer (or the Azure Storage
+  .NET/Java client library) should not be modified or blobs may be
+  unrecoverable.
 - MD5 for both the pre-encrypted and encrypted version of the file is stored
   on the blob. Rsync-like synchronization is still supported transparently
   with encrypted blobs.
@@ -294,9 +303,11 @@ Encryption Notes
   content MD5 has not changed; this behavior can be overriden by including
   the option ``--no-skiponmatch``.
 - Encryption is only applied to block blobs. Encrypted page blobs appear to
-  be of minimal value stored in Azure. Thus, if uploading encrypted VHDs for
-  storage in Azure, do not enable either of the options: ``--pageblob`` or
-  ``--autovhd`` as the script will fail.
+  be of minimal value stored in Azure. Thus, if uploading VHDs while enabling
+  encryption in the script, do not enable the option ``--pageblob``.
+  ``--autovhd`` will continue to work transparently where vhd files will be
+  uploaded as page blobs in unencrypted form while other files will be
+  uploaded as encrypted block blobs.
 - Downloading encrypted blobs may not fully preallocate each file due to
   padding. Script failure can result during transfer if there is insufficient
   disk space.
@@ -308,7 +319,8 @@ Change Log
 - 0.9.9.6: add encryption support, fix shared key upload with non-existent
   container, add file overwrite on download option, add auto-detection of file
   mimetype, add remote delete option, fix zero-byte blob download issue,
-  replace keeprootdir with strip-components option, add include option
+  replace keeprootdir with strip-components option, add include option,
+  reduce the number of default concurrent workers to 4 x CPU count
 - 0.9.9.5: add file collation support, fix page alignment bug, reduce memory
   usage
 - 0.9.9.4: improve page blob upload algorithm to skip empty max size pages.

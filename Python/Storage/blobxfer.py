@@ -111,7 +111,7 @@ except NameError:  # pragma: no cover
 # global defines
 _SCRIPT_VERSION = '0.9.9.6'
 _PY2 = sys.version_info.major == 2
-_DEFAULT_MAX_STORAGEACCOUNT_WORKERS = multiprocessing.cpu_count() * 5
+_DEFAULT_MAX_STORAGEACCOUNT_WORKERS = multiprocessing.cpu_count() * 4
 _MAX_BLOB_CHUNK_SIZE_BYTES = 4194304
 _EMPTY_MAX_PAGE_SIZE_MD5 = 'tc+p1sj+vWGPkawoQ9UKHA=='
 _MAX_LISTBLOBS_RESULTS = 1000
@@ -129,36 +129,38 @@ _ENCRYPTION_MODE_CHUNKEDBLOB = 'ChunkedBlob'
 _DEFAULT_ENCRYPTION_MODE = _ENCRYPTION_MODE_FULLBLOB
 _ENCRYPTION_PROTOCOL_VERSION = '1.0'
 _ENCRYPTION_ALGORITHM = 'AES_CBC_256'
-_ENCRYPTION_INTEGRITY_AUTH_ALGORITHM = 'HMAC-SHA256'
+_ENCRYPTION_AUTH_ALGORITHM = 'HMAC-SHA256'
 _ENCRYPTION_CHUNKSTRUCTURE = 'IV || EncryptedData || Signature'
 _ENCRYPTION_ENCRYPTED_KEY_SCHEME = 'RSA-OAEP'
-_ENCRYPTION_ENCRYPTED_KEY_SIGNATURE_SCHEME = 'RSASSA-PSS'
 _ENCRYPTION_METADATA_NAME = 'encryptiondata'
 _ENCRYPTION_METADATA_MODE = 'EncryptionMode'
 _ENCRYPTION_METADATA_ALGORITHM = 'Algorithm'
+_ENCRYPTION_METADATA_MAC = 'MessageAuthenticationCode'
 _ENCRYPTION_METADATA_LAYOUT = 'EncryptedDataLayout'
 _ENCRYPTION_METADATA_CHUNKOFFSETS = 'ChunkByteOffsets'
 _ENCRYPTION_METADATA_CHUNKSTRUCTURE = 'ChunkStructure'
 _ENCRYPTION_METADATA_AGENT = 'EncryptionAgent'
 _ENCRYPTION_METADATA_PROTOCOL = 'Protocol'
 _ENCRYPTION_METADATA_ENCRYPTION_ALGORITHM = 'EncryptionAlgorithm'
-_ENCRYPTION_METADATA_INTEGRITY_AUTH = 'EncryptionIntegrityAndAuthentication'
-_ENCRYPTION_METADATA_INTEGRITY_AUTH_MAC = 'MessageAuthenticationCode'
+_ENCRYPTION_METADATA_INTEGRITY_AUTH = 'EncryptionAuthentication'
 _ENCRYPTION_METADATA_WRAPPEDCONTENTKEY = 'WrappedContentKey'
-_ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY = 'WrappedSigningKey'
-_ENCRYPTION_METADATA_KEYSIGNATURESCHEME = 'EncryptedKeySignatureScheme'
 _ENCRYPTION_METADATA_ENCRYPTEDKEY = 'EncryptedKey'
-_ENCRYPTION_METADATA_ENCRYPTEDKEYSIGNATURE = 'EncryptedKeySignature'
+_ENCRYPTION_METADATA_ENCRYPTEDAUTHKEY = 'EncryptedAuthenticationKey'
 _ENCRYPTION_METADATA_CONTENT_IV = 'ContentEncryptionIV'
 _ENCRYPTION_METADATA_KEYID = 'KeyId'
+_ENCRYPTION_METADATA_BLOBXFER_EXTENSIONS = 'BlobxferExtensions'
 _ENCRYPTION_METADATA_PREENCRYPTED_MD5 = 'PreEncryptedContentMD5'
+_ENCRYPTION_METADATA_AUTH_NAME = 'encryptiondata_authentication'
+_ENCRYPTION_METADATA_AUTH_METAAUTH = 'EncryptionMetadataAuthentication'
+_ENCRYPTION_METADATA_AUTH_ENCODING = 'Encoding'
+_ENCRYPTION_METADATA_AUTH_ENCODING_TYPE = 'UTF-8'
 
 
 class EncryptionMetadataJson(object):
     """Class for handling encryption metadata json"""
     def __init__(
             self, args, symkey, signkey, iv, encdata_signature,
-            preencrypted_md5, symkeyid=None, signkeyid=None):
+            preencrypted_md5, rsakeyid=None):
         """Ctor for EncryptionMetadataJson
         Parameters:
             args - program arguments
@@ -167,8 +169,7 @@ class EncryptionMetadataJson(object):
             iv - initialization vector
             encdata_signature - encrypted data signature (MAC)
             preencrypted_md5 - pre-encrypted md5 hash
-            symkeyid - symmetric key id
-            signkeyid - signing key id
+            rsakeyid - symmetric key id
         Returns:
             Nothing
         Raises:
@@ -180,35 +181,33 @@ class EncryptionMetadataJson(object):
         self.chunksizebytes = args.chunksizebytes
         self.symkey = symkey
         self.signkey = signkey
-        if symkeyid is None:
-            self.symkeyid = 'private:key1'
+        if rsakeyid is None:
+            self.rsakeyid = 'private:key1'
         else:
-            self.symkeyid = symkeyid
-        if signkeyid is None:
-            self.signkeyid = 'signing:key1'
-        else:
-            self.signkeyid = signkeyid
+            self.rsakeyid = rsakeyid
         self.iv = iv
         self.hmac = encdata_signature
         self.md5 = preencrypted_md5
 
     def construct_metadata_json(self):
-        """Constructs encryptiondata metadata"""
-        encsymkey, symkeysig = rsa_encrypt_key(
+        """Constructs encryptiondata metadata
+        Paramters:
+            None
+        Returns:
+            dict of encryptiondata and encryptiondata_authentiation json
+        Raises:
+            Nothing
+        """
+        encsymkey, _ = rsa_encrypt_key(
             self.rsaprivatekey, self.rsapublickey, self.symkey)
-        encsignkey, signkeysig = rsa_encrypt_key(
+        encsignkey, _ = rsa_encrypt_key(
             self.rsaprivatekey, self.rsapublickey, self.signkey)
-        ret = {
+        encjson = {
             _ENCRYPTION_METADATA_MODE: self.encmode,
             _ENCRYPTION_METADATA_WRAPPEDCONTENTKEY: {
-                _ENCRYPTION_METADATA_KEYID: self.symkeyid,
+                _ENCRYPTION_METADATA_KEYID: self.rsakeyid,
                 _ENCRYPTION_METADATA_ENCRYPTEDKEY: encsymkey,
-                _ENCRYPTION_METADATA_ALGORITHM:
-                _ENCRYPTION_ENCRYPTED_KEY_SCHEME,
-            },
-            _ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY: {
-                _ENCRYPTION_METADATA_KEYID: self.signkeyid,
-                _ENCRYPTION_METADATA_ENCRYPTEDKEY: encsignkey,
+                _ENCRYPTION_METADATA_ENCRYPTEDAUTHKEY: encsignkey,
                 _ENCRYPTION_METADATA_ALGORITHM:
                 _ENCRYPTION_ENCRYPTED_KEY_SCHEME,
             },
@@ -219,46 +218,55 @@ class EncryptionMetadataJson(object):
             },
             _ENCRYPTION_METADATA_INTEGRITY_AUTH: {
                 _ENCRYPTION_METADATA_ALGORITHM:
-                _ENCRYPTION_INTEGRITY_AUTH_ALGORITHM,
+                _ENCRYPTION_AUTH_ALGORITHM,
             },
             'KeyWrappingMetadata': {},
         }
         if self.md5 is not None:
-            ret[_ENCRYPTION_METADATA_PREENCRYPTED_MD5] = self.md5
-        if symkeysig is not None:
-            ret[_ENCRYPTION_METADATA_WRAPPEDCONTENTKEY][
-                _ENCRYPTION_METADATA_ENCRYPTEDKEYSIGNATURE] = symkeysig
-            ret[_ENCRYPTION_METADATA_WRAPPEDCONTENTKEY][
-                _ENCRYPTION_METADATA_KEYSIGNATURESCHEME] = \
-                _ENCRYPTION_ENCRYPTED_KEY_SIGNATURE_SCHEME
-        if signkeysig is not None:
-            ret[_ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY][
-                _ENCRYPTION_METADATA_ENCRYPTEDKEYSIGNATURE] = signkeysig
-            ret[_ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY][
-                _ENCRYPTION_METADATA_KEYSIGNATURESCHEME] = \
-                _ENCRYPTION_ENCRYPTED_KEY_SIGNATURE_SCHEME
+            encjson[_ENCRYPTION_METADATA_BLOBXFER_EXTENSIONS] = {
+                _ENCRYPTION_METADATA_PREENCRYPTED_MD5: self.md5
+            }
         if self.encmode == _ENCRYPTION_MODE_FULLBLOB:
-            ret[_ENCRYPTION_METADATA_CONTENT_IV] = base64encode(self.iv)
-            ret[_ENCRYPTION_METADATA_INTEGRITY_AUTH][
-                _ENCRYPTION_METADATA_INTEGRITY_AUTH_MAC] = base64encode(
-                    self.hmac)
+            encjson[_ENCRYPTION_METADATA_CONTENT_IV] = base64encode(self.iv)
+            encjson[_ENCRYPTION_METADATA_INTEGRITY_AUTH][
+                _ENCRYPTION_METADATA_MAC] = base64encode(self.hmac)
         elif self.encmode == _ENCRYPTION_MODE_CHUNKEDBLOB:
-            ret[_ENCRYPTION_METADATA_LAYOUT] = {}
-            ret[_ENCRYPTION_METADATA_LAYOUT][
+            encjson[_ENCRYPTION_METADATA_LAYOUT] = {}
+            encjson[_ENCRYPTION_METADATA_LAYOUT][
                 _ENCRYPTION_METADATA_CHUNKOFFSETS] = \
                 self.chunksizebytes + _AES256CBC_HMACSHA256_OVERHEAD_BYTES + 1
-            ret[_ENCRYPTION_METADATA_LAYOUT][
+            encjson[_ENCRYPTION_METADATA_LAYOUT][
                 _ENCRYPTION_METADATA_CHUNKSTRUCTURE] = \
                 _ENCRYPTION_CHUNKSTRUCTURE
         else:
             raise RuntimeError(
                 'Unknown encryption mode: {}'.format(self.encmode))
-        return {_ENCRYPTION_METADATA_NAME: json.dumps(ret)}
+        bencjson = json.dumps(
+            encjson, sort_keys=True, ensure_ascii=False).encode(
+                _ENCRYPTION_METADATA_AUTH_ENCODING_TYPE)
+        encjson = {_ENCRYPTION_METADATA_NAME:
+                   json.dumps(encjson, sort_keys=True)}
+        # compute MAC over encjson
+        hmacsha256 = hmac.new(self.signkey, digestmod=hashlib.sha256)
+        hmacsha256.update(bencjson)
+        authjson = {
+            _ENCRYPTION_METADATA_AUTH_METAAUTH: {
+                _ENCRYPTION_METADATA_ALGORITHM: _ENCRYPTION_AUTH_ALGORITHM,
+                _ENCRYPTION_METADATA_AUTH_ENCODING:
+                _ENCRYPTION_METADATA_AUTH_ENCODING_TYPE,
+                _ENCRYPTION_METADATA_MAC: base64encode(hmacsha256.digest()),
+            }
+        }
+        encjson[_ENCRYPTION_METADATA_AUTH_NAME] = json.dumps(
+            authjson, sort_keys=True)
+        return encjson
 
-    def parse_metadata_json(self, rsaprivatekey, rsapublickey, mddict):
+    def parse_metadata_json(
+            self, blobname, rsaprivatekey, rsapublickey, mddict):
         """Parses a meta data dictionary containing the encryptiondata
         metadata
         Parameters:
+            blobname - name of blob
             rsaprivatekey - RSA private key
             rsapublickey - RSA public key
             mddict - metadata dictionary
@@ -273,8 +281,11 @@ class EncryptionMetadataJson(object):
         # json parse internal dict
         meta = json.loads(mddict[_ENCRYPTION_METADATA_NAME])
         # populate preencryption md5
-        if _ENCRYPTION_METADATA_PREENCRYPTED_MD5 in meta:
-            self.md5 = meta[_ENCRYPTION_METADATA_PREENCRYPTED_MD5]
+        if (_ENCRYPTION_METADATA_BLOBXFER_EXTENSIONS in meta and
+                _ENCRYPTION_METADATA_PREENCRYPTED_MD5 in meta[
+                    _ENCRYPTION_METADATA_BLOBXFER_EXTENSIONS]):
+            self.md5 = meta[_ENCRYPTION_METADATA_BLOBXFER_EXTENSIONS][
+                _ENCRYPTION_METADATA_PREENCRYPTED_MD5]
         else:
             self.md5 = None
         # if RSA key is not present return
@@ -292,58 +303,37 @@ class EncryptionMetadataJson(object):
                 _ENCRYPTION_METADATA_CHUNKSTRUCTURE]
             if chunkstructure != _ENCRYPTION_CHUNKSTRUCTURE:
                 raise RuntimeError(
-                    'Unknown encrypted chunk structure {}'.format(
-                        chunkstructure))
+                    '{}: unknown encrypted chunk structure {}'.format(
+                        blobname, chunkstructure))
         protocol = meta[_ENCRYPTION_METADATA_AGENT][
             _ENCRYPTION_METADATA_PROTOCOL]
         if protocol != _ENCRYPTION_PROTOCOL_VERSION:
-            raise RuntimeError('Unknown encryption protocol: {}'.format(
-                protocol))
+            raise RuntimeError('{}: unknown encryption protocol: {}'.format(
+                blobname, protocol))
         blockcipher = meta[_ENCRYPTION_METADATA_AGENT][
             _ENCRYPTION_METADATA_ENCRYPTION_ALGORITHM]
         if blockcipher != _ENCRYPTION_ALGORITHM:
-            raise RuntimeError('Unknown block cipher: {}'.format(blockcipher))
+            raise RuntimeError('{}: unknown block cipher: {}'.format(
+                blobname, blockcipher))
         if _ENCRYPTION_METADATA_INTEGRITY_AUTH in meta:
             intauth = meta[_ENCRYPTION_METADATA_INTEGRITY_AUTH][
                 _ENCRYPTION_METADATA_ALGORITHM]
-            if intauth != _ENCRYPTION_INTEGRITY_AUTH_ALGORITHM:
-                raise RuntimeError('Unknown integrity/auth method: {}'.format(
-                    intauth))
+            if intauth != _ENCRYPTION_AUTH_ALGORITHM:
+                raise RuntimeError(
+                    '{}: unknown integrity/auth method: {}'.format(
+                        blobname, intauth))
         symkeyalg = meta[_ENCRYPTION_METADATA_WRAPPEDCONTENTKEY][
             _ENCRYPTION_METADATA_ALGORITHM]
         if symkeyalg != _ENCRYPTION_ENCRYPTED_KEY_SCHEME:
-            raise RuntimeError('Unknown key encryption scheme: {}'.format(
-                symkeyalg))
-        if _ENCRYPTION_METADATA_KEYSIGNATURESCHEME in meta[
-                _ENCRYPTION_METADATA_WRAPPEDCONTENTKEY]:
-            symkeysigsch = meta[_ENCRYPTION_METADATA_WRAPPEDCONTENTKEY][
-                _ENCRYPTION_METADATA_KEYSIGNATURESCHEME]
-            if symkeysigsch != _ENCRYPTION_ENCRYPTED_KEY_SIGNATURE_SCHEME:
-                raise RuntimeError(
-                    'Unknown encrypted key signature scheme: {}'.format(
-                        symkeysigsch))
-        # validate signing key params
-        if _ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY in meta:
-            signkeyalg = meta[_ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY][
-                _ENCRYPTION_METADATA_ALGORITHM]
-            if signkeyalg != _ENCRYPTION_ENCRYPTED_KEY_SCHEME:
-                raise RuntimeError('Unknown key signature scheme: {}'.format(
-                    signkeyalg))
-            if _ENCRYPTION_METADATA_KEYSIGNATURESCHEME in meta[
-                    _ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY]:
-                signkeysigsch = meta[_ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY][
-                    _ENCRYPTION_METADATA_KEYSIGNATURESCHEME]
-                if signkeysigsch != _ENCRYPTION_ENCRYPTED_KEY_SIGNATURE_SCHEME:
-                    raise RuntimeError(
-                        'Unknown signing key signature scheme: {}'.format(
-                            signkeysigsch))
+            raise RuntimeError('{}: unknown key encryption scheme: {}'.format(
+                blobname, symkeyalg))
         # populate iv and hmac
         if self.encmode == _ENCRYPTION_MODE_FULLBLOB:
             self.iv = base64.b64decode(meta[_ENCRYPTION_METADATA_CONTENT_IV])
             # don't base64 decode hmac
             if _ENCRYPTION_METADATA_INTEGRITY_AUTH in meta:
                 self.hmac = meta[_ENCRYPTION_METADATA_INTEGRITY_AUTH][
-                    _ENCRYPTION_METADATA_INTEGRITY_AUTH_MAC]
+                    _ENCRYPTION_METADATA_MAC]
             else:
                 self.hmac = None
         # populate chunksize
@@ -354,39 +344,51 @@ class EncryptionMetadataJson(object):
         # if RSA key is a public key, stop here as keys cannot be decrypted
         if rsaprivatekey is None:
             return
-        # decrypt and validate symmetric key
-        if _ENCRYPTION_METADATA_ENCRYPTEDKEYSIGNATURE in meta[
-                _ENCRYPTION_METADATA_WRAPPEDCONTENTKEY]:
-            symkeysig = meta[_ENCRYPTION_METADATA_WRAPPEDCONTENTKEY][
-                _ENCRYPTION_METADATA_ENCRYPTEDKEYSIGNATURE]
-        else:
-            symkeysig = None
+        # decrypt symmetric key
         self.symkey = rsa_decrypt_key(
             rsaprivatekey,
             meta[_ENCRYPTION_METADATA_WRAPPEDCONTENTKEY][
-                _ENCRYPTION_METADATA_ENCRYPTEDKEY],
-            symkeysig)
-        # decrypt and validate signing key
-        if _ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY in meta:
-            if _ENCRYPTION_METADATA_ENCRYPTEDKEYSIGNATURE in meta[
-                    _ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY]:
-                signkeysig = meta[_ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY][
-                    _ENCRYPTION_METADATA_ENCRYPTEDKEYSIGNATURE]
-            else:
-                signkeysig = None
-            if _ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY in meta:
-                self.signkey = rsa_decrypt_key(
-                    rsaprivatekey,
-                    meta[_ENCRYPTION_METADATA_WRAPPEDSIGNINGKEY][
-                        _ENCRYPTION_METADATA_ENCRYPTEDKEY],
-                    signkeysig)
+                _ENCRYPTION_METADATA_ENCRYPTEDKEY], None)
+        # decrypt signing key, if it exists
+        if _ENCRYPTION_METADATA_ENCRYPTEDAUTHKEY in meta[
+                _ENCRYPTION_METADATA_WRAPPEDCONTENTKEY]:
+            self.signkey = rsa_decrypt_key(
+                rsaprivatekey,
+                meta[_ENCRYPTION_METADATA_WRAPPEDCONTENTKEY][
+                    _ENCRYPTION_METADATA_ENCRYPTEDAUTHKEY], None)
         else:
-            # fallback to the wrapped content key as the signing key if the
-            # integrity section is specified
-            if _ENCRYPTION_METADATA_INTEGRITY_AUTH in meta:
-                self.signkey = self.symkey
-            else:
-                self.signkey = None
+            self.signkey = None
+        # validate encryptiondata metadata using the signing key
+        if (self.signkey is not None and
+                _ENCRYPTION_METADATA_AUTH_NAME in mddict):
+            authmeta = json.loads(mddict[_ENCRYPTION_METADATA_AUTH_NAME])
+            if _ENCRYPTION_METADATA_AUTH_METAAUTH not in authmeta:
+                raise RuntimeError(
+                    '{}: encryption metadata auth block not found'.format(
+                        blobname))
+            if _ENCRYPTION_METADATA_AUTH_ENCODING not in authmeta[
+                    _ENCRYPTION_METADATA_AUTH_METAAUTH]:
+                raise RuntimeError(
+                    '{}: encryption metadata auth encoding not found'.format(
+                        blobname))
+            intauth = authmeta[_ENCRYPTION_METADATA_AUTH_METAAUTH][
+                _ENCRYPTION_METADATA_ALGORITHM]
+            if intauth != _ENCRYPTION_AUTH_ALGORITHM:
+                raise RuntimeError(
+                    '{}: unknown integrity/auth method: {}'.format(
+                        blobname, intauth))
+            authhmac = base64.b64decode(
+                authmeta[_ENCRYPTION_METADATA_AUTH_METAAUTH][
+                    _ENCRYPTION_METADATA_MAC])
+            bmeta = mddict[_ENCRYPTION_METADATA_NAME].encode(
+                authmeta[_ENCRYPTION_METADATA_AUTH_METAAUTH][
+                    _ENCRYPTION_METADATA_AUTH_ENCODING])
+            hmacsha256 = hmac.new(self.signkey, digestmod=hashlib.sha256)
+            hmacsha256.update(bmeta)
+            if hmacsha256.digest() != authhmac:
+                raise RuntimeError(
+                    '{}: encryption metadata authentication failed'.format(
+                        blobname))
 
 
 class PqTupleSort(tuple):
@@ -858,9 +860,11 @@ class BlobChunkWorker(threading.Thread):
             try:
                 if self.xfertoazure:
                     # if iv is not ready for this chunk, re-add back to queue
-                    if ((self.rsaprivatekey is not None or
-                         self.rsapublickey is not None) and
-                            self.encmode == _ENCRYPTION_MODE_FULLBLOB):
+                    if (not as_page_blob(
+                            self._pageblob, self._autovhd, localresource) and
+                            ((self.rsaprivatekey is not None or
+                              self.rsapublickey is not None) and
+                             self.encmode == _ENCRYPTION_MODE_FULLBLOB)):
                         _iblockid = int(blockid)
                         if _iblockid not in encparam[2]:
                             self._in_queue.put(
@@ -1479,7 +1483,8 @@ def get_blob_listing(blob_service, args, metadata=True):
                 encmeta = EncryptionMetadataJson(
                     args, None, None, None, None, None)
                 encmeta.parse_metadata_json(
-                    args.rsaprivatekey, args.rsapublickey, blob.metadata)
+                    blob.name, args.rsaprivatekey, args.rsapublickey,
+                    blob.metadata)
                 blobdict[blob.name][1] = encmeta.md5
                 if (args.rsaprivatekey is not None or
                         args.rsapublickey is not None):
@@ -1533,7 +1538,7 @@ def generate_xferspec_download(
             encmeta = EncryptionMetadataJson(
                 args, None, None, None, None, None)
             encmeta.parse_metadata_json(
-                args.rsaprivatekey, args.rsapublickey, mddict)
+                remoteresource, args.rsaprivatekey, args.rsapublickey, mddict)
     if contentlength < 0:
         raise ValueError(
             'contentlength is invalid for {}'.format(remoteresource))
@@ -1701,8 +1706,9 @@ def generate_xferspec_upload(
             chunktoadd = filesize - currfileoffset
         blockid = '{0:08d}'.format(currfileoffset // args.chunksizebytes)
         # generate the ivmap for the first block
-        if (args.rsaprivatekey is not None or
-                args.rsapublickey is not None) and currfileoffset == 0:
+        if (not as_page_blob(args.pageblob, args.autovhd, localfile) and
+                (args.rsaprivatekey is not None or
+                 args.rsapublickey is not None) and currfileoffset == 0):
             # generate sym/signing keys
             symkey, signkey = generate_aes256_keys()
             if args.encmode == _ENCRYPTION_MODE_FULLBLOB:
@@ -1897,10 +1903,9 @@ def main():
         rsakeyfile = None
     if rsakeyfile is not None:
         # check for conflicting options
-        if args.autovhd or args.pageblob:
+        if args.pageblob:
             raise ValueError(
-                'cannot operate in auto vhd or page blob mode with '
-                'encryption enabled')
+                'cannot operate in page blob mode with encryption enabled')
         # check for supported encryption modes
         if (args.encmode != _ENCRYPTION_MODE_FULLBLOB and
                 args.encmode != _ENCRYPTION_MODE_CHUNKEDBLOB):
@@ -2279,10 +2284,10 @@ def main():
 
     # finalize files/blobs
     if not xfertoazure:
-        print('performing finalization (if applicable): {}: {}, '
-              'MD5: {}'.format(
-                  _ENCRYPTION_INTEGRITY_AUTH_ALGORITHM,
-                  args.rsaprivatekey is not None, args.computefilemd5))
+        print(
+            'performing finalization (if applicable): {}: {}, MD5: {}'.format(
+                _ENCRYPTION_AUTH_ALGORITHM,
+                args.rsaprivatekey is not None, args.computefilemd5))
         for localfile in filemap:
             tmpfilename = filemap[localfile]
             finalizefile = True
@@ -2309,15 +2314,15 @@ def main():
                     else:
                         skipmd5 = True
                     print('[{}: {}, {}] {} <L..R> {}'.format(
-                        _ENCRYPTION_INTEGRITY_AUTH_ALGORITHM, res, localfile,
+                        _ENCRYPTION_AUTH_ALGORITHM, res, localfile,
                         digest, hmacdict['sig']))
             # compare md5 hash
             if args.computefilemd5 and not skipmd5:
+                lmd5 = compute_md5_for_file_asbase64(tmpfilename)
                 if md5map[localfile] is None:
                     print('[MD5: SKIPPED, {}] {} <L..R> {}'.format(
-                        localfile, None, md5map[localfile]))
+                        localfile, lmd5, md5map[localfile]))
                 else:
-                    lmd5 = compute_md5_for_file_asbase64(tmpfilename)
                     if lmd5 != md5map[localfile]:
                         res = 'MISMATCH'
                         if not args.keepmismatchedmd5files:
@@ -2467,13 +2472,13 @@ def parseargs():  # pragma: no cover
         '--rsaprivatekey',
         help='RSA private key file in PEM format. Specifying an RSA key '
         'will turn on encryption or decryption. An RSA private key is '
-        'required for downloading encrypted blobs and is optional for '
+        'required for downloading encrypted blobs and may be specified for '
         'uploading encrypted blobs.')
     parser.add_argument(
         '--rsapublickey',
         help='RSA public key file in PEM format. Specifying an RSA key '
         'will turn on encryption or decryption. An RSA public key can '
-        'only be used for uplaoding encrypted blobs.')
+        'only be used for encrypting and uploading blobs.')
     parser.add_argument(
         '--rsakeypassphrase',
         help='Optional passphrase for decrypting an RSA private key.')
