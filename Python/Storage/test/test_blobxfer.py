@@ -2,7 +2,10 @@
 """Tests for blobxfer"""
 
 # stdlib imports
+import base64
+import copy
 import errno
+import json
 import math
 import os
 try:
@@ -17,6 +20,10 @@ import uuid
 import azure
 import azure.common
 import azure.storage.blob
+import cryptography.exceptions
+import cryptography.hazmat.backends
+import cryptography.hazmat.primitives.asymmetric.rsa
+import cryptography.hazmat.primitives.serialization
 from mock import (MagicMock, Mock, patch)
 import pytest
 import requests
@@ -24,6 +31,90 @@ import requests_mock
 # module under test
 sys.path.append('..')
 import blobxfer
+
+
+# global defines
+_RSAKEY = cryptography.hazmat.primitives.asymmetric.rsa.generate_private_key(
+    public_exponent=65537, key_size=2048,
+    backend=cryptography.hazmat.backends.default_backend())
+
+
+def test_encrypt_decrypt_chunk():
+    enckey, signkey = blobxfer.generate_aes256_keys()
+    assert len(enckey) == blobxfer._AES256_KEYLENGTH_BYTES
+    assert len(signkey) == blobxfer._AES256_KEYLENGTH_BYTES
+
+    # test random binary data, unaligned
+    iv = os.urandom(16)
+    plaindata = os.urandom(31)
+    encdata = blobxfer.encrypt_chunk(
+        enckey, signkey, plaindata, blobxfer._ENCRYPTION_MODE_CHUNKEDBLOB,
+        pad=True)
+    assert encdata != plaindata
+    decdata = blobxfer.decrypt_chunk(
+        enckey, signkey, encdata, blobxfer._ENCRYPTION_MODE_CHUNKEDBLOB,
+        unpad=True)
+    assert decdata == plaindata
+    with pytest.raises(RuntimeError):
+        badsig = base64.b64encode(b'0')
+        blobxfer.decrypt_chunk(
+            enckey, badsig, encdata, blobxfer._ENCRYPTION_MODE_CHUNKEDBLOB,
+            unpad=True)
+
+    encdata = blobxfer.encrypt_chunk(
+        enckey, signkey, plaindata, blobxfer._ENCRYPTION_MODE_FULLBLOB,
+        iv=iv, pad=True)
+    decdata = blobxfer.decrypt_chunk(
+        enckey, signkey, encdata, blobxfer._ENCRYPTION_MODE_FULLBLOB,
+        iv=iv, unpad=True)
+    assert decdata == plaindata
+
+    # test random binary data aligned on boundary
+    plaindata = os.urandom(32)
+    encdata = blobxfer.encrypt_chunk(
+        enckey, signkey, plaindata, blobxfer._ENCRYPTION_MODE_FULLBLOB,
+        iv=iv, pad=True)
+    assert encdata != plaindata
+    decdata = blobxfer.decrypt_chunk(
+        enckey, signkey, encdata, blobxfer._ENCRYPTION_MODE_FULLBLOB,
+        iv=iv, unpad=True)
+    assert decdata == plaindata
+
+    # test text data
+    plaindata = b'attack at dawn!'
+    encdata = blobxfer.encrypt_chunk(
+        enckey, signkey, plaindata, blobxfer._ENCRYPTION_MODE_FULLBLOB,
+        iv, pad=True)
+    assert encdata != plaindata
+    decdata = blobxfer.decrypt_chunk(
+        enckey, signkey, encdata, blobxfer._ENCRYPTION_MODE_FULLBLOB,
+        iv, unpad=True)
+    assert decdata == plaindata
+
+
+def test_rsa_keys():
+    symkey = os.urandom(32)
+    enckey, sig = blobxfer.rsa_encrypt_key(
+        _RSAKEY, None, symkey, asbase64=False)
+    assert enckey is not None
+    assert sig is not None
+    plainkey = blobxfer.rsa_decrypt_key(_RSAKEY, enckey, sig, isbase64=False)
+    assert symkey == plainkey
+
+    with pytest.raises(cryptography.exceptions.InvalidSignature):
+        badsig = base64.b64encode(b'0')
+        blobxfer.rsa_decrypt_key(_RSAKEY, enckey, badsig, isbase64=False)
+
+    enckey, sig = blobxfer.rsa_encrypt_key(
+        _RSAKEY, None, symkey, asbase64=True)
+    assert enckey is not None
+    assert sig is not None
+    plainkey = blobxfer.rsa_decrypt_key(_RSAKEY, enckey, sig, isbase64=True)
+    assert symkey == plainkey
+
+    with pytest.raises(cryptography.exceptions.InvalidSignature):
+        badsig = base64.b64encode(b'0')
+        blobxfer.rsa_decrypt_key(_RSAKEY, enckey, badsig, isbase64=True)
 
 
 def test_compute_md5(tmpdir):
@@ -153,18 +244,35 @@ def test_sasblobservice_listblobs():
     with requests_mock.mock() as m:
         m.get('mock://blobepcontainer?saskey', content=content)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
-        result = sbs.list_blobs('container', 'marker')
+        result = sbs.list_blobs('container', 'marker', include='metadata')
         assert len(result) == 1
         assert result[0].name == 'blob-name'
         assert result[0].properties.content_length == 2147483648
         assert result[0].properties.content_md5 == 'abc'
         assert result[0].properties.blobtype == 'BlockBlob'
+        assert result[0].metadata['Name'] == 'value'
         assert result.next_marker == 'nm'
 
         m.get('mock://blobepcontainer?saskey', content=b'', status_code=201)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         with pytest.raises(IOError):
             sbs.list_blobs('container', 'marker')
+
+
+def test_sasblobservice_setblobmetadata():
+    session = requests.Session()
+    adapter = requests_mock.Adapter()
+    session.mount('mock', adapter)
+
+    with requests_mock.mock() as m:
+        m.put('mock://blobepcontainer/blob?saskey')
+        sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
+        sbs.set_blob_metadata('container', 'blob', None)
+        sbs.set_blob_metadata('container', 'blob', {'name': 'value'})
+
+        m.put('mock://blobepcontainer/blob?saskey', status_code=201)
+        with pytest.raises(IOError):
+            sbs.set_blob_metadata('container', 'blob', {'name': 'value'})
 
 
 def test_sasblobservice_getblob():
@@ -289,6 +397,7 @@ def test_blobchunkworker_run(tmpdir):
     with open(lpath, 'wt') as f:
         f.write(str(uuid.uuid4()))
     args = MagicMock()
+    args.rsakey = None
     args.pageblob = True
     args.autovhd = False
     args.timeout = None
@@ -299,7 +408,7 @@ def test_blobchunkworker_run(tmpdir):
 
     exc_list = []
     flock = threading.Lock()
-    sa_in_queue = queue.Queue()
+    sa_in_queue = queue.PriorityQueue()
     sa_out_queue = queue.Queue()
     with requests_mock.mock() as m:
         m.put('mock://blobepcontainer/blob?saskey', status_code=200)
@@ -308,7 +417,7 @@ def test_blobchunkworker_run(tmpdir):
             exc_list, sa_in_queue, sa_out_queue, args, sbs, True)
         with pytest.raises(IOError):
             bcw.putblobdata(lpath, 'container', 'blob', 'blockid',
-                            0, 4, flock, None)
+                            0, 4, None, flock, None)
 
     args.pageblob = False
     with requests_mock.mock() as m:
@@ -316,38 +425,34 @@ def test_blobchunkworker_run(tmpdir):
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         bcw = blobxfer.BlobChunkWorker(
             exc_list, sa_in_queue, sa_out_queue, args, sbs, True)
-        try:
-            bcw.putblobdata(lpath, 'container', 'blob', 'blockid',
-                            0, 4, flock, None)
-        except Exception:
-            pytest.fail('unexpected Exception raised')
+        bcw.putblobdata(lpath, 'container', 'blob', 'blockid',
+                        0, 4, None, flock, None)
 
         m.get('mock://blobepcontainer/blob?saskey', status_code=200)
-        try:
-            bcw.getblobrange(lpath, 'container', 'blob', 0, 4, flock, None)
-        except Exception:
-            pytest.fail('unexpected Exception raised')
+        bcw.getblobrange(lpath, 'container', 'blob', 0, 0, 4,
+                         [None, None, None, None, None, False], flock, None)
 
         # test zero-length putblob
         bcw.putblobdata(
-            lpath, 'container', 'blob', 'blockid', 0, 0, flock, None)
+            lpath, 'container', 'blob', 'blockid', 0, 0, None, flock, None)
         bcw._pageblob = True
         bcw.putblobdata(
-            lpath, 'container', 'blob', 'blockid', 0, 0, flock, None)
+            lpath, 'container', 'blob', 'blockid', 0, 0, None, flock, None)
 
         # test empty page
         with open(lpath, 'wb') as f:
             f.write(b'\0' * 4 * 1024 * 1024)
         bcw.putblobdata(
             lpath, 'container', 'blob', 'blockid', 0, 4 * 1024 * 1024,
-            flock, None)
+            None, flock, None)
         with open(lpath, 'wb') as f:
             f.write(b'\0' * 4 * 1024)
         bcw.putblobdata(
             lpath, 'container', 'blob', 'blockid', 0, 4 * 1024,
-            flock, None)
+            None, flock, None)
 
-    sa_in_queue.put((lpath, 'container', 'blob', 'blockid', 0, 4, flock, None))
+    sa_in_queue.put((0, (lpath, 'container', 'blob', 'blockid', 0, 4,
+                         [None, None, None, None], flock, None)))
     with requests_mock.mock() as m:
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         bcw = blobxfer.BlobChunkWorker(
@@ -365,7 +470,7 @@ def test_generate_xferspec_download_invalid(patched_azure_request):
     args.storageaccountkey = 'saskey'
     args.chunksizebytes = 5
     args.timeout = None
-    sa_in_queue = queue.Queue()
+    sa_in_queue = queue.PriorityQueue()
 
     with requests_mock.mock() as m:
         m.head('mock://blobepcontainer/blob?saskey', headers={
@@ -373,18 +478,20 @@ def test_generate_xferspec_download_invalid(patched_azure_request):
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         with pytest.raises(ValueError):
             blobxfer.generate_xferspec_download(
-                sbs, args, sa_in_queue, 'tmppath', 'blob', None, None, True)
+                sbs, args, sa_in_queue, 'tmppath', 'blob', True,
+                [None, None, None])
 
 
 def test_generate_xferspec_download(tmpdir):
     lpath = str(tmpdir.join('test.tmp'))
     args = MagicMock()
+    args.rsakey = None
     args.storageaccount = 'blobep'
     args.container = 'container'
     args.storageaccountkey = 'saskey'
     args.chunksizebytes = 5
     args.timeout = None
-    sa_in_queue = queue.Queue()
+    sa_in_queue = queue.PriorityQueue()
 
     session = requests.Session()
     adapter = requests_mock.Adapter()
@@ -396,26 +503,206 @@ def test_generate_xferspec_download(tmpdir):
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         with pytest.raises(ValueError):
             blobxfer.generate_xferspec_download(
-                sbs, args, sa_in_queue, lpath, 'blob', None, None, True)
+                sbs, args, sa_in_queue, lpath, 'blob', True,
+                [None, None, None])
+        assert sa_in_queue.qsize() == 0
         m.head('mock://blobepcontainer/blob?saskey', headers={
             'content-length': '6', 'content-md5': 'md5'})
         cl, nsops, md5, fd = blobxfer.generate_xferspec_download(
-            sbs, args, sa_in_queue, lpath, 'blob', None, None, True)
+            sbs, args, sa_in_queue, lpath, 'blob', True, [None, None, None])
+        assert sa_in_queue.qsize() == 2
+        assert 2 == nsops
         assert 6 == cl
         assert 2 == nsops
         assert 'md5' == md5
-        assert None != fd
+        assert fd is not None
         fd.close()
         cl, nsops, md5, fd = blobxfer.generate_xferspec_download(
-            sbs, args, sa_in_queue, lpath, 'blob', None, None, False)
-        assert None == fd
+            sbs, args, sa_in_queue, lpath, 'blob', False, [None, None, None])
+        assert 2 == nsops
+        assert fd is None
+        assert sa_in_queue.qsize() == 4
         with open(lpath, 'wt') as f:
             f.write('012345')
         m.head('mock://blobepcontainer/blob?saskey', headers={
             'content-length': '6', 'content-md5': '1qmpM8iq/FHlWsBmK25NSg=='})
         cl, nsops, md5, fd = blobxfer.generate_xferspec_download(
-            sbs, args, sa_in_queue, lpath, 'blob', None, None, True)
+            sbs, args, sa_in_queue, lpath, 'blob', True, [None, None, None])
+        assert nsops is None
         assert cl is None
+        assert sa_in_queue.qsize() == 4
+
+        sa_in_queue = queue.PriorityQueue()
+        args.rsaprivatekey = _RSAKEY
+        args.rsapublickey = None
+        symkey, signkey = blobxfer.generate_aes256_keys()
+        args.encmode = blobxfer._ENCRYPTION_MODE_CHUNKEDBLOB
+        metajson = blobxfer.EncryptionMetadataJson(
+            args, symkey, signkey, iv=b'0', encdata_signature=b'0',
+            preencrypted_md5=None)
+        encmeta = metajson.construct_metadata_json()
+        goodencjson = json.loads(encmeta[blobxfer._ENCRYPTION_METADATA_NAME])
+        goodauthjson = json.loads(
+            encmeta[blobxfer._ENCRYPTION_METADATA_AUTH_NAME])
+        metajson2 = blobxfer.EncryptionMetadataJson(
+            args, None, None, None, None, None)
+        metajson2.parse_metadata_json(
+            'blob', args.rsaprivatekey, args.rsapublickey, encmeta)
+        assert metajson2.symkey == symkey
+        assert metajson2.signkey == signkey
+        assert metajson2.encmode == args.encmode
+        assert metajson2.chunksizebytes == args.chunksizebytes + \
+            blobxfer._AES256CBC_HMACSHA256_OVERHEAD_BYTES + 1
+        encjson = json.loads(encmeta[blobxfer._ENCRYPTION_METADATA_NAME])
+        encjson[blobxfer._ENCRYPTION_METADATA_LAYOUT][
+            blobxfer._ENCRYPTION_METADATA_CHUNKSTRUCTURE] = 'X'
+        headers = {
+            'content-length': '64',
+            'content-md5': 'md5',
+            'x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME:
+            json.dumps(encjson),
+            'x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_AUTH_NAME:
+            json.dumps(goodauthjson),
+        }
+        m.head('mock://blobepcontainer/blob?saskey', headers=headers)
+        with pytest.raises(RuntimeError):
+            blobxfer.generate_xferspec_download(
+                sbs, args, sa_in_queue, lpath, 'blob', False,
+                [None, None, None])
+
+        # switch to full blob mode tests
+        args.encmode = blobxfer._ENCRYPTION_MODE_FULLBLOB
+        metajson = blobxfer.EncryptionMetadataJson(
+            args, symkey, signkey, iv=b'0', encdata_signature=b'0',
+            preencrypted_md5=None)
+        encmeta = metajson.construct_metadata_json()
+        goodencjson = json.loads(encmeta[blobxfer._ENCRYPTION_METADATA_NAME])
+        goodauthjson = json.loads(
+            encmeta[blobxfer._ENCRYPTION_METADATA_AUTH_NAME])
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME] = \
+            json.dumps(goodencjson)
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_AUTH_NAME] = \
+            json.dumps(goodauthjson)
+
+        encjson = copy.deepcopy(goodencjson)
+        encjson[blobxfer._ENCRYPTION_METADATA_AGENT][
+            blobxfer._ENCRYPTION_METADATA_PROTOCOL] = 'X'
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME] = \
+            json.dumps(encjson)
+        m.head('mock://blobepcontainer/blob?saskey', headers=headers)
+        with pytest.raises(RuntimeError):
+            blobxfer.generate_xferspec_download(
+                sbs, args, sa_in_queue, lpath, 'blob', False,
+                [None, None, None])
+
+        encjson = copy.deepcopy(goodencjson)
+        encjson[blobxfer._ENCRYPTION_METADATA_AGENT][
+            blobxfer._ENCRYPTION_METADATA_ENCRYPTION_ALGORITHM] = 'X'
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME] = \
+            json.dumps(encjson)
+        m.head('mock://blobepcontainer/blob?saskey', headers=headers)
+        with pytest.raises(RuntimeError):
+            blobxfer.generate_xferspec_download(
+                sbs, args, sa_in_queue, lpath, 'blob', False,
+                [None, None, None])
+
+        encjson = copy.deepcopy(goodencjson)
+        encjson[blobxfer._ENCRYPTION_METADATA_INTEGRITY_AUTH][
+            blobxfer._ENCRYPTION_METADATA_ALGORITHM] = 'X'
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME] = \
+            json.dumps(encjson)
+        m.head('mock://blobepcontainer/blob?saskey', headers=headers)
+        with pytest.raises(RuntimeError):
+            blobxfer.generate_xferspec_download(
+                sbs, args, sa_in_queue, lpath, 'blob', False,
+                [None, None, None])
+
+        encjson = copy.deepcopy(goodencjson)
+        encjson[blobxfer._ENCRYPTION_METADATA_WRAPPEDCONTENTKEY][
+            blobxfer._ENCRYPTION_METADATA_ALGORITHM] = 'X'
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME] = \
+            json.dumps(encjson)
+        m.head('mock://blobepcontainer/blob?saskey', headers=headers)
+        with pytest.raises(RuntimeError):
+            blobxfer.generate_xferspec_download(
+                sbs, args, sa_in_queue, lpath, 'blob', False,
+                [None, None, None])
+
+        authjson = copy.deepcopy(goodauthjson)
+        authjson.pop(blobxfer._ENCRYPTION_METADATA_AUTH_METAAUTH, None)
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME] = \
+            json.dumps(goodencjson)
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_AUTH_NAME] = \
+            json.dumps(authjson)
+        m.head('mock://blobepcontainer/blob?saskey', headers=headers)
+        with pytest.raises(RuntimeError):
+            blobxfer.generate_xferspec_download(
+                sbs, args, sa_in_queue, lpath, 'blob', False,
+                [None, None, None])
+
+        authjson = copy.deepcopy(goodauthjson)
+        authjson[blobxfer._ENCRYPTION_METADATA_AUTH_METAAUTH].pop(
+            blobxfer._ENCRYPTION_METADATA_AUTH_ENCODING, None)
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME] = \
+            json.dumps(goodencjson)
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_AUTH_NAME] = \
+            json.dumps(authjson)
+        m.head('mock://blobepcontainer/blob?saskey', headers=headers)
+        with pytest.raises(RuntimeError):
+            blobxfer.generate_xferspec_download(
+                sbs, args, sa_in_queue, lpath, 'blob', False,
+                [None, None, None])
+
+        authjson = copy.deepcopy(goodauthjson)
+        authjson[blobxfer._ENCRYPTION_METADATA_AUTH_METAAUTH][
+            blobxfer._ENCRYPTION_METADATA_ALGORITHM] = 'X'
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME] = \
+            json.dumps(goodencjson)
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_AUTH_NAME] = \
+            json.dumps(authjson)
+        m.head('mock://blobepcontainer/blob?saskey', headers=headers)
+        with pytest.raises(RuntimeError):
+            blobxfer.generate_xferspec_download(
+                sbs, args, sa_in_queue, lpath, 'blob', False,
+                [None, None, None])
+
+        authjson = copy.deepcopy(goodauthjson)
+        authjson[blobxfer._ENCRYPTION_METADATA_AUTH_METAAUTH][
+            blobxfer._ENCRYPTION_METADATA_MAC] = blobxfer.base64encode(b'X')
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME] = \
+            json.dumps(goodencjson)
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_AUTH_NAME] = \
+            json.dumps(authjson)
+        m.head('mock://blobepcontainer/blob?saskey', headers=headers)
+        with pytest.raises(RuntimeError):
+            blobxfer.generate_xferspec_download(
+                sbs, args, sa_in_queue, lpath, 'blob', False,
+                [None, None, None])
+
+        args.chunksizebytes = 5
+        metajson.chunksizebytes = args.chunksizebytes
+        metajson.md5 = headers['content-md5']
+        args.encmode = blobxfer._ENCRYPTION_MODE_FULLBLOB
+        encjson = copy.deepcopy(goodencjson)
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_NAME] = \
+            json.dumps(encjson)
+        headers['x-ms-meta-' + blobxfer._ENCRYPTION_METADATA_AUTH_NAME] = \
+            json.dumps(goodauthjson)
+        hcl = int(headers['content-length'])
+        cl, nsops, md5, fd = blobxfer.generate_xferspec_download(
+            sbs, args, sa_in_queue, lpath, 'blob', False,
+            [hcl, headers['content-md5'], metajson])
+        assert hcl == cl
+        calcops = hcl // args.chunksizebytes
+        hclmod = hcl % args.chunksizebytes
+        if hclmod > 0:
+            calcops += 1
+        assert calcops == nsops
+        assert headers['content-md5'] == md5
+        assert fd is None
+        assert sa_in_queue.qsize() == nsops
+        data = sa_in_queue.get()
+        assert data is not None
 
 
 def test_generate_xferspec_upload(tmpdir):
@@ -430,7 +717,7 @@ def test_generate_xferspec_upload(tmpdir):
     args.skiponmatch = False
     args.pageblob = False
     args.autovhd = False
-    sa_in_queue = queue.Queue()
+    sa_in_queue = queue.PriorityQueue()
     fs, nsops, md5, fd = blobxfer.generate_xferspec_upload(
         args, sa_in_queue, {}, {}, lpath, 'rr', True)
     stat = os.stat(lpath)
@@ -448,12 +735,34 @@ def test_generate_xferspec_upload(tmpdir):
     assert fs is None
 
 
-def test_apply_file_collation():
+def test_apply_file_collation_and_strip():
     args = MagicMock()
     args.collate = 'collatedir'
-    args.keeprootdir = False
-    rfname = blobxfer.apply_file_collation(args, 'tmpdir/file0', False)
+    rfname = blobxfer.apply_file_collation_and_strip(
+        args, 'tmpdir/file0')
     assert rfname == 'collatedir/file0'
+
+    args.collate = None
+    args.stripcomponents = 0
+    rfname = blobxfer.apply_file_collation_and_strip(
+        args, 'tmpdir/file0')
+    assert rfname == 'tmpdir/file0'
+    args.stripcomponents = 1
+    rfname = blobxfer.apply_file_collation_and_strip(
+        args, 'tmpdir/file0')
+    assert rfname == 'file0'
+    args.stripcomponents = 2
+    rfname = blobxfer.apply_file_collation_and_strip(
+        args, 'tmpdir/file0')
+    assert rfname == 'file0'
+    args.stripcomponents = 1
+    rfname = blobxfer.apply_file_collation_and_strip(
+        args, '/tmpdir/tmpdir2/file0')
+    assert rfname == 'tmpdir2/file0'
+    args.stripcomponents = 2
+    rfname = blobxfer.apply_file_collation_and_strip(
+        args, 'tmpdir/tmpdir2/file0')
+    assert rfname == 'file0'
 
 
 def _mock_get_storage_account_keys(timeout=None, service_name=None):
@@ -482,6 +791,12 @@ def test_main1(
         patched_sms_saprops, patched_sms_sakeys, patched_parseargs, tmpdir):
     lpath = str(tmpdir.join('test.tmp'))
     args = MagicMock()
+    args.include = None
+    args.stripcomponents = 0
+    args.delete = False
+    args.rsaprivatekey = None
+    args.rsapublickey = None
+    args.rsakeypassphrase = None
     args.numworkers = 0
     args.localresource = ''
     args.storageaccount = 'blobep'
@@ -564,12 +879,10 @@ def test_main1(
     with pytest.raises(ValueError):
         blobxfer.main()
 
-    args.keeprootdir = True
     args.collate = 'collatetmp'
     with pytest.raises(ValueError):
         blobxfer.main()
 
-    args.keeprootdir = False
     args.collate = None
     args.storageaccountkey = None
     args.saskey = ''
@@ -600,9 +913,17 @@ def test_main1(
         blobxfer.main()
     ssk.storage_service_keys.primary = 'key1'
     args.storageaccountkey = None
-    with pytest.raises(Exception):
+    args.rsaprivatekey = ''
+    args.rsapublickey = ''
+    with pytest.raises(ValueError):
+        blobxfer.main()
+    args.rsaprivatekey = ''
+    args.rsapublickey = None
+    args.encmode = blobxfer._ENCRYPTION_MODE_FULLBLOB
+    with pytest.raises(IOError):
         blobxfer.main()
 
+    args.rsaprivatekey = None
     args.storageaccountkey = None
     args.managementcert = None
     args.managementep = None
@@ -623,6 +944,8 @@ def test_main1(
               '?saskey&comp=blocklist', status_code=201)
         m.put('https://blobep.blobep/container' + lpath +
               '?saskey&comp=block&blockid=00000000', status_code=201)
+        m.put('https://blobep.blobep/container' + lpath +
+              '?saskey&comp=metadata', status_code=200)
         m.get('https://blobep.blobep/container?saskey&comp=list'
               '&restype=container&maxresults=1000',
               text='<?xml version="1.0" encoding="utf-8"?>'
@@ -630,9 +953,8 @@ def test_main1(
               'container"><Blobs><Blob><Name>' + lpath + '</Name>'
               '<Properties><Content-Length>6</Content-Length>'
               '<Content-MD5>md5</Content-MD5><BlobType>BlockBlob</BlobType>'
-              '</Properties></Blob></Blobs></EnumerationResults>')
+              '</Properties><Metadata/></Blob></Blobs></EnumerationResults>')
         args.progressbar = False
-        args.keeprootdir = False
         args.skiponmatch = True
         blobxfer.main()
 
@@ -650,6 +972,25 @@ def test_main1(
         m.get('https://blobep.blobep/container/blob?saskey', content=b'012345')
         blobxfer.main()
 
+        args.pageblob = False
+        args.autovhd = False
+        args.skiponmatch = False
+        pemcontents = _RSAKEY.private_bytes(
+            encoding=cryptography.hazmat.primitives.serialization.
+            Encoding.PEM,
+            format=cryptography.hazmat.primitives.serialization.
+            PrivateFormat.PKCS8,
+            encryption_algorithm=cryptography.hazmat.primitives.
+            serialization.NoEncryption())
+        pempath = str(tmpdir.join('rsa.pem'))
+        with open(pempath, 'wb') as f:
+            f.write(pemcontents)
+        args.rsaprivatekey = pempath
+        blobxfer.main()
+        os.remove(pempath)
+
+        args.rsaprivatekey = None
+        args.skiponmatch = True
         args.remoteresource = '.'
         args.keepmismatchedmd5files = False
         m.get('https://blobep.blobep/container?saskey&comp=list'
@@ -659,7 +1000,7 @@ def test_main1(
               'container"><Blobs><Blob><Name>blob</Name><Properties>'
               '<Content-Length>6</Content-Length><Content-MD5>'
               '</Content-MD5><BlobType>BlockBlob</BlobType></Properties>'
-              '</Blob></Blobs></EnumerationResults>')
+              '<Metadata/></Blob></Blobs></EnumerationResults>')
         m.get('https://blobep.blobep/container/?saskey')
         with pytest.raises(SystemExit):
             blobxfer.main()
@@ -671,11 +1012,10 @@ def test_main1(
               'container"><Blobs><Blob><Name>blob</Name><Properties>'
               '<Content-Length>6</Content-Length><Content-MD5>md5'
               '</Content-MD5><BlobType>BlockBlob</BlobType></Properties>'
-              '</Blob></Blobs></EnumerationResults>')
+              '<Metadata/></Blob></Blobs></EnumerationResults>')
         blobxfer.main()
 
         tmplpath = str(tmpdir.join('test', 'test2', 'test3'))
-        print(tmplpath)
         args.localresource = tmplpath
         blobxfer.main()
 
@@ -683,6 +1023,7 @@ def test_main1(
     notmp_lpath = '/'.join(lpath.strip('/').split('/')[1:])
 
     with requests_mock.mock() as m:
+        args.delete = True
         args.download = False
         args.upload = True
         args.remoteresource = None
@@ -699,6 +1040,16 @@ def test_main1(
               '?saskey&comp=block&blockid=00000000', status_code=200)
         m.put('https://blobep.blobep/container/' + notmp_lpath +
               '?saskey&comp=blocklist', status_code=201)
+        m.get('https://blobep.blobep/container?saskey&comp=list'
+              '&restype=container&maxresults=1000',
+              text='<?xml version="1.0" encoding="utf-8"?>'
+              '<EnumerationResults ContainerName="https://blobep.blobep/'
+              'container"><Blobs><Blob><Name>blob</Name><Properties>'
+              '<Content-Length>6</Content-Length><Content-MD5>md5'
+              '</Content-MD5><BlobType>BlockBlob</BlobType></Properties>'
+              '<Metadata/></Blob></Blobs></EnumerationResults>')
+        m.delete('https://blobep.blobep/container/blob?saskey',
+                 status_code=202)
         with pytest.raises(SystemExit):
             blobxfer.main()
 
@@ -714,6 +1065,8 @@ def test_main1(
         with pytest.raises(SystemExit):
             blobxfer.main()
 
+        args.stripcomponents = None
+        args.collate = '.'
         args.pageblob = True
         args.upload = True
         args.download = False
@@ -728,17 +1081,66 @@ def test_main1(
         m.put('https://blobep.blobep/container/blob?saskey', status_code=201)
         with pytest.raises(IOError):
             blobxfer.main()
+
+        args.stripcomponents = None
         m.put('https://blobep.blobep/container/blobsaskey', status_code=200)
         with pytest.raises(IOError):
             blobxfer.main()
 
+        args.stripcomponents = None
+        args.pageblob = False
         m.put('https://blobep.blobep/container/' + notmp_lpath +
               '?saskey&comp=blocklist', status_code=201)
         m.put('https://blobep.blobep/container/blob?saskey', status_code=201)
-        args.pageblob = False
         blobxfer.main()
-        args.pageblob = False
+
+        args.stripcomponents = None
         args.autovhd = True
+        blobxfer.main()
+
+        args.stripcomponents = None
+        args.include = 'nofiles'
+        with pytest.raises(SystemExit):
+            blobxfer.main()
+
+        args.stripcomponents = None
+        args.include = '*'
+        blobxfer.main()
+
+        args.include = None
+        args.stripcomponents = None
+        args.pageblob = False
+        args.autovhd = False
+        pempath = str(tmpdir.join('rsa.pem'))
+        with open(pempath, 'wb') as f:
+            f.write(pemcontents)
+        args.rsaprivatekey = pempath
+        m.put('https://blobep.blobep/container/rsa.pem?saskey&comp=block'
+              '&blockid=00000000', status_code=201)
+        m.put('https://blobep.blobep/container/rsa.pem?saskey&comp=blocklist',
+              status_code=201)
+        m.put('https://blobep.blobep/container/rsa.pem?saskey&comp=metadata',
+              status_code=200)
+        m.put('https://blobep.blobep/container/blob?saskey&comp=metadata',
+              status_code=200)
+        m.put('https://blobep.blobep/container/blob.blobtmp?saskey'
+              '&comp=metadata', status_code=200)
+        m.put('https://blobep.blobep/container/test.tmp.blobtmp?saskey'
+              '&comp=metadata', status_code=200)
+        m.put('https://blobep.blobep/container/test.tmp?saskey&comp=metadata',
+              status_code=200)
+        blobxfer.main()
+
+        args.stripcomponents = None
+        args.download = True
+        args.upload = False
+        args.rsaprivatekey = pempath
+        args.remoteresource = 'blob'
+        args.localresource = str(tmpdir)
+        m.head('https://blobep.blobep/container/blob?saskey', headers={
+            'content-length': '6', 'content-md5': '1qmpM8iq/FHlWsBmK25NSg=='})
+        m.get('https://blobep.blobep/container/blob?saskey', content=b'012345')
+        # TODO add encrypted data json
         blobxfer.main()
 
 
@@ -747,6 +1149,11 @@ def test_main2(patched_parseargs, tmpdir):
     lpath = str(tmpdir.join('test.tmp'))
     args = MagicMock()
     patched_parseargs.return_value = args
+    args.include = None
+    args.stripcomponents = 1
+    args.delete = False
+    args.rsaprivatekey = None
+    args.rsapublickey = None
     args.numworkers = 64
     args.storageaccount = 'blobep'
     args.container = 'container'
@@ -776,7 +1183,6 @@ def test_main2(patched_parseargs, tmpdir):
         args.createcontainer = True
         args.pageblob = False
         args.autovhd = False
-        args.keeprootdir = False
         args.collate = None
         mock.return_value = MagicMock()
         mock.return_value.create_container = _mock_blobservice_create_container
