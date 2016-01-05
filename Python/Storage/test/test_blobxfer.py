@@ -159,8 +159,16 @@ def _func_raise_azure_exception_once(val, timeout=None):
         response = MagicMock()
         return response
     val.append(0)
-    ex = Exception()
-    ex.message = 'TooManyRequests'
+    ex = Exception('TooManyRequests')
+    raise ex
+
+
+def _func_raise_azurehttperror_once(val, timeout=None):
+    if len(val) > 0:
+        response = MagicMock()
+        return response
+    val.append(0)
+    ex = azure.common.AzureHttpError('ServerBusy', 503)
     raise ex
 
 
@@ -188,11 +196,11 @@ def test_azure_request(patched_time_sleep):
         ex.__delattr__('message')
         blobxfer.azure_request(Mock(side_effect=ex))
 
-    try:
-        blobxfer.azure_request(
-            _func_raise_azure_exception_once, val=[], timeout=1)
-    except Exception:
-        pytest.fail('unexpected Exception raised')
+    blobxfer.azure_request(
+        _func_raise_azure_exception_once, val=[], timeout=1)
+
+    blobxfer.azure_request(
+        _func_raise_azurehttperror_once, val=[], timeout=1)
 
     with pytest.raises(requests.HTTPError):
         exc = requests.HTTPError()

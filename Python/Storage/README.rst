@@ -33,6 +33,7 @@ required dependent packages:
 - Base Requirements
 
   - ``azure-common`` >= 0.20.0
+  - ``requests`` >= 2.7.0
 
 - Encryption Support
 
@@ -49,7 +50,7 @@ required dependent packages:
 
 - SAS Key
 
-  - ``requests`` >= 2.7.0
+  - Covered by base requirements
 
 If you want to utilize any/all of the connection methods to Azure Storage,
 then install all three of ``azure-servicemanagement-legacy``,
@@ -95,7 +96,7 @@ Example Usage
 
 The following examples show how to invoke the script with commonly used
 options. Note that the authentication parameters are missing from the below
-examples. One will need to select a preferred method of authenticating with
+examples. You will need to select a preferred method of authenticating with
 Azure and add the authentication switches as noted above.
 
 The script will attempt to perform a smart transfer, by detecting if the local
@@ -105,8 +106,8 @@ resource exists. For example:
 
   blobxfer.py mystorageacct container0 mylocalfile.txt
 
-Note: if you downloaded the script via PyPI, you should not append .py to
-the invocation; just blobxfer should suffice.
+Note: if you downloaded the script via pip or easy_install, you should not
+append .py to the invocation; just blobxfer should suffice.
 
 If mylocalfile.txt exists locally, then the script will attempt to upload the
 file to container0 on mystorageacct. If the file does not exist, then it will
@@ -249,14 +250,14 @@ Performance Notes
 -----------------
 
 - Most likely, you will need to tweak the ``--numworkers`` argument that best
-  suits your environment. The default is the number of CPUs multiplied by 4.
-  Increasing this number (or even using the default) may not provide the
-  optimal balance between concurrency and your network conditions.
-  Additionally, this number may not work properly if you are attempting to run
-  multiple blobxfer sessions in parallel from one machine or IP address.
-  Futhermore, this number may be defaulted to be set too high if encryption
-  is enabled and the machine cannot handle processing multiple threads in
-  parallel.
+  suits your environment. The default is the number of CPUs on the running
+  machine multiplied by 3. Increasing this number (or even using the default)
+  may not provide the optimal balance between concurrency and your network
+  conditions. Additionally, this number may not work properly if you are
+  attempting to run multiple blobxfer sessions in parallel from one machine or
+  IP address. Futhermore, this number may be defaulted to be set too high if
+  encryption is enabled and the machine cannot handle processing multiple
+  threads in parallel.
 - As of requests 2.6.0 and Python versions < 2.7.9 (i.e., interpreter found
   on default Ubuntu 14.04 installations), if certain packages are installed,
   as those found in ``requests[security]`` then the underlying ``urllib3``
@@ -316,6 +317,11 @@ Encryption Notes
 Change Log
 ----------
 
+- 0.9.9.7: make base requirements non-optional in import process, update
+  azure_request exception handling to support new Azure Storage Python SDK
+  errors, reduce number of default concurrent workers to 3 x CPU count, change
+  azure_request backoff mechanism, add python environment and package info to
+  parameter dump to aid issue/bug reports
 - 0.9.9.6: add encryption support, fix shared key upload with non-existent
   container, add file overwrite on download option, add auto-detection of file
   mimetype, add remote delete option, fix zero-byte blob download issue,
