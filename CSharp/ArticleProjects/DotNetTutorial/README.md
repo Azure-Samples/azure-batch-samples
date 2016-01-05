@@ -1,6 +1,6 @@
 ## DotNetTutorial
 
-The DotNetTutorial sample project backs the code snippets found in [Get started with the Azure Batch library for .NET ][dotnet_getstarted]. This solution includes two projects - *DotNetTutorial* and *TaskApplication* - that together demonstrate a common Batch application workflow. While the code in the solution does not demonstrate every feature of the Batch service, it is intended to act as a primer for basic Batch concepts and features such as pools, nodes, jobs, and tasks, as well as demonstrate interaction between Batch and the Azure Storage service.
+This solution includes two projects - *DotNetTutorial* and *TaskApplication* - that together demonstrate a common Batch application workflow. While the code in the solution does not demonstrate every feature of the Batch service, it is intended to act as a primer for basic Batch concepts and features such as pools, nodes, jobs, and tasks, as well as demonstrate interaction between Batch and the Azure Storage service.
 
 The *DotNetTutorial* code sample is a Visual Studio 2013 solution consisting of two projects: **DotNetTutorial** and **TaskApplication**.
 
