@@ -51,13 +51,13 @@ import json
 import mimetypes
 import multiprocessing
 import os
+import platform
 # pylint: disable=F0401
 try:
     import queue
 except ImportError:  # pragma: no cover
     import Queue as queue
 # pylint: enable=F0401
-import random
 import socket
 import sys
 import threading
@@ -65,11 +65,8 @@ import time
 import traceback
 import xml.etree.ElementTree as ET
 # non-stdlib imports
-try:
-    import azure
-    import azure.common
-except ImportError:  # pragma: no cover
-    pass
+import azure
+import azure.common
 try:
     import azure.servicemanagement
 except ImportError:  # pragma: no cover
@@ -91,10 +88,7 @@ try:
     import cryptography.hazmat.primitives.serialization
 except ImportError:  # pragma: no cover
     pass
-try:
-    import requests
-except ImportError:  # pragma: no cover
-    pass
+import requests
 
 # remap keywords for Python3
 # pylint: disable=W0622,C0103
@@ -109,9 +103,9 @@ except NameError:  # pragma: no cover
 # pylint: enable=W0622,C0103
 
 # global defines
-_SCRIPT_VERSION = '0.9.9.6'
+_SCRIPT_VERSION = '0.9.9.7'
 _PY2 = sys.version_info.major == 2
-_DEFAULT_MAX_STORAGEACCOUNT_WORKERS = multiprocessing.cpu_count() * 4
+_DEFAULT_MAX_STORAGEACCOUNT_WORKERS = multiprocessing.cpu_count() * 3
 _MAX_BLOB_CHUNK_SIZE_BYTES = 4194304
 _EMPTY_MAX_PAGE_SIZE_MD5 = 'tc+p1sj+vWGPkawoQ9UKHA=='
 _MAX_LISTBLOBS_RESULTS = 1000
@@ -1303,6 +1297,7 @@ def azure_request(req, timeout=None, *args, **kwargs):
         IOError if timeout
     """
     start = time.clock()
+    lastwait = 1
     while True:
         try:
             return req(*args, **kwargs)
@@ -1313,6 +1308,11 @@ def azure_request(req, timeout=None, *args, **kwargs):
                     exc.response.status_code == 501 or
                     exc.response.status_code == 505):
                 raise
+        except azure.common.AzureHttpError as exc:
+            if (exc.status_code < 500 or
+                    exc.status_code == 501 or
+                    exc.status_code == 505):
+                raise
         except socket.error as exc:
             if (exc.errno != errno.ETIMEDOUT and
                     exc.errno != errno.ECONNRESET and
@@ -1322,18 +1322,23 @@ def azure_request(req, timeout=None, *args, **kwargs):
                 raise
         except Exception as exc:
             try:
-                if not ('TooManyRequests' in exc.message or
-                        'InternalError' in exc.message or
-                        'ServerBusy' in exc.message or
-                        'OperationTimedOut' in exc.message):
+                if ('TooManyRequests' not in exc.args[0] and
+                        'InternalError' not in exc.args[0] and
+                        'ServerBusy' not in exc.args[0] and
+                        'OperationTimedOut' not in exc.args[0]):
                     raise
-            except AttributeError:
-                raise exc
+            except Exception:
+                raise
         if timeout is not None and time.clock() - start > timeout:
             raise IOError(
-                'waited for {} for request {}, exceeded timeout of {}'.format(
+                'waited {} sec for request {}, exceeded timeout of {}'.format(
                     time.clock() - start, req.__name__, timeout))
-        time.sleep(random.randint(1, 5))
+        if lastwait > 8:
+            wait = 2
+        else:
+            wait = lastwait << 1
+        lastwait = wait
+        time.sleep(wait)
 
 
 def create_dir_ifnotexists(dirname):
@@ -1946,10 +1951,32 @@ def main():
                 args.chunksizebytes,
                 (_AES256CBC_HMACSHA256_OVERHEAD_BYTES + 1) << 1))
 
+    # collect package versions
+    packages = ['az.common=' + azure.common.__version__]
+    try:
+        packages.append('az.sml=' + azure.servicemanagement.__version__)
+    except Exception:
+        pass
+    try:
+        packages.append('az.stor=' + azure.storage.__version__)
+    except Exception:
+        pass
+    try:
+        packages.append('crypt=' + cryptography.__version__)
+    except Exception:
+        pass
+    packages.append(
+        'req=' + requests.__version__)
+
     # print all parameters
     print('======================================')
     print(' azure blobxfer parameters [v{}]'.format(_SCRIPT_VERSION))
     print('======================================')
+    print('             platform: {}'.format(platform.platform()))
+    print('   python interpreter: {} {}'.format(
+        platform.python_implementation(), platform.python_version()))
+    print('     package versions: {}'.format(' '.join(packages)))
+    del packages
     print('      subscription id: {}'.format(args.subscriptionid))
     print('      management cert: {}'.format(args.managementcert))
     print('   transfer direction: {}'.format(
@@ -2167,7 +2194,7 @@ def main():
             progress_text = 'pages'
         elif args.autovhd:
             print('performing {} mixed page/block operations with {} '
-                  'finalizing ops'.format(
+                  'finalizing operations'.format(
                       nstorageops, len(blockids) - emptyfiles))
             progress_text = 'chunks'
         else:
