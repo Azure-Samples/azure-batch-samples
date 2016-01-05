@@ -6,7 +6,7 @@ The **Azure Batch Explorer** is a Windows Presentation Foundation (WPF) applicat
 
 Some features of the Batch Explorer:
 
-- List and view the properties of Batch entities like pools, compute nodes, jobs, tasks, and schedules
+- List Batch entities like pools, compute nodes, jobs, tasks, and schedules, and view their properties
 - View task status and execution information
 - List and download files from compute nodes
 - Create user accounts on compute nodes and download RDP files for remote connection
