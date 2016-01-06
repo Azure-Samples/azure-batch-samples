@@ -317,6 +317,8 @@ Encryption Notes
 Change Log
 ----------
 
+- 0.9.9.8: disable unnecessary thread daemonization, gracefully handle
+  KeyboardInterrupts, explicitly add azure-common to setup.py install reqs
 - 0.9.9.7: make base requirements non-optional in import process, update
   azure_request exception handling to support new Azure Storage Python SDK
   errors, reduce number of default concurrent workers to 3 x CPU count, change
