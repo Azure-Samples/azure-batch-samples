@@ -10,14 +10,8 @@ python:
   # disable pypy3 until 3.3 compliance
   #- pypy3
 install:
-  - pip install azure-servicemanagement-legacy
-  - pip install azure-storage
-  - pip install coveralls
-  - pip install cryptography
-  - pip install flake8
-  - pip install pytest-cov
-  - pip install requests
-  - pip install requests_mock
+  - pip install azure-common azure-servicemanagement-legacy azure-storage cryptography requests
+  - pip install coveralls flake8 pytest pytest-cov requests_mock
 env:
   - TEST_DIR=Python/Storage
 script:
