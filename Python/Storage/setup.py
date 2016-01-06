@@ -15,9 +15,9 @@ with open('README.rst') as readme:
 setup(
     name='blobxfer',
     version=version,
-    author='Azure Batch and HPC Team',
+    author='Microsoft Corporation, Azure Batch and HPC Team',
     author_email='',
-    description='Azure Blob Transfer tool with AzCopy-like features',
+    description='Azure Blob storage transfer tool with AzCopy-like features',
     long_description=long_description,
     platforms='any',
     url='https://github.com/Azure/azure-batch-samples/Python/Storage',
@@ -27,6 +27,7 @@ setup(
         'console_scripts': 'blobxfer=blobxfer:main',
     },
     install_requires=[
+        'azure-common>=1.0.0',
         'azure-storage>=0.20.0',
         'azure-servicemanagement-legacy>=0.20.0',
         'cryptography>=1.1.1',

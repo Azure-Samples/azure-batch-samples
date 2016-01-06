@@ -65,7 +65,6 @@ import time
 import traceback
 import xml.etree.ElementTree as ET
 # non-stdlib imports
-import azure
 import azure.common
 try:
     import azure.servicemanagement
@@ -823,6 +822,7 @@ class BlobChunkWorker(threading.Thread):
             Nothing
         """
         threading.Thread.__init__(self)
+        self.terminate = False
         self._exc = exc
         self._in_queue = s_in_queue
         self._out_queue = s_out_queue
@@ -844,12 +844,15 @@ class BlobChunkWorker(threading.Thread):
         Raises:
             Nothing
         """
-        while True:
+        while not self.terminate:
             try:
                 pri, (localresource, container, remoteresource, blockid,
                       offset, bytestoxfer, encparam, flock, filedesc) = \
                     self._in_queue.get_nowait()
             except queue.Empty:
+                break
+            # detect termination early and break if necessary
+            if self.terminate:
                 break
             try:
                 if self.xfertoazure:
@@ -2211,12 +2214,13 @@ def main():
     maxworkers = min((args.numworkers, nstorageops))
     print('spawning {} worker threads'.format(maxworkers))
     exc_list = []
+    threads = []
     for _ in xrange(maxworkers):
         thr = BlobChunkWorker(
             exc_list, storage_in_queue, storage_out_queue, args, blob_service,
             xfertoazure)
-        thr.setDaemon(True)
         thr.start()
+        threads.append(thr)
 
     done_ops = 0
     hmacs = {}
@@ -2225,7 +2229,16 @@ def main():
         args.progressbar, 'xfer', progress_text, nstorageops,
         done_ops, storage_start)
     while True:
-        localresource, encparam = storage_out_queue.get()
+        try:
+            localresource, encparam = storage_out_queue.get()
+        except KeyboardInterrupt:
+            print('\n\nKeyboardInterrupt detected, force terminating '
+                  'threads (this may take a while)...')
+            for thr in threads:
+                thr.terminate = True
+            for thr in threads:
+                thr.join()
+            raise
         if len(exc_list) > 0:
             for exc in exc_list:
                 print(exc)
@@ -2304,10 +2317,6 @@ def main():
           'Throughput = {} Mbit/sec\n'.format(
               allfilesize / 1048576.0, endtime - storage_start,
               (8.0 * allfilesize / 1048576.0) / (endtime - storage_start)))
-
-    # join threads
-    for _ in xrange(maxworkers):
-        thr.join()
 
     # finalize files/blobs
     if not xfertoazure:
