@@ -12,7 +12,7 @@ Some features of the Batch Explorer:
 - Create user accounts on compute nodes and download RDP files for remote connection
 - Resize pools and reboot, reimage, or delete compute nodes
 - Create and delete pools, jobs, tasks, and job schedules
-- Task execution monitoring with the *Heat Map*
+- Monitor task execution with the *Heat Map*
 
 ### Using the Batch Explorer
 
