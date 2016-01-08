@@ -4,6 +4,7 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.IO;
     using System.Linq;
     using System.Text;
@@ -70,6 +71,11 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
         /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
         private static async Task MainAsync()
         {
+            Console.WriteLine("Sample start: {0}", DateTime.Now);
+            Console.WriteLine();
+            Stopwatch timer = new Stopwatch();
+            timer.Start();
+
             // Construct the Storage account connection string
             string storageConnectionString = String.Format("DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1}",
                                                             StorageAccountName, StorageAccountKey);
@@ -144,17 +150,23 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
                 await DeleteContainerAsync(blobClient, inputContainerName);
                 await DeleteContainerAsync(blobClient, outputContainerName);
 
+                // Print out some timing info
+                timer.Stop();
+                Console.WriteLine();
+                Console.WriteLine("Sample end: {0}", DateTime.Now);
+                Console.WriteLine("Elapsed time: {0}", timer.Elapsed);
+
                 // Clean up Batch resources (if the user so chooses)
                 Console.WriteLine();
-                Console.WriteLine("Delete job? [yes] no");
+                Console.Write("Delete job? [yes] no: ");
                 string response = Console.ReadLine().ToLower();
                 if (response != "n" && response != "no")
                 {
                     await batchClient.JobOperations.DeleteJobAsync(JobId);
                 }
 
-                Console.WriteLine("Delete pool? [yes] no");
-                response = Console.ReadLine();
+                Console.Write("Delete pool? [yes] no: ");
+                response = Console.ReadLine().ToLower();
                 if (response != "n" && response != "no")
                 {
                     await batchClient.PoolOperations.DeletePoolAsync(PoolId);
@@ -294,7 +306,7 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
                 // run by tasks.
                 
                 // Since a successful execution of robocopy can return a non-zero exit code (e.g. 1 when one or
-                // more files were succesfully copied) we need to manually exit with a 0 for Batch to recognize
+                // more files were successfully copied) we need to manually exit with a 0 for Batch to recognize
                 // StartTask execution success.
                 CommandLine = "cmd /c (robocopy %AZ_BATCH_TASK_WORKING_DIR% %AZ_BATCH_NODE_SHARED_DIR%) ^& IF %ERRORLEVEL% LEQ 1 exit 0",
                 ResourceFiles = resourceFiles,
