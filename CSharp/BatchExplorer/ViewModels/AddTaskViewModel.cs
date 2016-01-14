@@ -195,7 +195,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         RunElevated = this.RunElevated
                     };
 
-                    if (this.isMultiInstanceTask)
+                    if (this.IsMultiInstanceTask)
                     {
                         options.BackgroundCommand = this.BackgroundCommand;
                         options.InstanceNumber = Int32.Parse(this.InstanceNumber);

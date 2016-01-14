@@ -177,6 +177,32 @@ namespace Microsoft.Azure.BatchExplorer.Views
                     Messenger.Default.Send<ReimageComputeNodeConfirmationMessage>(new ReimageComputeNodeConfirmationMessage(confimation));
                 });
 
+                Messenger.Default.Register<ReimageComputeNodeMessage>(this, (message) =>
+                {
+                    MessageBoxResult result = MessageBox.Show("Are you sure you want to reimage this Compute Node?", "Compute Node Reimage", MessageBoxButton.YesNo);
+                    ComputeNodeReimageConfimation confimation = ComputeNodeReimageConfimation.Cancelled;
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        confimation = ComputeNodeReimageConfimation.Confirmed;
+                    }
+
+                    Messenger.Default.Send<ReimageComputeNodeConfirmationMessage>(new ReimageComputeNodeConfirmationMessage(confimation));
+                });
+
+                Messenger.Default.Register<DisableSchedulingComputeNodeMessage>(this, (message) =>
+                {
+                    MessageBoxResult result = MessageBox.Show("Are you sure you want to disable scheduling on this Compute Node?", "Compute Node Disable Scheduling", MessageBoxButton.YesNo);
+                    ComputeNodeDisableSchedulingConfimation confimation = ComputeNodeDisableSchedulingConfimation.Cancelled;
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        confimation = ComputeNodeDisableSchedulingConfimation.Confirmed;
+                    }
+
+                    Messenger.Default.Send<DisableSchedulingComputeNodeConfirmationMessage>(new DisableSchedulingComputeNodeConfirmationMessage(confimation));
+                });
+
                 Messenger.Default.Register<ShowAboutWindow>(this, (message) =>
                     {
                         this.aboutWindow = new AboutWindow();

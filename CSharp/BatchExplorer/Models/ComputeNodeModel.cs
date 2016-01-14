@@ -258,12 +258,15 @@ namespace Microsoft.Azure.BatchExplorer.Models
         {
             try
             {
-                Task asyncTask = this.ComputeNode.DisableSchedulingAsync(DisableComputeNodeSchedulingOption.Requeue);
-                AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
-                    asyncTask,
-                    new ComputeNodeOperation(ComputeNodeOperation.DisableScheduling, this.ParentPool.Id, this.ComputeNode.Id)));
-                await asyncTask;
-                await this.RefreshAsync(ModelRefreshType.Basic, showTrackedOperation: false);
+                if (this.ComputeNode.SchedulingState != SchedulingState.Disabled)
+                {
+                    Task asyncTask = this.ComputeNode.DisableSchedulingAsync(DisableComputeNodeSchedulingOption.Requeue);
+                    AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
+                        asyncTask,
+                        new ComputeNodeOperation(ComputeNodeOperation.DisableScheduling, this.ParentPool.Id, this.ComputeNode.Id)));
+                    await asyncTask;
+                    await this.RefreshAsync(ModelRefreshType.Basic, showTrackedOperation: false);
+                }
             }
             catch (Exception e)
             {
@@ -278,12 +281,15 @@ namespace Microsoft.Azure.BatchExplorer.Models
         {
             try
             {
-                Task asyncTask = this.ComputeNode.EnableSchedulingAsync();
-                AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
-                    asyncTask,
-                    new ComputeNodeOperation(ComputeNodeOperation.EnableScheduling, this.ParentPool.Id, this.ComputeNode.Id)));
-                await asyncTask;
-                await this.RefreshAsync(ModelRefreshType.Basic, showTrackedOperation: false);
+                if (this.ComputeNode.SchedulingState != SchedulingState.Enabled)
+                {
+                    Task asyncTask = this.ComputeNode.EnableSchedulingAsync();
+                    AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
+                        asyncTask,
+                        new ComputeNodeOperation(ComputeNodeOperation.EnableScheduling, this.ParentPool.Id, this.ComputeNode.Id)));
+                    await asyncTask;
+                    await this.RefreshAsync(ModelRefreshType.Basic, showTrackedOperation: false);
+                }
             }
             catch (Exception e)
             {
