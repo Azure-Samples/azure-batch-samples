@@ -102,7 +102,7 @@ except NameError:  # pragma: no cover
 # pylint: enable=W0622,C0103
 
 # global defines
-_SCRIPT_VERSION = '0.9.9.8'
+_SCRIPT_VERSION = '0.9.9.9'
 _PY2 = sys.version_info.major == 2
 _DEFAULT_MAX_STORAGEACCOUNT_WORKERS = multiprocessing.cpu_count() * 3
 _MAX_BLOB_CHUNK_SIZE_BYTES = 4194304
@@ -1306,6 +1306,17 @@ def azure_request(req, timeout=None, *args, **kwargs):
             return req(*args, **kwargs)
         except requests.Timeout as exc:
             pass
+        except requests.ConnectionError as exc:
+            if (isinstance(exc.args[0], requests.packages.urllib3.
+                           exceptions.ProtocolError) and
+                    isinstance(exc.args[0].args[1], socket.error)):
+                err = exc.args[0].args[1].errno
+                if (err != errno.ECONNRESET and
+                        err != errno.ECONNREFUSED and
+                        err != errno.ECONNABORTED and
+                        err != errno.ENETRESET and
+                        err != errno.ETIMEDOUT):
+                    raise
         except requests.HTTPError as exc:
             if (exc.response.status_code < 500 or
                     exc.response.status_code == 501 or
@@ -1316,13 +1327,6 @@ def azure_request(req, timeout=None, *args, **kwargs):
                     exc.status_code == 501 or
                     exc.status_code == 505):
                 raise
-        except socket.error as exc:
-            if (exc.errno != errno.ETIMEDOUT and
-                    exc.errno != errno.ECONNRESET and
-                    exc.errno != errno.ECONNREFUSED and
-                    exc.errno != errno.ECONNABORTED and
-                    exc.errno != errno.ENETRESET):
-                raise
         except Exception as exc:
             try:
                 if ('TooManyRequests' not in exc.args[0] and
@@ -1331,7 +1335,7 @@ def azure_request(req, timeout=None, *args, **kwargs):
                         'OperationTimedOut' not in exc.args[0]):
                     raise
             except Exception:
-                raise
+                raise exc
         if timeout is not None and time.clock() - start > timeout:
             raise IOError(
                 'waited {} sec for request {}, exceeded timeout of {}'.format(
@@ -2037,6 +2041,9 @@ def main():
         else:
             blobskipdict = {}
         if os.path.isdir(args.localresource):
+            if args.remoteresource is not None:
+                print('WARNING: ignorning specified remoteresource {} for '
+                      'directory upload'.format(args.remoteresource))
             _remotefiles = set()
             # mirror directory
             if args.recursive:
@@ -2091,8 +2098,11 @@ def main():
             del _remotefiles
         else:
             # upload single file
-            if not args.remoteresource:
+            if args.remoteresource is None:
                 args.remoteresource = args.localresource
+            else:
+                if args.stripcomponents > 0:
+                    args.stripcomponents -= 1
             args.remoteresource = apply_file_collation_and_strip(
                 args, args.remoteresource)
             filesize, nstorageops, md5digest, filedesc = \
@@ -2506,15 +2516,15 @@ def parseargs():  # pragma: no cover
         'be page-aligned in Azure storage')
     parser.add_argument(
         '--rsaprivatekey',
-        help='RSA private key file in PEM format. Specifying an RSA key '
-        'will turn on encryption or decryption. An RSA private key is '
-        'required for downloading encrypted blobs and may be specified for '
-        'uploading encrypted blobs.')
+        help='RSA private key file in PEM format. Specifying an RSA private '
+        'key will turn on decryption (or encryption). An RSA private key is '
+        'required for downloading and decrypting blobs and may be specified '
+        'for encrypting and uploading blobs.')
     parser.add_argument(
         '--rsapublickey',
-        help='RSA public key file in PEM format. Specifying an RSA key '
-        'will turn on encryption or decryption. An RSA public key can '
-        'only be used for encrypting and uploading blobs.')
+        help='RSA public key file in PEM format. Specifying an RSA public '
+        'key will turn on encryption. An RSA public key can only be used '
+        'for encrypting and uploading blobs.')
     parser.add_argument(
         '--rsakeypassphrase',
         help='Optional passphrase for decrypting an RSA private key.')

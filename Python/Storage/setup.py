@@ -28,10 +28,10 @@ setup(
     },
     install_requires=[
         'azure-common>=1.0.0',
-        'azure-storage>=0.20.0',
-        'azure-servicemanagement-legacy>=0.20.0',
-        'cryptography>=1.1.1',
-        'requests>=2.7.0'
+        'azure-storage>=0.20.3',
+        'azure-servicemanagement-legacy>=0.20.1',
+        'cryptography>=1.2.1',
+        'requests>=2.9.1'
     ],
     tests_require=['pytest'],
     classifiers=[

@@ -23,6 +23,12 @@ blobxfer is on PyPI and can be installed via:
 
   pip install blobxfer
 
+If you encounter difficulties installing the script, it may be due to the
+``cryptography`` dependency. Please ensure that your system is able to install
+binary wheels provided by these dependencies (e.g., on Windows) or is able to
+compile the dependencies (i.e., ensure you have a C compiler, python, ssl,
+and ffi development libraries/headers installed prior to invoking pip).
+
 If you need more fine-grained control on installing dependencies, continue
 reading this section. The blobxfer utility is a python script that can be used
 on any platform where Python 2.7, 3.3, 3.4 or 3.5 is installable. Depending
@@ -53,12 +59,10 @@ required dependent packages:
   - Covered by base requirements
 
 If you want to utilize any/all of the connection methods to Azure Storage,
-then install all three of ``azure-servicemanagement-legacy``,
-``azure-storage``, and ``requests``. You can install these packages using pip,
-easy_install or through standard setup.py procedures. As of this script
-version 0.9.9.0, it no longer supports the legacy Azure Python SDK, i.e.,
-``azure`` package with version < 1.0.0 due to breaking changes in the azure
-packages.
+then install all of the requirements as specified above. You can install these
+packages using pip, easy_install or through standard setup.py procedures.
+These dependencies will be automatically installed if using a package-based
+install or setup.py.
 
 Introduction
 ------------
@@ -117,7 +121,9 @@ mechanism with ``--download``. ``--upload`` is available to force the transfer
 to Azure storage. Note that specifying a particular direction does not force
 the actual operation to occur as that depends on other options specified such
 as skipping on MD5 matches. Note that you may use the ``--remoteresource`` flag
-to rename the local file as the blob name on Azure storage if uploading.
+to rename the local file as the blob name on Azure storage if uploading,
+however, ``--remoteresource`` has no effect if uploading a directory of files.
+Please refer to the ``--collate`` option as explained below.
 
 If the local resource is a directory that exists, the script will attempt to
 mirror (recursively copy) the entire directory to Azure storage while
@@ -317,18 +323,22 @@ Encryption Notes
 Change Log
 ----------
 
+- 0.9.9.9: fix regression in single file upload and remoteresource renaming,
+  emit warning when attempting to use remoteresource with a directory upload,
+  replace socket exception handling with requests ConnectionError handling,
+  update setup.py dependencies to latest available versions
 - 0.9.9.8: disable unnecessary thread daemonization, gracefully handle
   KeyboardInterrupts, explicitly add azure-common to setup.py install reqs
 - 0.9.9.7: make base requirements non-optional in import process, update
   azure_request exception handling to support new Azure Storage Python SDK
-  errors, reduce number of default concurrent workers to 3 x CPU count, change
+  errors, reduce number of default concurrent workers to 3x CPU count, change
   azure_request backoff mechanism, add python environment and package info to
   parameter dump to aid issue/bug reports
 - 0.9.9.6: add encryption support, fix shared key upload with non-existent
   container, add file overwrite on download option, add auto-detection of file
   mimetype, add remote delete option, fix zero-byte blob download issue,
   replace keeprootdir with strip-components option, add include option,
-  reduce the number of default concurrent workers to 4 x CPU count
+  reduce the number of default concurrent workers to 4x CPU count
 - 0.9.9.5: add file collation support, fix page alignment bug, reduce memory
   usage
 - 0.9.9.4: improve page blob upload algorithm to skip empty max size pages.
