@@ -424,9 +424,6 @@
     <Resource Include="Assets\Icons\refresh_24.png" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="readme.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <Resource Include="Images\add.png" />
     <Resource Include="Images\delete.png" />
     <Resource Include="Images\refresh.png" />
