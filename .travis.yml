@@ -5,21 +5,19 @@ python:
   - 3.3
   - 3.4
   - 3.5
-  - pypy
-  - pypy3
+  # disable pypy until cryptography is supported
+  #- pypy
+  # disable pypy3 until 3.3 compliance
+  #- pypy3
 install:
-  - pip install azure
-  - pip install coveralls
-  - pip install pytest-cov
-  - pip install requests
-  - pip install requests_mock
-  - pip install flake8
+  - pip install azure-common azure-servicemanagement-legacy azure-storage cryptography requests
+  - pip install coveralls flake8 pytest pytest-cov requests_mock
 env:
   - TEST_DIR=Python/Storage
 script:
   - cd $TEST_DIR
   - flake8 blobxfer.py
-  - PYTHONPATH=. py.test --cov-config ../.coveragerc --cov-report term-missing --cov blobxfer test/test_blobxfer.py
+  - PYTHONPATH=. py.test -l --cov-config ../.coveragerc --cov-report term-missing --cov blobxfer test/test_blobxfer.py
 after_success:
   - coveralls --rcfile=../.coveragerc --verbose
 
