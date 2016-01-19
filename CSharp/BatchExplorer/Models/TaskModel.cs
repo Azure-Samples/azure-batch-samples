@@ -56,6 +56,12 @@ namespace Microsoft.Azure.BatchExplorer.Models
         public IEnumerable<ResourceFile> ResourceFiles { get { return this.Task.ResourceFiles; } }
 
         /// <summary>
+        /// The set of Subtask information
+        /// </summary>
+        [ChangeTracked(ModelRefreshType.Basic)]
+        public IEnumerable<SubtaskModel> Subtasks { get { return this.SubtasksInfo; } }
+
+        /// <summary>
         /// The number of times to retry this task
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
@@ -113,12 +119,14 @@ namespace Microsoft.Azure.BatchExplorer.Models
         #endregion
 
         private CloudTask Task { get; set; }
+        private IList<SubtaskModel> SubtasksInfo { get; set; }
         private static readonly List<string> PropertiesToOmitFromDisplay = new List<string> {"FilesToStage"};
         public TaskModel(JobModel parentJob, CloudTask task)
         {
             this.ParentJob = parentJob;
             this.Task = task;
             this.LastUpdatedTime = DateTime.UtcNow;
+            this.SubtasksInfo = null;
         }
 
         #region ModelBase implementation
@@ -155,6 +163,12 @@ namespace Microsoft.Azure.BatchExplorer.Models
 
                     this.Task = await asyncTask;
                     this.LastUpdatedTime = DateTime.UtcNow;
+
+                    IPagedEnumerable<SubtaskInformation> subtasks = this.Task.ListSubtasks(OptionsModel.Instance.ListDetailLevel);
+
+                    this.SubtasksInfo = new List<SubtaskModel>();
+
+                    await subtasks.ForEachAsync(item => this.SubtasksInfo.Add(new SubtaskModel(item)));
 
                     //
                     // Fire property change events for this models properties

@@ -175,6 +175,9 @@
     <Compile Include="Helpers\Operations.cs" />
     <Compile Include="Helpers\ResourceFileStringParser.cs" />
     <Compile Include="Helpers\WaitSpinnerPanel.cs" />
+    <Compile Include="Messages\DisableSchedulingComputeNodeConfirmationMessage.cs" />
+    <Compile Include="Messages\DisableSchedulingComputeNodeMessage.cs" />
+    <Compile Include="Messages\EnableSchedulingComputeNodeMessage.cs" />
     <Compile Include="Messages\HeatMapPollIntervalUpdatedMessage.cs" />
     <Compile Include="Messages\CloseGenericMessage.cs" />
     <Compile Include="Messages\ConfirmAccountAddMessage.cs" />
@@ -216,6 +219,7 @@
     <Compile Include="Models\PropertyDisplayModel.cs" />
     <Compile Include="Models\ResourceFileInfo.cs" />
     <Compile Include="Models\StartTaskOptions.cs" />
+    <Compile Include="Models\SubtaskModel.cs" />
     <Compile Include="PluginInterfaces\AccountPlugin\AccountManagementAddOperation.cs" />
     <Compile Include="PluginInterfaces\AccountPlugin\AccountManagementEditOperation.cs" />
     <Compile Include="PluginInterfaces\AccountPlugin\AccountManagementOperation.cs" />

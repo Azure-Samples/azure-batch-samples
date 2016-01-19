@@ -250,7 +250,53 @@ namespace Microsoft.Azure.BatchExplorer.Models
                 Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
             }
         }
-        
+
+        /// <summary>
+        /// Disables scheduling on the ComputeNode.
+        /// </summary>
+        public async Task DisableSchedlingAsync()
+        {
+            try
+            {
+                if (this.ComputeNode.SchedulingState != SchedulingState.Disabled)
+                {
+                    Task asyncTask = this.ComputeNode.DisableSchedulingAsync(DisableComputeNodeSchedulingOption.Requeue);
+                    AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
+                        asyncTask,
+                        new ComputeNodeOperation(ComputeNodeOperation.DisableScheduling, this.ParentPool.Id, this.ComputeNode.Id)));
+                    await asyncTask;
+                    await this.RefreshAsync(ModelRefreshType.Basic, showTrackedOperation: false);
+                }
+            }
+            catch (Exception e)
+            {
+                Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
+            }
+        }
+
+        /// <summary>
+        /// Enables scheduling on the ComputeNode.
+        /// </summary>
+        public async Task EnableSchedlingAsync()
+        {
+            try
+            {
+                if (this.ComputeNode.SchedulingState != SchedulingState.Enabled)
+                {
+                    Task asyncTask = this.ComputeNode.EnableSchedulingAsync();
+                    AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
+                        asyncTask,
+                        new ComputeNodeOperation(ComputeNodeOperation.EnableScheduling, this.ParentPool.Id, this.ComputeNode.Id)));
+                    await asyncTask;
+                    await this.RefreshAsync(ModelRefreshType.Basic, showTrackedOperation: false);
+                }
+            }
+            catch (Exception e)
+            {
+                Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
+            }
+        }
+
         /// <summary>
         /// Downloads an RDP file associated with this ComputeNode.
         /// </summary>

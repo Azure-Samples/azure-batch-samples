@@ -62,6 +62,76 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
+        private bool runElevated;
+        public bool RunElevated
+        {
+            get
+            {
+                return this.runElevated;
+            }
+            set
+            {
+                this.runElevated = value;
+                this.FirePropertyChangedEvent("runElevated");
+            }
+        }
+
+        private bool isMultiInstanceTask;
+        public bool IsMultiInstanceTask
+        {
+            get
+            {
+                return this.isMultiInstanceTask;
+            }
+            set
+            {
+                this.isMultiInstanceTask = value;
+                this.FirePropertyChangedEvent("IsMultiInstanceTask");
+            }
+        }
+
+        private string backgroundCommand;
+        public string BackgroundCommand
+        {
+            get
+            {
+                return this.backgroundCommand;
+            }
+            set
+            {
+                this.backgroundCommand = value;
+                this.FirePropertyChangedEvent("BackgroundCommand");
+            }
+        }
+
+        private string instanceNumber;
+        public string InstanceNumber
+        {
+            get
+            {
+                return this.instanceNumber;
+            }
+            set
+            {
+                this.instanceNumber = value;
+                this.FirePropertyChangedEvent("InstanceNumber");
+            }
+        }
+
+        private string commonResourceFiles;
+        public string CommonResourceFiles
+        {
+            get
+            {
+                return this.commonResourceFiles;
+            }
+            set
+            {
+                this.commonResourceFiles = value;
+                this.FirePropertyChangedEvent("CommonResourceFiles");
+            }
+        }
+
         private string resourceFiles;
         public string ResourceFiles
         {
@@ -120,8 +190,17 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         JobId = this.jobId,
                         CommandLine = this.CommandLine,
                         TaskId = this.TaskId,
+                        IsMultiInstanceTask = this.IsMultiInstanceTask,
                         ResourceFiles = ResourceFileStringParser.Parse(this.ResourceFiles).Files.ToList(),
+                        RunElevated = this.RunElevated
                     };
+
+                    if (this.IsMultiInstanceTask)
+                    {
+                        options.BackgroundCommand = this.BackgroundCommand;
+                        options.InstanceNumber = Int32.Parse(this.InstanceNumber);
+                        options.CommonResourceFiles = ResourceFileStringParser.Parse(this.commonResourceFiles).Files.ToList();
+                    }
 
                     await this.batchService.AddTaskAsync(options);
 
@@ -147,6 +226,27 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             {
                 Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Invalid values for Command Line"));
                 return false;
+            }
+
+            if (this.IsMultiInstanceTask)
+            {
+                if (string.IsNullOrEmpty(this.InstanceNumber))
+                {
+                    Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Invalid values for Instance Number"));
+                }
+
+                int i;
+                if (!Int32.TryParse(this.InstanceNumber, out i))
+                {
+                    Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage("Instance Number must be an integer"));
+                }
+
+                var commonResourceFiles = ResourceFileStringParser.Parse(this.CommonResourceFiles);
+                if (commonResourceFiles.HasErrors)
+                {
+                    Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage(String.Join(Environment.NewLine, commonResourceFiles.Errors)));
+                    return false;
+                }
             }
 
             var resourceFiles = ResourceFileStringParser.Parse(this.ResourceFiles);

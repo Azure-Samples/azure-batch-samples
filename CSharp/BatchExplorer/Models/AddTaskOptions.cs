@@ -13,5 +13,15 @@ namespace Microsoft.Azure.BatchExplorer.Models
         public string TaskId { get; set; }
 
         public List<ResourceFileInfo> ResourceFiles { get; set; }
+
+        public bool RunElevated { get; set; }
+
+        public string BackgroundCommand { get; set; }
+
+        public List<ResourceFileInfo> CommonResourceFiles { get; set; }
+
+        public int InstanceNumber { get; set; }
+
+        public bool IsMultiInstanceTask { get; set; }
     }
 }
