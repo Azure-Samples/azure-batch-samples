@@ -182,10 +182,8 @@ namespace Microsoft.Azure.BatchExplorer.Views
                 case ComputeNodeState.Idle:
                     uiState = ComputeNodeUIStates.Idle;
                     break;
-                case ComputeNodeState.Invalid:
                 case ComputeNodeState.StartTaskFailed:
                 case ComputeNodeState.Unknown:
-                case ComputeNodeState.Unmapped:
                 case ComputeNodeState.Unusable:
                     uiState = ComputeNodeUIStates.Error;
                     break;

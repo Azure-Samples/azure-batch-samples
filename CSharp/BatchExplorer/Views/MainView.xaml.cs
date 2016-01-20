@@ -217,7 +217,7 @@ namespace Microsoft.Azure.BatchExplorer.Views
                 {
                     this.genericEmptyWindow = new GenericEmptyWindow();
                     this.genericEmptyWindow.Title = "Create Pool";
-                    this.genericEmptyWindow.Content = new CreateControls.CreatePoolControl(new CreatePoolViewModel(MainViewModel.dataProvider));
+                    this.genericEmptyWindow.Content = new CreateControls.CreatePoolControl(new CreatePoolViewModel(MainViewModel.dataProvider, message.NodeAgentSkus));
                     this.genericEmptyWindow.Owner = this;
                     this.genericEmptyWindow.SizeToContent = System.Windows.SizeToContent.WidthAndHeight;
                     this.IsEnabled = false;

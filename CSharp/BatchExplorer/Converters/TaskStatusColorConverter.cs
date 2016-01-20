@@ -15,7 +15,7 @@ namespace Microsoft.Azure.BatchExplorer.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            TaskState state = TaskState.Unmapped;
+            TaskState? state = null;
             if (value != null)
             {
                 state = (TaskState) value;
@@ -23,8 +23,6 @@ namespace Microsoft.Azure.BatchExplorer.Converters
 
             switch (state)
             {
-                case TaskState.Invalid:
-                    return new SolidColorBrush(Colors.DarkRed);
                 case TaskState.Active:
                     return new SolidColorBrush(Colors.Orange);
                 case TaskState.Preparing:
@@ -33,7 +31,6 @@ namespace Microsoft.Azure.BatchExplorer.Converters
                     return new SolidColorBrush(Colors.Blue);
                 case TaskState.Completed:
                     return new SolidColorBrush(Colors.LimeGreen);
-                case TaskState.Unmapped:
                 default:
                     return new SolidColorBrush(Colors.DarkGray);
             }

@@ -8,6 +8,7 @@
              mc:Ignorable="d">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <converter:InvertedBoolToVisibilityConverter x:Key="InvertedBoolToVisibilityConverter"/>
     </UserControl.Resources>
     <Grid Background="WhiteSmoke"
           Name="MainGrid"
@@ -101,52 +102,230 @@
         
         <Separator Grid.Row="5" Grid.ColumnSpan="2"/>
 
-        <StackPanel 
-            Orientation="Horizontal"
-            Grid.Row="6" Grid.Column="0">
-
-            <TextBlock
-                Margin="4,0,0,0"
+        <Grid Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                
+            </Grid.RowDefinitions>
+            <RadioButton 
                 VerticalAlignment="Center"
-                Foreground="Red"
-                Text="*" />
-            <TextBlock
-                Margin="8,4"
-                VerticalAlignment="Center"
+                Grid.Row="0"
+                Grid.Column="0"
+                GroupName="PoolMode"
                 FontSize="12"
-                Text="Operating System Family"/>
-        </StackPanel>
+                IsChecked="True"
+                Content="Cloud Service Configuration" />
+            <Grid Grid.Row="1" Margin="28,0,0,0" Visibility="{Binding HasVirtualMachineConfiguration, Converter={StaticResource InvertedBoolToVisibilityConverter}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <StackPanel 
+                    Orientation="Horizontal"
+                    Grid.Row="0" Grid.Column="0">
 
-        <ComboBox 
-            Grid.Row="6" 
-            Grid.Column="1"
-            SelectedIndex="0"
-            IsEditable="True"
-            Text="{Binding SelectedOSFamily}"
-            ItemsSource="{Binding AvailableOSFamilies}"/>
+                    <TextBlock
+                        Margin="4,0,0,0"
+                        VerticalAlignment="Center"
+                        Foreground="Red"
+                        Text="*" />
+                    <TextBlock
+                        Margin="8,4"
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        Text="Operating System Family"/>
+                </StackPanel>
+
+                <ComboBox 
+                    Grid.Row="0" 
+                    Grid.Column="1"
+                    SelectedIndex="0"
+                    IsEditable="True"
+                    Text="{Binding SelectedOSFamily}"
+                    ItemsSource="{Binding AvailableOSFamilies}"/>
+
+                <Separator Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"/>
+
+                <StackPanel 
+                    Orientation="Horizontal"
+                    Grid.Row="2" 
+                    Grid.Column="0">
+
+                    <TextBlock
+                        Margin="8,4"
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        Text="Operating System Version"/>
+                </StackPanel>
+                <ComboBox 
+                    Grid.Row="2" 
+                    Grid.Column="1"
+                    SelectedIndex="0"
+                    IsEditable="True"
+                    Text="{Binding SelectedOSVersion}"
+                    ItemsSource="{Binding AvailableOSVersions}"/>
+            </Grid>
+            
+        </Grid>
 
         <Separator Grid.Row="7" Grid.ColumnSpan="2"/>
 
-        <StackPanel 
-            Orientation="Horizontal"
-            Grid.Row="8" 
-            Grid.Column="0">
-
-            <TextBlock
-                Margin="8,4"
+        <Grid Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <RadioButton 
                 VerticalAlignment="Center"
+                Grid.Row="0"
+                Grid.Column="0"
+                GroupName="PoolMode"
                 FontSize="12"
-                Text="Operating System Version"/>
-        </StackPanel>
+                IsChecked="{Binding HasVirtualMachineConfiguration}"
+                Content="Virtual Machine Configuration" />
+            <Grid Grid.Row="1" Margin="28,0,0,0" Visibility="{Binding HasVirtualMachineConfiguration, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <StackPanel 
+                    Orientation="Horizontal"
+                    Grid.Row="0" Grid.Column="0">
 
-        <ComboBox 
-            Grid.Row="8" 
-            Grid.Column="1"
-            SelectedIndex="0"
-            IsEditable="True"
-            Text="{Binding SelectedOSVersion}"
-            ItemsSource="{Binding AvailableOSVersions}"/>
+                    <TextBlock
+                        Margin="4,0,0,0"
+                        VerticalAlignment="Center"
+                        Foreground="Red"
+                        Text="*" />
+                    <TextBlock
+                        Margin="8,4"
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        Text="Publisher"/>
+                </StackPanel>
 
+                <ComboBox 
+                    Grid.Row="0" 
+                    Grid.Column="1"
+                    SelectedIndex="0"
+                    IsEditable="True"
+                    Text="{Binding Publisher}"
+                    ItemsSource="{Binding AvailablePublishers}"/>
+                
+                <Separator Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"/>
+                
+                <StackPanel 
+                    Orientation="Horizontal"
+                    Grid.Row="2" Grid.Column="0">
+
+                    <TextBlock
+                        Margin="4,0,0,0"
+                        VerticalAlignment="Center"
+                        Foreground="Red"
+                        Text="*" />
+                    <TextBlock
+                        Margin="8,4"
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        Text="Offer"/>
+                </StackPanel>
+
+                <ComboBox 
+                    Grid.Row="2" 
+                    Grid.Column="1"
+                    SelectedIndex="0"
+                    IsEditable="True"
+                    Text="{Binding Offer}"
+                    ItemsSource="{Binding AvailableOffers}"/>
+                
+                <Separator Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"/>
+
+                <StackPanel 
+                    Orientation="Horizontal"
+                    Grid.Row="4" Grid.Column="0">
+
+                    <TextBlock
+                        Margin="4,0,0,0"
+                        VerticalAlignment="Center"
+                        Foreground="Red"
+                        Text="*" />
+                    <TextBlock
+                        Margin="8,4"
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        Text="Sku Id"/>
+                </StackPanel>
+
+                <ComboBox 
+                    Grid.Row="4" 
+                    Grid.Column="1"
+                    SelectedIndex="0"
+                    IsEditable="True"
+                    Text="{Binding SkuId}"
+                    ItemsSource="{Binding AvailableSkus}"/>
+                
+                <Separator Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2"/>
+
+                <TextBlock
+                    Grid.Row="6"
+                    Grid.Column="0"
+                    Margin="8,4"
+                    VerticalAlignment="Center"
+                    FontSize="12"
+                    Text="Version"/>
+
+                <TextBox 
+                    Grid.Row="6" 
+                    Grid.Column="1"
+                    Text="{Binding Version}"/>
+
+                <Separator Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2"/>
+
+                <StackPanel 
+                    Orientation="Horizontal"
+                    Grid.Row="8" Grid.Column="0">
+
+                    <TextBlock
+                        Margin="4,0,0,0"
+                        VerticalAlignment="Center"
+                        Foreground="Red"
+                        Text="*" />
+                    <TextBlock
+                        Margin="8,4"
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        Text="Node Agent Sku Id"/>
+                </StackPanel>
+
+                <ComboBox 
+                    Grid.Row="8" 
+                    Grid.Column="1"
+                    SelectedIndex="0"
+                    IsEditable="True"
+                    Text="{Binding NodeAgentSkuId}"
+                    ItemsSource="{Binding AvailableNodeAgentSkuIds}"/>
+            </Grid>
+        </Grid>
+        
         <Separator Grid.Row="9" Grid.ColumnSpan="2"/>
 
         <StackPanel 

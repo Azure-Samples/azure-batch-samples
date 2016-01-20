@@ -20,7 +20,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         #region Public properties
 
         //TODO: Note that this is not thread safe currently
-
+        //TODO: Note that this should be changed to a detail level per-type
         public ODATADetailLevel ListDetailLevel { get; set; }
 
         [DataMember]
