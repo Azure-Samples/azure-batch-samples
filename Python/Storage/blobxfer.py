@@ -33,7 +33,6 @@ See notes in the README.rst file.
 
 TODO list:
 - convert from threading to multiprocessing
-- convert to fully use azure storage for sas
 - move instruction queue data to class
 """
 
@@ -63,6 +62,10 @@ import sys
 import threading
 import time
 import traceback
+try:
+    from urllib.parse import quote as urlquote
+except ImportError:  # pramga: no cover
+    from urllib import quote as urlquote
 import xml.etree.ElementTree as ET
 # non-stdlib imports
 import azure.common
@@ -1306,7 +1309,8 @@ def azure_request(req, timeout=None, *args, **kwargs):
             return req(*args, **kwargs)
         except requests.Timeout as exc:
             pass
-        except requests.ConnectionError as exc:
+        except (requests.ConnectionError,
+                requests.exceptions.ChunkedEncodingError) as exc:
             if (isinstance(exc.args[0], requests.packages.urllib3.
                            exceptions.ProtocolError) and
                     isinstance(exc.args[0].args[1], socket.error)):
@@ -1327,15 +1331,6 @@ def azure_request(req, timeout=None, *args, **kwargs):
                     exc.status_code == 501 or
                     exc.status_code == 505):
                 raise
-        except Exception as exc:
-            try:
-                if ('TooManyRequests' not in exc.args[0] and
-                        'InternalError' not in exc.args[0] and
-                        'ServerBusy' not in exc.args[0] and
-                        'OperationTimedOut' not in exc.args[0]):
-                    raise
-            except Exception:
-                raise exc
         if timeout is not None and time.clock() - start > timeout:
             raise IOError(
                 'waited {} sec for request {}, exceeded timeout of {}'.format(
@@ -1376,6 +1371,22 @@ def get_mime_type(filename):
         Nothing
     """
     return (mimetypes.guess_type(filename)[0] or 'application/octet-stream')
+
+
+def encode_blobname(args, blobname):
+    """Encode blob name: encode UTF-8 and url encode. Due to current
+    Azure Python Storage SDK limitations, does not apply to non-SAS requests.
+    Parameters:
+        args - program arguments
+    Returns:
+        UTF-8 and urlencoded blob name
+    Raises:
+        Nothing
+    """
+    if args.saskey is None:
+        return blobname.encode('utf8')
+    else:
+        return urlquote(blobname.encode('utf8'))
 
 
 def base64encode(obj):
@@ -1528,6 +1539,7 @@ def generate_xferspec_download(
     contentlength = blobprop[0]
     contentmd5 = blobprop[1]
     encmeta = blobprop[2]
+    remoteresource = encode_blobname(args, remoteresource)
     # get the file metadata
     if (contentlength is None or contentmd5 is None or
             (args.rsaprivatekey is not None and encmeta is None)):
@@ -1733,7 +1745,8 @@ def generate_xferspec_upload(
             ivmap['md5'] = hashlib.md5()
         blockids[localfile].append(blockid)
         encparam = [symkey, signkey, ivmap, False]
-        xferspec = (localfile, args.container, remoteresource, blockid,
+        xferspec = (localfile, args.container,
+                    encode_blobname(args, remoteresource), blockid,
                     currfileoffset, chunktoadd, encparam, flock, filedesc)
         currfileoffset = currfileoffset + chunktoadd
         nstorageops = nstorageops + 1
@@ -2063,7 +2076,7 @@ def main():
                         if filesize is not None:
                             completed_blockids[fname] = 0
                             md5map[fname] = md5digest
-                            filemap[fname] = remotefname
+                            filemap[fname] = encode_blobname(args, remotefname)
                             filesizes[fname] = filesize
                             allfilesize = allfilesize + filesize
                             nstorageops = nstorageops + ops
@@ -2084,7 +2097,7 @@ def main():
                     if filesize is not None:
                         completed_blockids[fname] = 0
                         md5map[fname] = md5digest
-                        filemap[fname] = remotefname
+                        filemap[fname] = encode_blobname(args, remotefname)
                         filesizes[fname] = filesize
                         allfilesize = allfilesize + filesize
                         nstorageops = nstorageops + ops
@@ -2112,7 +2125,8 @@ def main():
             if filesize is not None:
                 completed_blockids[args.localresource] = 0
                 md5map[args.localresource] = md5digest
-                filemap[args.localresource] = args.remoteresource
+                filemap[args.localresource] = encode_blobname(
+                    args, args.remoteresource)
                 filesizes[args.localresource] = filesize
                 allfilesize = allfilesize + filesize
         del blobskipdict

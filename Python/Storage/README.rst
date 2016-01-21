@@ -38,21 +38,21 @@ required dependent packages:
 
 - Base Requirements
 
-  - ``azure-common`` >= 0.20.0
-  - ``requests`` >= 2.7.0
+  - ``azure-common`` >= 1.0.0
+  - ``requests`` >= 2.9.1
 
 - Encryption Support
 
-  - ``cryptography`` >= 1.1.1
+  - ``cryptography`` >= 1.2.1
 
 - Management Certificate
 
-  - ``azure-servicemanagement-legacy`` >= 0.20.0
-  - ``azure-storage`` >= 0.20.0
+  - ``azure-servicemanagement-legacy`` >= 0.20.1
+  - ``azure-storage`` >= 0.20.3
 
 - Shared Account Key
 
-  - ``azure-storage`` >= 0.20.0
+  - ``azure-storage`` >= 0.20.3
 
 - SAS Key
 
@@ -251,6 +251,10 @@ General Notes
   the pattern will be applied to the blob name without the container name.
   Globbing of wildcards must be disabled such that the script can read
   the include pattern without the shell expanding the wildcards, if specified.
+- Due to an underlying issue with the Azure Python Storage SDK, file or blob
+  names with ``?`` character in them cannot be uploaded or downloaded using
+  a shared storage account key. Please connect with a SAS key if this
+  functionality is required.
 
 Performance Notes
 -----------------
@@ -326,7 +330,8 @@ Change Log
 - 0.9.9.9: fix regression in single file upload and remoteresource renaming,
   emit warning when attempting to use remoteresource with a directory upload,
   replace socket exception handling with requests ConnectionError handling,
-  update setup.py dependencies to latest available versions
+  properly handle blob names containing ``?`` if using SAS, update setup.py
+  dependencies to latest available versions
 - 0.9.9.8: disable unnecessary thread daemonization, gracefully handle
   KeyboardInterrupts, explicitly add azure-common to setup.py install reqs
 - 0.9.9.7: make base requirements non-optional in import process, update

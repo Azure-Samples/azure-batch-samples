@@ -167,12 +167,16 @@ def _func_raise_requests_connection_error_once(val, timeout=None):
     raise ex
 
 
-def _func_raise_azure_exception_once(val, timeout=None):
+def _func_raise_requests_chunked_encoding_error_once(val, timeout=None):
     if len(val) > 0:
         response = MagicMock()
+        response.raise_for_status = lambda: None
         return response
     val.append(0)
-    ex = Exception('TooManyRequests')
+    ex = requests.exceptions.ChunkedEncodingError(
+        requests.packages.urllib3.exceptions.ProtocolError(
+            'Connection aborted.',
+            socket.error(errno.ECONNRESET, 'Connection reset by peer')))
     raise ex
 
 
@@ -208,7 +212,7 @@ def test_azure_request(patched_time_sleep):
         _func_raise_requests_connection_error_once, val=[], timeout=1)
 
     blobxfer.azure_request(
-        _func_raise_azure_exception_once, val=[], timeout=1)
+        _func_raise_requests_chunked_encoding_error_once, val=[], timeout=1)
 
     blobxfer.azure_request(
         _func_raise_azurehttperror_once, val=[], timeout=1)
