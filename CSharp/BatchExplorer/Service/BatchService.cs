@@ -326,6 +326,24 @@ namespace Microsoft.Azure.BatchExplorer.Service
 
         #endregion
 
+        #region Certificate related operations
+
+        /// <summary>
+        /// Returns a list of certificates
+        /// </summary>
+        /// <returns></returns>
+        public IPagedEnumerable<Certificate> ListCertificates(DetailLevel detailLevel = null)
+        {
+            return this.Client.CertificateOperations.ListCertificates(detailLevel);
+        }
+
+        public Task<Certificate> GetCertificateAsync(string thumbprint, string thumbprintAlgorithm)
+        {
+            return this.Client.CertificateOperations.GetCertificateAsync(thumbprint, thumbprintAlgorithm);
+        }
+
+        #endregion
+
         /// <summary>
         /// Dispose of this object and all members
         /// </summary>

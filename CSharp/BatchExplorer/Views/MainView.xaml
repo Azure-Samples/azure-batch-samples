@@ -505,6 +505,7 @@
                 <MenuItem Header="Refresh Job _Schedules" Command="{Binding RefreshJobSchedules}" HorizontalAlignment="Stretch"/>
                 <MenuItem Header="Refresh _Jobs" Command="{Binding RefreshJobs}" HorizontalAlignment="Stretch"/>
                 <MenuItem Header="Refresh _Pools" Command="{Binding RefreshPools}" HorizontalAlignment="Stretch"/>
+                <MenuItem Header="Refresh _Certificates" Command="{Binding RefreshCertificates}" HorizontalAlignment="Stretch"/>
                 <MenuItem Header="_Refresh All" Command="{Binding RefreshAll}" HorizontalAlignment="Stretch"/>
             </MenuItem>
 
@@ -770,6 +771,31 @@
                                     </DataGridTextColumn.CellStyle>
                                 </DataGridTextColumn>
                                 <DataGridTextColumn Header="VM Size" Binding="{Binding VirtualMachineSize}"/>
+
+                                <DataGridTextColumn Header="" Width="*" 
+                                                    CanUserReorder="False" CanUserSort="False"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+
+                </TabItem>
+                <TabItem Header="{Binding CertificatesTabTitle}" IsSelected="{Binding CertificatesTabIsSelected}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <DataGrid
+                            Grid.Row="1"
+                            ItemsSource="{Binding Certificates}"
+                            SelectedItem="{Binding SelectedCertificate}">
+                            <DataGrid.InputBindings>
+                                <KeyBinding Command="{Binding RefreshCertificates}" Key="F5" />
+                            </DataGrid.InputBindings>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Thumbprint" Binding="{Binding Thumbprint}"/>
+                                <DataGridTextColumn Header="Algorithm" Binding="{Binding ThumbprintAlgorithm}"/>
+                                <DataGridTextColumn Header="State" Binding="{Binding State}"/>
 
                                 <DataGridTextColumn Header="" Width="*" 
                                                     CanUserReorder="False" CanUserSort="False"/>

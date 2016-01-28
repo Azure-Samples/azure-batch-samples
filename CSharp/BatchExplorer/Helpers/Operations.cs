@@ -31,6 +31,7 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         public const string ListJobs = "ListJobs";
         public const string ListPools = "ListPools";
         public const string ListOSVersions = "ListOSVersions";
+        public const string ListCertificates = "ListCertificates";
 
         public AccountOperation(string operationName)
             : base(operationName)
@@ -168,6 +169,27 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         {
             this.poolId = poolId;
             this.nodeId = nodeId;
+        }
+    }
+
+    public class CertificateOperation : Operation
+    {
+        public const string Refresh = "Refresh";
+
+        private readonly string thumbprint;
+        private readonly string thumbprintAlgorithm;
+        private const string OperationTargetFormatString = @"Certificate: {0} ({1})";
+
+        public override string OperationTarget
+        {
+            get { return string.Format(CultureInfo.CurrentCulture, OperationTargetFormatString, this.thumbprint, this.thumbprintAlgorithm); }
+        }
+
+        public CertificateOperation(string operationName, string thumbprint, string thumbprintAlgorithm)
+            : base(operationName)
+        {
+            this.thumbprint = thumbprint;
+            this.thumbprintAlgorithm = thumbprintAlgorithm;
         }
     }
 }

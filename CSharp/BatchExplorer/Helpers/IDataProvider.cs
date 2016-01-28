@@ -88,5 +88,11 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         /// <param name="computeNodeDeallocationOption"></param>
         /// <returns></returns>
         Task ResizePoolAsync(string poolId, int targetDedicated, TimeSpan? timeout, ComputeNodeDeallocationOption? computeNodeDeallocationOption);
+
+        /// <summary>
+        /// Get a collection of certificates from the default source (if any)
+        /// </summary>
+        /// <returns>A <see cref="Task"/> whose result is a collection of certificates</returns>
+        Task<IList<CertificateModel>> GetCertificatesCollectionAsync();
     }
 }

@@ -176,6 +176,7 @@
     <Compile Include="Helpers\Operations.cs" />
     <Compile Include="Helpers\ResourceFileStringParser.cs" />
     <Compile Include="Helpers\WaitSpinnerPanel.cs" />
+    <Compile Include="Messages\CertificateUpdateCompleteMessage.cs" />
     <Compile Include="Messages\DisableSchedulingComputeNodeConfirmationMessage.cs" />
     <Compile Include="Messages\DisableSchedulingComputeNodeMessage.cs" />
     <Compile Include="Messages\EnableSchedulingComputeNodeMessage.cs" />
@@ -215,6 +216,7 @@
     <Compile Include="Messages\ReimageComputeNodeConfirmationMessage.cs" />
     <Compile Include="Messages\UpdateWaitSpinnerMessage.cs" />
     <Compile Include="Models\Account.cs" />
+    <Compile Include="Models\CertificateModel.cs" />
     <Compile Include="Models\CreateAutoPoolOptions.cs" />
     <Compile Include="Models\CreateJobManagerOptions.cs" />
     <Compile Include="Models\CreateJobOptions.cs" />
