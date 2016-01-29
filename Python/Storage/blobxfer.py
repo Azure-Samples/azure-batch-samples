@@ -33,7 +33,6 @@ See notes in the README.rst file.
 
 TODO list:
 - convert from threading to multiprocessing
-- convert to fully use azure storage for sas
 - move instruction queue data to class
 """
 
@@ -63,6 +62,10 @@ import sys
 import threading
 import time
 import traceback
+try:
+    from urllib.parse import quote as urlquote
+except ImportError:  # pramga: no cover
+    from urllib import quote as urlquote
 import xml.etree.ElementTree as ET
 # non-stdlib imports
 import azure.common
@@ -102,7 +105,7 @@ except NameError:  # pragma: no cover
 # pylint: enable=W0622,C0103
 
 # global defines
-_SCRIPT_VERSION = '0.9.9.8'
+_SCRIPT_VERSION = '0.9.9.9'
 _PY2 = sys.version_info.major == 2
 _DEFAULT_MAX_STORAGEACCOUNT_WORKERS = multiprocessing.cpu_count() * 3
 _MAX_BLOB_CHUNK_SIZE_BYTES = 4194304
@@ -1306,6 +1309,18 @@ def azure_request(req, timeout=None, *args, **kwargs):
             return req(*args, **kwargs)
         except requests.Timeout as exc:
             pass
+        except (requests.ConnectionError,
+                requests.exceptions.ChunkedEncodingError) as exc:
+            if (isinstance(exc.args[0], requests.packages.urllib3.
+                           exceptions.ProtocolError) and
+                    isinstance(exc.args[0].args[1], socket.error)):
+                err = exc.args[0].args[1].errno
+                if (err != errno.ECONNRESET and
+                        err != errno.ECONNREFUSED and
+                        err != errno.ECONNABORTED and
+                        err != errno.ENETRESET and
+                        err != errno.ETIMEDOUT):
+                    raise
         except requests.HTTPError as exc:
             if (exc.response.status_code < 500 or
                     exc.response.status_code == 501 or
@@ -1315,22 +1330,6 @@ def azure_request(req, timeout=None, *args, **kwargs):
             if (exc.status_code < 500 or
                     exc.status_code == 501 or
                     exc.status_code == 505):
-                raise
-        except socket.error as exc:
-            if (exc.errno != errno.ETIMEDOUT and
-                    exc.errno != errno.ECONNRESET and
-                    exc.errno != errno.ECONNREFUSED and
-                    exc.errno != errno.ECONNABORTED and
-                    exc.errno != errno.ENETRESET):
-                raise
-        except Exception as exc:
-            try:
-                if ('TooManyRequests' not in exc.args[0] and
-                        'InternalError' not in exc.args[0] and
-                        'ServerBusy' not in exc.args[0] and
-                        'OperationTimedOut' not in exc.args[0]):
-                    raise
-            except Exception:
                 raise
         if timeout is not None and time.clock() - start > timeout:
             raise IOError(
@@ -1372,6 +1371,22 @@ def get_mime_type(filename):
         Nothing
     """
     return (mimetypes.guess_type(filename)[0] or 'application/octet-stream')
+
+
+def encode_blobname(args, blobname):
+    """Encode blob name: encode UTF-8 and url encode. Due to current
+    Azure Python Storage SDK limitations, does not apply to non-SAS requests.
+    Parameters:
+        args - program arguments
+    Returns:
+        UTF-8 and urlencoded blob name
+    Raises:
+        Nothing
+    """
+    if args.saskey is None:
+        return blobname.encode('utf8')
+    else:
+        return urlquote(blobname.encode('utf8'))
 
 
 def base64encode(obj):
@@ -1524,6 +1539,7 @@ def generate_xferspec_download(
     contentlength = blobprop[0]
     contentmd5 = blobprop[1]
     encmeta = blobprop[2]
+    remoteresource = encode_blobname(args, remoteresource)
     # get the file metadata
     if (contentlength is None or contentmd5 is None or
             (args.rsaprivatekey is not None and encmeta is None)):
@@ -1729,7 +1745,8 @@ def generate_xferspec_upload(
             ivmap['md5'] = hashlib.md5()
         blockids[localfile].append(blockid)
         encparam = [symkey, signkey, ivmap, False]
-        xferspec = (localfile, args.container, remoteresource, blockid,
+        xferspec = (localfile, args.container,
+                    encode_blobname(args, remoteresource), blockid,
                     currfileoffset, chunktoadd, encparam, flock, filedesc)
         currfileoffset = currfileoffset + chunktoadd
         nstorageops = nstorageops + 1
@@ -2037,6 +2054,9 @@ def main():
         else:
             blobskipdict = {}
         if os.path.isdir(args.localresource):
+            if args.remoteresource is not None:
+                print('WARNING: ignorning specified remoteresource {} for '
+                      'directory upload'.format(args.remoteresource))
             _remotefiles = set()
             # mirror directory
             if args.recursive:
@@ -2056,7 +2076,7 @@ def main():
                         if filesize is not None:
                             completed_blockids[fname] = 0
                             md5map[fname] = md5digest
-                            filemap[fname] = remotefname
+                            filemap[fname] = encode_blobname(args, remotefname)
                             filesizes[fname] = filesize
                             allfilesize = allfilesize + filesize
                             nstorageops = nstorageops + ops
@@ -2077,7 +2097,7 @@ def main():
                     if filesize is not None:
                         completed_blockids[fname] = 0
                         md5map[fname] = md5digest
-                        filemap[fname] = remotefname
+                        filemap[fname] = encode_blobname(args, remotefname)
                         filesizes[fname] = filesize
                         allfilesize = allfilesize + filesize
                         nstorageops = nstorageops + ops
@@ -2091,8 +2111,11 @@ def main():
             del _remotefiles
         else:
             # upload single file
-            if not args.remoteresource:
+            if args.remoteresource is None:
                 args.remoteresource = args.localresource
+            else:
+                if args.stripcomponents > 0:
+                    args.stripcomponents -= 1
             args.remoteresource = apply_file_collation_and_strip(
                 args, args.remoteresource)
             filesize, nstorageops, md5digest, filedesc = \
@@ -2102,7 +2125,8 @@ def main():
             if filesize is not None:
                 completed_blockids[args.localresource] = 0
                 md5map[args.localresource] = md5digest
-                filemap[args.localresource] = args.remoteresource
+                filemap[args.localresource] = encode_blobname(
+                    args, args.remoteresource)
                 filesizes[args.localresource] = filesize
                 allfilesize = allfilesize + filesize
         del blobskipdict
@@ -2506,15 +2530,15 @@ def parseargs():  # pragma: no cover
         'be page-aligned in Azure storage')
     parser.add_argument(
         '--rsaprivatekey',
-        help='RSA private key file in PEM format. Specifying an RSA key '
-        'will turn on encryption or decryption. An RSA private key is '
-        'required for downloading encrypted blobs and may be specified for '
-        'uploading encrypted blobs.')
+        help='RSA private key file in PEM format. Specifying an RSA private '
+        'key will turn on decryption (or encryption). An RSA private key is '
+        'required for downloading and decrypting blobs and may be specified '
+        'for encrypting and uploading blobs.')
     parser.add_argument(
         '--rsapublickey',
-        help='RSA public key file in PEM format. Specifying an RSA key '
-        'will turn on encryption or decryption. An RSA public key can '
-        'only be used for encrypting and uploading blobs.')
+        help='RSA public key file in PEM format. Specifying an RSA public '
+        'key will turn on encryption. An RSA public key can only be used '
+        'for encrypting and uploading blobs.')
     parser.add_argument(
         '--rsakeypassphrase',
         help='Optional passphrase for decrypting an RSA private key.')

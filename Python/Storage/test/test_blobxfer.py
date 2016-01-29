@@ -30,7 +30,7 @@ import requests
 import requests_mock
 # module under test
 sys.path.append('..')
-import blobxfer
+import blobxfer  # noqa
 
 
 # global defines
@@ -154,12 +154,29 @@ def _func_raise_requests_exception_once(val, timeout=None):
     raise ex
 
 
-def _func_raise_azure_exception_once(val, timeout=None):
+def _func_raise_requests_connection_error_once(val, timeout=None):
     if len(val) > 0:
         response = MagicMock()
+        response.raise_for_status = lambda: None
         return response
     val.append(0)
-    ex = Exception('TooManyRequests')
+    ex = requests.ConnectionError(
+        requests.packages.urllib3.exceptions.ProtocolError(
+            'Connection aborted.',
+            socket.error(errno.ECONNRESET, 'Connection reset by peer')))
+    raise ex
+
+
+def _func_raise_requests_chunked_encoding_error_once(val, timeout=None):
+    if len(val) > 0:
+        response = MagicMock()
+        response.raise_for_status = lambda: None
+        return response
+    val.append(0)
+    ex = requests.exceptions.ChunkedEncodingError(
+        requests.packages.urllib3.exceptions.ProtocolError(
+            'Connection aborted.',
+            socket.error(errno.ECONNRESET, 'Connection reset by peer')))
     raise ex
 
 
@@ -174,15 +191,10 @@ def _func_raise_azurehttperror_once(val, timeout=None):
 
 @patch('time.sleep', return_value=None)
 def test_azure_request(patched_time_sleep):
-    socket_error = socket.error()
-    socket_error.errno = errno.E2BIG
+    azcomerr = azure.common.AzureHttpError('ServerBusy', 503)
 
-    with pytest.raises(socket.error):
-        blobxfer.azure_request(Mock(side_effect=socket_error))
-
-    socket_error.errno = errno.ETIMEDOUT
     with pytest.raises(IOError):
-        mock = Mock(side_effect=socket_error)
+        mock = Mock(side_effect=azcomerr)
         mock.__name__ = 'name'
         blobxfer.azure_request(mock, timeout=0.001)
 
@@ -197,7 +209,10 @@ def test_azure_request(patched_time_sleep):
         blobxfer.azure_request(Mock(side_effect=ex))
 
     blobxfer.azure_request(
-        _func_raise_azure_exception_once, val=[], timeout=1)
+        _func_raise_requests_connection_error_once, val=[], timeout=1)
+
+    blobxfer.azure_request(
+        _func_raise_requests_chunked_encoding_error_once, val=[], timeout=1)
 
     blobxfer.azure_request(
         _func_raise_azurehttperror_once, val=[], timeout=1)
@@ -731,7 +746,7 @@ def test_generate_xferspec_upload(tmpdir):
     stat = os.stat(lpath)
     assert stat.st_size == fs
     assert math.ceil(stat.st_size / 5.0) == nsops
-    assert None != fd
+    assert fd is not None
     fd.close()
     args.skiponmatch = True
     with open(lpath, 'wt') as f:
