@@ -650,27 +650,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             get
             {
                 return new CommandBase(
-                    (o) =>
-                    {
-                        //Listen for the user response to the warning we are about to send
-                        Messenger.Default.Register<MultibuttonDialogReturnMessage>(this, (message) =>
-                            {
-                                if (message.MessageBoxResult == MessageBoxResult.Yes)
-                                {
-                                    AsyncOperationTracker.Instance.AddTrackedInternalOperation(GetDataAsync(dataProvider, true, true, true));
-                                }
-                                Messenger.Default.Unregister<MultibuttonDialogReturnMessage>(this);
-                            });
-                        //send the warning
-                        Messenger.Default.Send<LaunchMultibuttonDialogMessage>(new LaunchMultibuttonDialogMessage()
-                        {
-                            Caption="Confirm Refresh",
-                            DialogMessage = "Warning: Refresh All will cause a large amount of data to be transfered and may entail an extended wait time - do you want to proceed?",
-                            MessageBoxButton = MessageBoxButton.YesNo,
-                            MessageBoxImage=MessageBoxImage.Warning
-                        });
-                    }
-                    );
+                    (o) => AsyncOperationTracker.Instance.AddTrackedInternalOperation(GetDataAsync(dataProvider, true, true, true)));
             }
         }
 
