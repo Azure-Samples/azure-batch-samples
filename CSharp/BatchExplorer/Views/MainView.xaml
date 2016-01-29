@@ -902,15 +902,7 @@
                                 </TreeView.CommandBindings>
                             </TreeView>
                         </TabItem>
-                        <TabItem Header="Resources">
-                            <DataGrid ItemsSource="{Binding Path=SelectedTask.ResourceFiles}">
-                                <DataGrid.Columns>
-                                    <DataGridTextColumn Header="File Path" Binding="{Binding FilePath}"/>
-                                    <DataGridTextColumn Header="Blob Source" Binding="{Binding BlobSource}"/>
-                                </DataGrid.Columns>
-                            </DataGrid>
-                        </TabItem>
-                        <TabItem Header="Outputs">
+                        <TabItem Header="Files">
                             <Grid>
                                 <DataGrid ItemsSource="{Binding Path=SelectedTask.OutputFiles}"
                                           SelectedItem="{Binding Path=SelectedTask.SelectedTaskFile}"
@@ -933,17 +925,6 @@
                                 </DataGrid>
                                 <TextBlock Text="No outputs available. Try refreshing the Task." Margin="0,10,0,0"
                                            Visibility="{Binding Path=SelectedTask.HasOutputFiles, Converter={StaticResource IBVC}, FallbackValue=Hidden}"/>
-                                <toolkit:BusyIndicator IsBusy="{Binding LowerRightSpinnerIsVisible}"/>
-                            </Grid>
-                        </TabItem>
-                        <TabItem Header="Environment">
-                            <Grid>
-                                <DataGrid ItemsSource="{Binding Path=SelectedTask.EnvironmentSettings}">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Name" Binding="{Binding Name}"/>
-                                        <DataGridTextColumn Header="Value" Binding="{Binding Value}"/>
-                                    </DataGrid.Columns>
-                                </DataGrid>
                                 <toolkit:BusyIndicator IsBusy="{Binding LowerRightSpinnerIsVisible}"/>
                             </Grid>
                         </TabItem>
