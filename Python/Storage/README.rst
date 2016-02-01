@@ -327,6 +327,7 @@ Encryption Notes
 Change Log
 ----------
 
+- 0.9.9.10: fix regression in blob name encoding with Python3
 - 0.9.9.9: fix regression in single file upload and remoteresource renaming,
   emit warning when attempting to use remoteresource with a directory upload,
   replace socket exception handling with requests ConnectionError handling,
