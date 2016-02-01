@@ -36,6 +36,13 @@ namespace Microsoft.Azure.BatchExplorer.Models
         [ChangeTracked(ModelRefreshType.Basic)]
         public ComputeNodeState? State { get { return this.ComputeNode.State; } }
 
+
+        /// <summary>
+        /// The SchedulingState of this ComputeNode
+        /// </summary>
+        [ChangeTracked(ModelRefreshType.Basic)]
+        public SchedulingState? SchedulingState { get { return this.ComputeNode.SchedulingState; } }
+
         /// <summary>
         /// The allocation time of the ComputeNode.
         /// </summary>
@@ -50,19 +57,19 @@ namespace Microsoft.Azure.BatchExplorer.Models
         {
             get { return (this.Files != null && this.Files.Count > 0); }
         }
-        
+
         /// <summary>
         /// The collection of files on this ComputeNode.
         /// </summary>
         [ChangeTracked(ModelRefreshType.Children)]
-        public List<NodeFile> Files 
-        { 
+        public List<NodeFile> Files
+        {
             get
             {
                 return this.files;
             }
-            private set 
-            { 
+            private set
+            {
                 this.files = value;
                 FirePropertyChangedEvent("Files");
             }
@@ -117,7 +124,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
 
         private ComputeNode ComputeNode { get; set; }
         private List<NodeFile> files;
- 
+
         public ComputeNodeModel(PoolModel parentPool, ComputeNode computeNode)
         {
             this.ComputeNode = computeNode;
@@ -126,7 +133,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         }
 
         #region ModelBase implementation
-        
+
         public override List<PropertyModel> PropertyModel
         {
             get { return this.ObjectToPropertyModel(this.ComputeNode); }
@@ -139,7 +146,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
                 try
                 {
                     Messenger.Default.Send(new UpdateWaitSpinnerMessage(WaitSpinnerPanel.UpperRight, true));
-                    Task asyncTask =  this.ComputeNode.RefreshAsync();
+                    Task asyncTask = this.ComputeNode.RefreshAsync();
                     if (showTrackedOperation)
                     {
                         AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
@@ -177,7 +184,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
                     Messenger.Default.Send(new UpdateWaitSpinnerMessage(WaitSpinnerPanel.LowerRight, true));
                     //Set this before the children load so that on revisit we know we have loaded the children (or are in the process)
                     this.HasLoadedChildren = true;
-                    
+
                     try
                     {
                         Task<List<NodeFile>> asyncTask = this.ListFilesAsync();
@@ -210,6 +217,47 @@ namespace Microsoft.Azure.BatchExplorer.Models
         #endregion
 
         #region Operations on ComputeNodes
+
+        /// <summary>
+        /// Puts the compute node online
+        /// </summary>
+        public async Task DisableAsync()
+        {
+            try
+            {
+                Task asyncTask = this.ComputeNode.DisableSchedulingAsync(null);
+                AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
+                    asyncTask,
+                    new ComputeNodeOperation(ComputeNodeOperation.DisableScheduling, this.ParentPool.Id, this.ComputeNode.Id)));
+                await asyncTask;
+                await this.RefreshAsync(ModelRefreshType.Basic, showTrackedOperation: false);
+            }
+            catch (Exception e)
+            {
+                Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
+            }
+        }
+
+        /// <summary>
+        /// Puts the compute node offline
+        /// </summary>
+        public async Task EnableAsync()
+        {
+            try
+            {
+                Task asyncTask = this.ComputeNode.EnableSchedulingAsync();
+                AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
+                    asyncTask,
+                    new ComputeNodeOperation(ComputeNodeOperation.EnableScheduling, this.ParentPool.Id, this.ComputeNode.Id)));
+                await asyncTask;
+
+                await this.RefreshAsync(ModelRefreshType.Basic, showTrackedOperation: false);
+            }
+            catch (Exception e)
+            {
+                Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
+            }
+        }
 
         /// <summary>
         /// Reboots the ComputeNode.
@@ -250,7 +298,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
                 Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
             }
         }
-        
+
         /// <summary>
         /// Downloads an RDP file associated with this ComputeNode.
         /// </summary>
@@ -294,7 +342,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
             IPagedEnumerable<NodeFile> vmFiles = this.ComputeNode.ListNodeFiles(recursive: true);
 
             List<NodeFile> results = await vmFiles.ToListAsync();
-            
+
             return results;
         }
 

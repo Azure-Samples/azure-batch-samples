@@ -144,6 +144,8 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
 
     public class ComputeNodeOperation : Operation
     {
+        public const string DisableScheduling = "DisableScheduling";
+        public const string EnableScheduling = "EnableScheduling";
         public const string Reboot = "Reboot";
         public const string Reimage = "Reimage";
         public const string Refresh = "Refresh";

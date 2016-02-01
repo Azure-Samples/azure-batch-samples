@@ -22,6 +22,7 @@
         <converters:IsNotNullToBooleanConverter x:Key="IsNotNullToBooleanConverter"/>
         <converters:InvertedBoolToVisibilityConverter x:Key="IBVC"/>
         <converters:BooleanAndConverter x:Key="BAC"/>
+        <converters:EnumToStringConverter x:Key="EnumToStringConverter"/>
         <Style TargetType="DataGrid">
             <Setter Property="IsReadOnly" Value="True"/>
             <Setter Property="AutoGenerateColumns" Value="False"/>
@@ -202,6 +203,30 @@
                             <StackPanel>
                                 <Image Source="../Images/add.png" Height="36"/>
                                 <TextBlock HorizontalAlignment="Center" Text="Add User" FontSize="12" Foreground="Black" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                    <Button
+                        Margin="4"
+                        Width="48"
+                        Command="{Binding EnableNode}"
+                        CommandParameter="{Binding SelectedComputeNode}">
+                        <Button.Content>
+                            <StackPanel>
+                                <Image Source="../Images/check.png" Height="36"/>
+                                <TextBlock HorizontalAlignment="Center" Text="Enable" FontSize="12" Foreground="Black" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                    <Button
+                        Margin="4"
+                        Width="48"
+                        Command="{Binding DisableNode}"
+                        CommandParameter="{Binding SelectedComputeNode}">
+                        <Button.Content>
+                            <StackPanel>
+                                <Image Source="../Images/cancel.png" Height="36"/>
+                                <TextBlock HorizontalAlignment="Center" Text="Disable" FontSize="12" Foreground="Black" />
                             </StackPanel>
                         </Button.Content>
                     </Button>
@@ -1006,6 +1031,14 @@
                                         <MenuItem Header="Open RDP File"
                                             Command="{Binding OpenRDP}"
                                             CommandParameter="{Binding SelectedComputeNode}"/>
+                                        
+                                        <MenuItem Header="Enable"
+                                            Command="{Binding EnableNode}"
+                                            CommandParameter="{Binding SelectedComputeNode}"/>
+                                        <MenuItem Header="Disable"
+                                            Command="{Binding DisableNode}"
+                                            CommandParameter="{Binding SelectedComputeNode}"/>
+                                        
                                         <MenuItem Header="Reboot"
                                             Command="{Binding RebootComputeNode}"
                                             CommandParameter="{Binding SelectedComputeNode}"/>
@@ -1028,6 +1061,7 @@
                                     <DataGridTextColumn Header="Compute Node Allocation Time" Binding="{Binding CreationTime}"/>
                                     <DataGridTextColumn Header="Status" Binding="{Binding State}"/>
                                     <DataGridTextColumn Header="Pool" Binding="{Binding ParentPool.Id}"/>
+                                    <DataGridTextColumn Header="Scheduling State" Binding="{Binding SchedulingState, Converter={StaticResource EnumToStringConverter}}"/>
                                     <DataGridTextColumn Header="" Width="*" 
                                                     CanUserReorder="False" CanUserSort="False"/>
                                 </DataGrid.Columns>

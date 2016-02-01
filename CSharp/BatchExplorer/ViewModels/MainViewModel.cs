@@ -798,6 +798,38 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         }
 
         /// <summary>
+        /// Enable the selected ComputeNode
+        /// </summary>
+        public CommandBase EnableNode
+        {
+            get
+            {
+                return new CommandBase(
+                    (o) =>
+                    {
+                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.selectedComputeNode.EnableAsync());
+                    }
+                );
+            }
+        }
+
+        /// <summary>
+        /// Disablethe selected ComputeNode
+        /// </summary>
+        public CommandBase DisableNode
+        {
+            get
+            {
+                return new CommandBase(
+                    (o) =>
+                    {
+                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.selectedComputeNode.DisableAsync());
+                    }
+                );
+            }
+        }
+
+        /// <summary>
         /// Add a user to the selected compute node
         /// </summary>
         public CommandBase AddComputeNodeUser
