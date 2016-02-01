@@ -57,19 +57,19 @@ namespace Microsoft.Azure.BatchExplorer.Models
         {
             get { return (this.Files != null && this.Files.Count > 0); }
         }
-
+        
         /// <summary>
         /// The collection of files on this ComputeNode.
         /// </summary>
         [ChangeTracked(ModelRefreshType.Children)]
-        public List<NodeFile> Files
-        {
+        public List<NodeFile> Files 
+        { 
             get
             {
                 return this.files;
             }
-            private set
-            {
+            private set 
+            { 
                 this.files = value;
                 FirePropertyChangedEvent("Files");
             }
@@ -124,7 +124,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
 
         private ComputeNode ComputeNode { get; set; }
         private List<NodeFile> files;
-
+ 
         public ComputeNodeModel(PoolModel parentPool, ComputeNode computeNode)
         {
             this.ComputeNode = computeNode;
@@ -133,7 +133,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         }
 
         #region ModelBase implementation
-
+        
         public override List<PropertyModel> PropertyModel
         {
             get { return this.ObjectToPropertyModel(this.ComputeNode); }
@@ -184,7 +184,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
                     Messenger.Default.Send(new UpdateWaitSpinnerMessage(WaitSpinnerPanel.LowerRight, true));
                     //Set this before the children load so that on revisit we know we have loaded the children (or are in the process)
                     this.HasLoadedChildren = true;
-
+                    
                     try
                     {
                         Task<List<NodeFile>> asyncTask = this.ListFilesAsync();
@@ -298,6 +298,52 @@ namespace Microsoft.Azure.BatchExplorer.Models
                 Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
             }
         }
+        
+        /// <summary>
+        /// Disables scheduling on the ComputeNode.
+        /// </summary>
+        public async Task DisableSchedlingAsync()
+        {
+            try
+            {
+                if (this.ComputeNode.SchedulingState != Microsoft.Azure.Batch.Common.SchedulingState.Disabled)
+                {
+                    Task asyncTask = this.ComputeNode.DisableSchedulingAsync(DisableComputeNodeSchedulingOption.Requeue);
+                    AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
+                        asyncTask,
+                        new ComputeNodeOperation(ComputeNodeOperation.DisableScheduling, this.ParentPool.Id, this.ComputeNode.Id)));
+                    await asyncTask;
+                    await this.RefreshAsync(ModelRefreshType.Basic, showTrackedOperation: false);
+                }
+            }
+            catch (Exception e)
+            {
+                Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
+            }
+        }
+
+        /// <summary>
+        /// Enables scheduling on the ComputeNode.
+        /// </summary>
+        public async Task EnableSchedlingAsync()
+        {
+            try
+            {
+                if (this.ComputeNode.SchedulingState != Microsoft.Azure.Batch.Common.SchedulingState.Enabled)
+                {
+                    Task asyncTask = this.ComputeNode.EnableSchedulingAsync();
+                    AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
+                        asyncTask,
+                        new ComputeNodeOperation(ComputeNodeOperation.EnableScheduling, this.ParentPool.Id, this.ComputeNode.Id)));
+                    await asyncTask;
+                    await this.RefreshAsync(ModelRefreshType.Basic, showTrackedOperation: false);
+                }
+            }
+            catch (Exception e)
+            {
+                Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
+            }
+        }
 
         /// <summary>
         /// Downloads an RDP file associated with this ComputeNode.
@@ -342,7 +388,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
             IPagedEnumerable<NodeFile> vmFiles = this.ComputeNode.ListNodeFiles(recursive: true);
 
             List<NodeFile> results = await vmFiles.ToListAsync();
-
+            
             return results;
         }
 

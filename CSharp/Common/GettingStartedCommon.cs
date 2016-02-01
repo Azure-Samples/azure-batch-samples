@@ -33,7 +33,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
             await pools.ForEachAsync(pool =>
             {
                 Console.WriteLine("State of pool {0} is {1} and it has {2} nodes of size {3}", pool.Id, pool.State, pool.CurrentDedicated, pool.VirtualMachineSize);
-            });
+            }).ConfigureAwait(continueOnCapturedContext: false);
             Console.WriteLine("=============");
         }
 
@@ -51,9 +51,44 @@ namespace Microsoft.Azure.Batch.Samples.Common
             await jobs.ForEachAsync(job =>
             {
                 Console.WriteLine("State of job " + job.Id + " is " + job.State);
-            });
+            }).ConfigureAwait(continueOnCapturedContext: false);
 
             Console.WriteLine("============");
+        }
+
+        /// <summary>
+        /// Prints task information to the console for each of the nodes in the specified pool.
+        /// </summary>
+        /// <param name="poolId">The ID of the <see cref="CloudPool"/> containing the nodes whose task information should be printed to the console.</param>
+        /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
+        public static async Task PrintNodeTasksAsync(BatchClient batchClient, string poolId)
+        {
+            Console.WriteLine("Listing Node Tasks");
+            Console.WriteLine("==================");
+
+            ODATADetailLevel nodeDetail = new ODATADetailLevel(selectClause: "id,recentTasks");
+            IPagedEnumerable<ComputeNode> nodes = batchClient.PoolOperations.ListComputeNodes(poolId, nodeDetail);
+            
+            await nodes.ForEachAsync(node =>
+            {
+                Console.WriteLine();
+                Console.WriteLine(node.Id + " tasks:");
+
+                if (node.RecentTasks != null && node.RecentTasks.Any())
+                {
+                    foreach (TaskInformation task in node.RecentTasks)
+                    {
+                        Console.WriteLine("\t{0}: {1}", task.TaskId, task.TaskState);
+                    }
+                }
+                else
+                {
+                    // No tasks found for the node
+                    Console.WriteLine("\tNone");
+                }
+            }).ConfigureAwait(continueOnCapturedContext: false);
+
+            Console.WriteLine("==================");
         }
 
         public static string CreateJobId(string prefix)
@@ -77,7 +112,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
             // Wait until the tasks are in completed state.
             List<CloudTask> ourTasks = tasks.ToList();
 
-            bool timedOut = await taskStateMonitor.WaitAllAsync(ourTasks, TaskState.Completed, timeout);
+            bool timedOut = await taskStateMonitor.WaitAllAsync(ourTasks, TaskState.Completed, timeout).ConfigureAwait(continueOnCapturedContext: false);
 
             if (timedOut)
             {
@@ -90,14 +125,14 @@ namespace Microsoft.Azure.Batch.Samples.Common
                 Console.WriteLine("Task {0}", t.Id);
 
                 //Read the standard out of the task
-                NodeFile standardOutFile = await t.GetNodeFileAsync(Constants.StandardOutFileName);
-                string standardOutText = await standardOutFile.ReadAsStringAsync();
+                NodeFile standardOutFile = await t.GetNodeFileAsync(Constants.StandardOutFileName).ConfigureAwait(continueOnCapturedContext: false);
+                string standardOutText = await standardOutFile.ReadAsStringAsync().ConfigureAwait(continueOnCapturedContext: false);
                 Console.WriteLine("Standard out:");
                 Console.WriteLine(standardOutText);
 
                 //Read the standard error of the task
-                NodeFile standardErrorFile = await t.GetNodeFileAsync(Constants.StandardErrorFileName);
-                string standardErrorText = await standardErrorFile.ReadAsStringAsync();
+                NodeFile standardErrorFile = await t.GetNodeFileAsync(Constants.StandardErrorFileName).ConfigureAwait(continueOnCapturedContext: false);
+                string standardErrorText = await standardErrorFile.ReadAsStringAsync().ConfigureAwait(continueOnCapturedContext: false);
                 Console.WriteLine("Standard error:");
                 Console.WriteLine(standardErrorText);
 
@@ -152,7 +187,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
                 Console.WriteLine("Attempting to create pool: {0}", pool.Id);
 
                 // Create the pool on the Batch Service
-                await pool.CommitAsync();
+                await pool.CommitAsync().ConfigureAwait(continueOnCapturedContext: false);
 
                 successfullyCreatedPool = true;
                 Console.WriteLine("Created pool {0} with {1} {2} nodes",
@@ -180,7 +215,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
             // If the pool already existed, make sure that its targets are correct
             if (!successfullyCreatedPool)
             {
-                CloudPool existingPool = await batchClient.PoolOperations.GetPoolAsync(poolId);
+                CloudPool existingPool = await batchClient.PoolOperations.GetPoolAsync(poolId).ConfigureAwait(continueOnCapturedContext: false);
 
                 // If the pool doesn't have the right number of nodes and it isn't resizing then we need
                 // to ask it to resize
@@ -188,7 +223,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
                     existingPool.AllocationState != AllocationState.Resizing)
                 {
                     // Resize the pool to the desired target.  Note that provisioning the nodes in the pool may take some time
-                    await existingPool.ResizeAsync(poolTargetNodeCount);
+                    await existingPool.ResizeAsync(poolTargetNodeCount).ConfigureAwait(continueOnCapturedContext: false);
                 }
             }
         }

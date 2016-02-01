@@ -5,21 +5,19 @@ python:
   - 3.3
   - 3.4
   - 3.5
-  - pypy
-  - pypy3
-install:
-  - pip install azure
-  - pip install coveralls
-  - pip install pytest-cov
-  - pip install requests
-  - pip install requests_mock
-  - pip install flake8
+  # disable pypy until travis upgrades to at least pypy2.6 due to cryptography
+  #- pypy
+  # disable pypy3 until 3.3 compliance
+  #- pypy3
 env:
   - TEST_DIR=Python/Storage
+install:
+  - pip install -e $TEST_DIR
+  - pip install coveralls flake8 pytest pytest-cov requests_mock
 script:
   - cd $TEST_DIR
-  - flake8 blobxfer.py
-  - PYTHONPATH=. py.test --cov-config ../.coveragerc --cov-report term-missing --cov blobxfer test/test_blobxfer.py
+  - flake8 blobxfer.py test/test_blobxfer.py
+  - PYTHONPATH=. py.test -l --cov-config ../.coveragerc --cov-report term-missing --cov blobxfer test/test_blobxfer.py
 after_success:
   - coveralls --rcfile=../.coveragerc --verbose
 

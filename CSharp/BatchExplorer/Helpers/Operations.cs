@@ -144,8 +144,6 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
 
     public class ComputeNodeOperation : Operation
     {
-        public const string DisableScheduling = "DisableScheduling";
-        public const string EnableScheduling = "EnableScheduling";
         public const string Reboot = "Reboot";
         public const string Reimage = "Reimage";
         public const string Refresh = "Refresh";
@@ -153,6 +151,8 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         public const string GetRdp = "GetRdp";
         public const string GetFile = "GetFile";
         public const string CreateUser = "CreateUser";
+        public const string DisableScheduling = "DisableScheduling";
+        public const string EnableScheduling = "EnableScheduling";
 
         private readonly string poolId;
         private readonly string nodeId;

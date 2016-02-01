@@ -56,6 +56,12 @@ namespace Microsoft.Azure.BatchExplorer.Models
         public IEnumerable<ResourceFile> ResourceFiles { get { return this.Task.ResourceFiles; } }
 
         /// <summary>
+        /// The set of Subtask information
+        /// </summary>
+        [ChangeTracked(ModelRefreshType.Basic)]
+        public IEnumerable<SubtaskModel> Subtasks { get { return this.SubtasksInfo; } }
+
+        /// <summary>
         /// The number of times to retry this task
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
@@ -72,7 +78,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
         public TimeSpan? RetentionTime { get { return this.Task.Constraints.RetentionTime; } }
-
+        
         /// <summary>
         /// The environmental settings
         /// </summary>
@@ -101,7 +107,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
                 return (this.OutputFiles != null && this.OutputFiles.Any());
             }
         }
-
+        
         #endregion
 
         #region Public UI Properties
@@ -121,12 +127,14 @@ namespace Microsoft.Azure.BatchExplorer.Models
         #endregion
 
         private CloudTask Task { get; set; }
-        private static readonly List<string> PropertiesToOmitFromDisplay = new List<string> { "FilesToStage" };
+        private IList<SubtaskModel> SubtasksInfo { get; set; }
+        private static readonly List<string> PropertiesToOmitFromDisplay = new List<string> {"FilesToStage"};
         public TaskModel(JobModel parentJob, CloudTask task)
         {
             this.ParentJob = parentJob;
             this.Task = task;
             this.LastUpdatedTime = DateTime.UtcNow;
+            this.SubtasksInfo = null;
         }
 
         #region ModelBase implementation
@@ -164,6 +172,12 @@ namespace Microsoft.Azure.BatchExplorer.Models
                     this.Task = await asyncTask;
                     this.LastUpdatedTime = DateTime.UtcNow;
 
+                    IPagedEnumerable<SubtaskInformation> subtasks = this.Task.ListSubtasks(OptionsModel.Instance.ListDetailLevel);
+
+                    this.SubtasksInfo = new List<SubtaskModel>();
+
+                    await subtasks.ForEachAsync(item => this.SubtasksInfo.Add(new SubtaskModel(item)));
+
                     //
                     // Fire property change events for this models properties
                     //
@@ -192,7 +206,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
                         AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                             asyncTask,
                             new TaskOperation(TaskOperation.ListFiles, this.ParentJob.Id, this.Task.Id)));
-
+                        
                         this.OutputFiles = await asyncTask;
                     }
                     catch (Exception)
@@ -200,7 +214,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
                         this.HasLoadedChildren = false; //On exception, we failed to load children so try again next time
                         //Swallow the exception to stop popups from occuring for every bad VM
                     }
-
+                    
                     this.FireChangesOnRefresh(ModelRefreshType.Children);
                 }
                 catch (Exception e)
@@ -217,7 +231,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         #endregion
 
         #region Task operations
-
+        
         /// <summary>
         /// Delete this task
         /// </summary>
@@ -275,7 +289,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         #endregion
 
         #region Private methods
-
+        
         /// <summary>
         /// Lists the task files associated with this task
         /// </summary>
@@ -285,7 +299,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
             IPagedEnumerable<NodeFile> vmFiles = this.Task.ListNodeFiles(recursive: true);
 
             List<NodeFile> results = await vmFiles.ToListAsync();
-
+            
             return results;
         }
 

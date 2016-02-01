@@ -766,6 +766,50 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         }
 
         /// <summary>
+        /// Disables scheduling on the selected Compute Node
+        /// </summary>
+        public CommandBase DisableSchedulingComputeNode
+        {
+            get
+            {
+                return new CommandBase(
+                    (o) =>
+                    {
+                        Messenger.Default.Register<DisableSchedulingComputeNodeConfirmationMessage>(this, (message) =>
+                        {
+                            if (message.Confirmation == ComputeNodeDisableSchedulingConfimation.Confirmed)
+                            {
+                                AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.SelectedComputeNode.DisableSchedlingAsync());
+                            }
+
+                            Messenger.Default.Unregister<DisableSchedulingComputeNodeConfirmationMessage>(this);
+                        });
+
+                        Messenger.Default.Send(new DisableSchedulingComputeNodeMessage());
+                    }
+                );
+            }
+        }
+
+        /// <summary>
+        /// Enables scheduling on the selected Compute Node
+        /// </summary>
+        public CommandBase EnableSchedulingComputeNode
+        {
+            get
+            {
+                return new CommandBase(
+                    (o) =>
+                    {
+                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.SelectedComputeNode.EnableSchedlingAsync());
+
+                        Messenger.Default.Send(new EnableSchedulingComputeNodeMessage());
+                    }
+                );
+            }
+        }
+
+        /// <summary>
         /// Download RDP from the selected ComputeNode and prompt the user for a save file dialog
         /// </summary>
         public CommandBase DownloadRDP
@@ -792,38 +836,6 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                     (o) =>
                     {
                         AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.DownloadRDPFileAsync(this.SelectedComputeNode, Path.GetTempPath()));
-                    }
-                );
-            }
-        }
-
-        /// <summary>
-        /// Enable the selected ComputeNode
-        /// </summary>
-        public CommandBase EnableNode
-        {
-            get
-            {
-                return new CommandBase(
-                    (o) =>
-                    {
-                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.selectedComputeNode.EnableAsync());
-                    }
-                );
-            }
-        }
-
-        /// <summary>
-        /// Disablethe selected ComputeNode
-        /// </summary>
-        public CommandBase DisableNode
-        {
-            get
-            {
-                return new CommandBase(
-                    (o) =>
-                    {
-                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.selectedComputeNode.DisableAsync());
                     }
                 );
             }

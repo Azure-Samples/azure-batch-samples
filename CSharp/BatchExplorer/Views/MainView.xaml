@@ -209,19 +209,19 @@
                     <Button
                         Margin="4"
                         Width="48"
-                        Command="{Binding EnableNode}"
+                        Command="{Binding EnableSchedulingComputeNode}"
                         CommandParameter="{Binding SelectedComputeNode}">
                         <Button.Content>
                             <StackPanel>
                                 <Image Source="../Images/check.png" Height="36"/>
                                 <TextBlock HorizontalAlignment="Center" Text="Enable" FontSize="12" Foreground="Black" />
-                            </StackPanel>
+                </StackPanel>
                         </Button.Content>
                     </Button>
                     <Button
                         Margin="4"
                         Width="48"
-                        Command="{Binding DisableNode}"
+                        Command="{Binding DisableSchedulingComputeNode}"
                         CommandParameter="{Binding SelectedComputeNode}">
                         <Button.Content>
                             <StackPanel>
@@ -927,7 +927,18 @@
                                 </TreeView.CommandBindings>
                             </TreeView>
                         </TabItem>
-                        <TabItem Header="Files">
+                        <TabItem Header="Subtasks">
+                            <DataGrid ItemsSource="{Binding Path=SelectedJob.SelectedTask.Subtasks}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Id" Binding="{Binding Id}"/>
+                                    <DataGridTextColumn Header="State" Binding="{Binding State}"/>
+                                    <DataGridTextColumn Header="Node Name" Binding="{Binding NodeId}"/>
+                                    <DataGridTextColumn Header="Exit Code" Binding="{Binding ExitCode}"/>
+                                    <DataGridTextColumn Header="Task Root Directory" Binding="{Binding TaskRootDir}"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </TabItem>                        
+                        <TabItem Header="Outputs">
                             <Grid>
                                 <DataGrid ItemsSource="{Binding Path=SelectedTask.OutputFiles}"
                                           SelectedItem="{Binding Path=SelectedTask.SelectedTaskFile}"
@@ -1031,19 +1042,17 @@
                                         <MenuItem Header="Open RDP File"
                                             Command="{Binding OpenRDP}"
                                             CommandParameter="{Binding SelectedComputeNode}"/>
-                                        
-                                        <MenuItem Header="Enable"
-                                            Command="{Binding EnableNode}"
-                                            CommandParameter="{Binding SelectedComputeNode}"/>
-                                        <MenuItem Header="Disable"
-                                            Command="{Binding DisableNode}"
-                                            CommandParameter="{Binding SelectedComputeNode}"/>
-                                        
                                         <MenuItem Header="Reboot"
                                             Command="{Binding RebootComputeNode}"
                                             CommandParameter="{Binding SelectedComputeNode}"/>
                                         <MenuItem Header="Reimage"
                                             Command="{Binding ReimageComputeNode}"
+                                            CommandParameter="{Binding SelectedComputeNode}"/>
+                                        <MenuItem Header="DisableScheduling"
+                                            Command="{Binding DisableSchedulingComputeNode}"
+                                            CommandParameter="{Binding SelectedComputeNode}"/>
+                                        <MenuItem Header="EnableScheduling"
+                                            Command="{Binding EnableSchedulingComputeNode}"
                                             CommandParameter="{Binding SelectedComputeNode}"/>
                                         <MenuItem Header="Add User"
                                             Command="{Binding AddComputeNodeUser}"
@@ -1067,7 +1076,6 @@
                                 </DataGrid.Columns>
                             </DataGrid>
                         </Grid>
-                        
                     </TabItem>
                 </TabControl>
                 <GridSplitter Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
@@ -1110,6 +1118,7 @@
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Job Id" Binding="{Binding JobId}"/>
                                     <DataGridTextColumn Header="Task Id" Binding="{Binding TaskId}"/>
+                                    <DataGridTextColumn Header="Subtask Id" Binding="{Binding SubtaskId, TargetNullValue=''}"/>
                                     <DataGridTextColumn Header="Task State" Binding="{Binding TaskState}"/>
                                     <DataGridTextColumn Header="Task URL" Binding="{Binding TaskUrl}"/>
                                     <DataGridTextColumn Header="Job Schedule Id" Binding="{Binding JobScheduleId}"/>

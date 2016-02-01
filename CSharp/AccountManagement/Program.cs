@@ -1,114 +1,187 @@
 ﻿//Copyright (c) Microsoft Corporation
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.Azure.Common.Authentication;
-using Microsoft.Azure.Common.Authentication.Models;
-using Microsoft.Azure.Management.Batch;
-using Microsoft.Azure.Management.Batch.Models;
-using Microsoft.Azure.Management.Resources;
-using Microsoft.Azure.Management.Resources.Models;
-
-namespace AccountManagement
+namespace Microsoft.Azure.Batch.Samples.AccountManagement
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Threading.Tasks;
+    using Microsoft.Azure;
+    using Microsoft.Azure.Batch.Samples.Common;
+    using Microsoft.Azure.Management.Batch;
+    using Microsoft.Azure.Management.Batch.Models;
+    using Microsoft.Azure.Management.Resources;
+    using Microsoft.Azure.Management.Resources.Models;
+    using Microsoft.Azure.Subscriptions;
+    using Microsoft.Azure.Subscriptions.Models;
+    using Microsoft.IdentityModel.Clients.ActiveDirectory;
+
     public class BatchAccountManagementSample
     {
-        private const string BatchNameSpace = "Microsoft.Batch";
-        private const string ResourceGroupName = "SampleGroup";
+        // This sample uses the Active Directory Authentication Library (ADAL) to discover
+        // subscriptions in your account and obtain TokenCloudCredentials required by the
+        // Batch Management and Resource Management clients.
+
+        // These endpoints are used during authentication and authorization with AAD.
+        private const string AuthorityUri = "https://login.microsoftonline.com/common"; // Azure Active Directory "common" endpoint
+        private const string ResourceUri  = "https://management.core.windows.net/";     // Azure service management resource
+
+        // Specify the unique identifier (the "Client ID") for your application. This is required so that your
+        // native client application (i.e. this sample) can access the Microsoft Azure AD Graph API. For information
+        // about registering an application in Azure Active Directory, please see "Adding an Application" here:
+        // https://azure.microsoft.com/documentation/articles/active-directory-integrating-applications/
+        private const string ClientId = "[specify-your-client-id-here]";
+
+        // The URI to which Azure AD will redirect in response to an OAuth 2.0 request. This value is
+        // specified by you when you register an application with AAD (see comment above).
+        private const string RedirectUri = "[specify-your-redirect-uri-here]";
         
-        private static readonly string[] Locations = new string[]
-            {
-                // Not all Azure locations are listed; please add the locations you want to use here
-                "North Europe",
-                "West Europe",
-                "South Central US",
-                "West US",
-                "North Central US",
-                "East US",
-                "Southeast Asia",
-                "East Asia"
-            };
+        // These constants are used by the ResourceManagementClient when querying AAD and for resource group creation.
+        private const string BatchNameSpace = "Microsoft.Batch";
+        private const string BatchAccountResourceType = "batchAccounts";
+        private const string ResourceGroupName = "AccountMgmtSampleGroup";
 
         public static void Main(string[] args)
         {
-            AzureProfile profile = GetAzureProfile();
-
-            string location = PromptUserForLocation();
-
-            using (IResourceManagementClient resourceManagementClient = 
-                AzureSession.ClientFactory.CreateClient<ResourceManagementClient>(profile, AzureEnvironment.Endpoint.ResourceManager))
+            try
             {
-                // Register with the Batch resource provider.
+                // Call the asynchronous version of the Main() method. This is done so that we can await various
+                // calls to async methods within the "Main" method of this console application.
+                MainAsync().Wait();
+            }
+            catch (AggregateException ae)
+            {
+                Console.WriteLine();
+                Console.WriteLine("One or more exceptions occurred.");
+                Console.WriteLine();
+
+                SampleHelpers.PrintAggregateException(ae.Flatten());
+            }
+            finally
+            {
+                Console.WriteLine();
+                Console.WriteLine("Sample complete, hit ENTER to exit...");
+                Console.ReadLine();
+            }
+        }
+
+        private static async Task MainAsync()
+        {
+            // Obtain an access token using the "common" AAD resource. This allows the application
+            // to query AAD for information that lies outside the application's tenant (such as for
+            // querying subscription information in your Azure account).
+            AuthenticationContext authContext = new AuthenticationContext(AuthorityUri);
+            AuthenticationResult authResult = authContext.AcquireToken(ResourceUri,
+                                                                       ClientId,
+                                                                       new Uri(RedirectUri),
+                                                                       PromptBehavior.Auto);
+
+            // The first credential object is used when querying for subscriptions, and is therefore
+            // not associated with a specific subscription.
+            TokenCloudCredentials subscriptionCreds = new TokenCloudCredentials(authResult.AccessToken);
+
+            string subscriptionId = String.Empty;
+            using (SubscriptionClient subClient = new SubscriptionClient(subscriptionCreds))
+            {
+                // Ask the user to select a subscription. We'll use the selected subscription's
+                // ID when constructing another credential object used in initializing the management
+                // clients for the remainder of the sample.
+                subscriptionId = await SelectSubscriptionAsync(subClient);
+            }
+
+            // These credentials are associated with a subscription, and can therefore be used when
+            // creating Resource and Batch management clients for use in manipulating entities within
+            // the subscription (e.g. resource groups and Batch accounts).
+            TokenCloudCredentials creds = new TokenCloudCredentials(subscriptionId, authResult.AccessToken);
+
+            // With the ResourceManagementClient, we create a resource group in which to create the Batch account.
+            using (ResourceManagementClient resourceManagementClient = new ResourceManagementClient(creds))
+            {
+                // Register with the Batch resource provider; this only needs to be performed once per subscription.
                 resourceManagementClient.Providers.Register(BatchNameSpace);
+                
+                string location = await PromptUserForLocationAsync(resourceManagementClient);
+                
+                await CreateResourceGroupAsync(resourceManagementClient, location);
 
-                try
-                {
-                    CreateResourceGroupAsync(resourceManagementClient, location).Wait();
+                await PerformBatchAccountOperationsAsync(creds, location);
 
-                    PerformBatchAccountOperationsAsync(profile, location).Wait();
-
-                    DeleteResourceGroupAsync(resourceManagementClient).Wait();
-                }
-                catch (AggregateException aex)
-                {
-                    foreach (Exception inner in aex.InnerExceptions)
-                    {
-                        Console.WriteLine("Unexpected error encountered: {0}", inner.ToString());
-                    }
-                }
+                await DeleteResourceGroupAsync(resourceManagementClient);
             }
-
-            Console.WriteLine("Press any key to exit");
-            Console.ReadKey();
         }
 
-        // Gets the customer's Azure account and subscription information
-        private static AzureProfile GetAzureProfile()
+        /// <summary>
+        /// Select the subscription id to use in the rest of the sample. 
+        /// </summary>
+        /// <param name="client">The <see cref="Microsoft.Azure.Subscriptions.SubscriptionClient"/> to use to get all the subscriptions 
+        /// under the user's Azure account.</param>
+        /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
+        /// <remarks>If the user has 1 subscription under their Azure account, it is chosen automatically. If the user has more than
+        /// one, they are prompted to make a selection.</remarks>
+        private static async Task<string> SelectSubscriptionAsync(SubscriptionClient client)
         {
-            AzureProfile profile = new AzureProfile();
-            ProfileClient profileClient = new ProfileClient(profile);
-            AzureAccount azureAccount = new AzureAccount() {Type = AzureAccount.AccountType.User};
+            SubscriptionListResult subs = await client.Subscriptions.ListAsync();
 
-            // Prompts the user for their credentials and retrieves their account/subscription info
-            profileClient.AddAccountAndLoadSubscriptions(azureAccount, profile.Environments[EnvironmentName.AzureCloud], null);
-
-            // By default, the first subscription is chosen
-            if (profileClient.Profile.Subscriptions.Count > 1)
+            if (subs.Subscriptions.Any())
             {
-                SelectSubscription(profileClient.Profile);
+                if (subs.Subscriptions.Count > 1)
+                {
+                    // More than 1 subscription found under the Azure account, prompt the user for the subscription to use
+                    string[] subscriptionNames = subs.Subscriptions.Select(s => s.DisplayName).ToArray();
+                    string selectedSubscription = PromptForSelectionFromCollection(subscriptionNames, "Enter the number of the Azure subscription to use: ");
+                    Subscription selectedSub = subs.Subscriptions.First(s => s.DisplayName.Equals(selectedSubscription));
+                    return selectedSub.SubscriptionId;
+                }
+                else
+                {
+                    // Only one subscription found, use that one
+                    return subs.Subscriptions.First().SubscriptionId;
+                }
             }
-
-            return profileClient.Profile;
+            else
+            {
+                throw new InvalidOperationException("No subscriptions found in account. Please create at least one subscription within your Azure account.");
+            }
         }
 
-        // Prompt the user for the subscription to use
-        private static void SelectSubscription(AzureProfile profile)
+        /// <summary>
+        /// Obtains a list of locations via the specified <see cref="Microsoft.Azure.Management.Resources.IResourceManagementClient"/>
+        /// and prompts the user to select a location from the list.
+        /// </summary>
+        /// <param name="resourceManagementClient">The <see cref="Microsoft.Azure.Management.Resources.IResourceManagementClient"/> 
+        /// to use when obtaining a list of datacenter locations.</param>
+        /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
+        private static async Task<string> PromptUserForLocationAsync(IResourceManagementClient resourceManagementClient)
         {
-            string[] subscriptionNames = profile.Subscriptions.Values.Select(s => s.Name).ToArray();
-            string selectedSubscription = PromptForSelectionFromList(subscriptionNames, "Enter the number of the Azure subscription you would like to use:");
-            profile.DefaultSubscription = profile.Subscriptions.Values.First(s => s.Name.Equals(selectedSubscription));
+            // Obtain the list of available datacenter locations for Batch accounts supported by this subscription
+            ProviderGetResult batchProvider = await resourceManagementClient.Providers.GetAsync(BatchNameSpace);
+            ProviderResourceType batchResource = batchProvider.Provider.ResourceTypes.Where(p => p.Name == BatchAccountResourceType).First();
+            string[] locations = batchResource.Locations.ToArray();
+
+            // Ask the user where they would like to create the resource group and account
+            return PromptForSelectionFromCollection(locations, "Enter the number of the location where you'd like to create your Batch account: ");
         }
 
-        // Prompt the user for the location where the resource group and Batch account will be created
-        private static string PromptUserForLocation()
+        /// <summary>
+        /// Helper function that prompts the user to make a selection from a collection.
+        /// </summary>
+        /// <param name="choices">The set of options the user can choose from.</param>
+        /// <param name="promptMessage">The message to display to the user.</param>
+        /// <returns>The item the user selected from the collection.</returns>
+        private static string PromptForSelectionFromCollection(string[] choices, string promptMessage)
         {
-            return PromptForSelectionFromList(Locations, "Enter the number of the location where you'd like to create your Batch account:");
-        }
-
-        // Prompts the user to select an item from a list of options
-        private static string PromptForSelectionFromList(string[] choices, string promptMessage)
-        {
-            Console.WriteLine(promptMessage);
             for (int i = 0; i < choices.Length; i++)
             {
                 Console.WriteLine(" {0} - {1}", i + 1, choices[i]);
             }
+
+            Console.WriteLine();
+            Console.Write(promptMessage);
             string numberText = Console.ReadLine();
             Console.WriteLine();
+            
             int number = 0;
-            if (!int.TryParse(numberText, out number) || number < 0 || number > choices.Length)
+            if (!int.TryParse(numberText, out number) || number <= 0 || number > choices.Length)
             {
                 throw new ArgumentException("Supplied value not a valid number from the list.");
             }
@@ -116,7 +189,27 @@ namespace AccountManagement
             return choices[number - 1];
         }
 
-        // Create a resource group to create Batch accounts under.
+        /// <summary>
+        /// Prompts the user for the name of the Batch account to create.
+        /// </summary>
+        /// <returns>The name of the Batch account to create.</returns>
+        private static string PromptUserForAccountName()
+        {
+            Console.WriteLine("Batch account names must be 3 to 24 characters and contain only lowercase letters and numbers.");
+            Console.Write("Enter the name of the Batch account to create: ");
+            string accountName = Console.ReadLine();
+            Console.WriteLine();
+
+            return accountName;
+        }
+
+        /// <summary>
+        /// Creates a resource group. The user's Batch account will be created under this resource group.
+        /// </summary>
+        /// <param name="resourceManagementClient">The <see cref="Microsoft.Azure.Management.Resources.IResourceManagementClient"/> 
+        /// to use when creating the resource group.</param>
+        /// <param name="location">The location where the resource group will be created.</param>
+        /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
         private static async Task CreateResourceGroupAsync(IResourceManagementClient resourceManagementClient, string location)
         {
             ResourceGroupExistsResult existsResult = await resourceManagementClient.ResourceGroups.CheckExistenceAsync(ResourceGroupName);
@@ -129,76 +222,103 @@ namespace AccountManagement
             }
         }
 
-        // Deletes the resource group
+        /// <summary>
+        /// Deletes the resource group.
+        /// </summary>
+        /// <param name="resourceManagementClient">The <see cref="Microsoft.Azure.Management.Resources.IResourceManagementClient"/> 
+        /// to use when deleting the resource group.</param>
+        /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
         private static async Task DeleteResourceGroupAsync(IResourceManagementClient resourceManagementClient)
         {
-            Console.WriteLine("Deleting resource group {0}", ResourceGroupName);
+            Console.Write("Hit ENTER to delete resource group {0}: ", ResourceGroupName);
+            Console.ReadLine();
+            Console.WriteLine("Deleting resource group {0}...", ResourceGroupName);
             await resourceManagementClient.ResourceGroups.DeleteAsync(ResourceGroupName);
             Console.WriteLine("Resource group deleted");
             Console.WriteLine();
         }
 
-        // Performs various Batch account operations
-        private static async Task PerformBatchAccountOperationsAsync(AzureProfile profile, string location)
+        /// <summary>
+        /// Performs various Batch account operations using the Batch Management library.
+        /// </summary>
+        /// <param name="creds">The <see cref="Microsoft.Azure.TokenCloudCredentials"/> containing information about the user's
+        /// Azure account and subscription.</param>
+        /// <param name="location">The location where the Batch account will be created.</param>
+        /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
+        private static async Task PerformBatchAccountOperationsAsync(TokenCloudCredentials creds, string location)
         {
-            using (IBatchManagementClient batchManagementClient = 
-                AzureSession.ClientFactory.CreateClient<BatchManagementClient>(profile, AzureEnvironment.Endpoint.ResourceManager))
+            using (BatchManagementClient batchManagementClient = new BatchManagementClient(creds))
             {
-                Console.WriteLine("The Batch account name must be 3 to 24 characters, and it must only contain lowercase letters and numbers.");
-                Console.WriteLine("Please input the account name you want to create: ");
-                string accountName = Console.ReadLine();
+                // Get the account quota for the subscription
+                SubscriptionQuotasGetResponse quotaResponse = await batchManagementClient.Subscriptions.GetSubscriptionQuotasAsync(location);
+                Console.WriteLine("Your subscription can create {0} account(s) in the {1} region.", quotaResponse.AccountQuota, location);
                 Console.WriteLine();
 
                 // Create account
-                Console.WriteLine("Creating account {0} ...", accountName);
-                await batchManagementClient.Accounts.CreateAsync(ResourceGroupName, accountName, new BatchAccountCreateParameters() {Location = location});
+                string accountName = PromptUserForAccountName();
+                Console.WriteLine("Creating account {0}...", accountName);
+                await batchManagementClient.Accounts.CreateAsync(ResourceGroupName, accountName, new BatchAccountCreateParameters() { Location = location });
                 Console.WriteLine("Account {0} created", accountName);
                 Console.WriteLine();
 
-                // Get acount
-                Console.WriteLine("Getting account {0} ...", accountName);
-                BatchAccountGetResponse getRespone = await batchManagementClient.Accounts.GetAsync(ResourceGroupName, accountName);
-                AccountResource account = getRespone.Resource;
-                Console.WriteLine("Got account {0}:", accountName);
-                Console.WriteLine(" Account location: {0}", account.Location);
-                Console.WriteLine(" Account resource type: {0}", account.Type);
-                Console.WriteLine(" Account id: {0}", account.Id);
+                // Get account
+                Console.WriteLine("Getting account {0}...", accountName);
+                BatchAccountGetResponse getResponse = await batchManagementClient.Accounts.GetAsync(ResourceGroupName, accountName);
+                AccountResource account = getResponse.Resource;
+                Console.WriteLine("Got account {0}:", account.Name);
+                Console.WriteLine("  Account location: {0}", account.Location);
+                Console.WriteLine("  Account resource type: {0}", account.Type);
+                Console.WriteLine("  Account id: {0}", account.Id);
+                Console.WriteLine();
+
+                // Print account quotas
+                Console.WriteLine("Quotas for account {0}:", account.Name);
+                Console.WriteLine("  Core quota: {0}", account.Properties.CoreQuota);
+                Console.WriteLine("  Pool quota: {0}", account.Properties.PoolQuota);
+                Console.WriteLine("  Active job and job schedule quota: {0}", account.Properties.ActiveJobAndJobScheduleQuota);
                 Console.WriteLine();
 
                 // Get account keys
-                Console.WriteLine("Getting Account keys of account {0} ....", accountName);
-                BatchAccountListKeyResponse accountKeys = await batchManagementClient.Accounts.ListKeysAsync(ResourceGroupName, accountName);
-                Console.WriteLine("Primary key of account {0}:", accountName);
-                Console.WriteLine(accountKeys.PrimaryKey);
-                Console.WriteLine("Secondary key of account {0}:", accountName);
-                Console.WriteLine(accountKeys.SecondaryKey);
+                Console.WriteLine("Getting account keys of account {0}...", account.Name);
+                BatchAccountListKeyResponse accountKeys = await batchManagementClient.Accounts.ListKeysAsync(ResourceGroupName, account.Name);
+                Console.WriteLine("  Primary key of account {0}:   {1}", account.Name, accountKeys.PrimaryKey);
+                Console.WriteLine("  Secondary key of account {0}: {1}", account.Name, accountKeys.SecondaryKey);
                 Console.WriteLine();
 
-                // Regenerate account key
-                Console.WriteLine("Regenerating the primary key of account {0} ....", accountName);
-                BatchAccountRegenerateKeyResponse newKeys = await batchManagementClient.Accounts.RegenerateKeyAsync(ResourceGroupName, accountName,
-                    new BatchAccountRegenerateKeyParameters() {KeyName = AccountKeyType.Primary});
-                Console.WriteLine("New primary key of account {0}:", accountName);
-                Console.WriteLine(newKeys.PrimaryKey);
-                Console.WriteLine("Secondary key of account {0}:", accountName);
-                Console.WriteLine(newKeys.SecondaryKey);
+                // Regenerate primary account key
+                Console.WriteLine("Regenerating the primary key of account {0}...", account.Name);
+                BatchAccountRegenerateKeyResponse newKeys = await batchManagementClient.Accounts.RegenerateKeyAsync(
+                    ResourceGroupName, account.Name, 
+                    new BatchAccountRegenerateKeyParameters() { KeyName = AccountKeyType.Primary });
+                Console.WriteLine("  New primary key of account {0}: {1}", account.Name, newKeys.PrimaryKey);
+                Console.WriteLine("  Secondary key of account {0}:   {1}", account.Name, newKeys.SecondaryKey);
                 Console.WriteLine();
 
-                // list accounts
-                Console.WriteLine("Listing all Batch accounts under subscription id {0} ...", profile.DefaultSubscription.Id);
+                // Print subscription quota information
                 BatchAccountListResponse listResponse = await batchManagementClient.Accounts.ListAsync(new AccountListParameters());
                 IList<AccountResource> accounts = listResponse.Accounts;
-                Console.WriteLine("Total number of Batch accounts under subscription id {0}:  {1}", profile.DefaultSubscription.Id, accounts.Count);
-                for (int i = 0; i < accounts.Count; i++)
+                Console.WriteLine("Total number of Batch accounts under subscription id {0}:  {1}", creds.SubscriptionId, accounts.Count);
+
+                // Determine how many additional accounts can be created in the target region
+                int numAccountsInRegion = accounts.Count(o => o.Location == account.Location);
+                Console.WriteLine("Accounts in {0}: {1}", account.Location, numAccountsInRegion);
+                Console.WriteLine("You can create {0} more accounts in the {1} region.", quotaResponse.AccountQuota - numAccountsInRegion, account.Location);
+                Console.WriteLine();
+
+                // List accounts in the subscription
+                Console.WriteLine("Listing all Batch accounts under subscription id {0}...", creds.SubscriptionId);
+                foreach (AccountResource acct in accounts)
                 {
-                    Console.WriteLine(" {0} - {1}", i + 1, accounts[i].Name);
+                    Console.WriteLine("  {0} - {1} | Location: {2}", accounts.IndexOf(acct) + 1, acct.Name, acct.Location);
                 }
                 Console.WriteLine();
 
-                // delete account
-                Console.WriteLine("Deleting account {0} ...", accountName);
-                await batchManagementClient.Accounts.DeleteAsync(ResourceGroupName, accountName);
-                Console.WriteLine("Account {0} deleted", accountName);
+                // Delete account
+                Console.Write("Hit ENTER to delete account {0}: ", account.Name);
+                Console.ReadLine();
+                Console.WriteLine("Deleting account {0}...", account.Name);
+                await batchManagementClient.Accounts.DeleteAsync(ResourceGroupName, account.Name);
+                Console.WriteLine("Account {0} deleted", account.Name);
                 Console.WriteLine();
             }
         }

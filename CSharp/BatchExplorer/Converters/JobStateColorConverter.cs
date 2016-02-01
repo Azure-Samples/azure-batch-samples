@@ -34,9 +34,9 @@ namespace Microsoft.Azure.BatchExplorer.Converters
                 case JobState.Terminating:
                     return new SolidColorBrush(Colors.DarkRed);
                 case JobState.Invalid:
-                    return new SolidColorBrush(Colors.Gray);
+                case JobState.Unmapped:
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    return new SolidColorBrush(Colors.Gray);
             }
         }
 

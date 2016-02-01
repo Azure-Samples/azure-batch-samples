@@ -176,6 +176,9 @@
     <Compile Include="Helpers\Operations.cs" />
     <Compile Include="Helpers\ResourceFileStringParser.cs" />
     <Compile Include="Helpers\WaitSpinnerPanel.cs" />
+    <Compile Include="Messages\DisableSchedulingComputeNodeConfirmationMessage.cs" />
+    <Compile Include="Messages\DisableSchedulingComputeNodeMessage.cs" />
+    <Compile Include="Messages\EnableSchedulingComputeNodeMessage.cs" />
     <Compile Include="Messages\HeatMapPollIntervalUpdatedMessage.cs" />
     <Compile Include="Messages\CloseGenericMessage.cs" />
     <Compile Include="Messages\ConfirmAccountAddMessage.cs" />
@@ -218,6 +221,7 @@
     <Compile Include="Models\PropertyDisplayModel.cs" />
     <Compile Include="Models\ResourceFileInfo.cs" />
     <Compile Include="Models\StartTaskOptions.cs" />
+    <Compile Include="Models\SubtaskModel.cs" />
     <Compile Include="PluginInterfaces\AccountPlugin\AccountManagementAddOperation.cs" />
     <Compile Include="PluginInterfaces\AccountPlugin\AccountManagementEditOperation.cs" />
     <Compile Include="PluginInterfaces\AccountPlugin\AccountManagementOperation.cs" />
@@ -420,9 +424,6 @@
     <Resource Include="Assets\Icons\add_all_24.png" />
     <Resource Include="Assets\Icons\add_incremental_24.png" />
     <Resource Include="Assets\Icons\refresh_24.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="readme.txt" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Images\add.png" />
