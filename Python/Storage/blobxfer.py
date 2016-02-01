@@ -105,7 +105,7 @@ except NameError:  # pragma: no cover
 # pylint: enable=W0622,C0103
 
 # global defines
-_SCRIPT_VERSION = '0.9.9.9'
+_SCRIPT_VERSION = '0.9.9.10'
 _PY2 = sys.version_info.major == 2
 _DEFAULT_MAX_STORAGEACCOUNT_WORKERS = multiprocessing.cpu_count() * 3
 _MAX_BLOB_CHUNK_SIZE_BYTES = 4194304
@@ -1374,19 +1374,19 @@ def get_mime_type(filename):
 
 
 def encode_blobname(args, blobname):
-    """Encode blob name: encode UTF-8 and url encode. Due to current
-    Azure Python Storage SDK limitations, does not apply to non-SAS requests.
+    """Encode blob name: url encode. Due to current Azure Python Storage SDK
+    limitations, does not apply to non-SAS requests.
     Parameters:
         args - program arguments
     Returns:
-        UTF-8 and urlencoded blob name
+        urlencoded blob name
     Raises:
         Nothing
     """
     if args.saskey is None:
-        return blobname.encode('utf8')
+        return blobname
     else:
-        return urlquote(blobname.encode('utf8'))
+        return urlquote(blobname)
 
 
 def base64encode(obj):
