@@ -1124,6 +1124,13 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                             {
                                 throw new NotImplementedException("Not implemented");
                             }
+                            else if (itemType == typeof(CertificateModel))
+                            {
+                                CertificateModel certificate = item as CertificateModel;
+
+                                objectType = "Certificate";
+                                objectName = certificate.Thumbprint;
+                            }
 
                             Messenger.Default.Register<MultibuttonDialogReturnMessage>(this, (message) =>
                                 {
@@ -1138,8 +1145,13 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                                         {
                                             TaskModel taskModel = item as TaskModel;
                                             AsyncOperationTracker.Instance.AddTrackedInternalOperation(taskModel.DeleteAsync());
-                                        } 
-                                        else if (itemType == typeof (ComputeNodeModel))
+                                        }
+                                        else if (itemType == typeof(CertificateModel))
+                                        {
+                                            CertificateModel certificate = item as CertificateModel;
+                                            AsyncOperationTracker.Instance.AddTrackedInternalOperation(certificate.DeleteAsync());
+                                        }
+                                        else if (itemType == typeof(ComputeNodeModel))
                                         {
                                             throw new NotImplementedException("Not implemented");
                                         }

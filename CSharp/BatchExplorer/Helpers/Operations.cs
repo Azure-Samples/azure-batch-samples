@@ -175,6 +175,7 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
     public class CertificateOperation : Operation
     {
         public const string Refresh = "Refresh";
+        public const string Delete = "Delete";
 
         private readonly string thumbprint;
         private readonly string thumbprintAlgorithm;

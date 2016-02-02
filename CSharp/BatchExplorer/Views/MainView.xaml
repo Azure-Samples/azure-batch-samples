@@ -822,6 +822,16 @@
                             <DataGrid.InputBindings>
                                 <KeyBinding Command="{Binding RefreshCertificates}" Key="F5" />
                             </DataGrid.InputBindings>
+                            <DataGrid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Refresh"
+                                              Command="{Binding RefreshItem}"
+                                              CommandParameter="{Binding SelectedCertificate}" />
+                                    <MenuItem Header="Delete"
+                                              Command="{Binding Delete}"
+                                              CommandParameter="{Binding SelectedCertificate}"/>
+                                </ContextMenu>
+                            </DataGrid.ContextMenu>
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Thumbprint" Binding="{Binding Thumbprint}"/>
                                 <DataGridTextColumn Header="Algorithm" Binding="{Binding ThumbprintAlgorithm}"/>

@@ -90,5 +90,24 @@ namespace Microsoft.Azure.BatchExplorer.Models
                 Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
             }
         }
+
+        /// <summary>
+        /// Delete this certificate from the server
+        /// </summary>
+        public async Task DeleteAsync()
+        {
+            try
+            {
+                Task asyncTask = this.Certificate.DeleteAsync();
+                AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
+                    asyncTask,
+                    new CertificateOperation(CertificateOperation.Delete, this.Certificate.Thumbprint, this.Certificate.ThumbprintAlgorithm)));
+                await asyncTask;
+            }
+            catch (Exception e)
+            {
+                Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage(e.ToString()));
+            }
+        }
     }
 }
