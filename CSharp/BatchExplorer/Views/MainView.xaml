@@ -785,6 +785,36 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
+                        <StackPanel
+                            Grid.Row="0"
+                            Orientation="Horizontal">
+                            <!--
+                            <Button
+                                Margin="4"
+                                Width="48"
+                                Command="{Binding AddCertificate}"
+                                IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
+                                <Button.Content>
+                                    <StackPanel>
+                                        <Image Source="../Images/add.png" Height="36"/>
+                                        <TextBlock HorizontalAlignment="Center" Text="Add" FontSize="12" Foreground="Black" />
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>
+                            -->
+                            <Button
+                                Margin="4"
+                                Width="48"
+                                Command="{Binding RefreshCertificates}"
+                                IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
+                                <Button.Content>
+                                    <StackPanel>
+                                        <Image Source="../Images/refresh.png" Height="36"/>
+                                        <TextBlock HorizontalAlignment="Center" Text="Refresh" FontSize="12" Foreground="Black" />
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>
+                        </StackPanel>
                         <DataGrid
                             Grid.Row="1"
                             ItemsSource="{Binding Certificates}"
