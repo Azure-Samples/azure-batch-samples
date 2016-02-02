@@ -94,5 +94,10 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         /// </summary>
         /// <returns>A <see cref="Task"/> whose result is a collection of certificates</returns>
         Task<IList<CertificateModel>> GetCertificatesCollectionAsync();
+
+        /// <summary>
+        /// Creates a certificate
+        /// </summary>
+        Task CreateCertificateAsync(CreateCertificateOptions options);
     }
 }

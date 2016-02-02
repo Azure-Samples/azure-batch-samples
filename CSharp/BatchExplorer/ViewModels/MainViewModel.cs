@@ -1241,6 +1241,20 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
+        public CommandBase CreateCertificate
+        {
+            get
+            {
+                return new CommandBase(
+                    (o) =>
+                    {
+                        // Call a new window to show the Create Certificate UI
+                        Messenger.Default.Send(new ShowCreateCertificateWindow());
+                    }
+                );
+            }
+        }
+
         #endregion
 
         public CommandBase ShowHeatMap

@@ -83,6 +83,11 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
             return certificateModels;
         }
 
+        public Task CreateCertificateAsync(CreateCertificateOptions options)
+        {
+            return this.Service.CreateCertificateAsync(options);
+        }
+
         public async Task CreatePoolAsync(
             string poolId, 
             string virtualMachineSize, 

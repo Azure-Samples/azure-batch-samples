@@ -788,11 +788,10 @@
                         <StackPanel
                             Grid.Row="0"
                             Orientation="Horizontal">
-                            <!--
                             <Button
                                 Margin="4"
                                 Width="48"
-                                Command="{Binding AddCertificate}"
+                                Command="{Binding CreateCertificate}"
                                 IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
                                 <Button.Content>
                                     <StackPanel>
@@ -801,7 +800,6 @@
                                     </StackPanel>
                                 </Button.Content>
                             </Button>
-                            -->
                             <Button
                                 Margin="4"
                                 Width="48"

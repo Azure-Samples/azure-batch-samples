@@ -191,6 +191,7 @@
     <Compile Include="Messages\ModelNotFoundAfterRefresh.cs" />
     <Compile Include="Messages\NodeSchedulingMessage.cs" />
     <Compile Include="Messages\ShowAddTaskWindow.cs" />
+    <Compile Include="Messages\ShowCreateCertificateWindow.cs" />
     <Compile Include="Messages\ShowCreateJobWindow.cs" />
     <Compile Include="Messages\ShowResizePoolWindow.cs" />
     <Compile Include="Messages\ShowCreateComputeNodeUserWindow.cs" />
@@ -218,6 +219,7 @@
     <Compile Include="Models\Account.cs" />
     <Compile Include="Models\CertificateModel.cs" />
     <Compile Include="Models\CreateAutoPoolOptions.cs" />
+    <Compile Include="Models\CreateCertificateOptions.cs" />
     <Compile Include="Models\CreateJobManagerOptions.cs" />
     <Compile Include="Models\CreateJobOptions.cs" />
     <Compile Include="Models\PropertyDisplayModel.cs" />
@@ -258,6 +260,7 @@
     <Compile Include="Helpers\EntityBase.cs" />
     <Compile Include="ViewModels\AddTaskViewModel.cs" />
     <Compile Include="ViewModels\AsyncOperationDetailsViewModel.cs" />
+    <Compile Include="ViewModels\CreateCertificateViewModel.cs" />
     <Compile Include="ViewModels\CreateJobViewModel.cs" />
     <Compile Include="ViewModels\ResizePoolViewModel.cs" />
     <Compile Include="ViewModels\CreateComputeNodeUserViewModel.cs" />
@@ -277,6 +280,9 @@
     </Compile>
     <Compile Include="Views\CreateControls\AddTaskControl.xaml.cs">
       <DependentUpon>AddTaskControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\CreateControls\CreateCertificateControl.xaml.cs">
+      <DependentUpon>CreateCertificateControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\CreateControls\CreateJobControl.xaml.cs">
       <DependentUpon>CreateJobControl.xaml</DependentUpon>
@@ -337,6 +343,10 @@
     <Page Include="Views\CreateControls\AddTaskControl.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\CreateControls\CreateCertificateControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\CreateControls\CreateJobControl.xaml">
       <Generator>MSBuild:Compile</Generator>

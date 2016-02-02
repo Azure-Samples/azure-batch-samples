@@ -341,6 +341,24 @@ namespace Microsoft.Azure.BatchExplorer.Service
         {
             return this.Client.CertificateOperations.GetCertificateAsync(thumbprint, thumbprintAlgorithm);
         }
+        public async Task CreateCertificateAsync(CreateCertificateOptions options)
+        {
+            Certificate certificate;
+
+            switch (options.CertificateFormat)
+            {
+                case CertificateFormat.Pfx:
+                    certificate = this.Client.CertificateOperations.CreateCertificate(options.FilePath, options.Password);
+                    break;
+                case CertificateFormat.Cer:
+                    certificate = this.Client.CertificateOperations.CreateCertificate(options.FilePath);
+                    break;
+                default:
+                    throw new ArgumentException("Invalid certificate format " + options.CertificateFormat);
+            }
+
+            await certificate.CommitAsync();
+        }
 
         #endregion
 
