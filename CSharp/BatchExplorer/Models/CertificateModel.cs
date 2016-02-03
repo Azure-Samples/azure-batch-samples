@@ -18,16 +18,19 @@ namespace Microsoft.Azure.BatchExplorer.Models
             this.Certificate = source;
         }
 
+        [ChangeTracked(ModelRefreshType.Basic)]
         public string Thumbprint
         {
             get { return this.Certificate.Thumbprint; }
         }
 
+        [ChangeTracked(ModelRefreshType.Basic)]
         public string ThumbprintAlgorithm
         {
             get { return this.Certificate.ThumbprintAlgorithm; }
         }
 
+        [ChangeTracked(ModelRefreshType.Basic)]
         public CertificateState? State
         {
             get { return this.Certificate.State; }
