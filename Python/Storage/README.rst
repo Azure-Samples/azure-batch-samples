@@ -43,7 +43,7 @@ required dependent packages:
 
 - Encryption Support
 
-  - ``cryptography`` >= 1.2.1
+  - ``cryptography`` >= 1.2.2
 
 - Management Certificate
 
@@ -301,7 +301,7 @@ Encryption Notes
   .NET/Java client library) should not be modified or blobs may be
   unrecoverable.
 - MD5 for both the pre-encrypted and encrypted version of the file is stored
-  on the blob. Rsync-like synchronization is still supported transparently
+  in blob metadata. Rsync-like synchronization is still supported transparently
   with encrypted blobs.
 - Whole file MD5 checks are skipped if a message authentication code is found
   to validate the integrity of the encrypted data.
@@ -327,6 +327,8 @@ Encryption Notes
 Change Log
 ----------
 
+- 0.9.9.11: minor bug fixes, update cryptography requirement to 1.2.2, pin
+  azure dependencies due to breaking changes
 - 0.9.9.10: fix regression in blob name encoding with Python3
 - 0.9.9.9: fix regression in single file upload and remoteresource renaming,
   emit warning when attempting to use remoteresource with a directory upload,
