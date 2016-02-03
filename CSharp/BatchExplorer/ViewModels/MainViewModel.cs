@@ -779,7 +779,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         {
                             if (message.Confirmation == ComputeNodeDisableSchedulingConfimation.Confirmed)
                             {
-                                AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.SelectedComputeNode.DisableSchedlingAsync());
+                                AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.SelectedComputeNode.DisableSchedulingAsync());
                             }
 
                             Messenger.Default.Unregister<DisableSchedulingComputeNodeConfirmationMessage>(this);
@@ -801,7 +801,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 return new CommandBase(
                     (o) =>
                     {
-                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.SelectedComputeNode.EnableSchedlingAsync());
+                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.SelectedComputeNode.EnableSchedulingAsync());
 
                         Messenger.Default.Send(new EnableSchedulingComputeNodeMessage());
                     }

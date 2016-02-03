@@ -938,7 +938,7 @@
                                 </DataGrid.Columns>
                             </DataGrid>
                         </TabItem>                        
-                        <TabItem Header="Outputs">
+                        <TabItem Header="Files">
                             <Grid>
                                 <DataGrid ItemsSource="{Binding Path=SelectedTask.OutputFiles}"
                                           SelectedItem="{Binding Path=SelectedTask.SelectedTaskFile}"
@@ -959,7 +959,7 @@
                                         <DataGridTextColumn Header="Path" Binding="{Binding Url}"/>
                                     </DataGrid.Columns>
                                 </DataGrid>
-                                <TextBlock Text="No outputs available. Try refreshing the Task." Margin="0,10,0,0"
+                                <TextBlock Text="{Binding Path=SelectedTask.NoOutputFilesReason}" Margin="0,10,0,0"
                                            Visibility="{Binding Path=SelectedTask.HasOutputFiles, Converter={StaticResource IBVC}, FallbackValue=Hidden}"/>
                                 <toolkit:BusyIndicator IsBusy="{Binding LowerRightSpinnerIsVisible}"/>
                             </Grid>

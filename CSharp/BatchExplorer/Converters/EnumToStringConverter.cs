@@ -11,7 +11,12 @@ namespace Microsoft.Azure.BatchExplorer.Converters
     {
         public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
         {
-            return value.ToString();
+            if (value != null && value.GetType().BaseType == typeof(Enum))
+            {
+                return value.ToString();
+            }
+
+            return null;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)

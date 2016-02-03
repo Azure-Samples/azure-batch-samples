@@ -217,48 +217,6 @@ namespace Microsoft.Azure.BatchExplorer.Models
         #endregion
 
         #region Operations on ComputeNodes
-
-        /// <summary>
-        /// Puts the compute node online
-        /// </summary>
-        public async Task DisableAsync()
-        {
-            try
-            {
-                Task asyncTask = this.ComputeNode.DisableSchedulingAsync(null);
-                AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
-                    asyncTask,
-                    new ComputeNodeOperation(ComputeNodeOperation.DisableScheduling, this.ParentPool.Id, this.ComputeNode.Id)));
-                await asyncTask;
-                await this.RefreshAsync(ModelRefreshType.Basic, showTrackedOperation: false);
-            }
-            catch (Exception e)
-            {
-                Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
-            }
-        }
-
-        /// <summary>
-        /// Puts the compute node offline
-        /// </summary>
-        public async Task EnableAsync()
-        {
-            try
-            {
-                Task asyncTask = this.ComputeNode.EnableSchedulingAsync();
-                AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
-                    asyncTask,
-                    new ComputeNodeOperation(ComputeNodeOperation.EnableScheduling, this.ParentPool.Id, this.ComputeNode.Id)));
-                await asyncTask;
-
-                await this.RefreshAsync(ModelRefreshType.Basic, showTrackedOperation: false);
-            }
-            catch (Exception e)
-            {
-                Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
-            }
-        }
-
         /// <summary>
         /// Reboots the ComputeNode.
         /// </summary>
@@ -302,7 +260,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// <summary>
         /// Disables scheduling on the ComputeNode.
         /// </summary>
-        public async Task DisableSchedlingAsync()
+        public async Task DisableSchedulingAsync()
         {
             try
             {
@@ -325,7 +283,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// <summary>
         /// Enables scheduling on the ComputeNode.
         /// </summary>
-        public async Task EnableSchedlingAsync()
+        public async Task EnableSchedulingAsync()
         {
             try
             {
