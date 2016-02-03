@@ -341,6 +341,7 @@ namespace Microsoft.Azure.BatchExplorer.Service
         {
             return this.Client.CertificateOperations.GetCertificateAsync(thumbprint, thumbprintAlgorithm);
         }
+
         public async Task CreateCertificateAsync(CreateCertificateOptions options)
         {
             Certificate certificate;
