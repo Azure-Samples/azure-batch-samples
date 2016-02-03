@@ -337,13 +337,6 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             get
             {
                 return this.selectedTask;
-                if (this.selectedTask != null)
-                {
-                    if (!this.selectedTask.HasLoadedChildren)
-                    {
-                        this.selectedTask.RefreshAsync(ModelRefreshType.Children);
-                    }
-                }
             }
             set
             {
