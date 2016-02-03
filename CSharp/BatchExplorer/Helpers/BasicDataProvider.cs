@@ -75,10 +75,10 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
 
         public async Task<IList<CertificateModel>> GetCertificatesCollectionAsync()
         {
-            IPagedEnumerable<Certificate> pools = this.Service.ListCertificates(OptionsModel.Instance.ListDetailLevel);
+            IPagedEnumerable<Certificate> certificates = this.Service.ListCertificates(OptionsModel.Instance.ListDetailLevel);
             IList<CertificateModel> certificateModels = new List<CertificateModel>();
 
-            await pools.ForEachAsync(item => certificateModels.Add(new CertificateModel(item)));
+            await certificates.ForEachAsync(item => certificateModels.Add(new CertificateModel(item)));
 
             return certificateModels;
         }
