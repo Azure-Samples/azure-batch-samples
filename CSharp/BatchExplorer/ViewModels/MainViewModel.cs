@@ -1054,9 +1054,12 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                                 objectType = "Job";
                                 objectName = jobModel.Id;
                             }
-                            else if (itemType == typeof(ComputeNodeModel))
+                            else if (itemType == typeof(JobScheduleModel))
                             {
-                                throw new NotImplementedException("Not implemented");
+                                JobScheduleModel jobScheduleModel = item as JobScheduleModel;
+
+                                objectType = "Job Schedule";
+                                objectName = jobScheduleModel.Id;
                             }
 
                             Messenger.Default.Register<MultibuttonDialogReturnMessage>(this, (message) =>
@@ -1072,10 +1075,16 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                                         {
                                             TaskModel taskModel = item as TaskModel;
                                             AsyncOperationTracker.Instance.AddTrackedInternalOperation(taskModel.DeleteAsync());
-                                        } 
-                                        else if (itemType == typeof (ComputeNodeModel))
+                                        }
+                                        else if (itemType == typeof(JobModel))
                                         {
-                                            throw new NotImplementedException("Not implemented");
+                                            JobModel job = item as JobModel;
+                                            AsyncOperationTracker.Instance.AddTrackedInternalOperation(job.DeleteAsync());
+                                        }
+                                        else if (itemType == typeof(JobScheduleModel))
+                                        {
+                                            JobScheduleModel jobScedule = item as JobScheduleModel;
+                                            AsyncOperationTracker.Instance.AddTrackedInternalOperation(jobScedule.DeleteAsync());
                                         }
                                     }
                                     Messenger.Default.Unregister<MultibuttonDialogReturnMessage>(this);

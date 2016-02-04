@@ -197,7 +197,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// <summary>
         /// Terminates this JobSchedule
         /// </summary>
-        private async Task TerminateAsync()
+        public async Task TerminateAsync()
         {
             try
             {
@@ -217,7 +217,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// <summary>
         /// Deletes this JobSchedule
         /// </summary>
-        private async Task DeleteAsync()
+        public async Task DeleteAsync()
         {
             try
             {
@@ -226,6 +226,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
                     asyncTask,
                     new JobScheduleOperation(JobScheduleOperation.Delete, this.JobSchedule.Id)));
                 await asyncTask;
+                Messenger.Default.Send<RefreshMessage>(new RefreshMessage(RefreshTarget.JobSchedules));
             }
             catch (Exception e)
             {
@@ -236,7 +237,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// <summary>
         /// Enables this JobSchedule
         /// </summary>
-        private async Task EnableAsync()
+        public async Task EnableAsync()
         {
             try
             {
@@ -256,7 +257,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// <summary>
         /// Disables this JobSchedule
         /// </summary>
-        private async Task DisableAsync()
+        public async Task DisableAsync()
         {
             try
             {

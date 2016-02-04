@@ -313,6 +313,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
                     asyncTask,
                     new JobOperation(JobOperation.Delete, this.Job.Id)));
                 await asyncTask;
+                Messenger.Default.Send<RefreshMessage>(new RefreshMessage(RefreshTarget.Jobs));
             }
             catch (Exception e)
             {

@@ -180,6 +180,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
                     asyncTask,
                     new PoolOperation(PoolOperation.Delete, this.Pool.Id)));
                 await asyncTask;
+                Messenger.Default.Send<RefreshMessage>(new RefreshMessage(RefreshTarget.Pools));
             }
             catch (Exception e)
             {
