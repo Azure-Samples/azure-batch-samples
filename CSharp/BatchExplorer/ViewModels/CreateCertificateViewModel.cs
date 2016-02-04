@@ -61,7 +61,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                     return false;
                 }
 
-                var format = Format();
+                var format = InferFormat();
 
                 if (format == null)
                 {
@@ -115,7 +115,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
-        private CertificateFormat? Format()
+        private CertificateFormat? InferFormat()
         {
             var fileExtension = System.IO.Path.GetExtension(FilePath);
             var comparer = StringComparer.OrdinalIgnoreCase;
@@ -135,7 +135,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         {
             try
             {
-                var certificateFormat = Format();
+                var certificateFormat = InferFormat();
 
                 if (certificateFormat == null)
                 {
