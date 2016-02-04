@@ -100,22 +100,14 @@ namespace Microsoft.Azure.BatchExplorer.Models
         {
             get
             {
-                try
+                if (this.attemptToLoadOutputs && (this.OutputFiles == null || !this.OutputFiles.Any()))
                 {
-                    if (this.attemptToLoadOutputs && (this.OutputFiles == null || !this.OutputFiles.Any()))
-                    {
-                        this.RefreshAsync(ModelRefreshType.Children);
-                    }
-
-                    this.attemptToLoadOutputs = false;
-                    return (this.OutputFiles != null && this.OutputFiles.Any());
-                }
-                catch (Exception e)
-                {
-
+                    AsyncOperationTracker.Instance.AddTrackedInternalOperation(
+                        this.RefreshAsync(ModelRefreshType.Children));
                 }
 
-                return false;
+                this.attemptToLoadOutputs = false;
+                return (this.OutputFiles != null && this.OutputFiles.Any());
             }
         }
         #endregion
