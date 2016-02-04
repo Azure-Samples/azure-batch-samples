@@ -5,6 +5,7 @@ using Microsoft.Azure.BatchExplorer.Messages;
 using Microsoft.Azure.BatchExplorer.Models;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -139,7 +140,8 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
 
                 if (certificateFormat == null)
                 {
-                    return;  // shouldn't have got here
+                    Debug.Assert(false, "Create button should not have enabled when we were unable to infer a certificate format");
+                    return;
                 }
 
                 CreateCertificateOptions options = new CreateCertificateOptions
