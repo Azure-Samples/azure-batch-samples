@@ -91,11 +91,11 @@
                         Command="ApplicationCommands.Copy" 
                         CanExecute="TreeViewCopyCommandBinding_CanExecute" 
                         Executed="TreeViewCopyCommandBinding_Executed"/>
-        
+
         <Style x:Key="TreeViewItemStyle" TargetType="{x:Type TreeViewItem}">
             <Setter Property="IsExpanded" Value="True"/>
         </Style>
-        
+
         <Style x:Key="ConnectAccountMenuItemStyle" TargetType="MenuItem">
             <Setter Property="Header" Value="{Binding Alias}"/>
             <Setter Property="Command" Value="{Binding DataContext.ConnectAccount, 
@@ -206,6 +206,16 @@
                             </StackPanel>
                         </Button.Content>
                     </Button>
+                </StackPanel>
+                <TextBlock HorizontalAlignment="Center" Text="Node Commands" FontSize="12" Foreground="Gray" FontWeight="Bold" />
+            </StackPanel>
+        </ControlTemplate>
+
+        <ControlTemplate x:Key="ComputeTaskCommands">
+            <StackPanel
+                Orientation="Vertical">
+                <StackPanel
+                    Orientation="Horizontal">
                     <Button
                         Margin="4"
                         Width="48"
@@ -215,8 +225,11 @@
                             <StackPanel>
                                 <Image Source="../Images/check.png" Height="36"/>
                                 <TextBlock HorizontalAlignment="Center" Text="Enable" FontSize="12" Foreground="Black" />
-                </StackPanel>
+                            </StackPanel>
                         </Button.Content>
+                        <Button.ToolTip>
+                            <TextBlock>Enables task scheulding on this node</TextBlock>
+                        </Button.ToolTip>
                     </Button>
                     <Button
                         Margin="4"
@@ -229,9 +242,12 @@
                                 <TextBlock HorizontalAlignment="Center" Text="Disable" FontSize="12" Foreground="Black" />
                             </StackPanel>
                         </Button.Content>
+                        <Button.ToolTip>
+                            <TextBlock>Disables future tasks from being scheulded to this node</TextBlock>
+                        </Button.ToolTip>
                     </Button>
                 </StackPanel>
-                <TextBlock HorizontalAlignment="Center" Text="Node Commands" FontSize="12" Foreground="Gray" FontWeight="Bold" />
+                <TextBlock HorizontalAlignment="Center" Text="Task Scheduling" FontSize="12" Foreground="Gray" FontWeight="Bold" />
             </StackPanel>
         </ControlTemplate>
 
@@ -303,7 +319,7 @@
                 </StackPanel>
                 <TextBlock HorizontalAlignment="Center" Text="Job Commands" FontSize="12" Foreground="Gray" FontWeight="Bold" />
             </StackPanel>
-            
+
         </ControlTemplate>
 
         <ControlTemplate x:Key="TaskCommands">
@@ -396,7 +412,7 @@
                 </StackPanel>
                 <TextBlock HorizontalAlignment="Center" Text="Job Schedule Commands" FontSize="12" Foreground="Gray" FontWeight="Bold"/>
             </StackPanel>
-                
+
         </ControlTemplate>
     </Window.Resources>
     <Grid x:Name="MainGrid">
@@ -415,7 +431,7 @@
                 <MenuItem Header="_Add" HorizontalAlignment="Stretch" ItemsSource="{Binding AccountManagers}">
                     <MenuItem.ItemContainerStyle>
                         <Style TargetType="MenuItem">
-                        <Setter 
+                            <Setter 
                             Property="Command"
                             Value="{Binding DataContext.AddAccount, 
                                     RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=MenuItem, AncestorLevel=1}}"/>
@@ -496,11 +512,11 @@
                 <MenuItem Header="_Edit options" 
                           Command="{Binding ViewOptionsDialog}"/>
             </MenuItem>
-            
+
             <MenuItem Header="_Help">
                 <MenuItem Header="About" Command="{Binding ShowAboutDialog}"/>
             </MenuItem>
-            
+
         </Menu>
         <Grid HorizontalAlignment="Stretch" Grid.Row="1">
             <Grid.ColumnDefinitions>
@@ -760,7 +776,7 @@
                             </DataGrid.Columns>
                         </DataGrid>
                     </Grid>
-                    
+
                 </TabItem>
             </TabControl>
             <toolkit:BusyIndicator IsBusy="{Binding LeftSpinnerIsVisible}"/>
@@ -813,7 +829,7 @@
                                 Orientation="Horizontal">
                                 <ContentControl
                                     IsEnabled="{Binding SelectedJob, Converter={StaticResource IsNotNullToBooleanConverter}}"
-                                    Template="{StaticResource JobCommands}"/>    
+                                    Template="{StaticResource JobCommands}"/>
                             </StackPanel>
 
                             <TreeView 
@@ -855,43 +871,43 @@
                                 Grid.Row="1"
                                 ItemsSource="{Binding Path=SelectedJob.TaskCollection}"
                                 SelectedItem="{Binding Path=SelectedTask}">
-                            <DataGrid.InputBindings>
-                                <KeyBinding Command="{Binding RefreshItem}" CommandParameter="{Binding SelectedJob}" Key="F5" />
-                            </DataGrid.InputBindings>
-                            <DataGrid.ContextMenu>
-                                <ContextMenu>
-                                    <MenuItem Header="Refresh"
+                                <DataGrid.InputBindings>
+                                    <KeyBinding Command="{Binding RefreshItem}" CommandParameter="{Binding SelectedJob}" Key="F5" />
+                                </DataGrid.InputBindings>
+                                <DataGrid.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Refresh"
                                               Command="{Binding RefreshItem}"
                                               CommandParameter="{Binding Path=SelectedTask}"/>
-                                    <MenuItem Header="Refresh All Tasks"
+                                        <MenuItem Header="Refresh All Tasks"
                                               Command="{Binding RefreshTasks}"
                                               CommandParameter="{Binding Path=SelectedTask.ParentJob}"/>
-                                    <MenuItem Header="Delete"
+                                        <MenuItem Header="Delete"
                                               Command="{Binding Delete}"
                                               CommandParameter="{Binding Path=SelectedTask}"/>
-                                    <MenuItem Header="Terminate"
+                                        <MenuItem Header="Terminate"
                                               Command="{Binding Terminate}"
                                               CommandParameter="{Binding Path=SelectedTask}"/>
-                                </ContextMenu>
-                            </DataGrid.ContextMenu>
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Id" Binding="{Binding Id}" />
-                                <DataGridTextColumn Header="Created" Binding="{Binding CreationTime}"/>
-                                <DataGridTextColumn Header="Status" Binding="{Binding State}">
-                                    <DataGridTextColumn.CellStyle>
-                                        <Style TargetType="DataGridCell">
-                                            <Setter Property="Foreground" Value="{Binding State, Converter={StaticResource TaskStatusColorConverter}}"/>
-                                            <Setter Property="FontWeight" Value="Bold"/>
-                                            <Setter Property="Background" Value="Transparent"/>
-                                        </Style>
-                                    </DataGridTextColumn.CellStyle>
-                                </DataGridTextColumn>
-                                <DataGridTextColumn Header="" Width="*" 
+                                    </ContextMenu>
+                                </DataGrid.ContextMenu>
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Id" Binding="{Binding Id}" />
+                                    <DataGridTextColumn Header="Created" Binding="{Binding CreationTime}"/>
+                                    <DataGridTextColumn Header="Status" Binding="{Binding State}">
+                                        <DataGridTextColumn.CellStyle>
+                                            <Style TargetType="DataGridCell">
+                                                <Setter Property="Foreground" Value="{Binding State, Converter={StaticResource TaskStatusColorConverter}}"/>
+                                                <Setter Property="FontWeight" Value="Bold"/>
+                                                <Setter Property="Background" Value="Transparent"/>
+                                            </Style>
+                                        </DataGridTextColumn.CellStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Header="" Width="*" 
                                                     CanUserSort="False" CanUserReorder="False"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
+                                </DataGrid.Columns>
+                            </DataGrid>
                         </Grid>
-                        
+
                     </TabItem>
 
                 </TabControl>
@@ -937,7 +953,7 @@
                                     <DataGridTextColumn Header="Task Root Directory" Binding="{Binding TaskRootDir}"/>
                                 </DataGrid.Columns>
                             </DataGrid>
-                        </TabItem>                        
+                        </TabItem>
                         <TabItem Header="Files">
                             <Grid>
                                 <DataGrid ItemsSource="{Binding Path=SelectedTask.OutputFiles}"
@@ -1019,8 +1035,17 @@
                                     Grid.Row="0"
                                     IsEnabled="{Binding SelectedComputeNode, Converter={StaticResource IsNotNullToBooleanConverter}}"
                                     Template="{StaticResource ComputeNodeCommands}"/>
+                                <Rectangle
+                                    Margin="8"
+                                    VerticalAlignment="Stretch"
+                                    Width="1"
+                                    Fill="Black"/>
+                                <ContentControl
+                                    Grid.Row="0"
+                                    IsEnabled="{Binding SelectedComputeNode, Converter={StaticResource IsNotNullToBooleanConverter}}"
+                                    Template="{StaticResource ComputeTaskCommands}"/>
                             </StackPanel>
-                            
+
                             <DataGrid 
                                 Grid.Row="1"
                                 ItemsSource="{Binding SelectedPool.ComputeNodeCollection}"
@@ -1048,10 +1073,10 @@
                                         <MenuItem Header="Reimage"
                                             Command="{Binding ReimageComputeNode}"
                                             CommandParameter="{Binding SelectedComputeNode}"/>
-                                        <MenuItem Header="Disable Scheduling"
+                                        <MenuItem Header="Disable Task Scheduling"
                                             Command="{Binding DisableSchedulingComputeNode}"
                                             CommandParameter="{Binding SelectedComputeNode}"/>
-                                        <MenuItem Header="Enable Scheduling"
+                                        <MenuItem Header="Enable Task Scheduling"
                                             Command="{Binding EnableSchedulingComputeNode}"
                                             CommandParameter="{Binding SelectedComputeNode}"/>
                                         <MenuItem Header="Add User"
@@ -1207,5 +1232,5 @@
             </DataGrid.RowStyle>
         </DataGrid>
     </Grid>
-       
+
 </Window>
