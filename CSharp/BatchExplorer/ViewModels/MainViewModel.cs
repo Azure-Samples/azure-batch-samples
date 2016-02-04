@@ -704,7 +704,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             get
             {
                 return new CommandBase(
-                    (o) => AsyncOperationTracker.Instance.AddTrackedInternalOperation(GetDataAsync(dataProvider, true, true, true)));
+                    (o) => AsyncOperationTracker.Instance.AddTrackedInternalOperation(GetDataAsync(dataProvider, true, true, true, true)));
             }
         }
 
