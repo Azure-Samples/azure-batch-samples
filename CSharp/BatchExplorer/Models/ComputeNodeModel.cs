@@ -36,6 +36,13 @@ namespace Microsoft.Azure.BatchExplorer.Models
         [ChangeTracked(ModelRefreshType.Basic)]
         public ComputeNodeState? State { get { return this.ComputeNode.State; } }
 
+
+        /// <summary>
+        /// The SchedulingState of this ComputeNode
+        /// </summary>
+        [ChangeTracked(ModelRefreshType.Basic)]
+        public SchedulingState? SchedulingState { get { return this.ComputeNode.SchedulingState; } }
+
         /// <summary>
         /// The allocation time of the ComputeNode.
         /// </summary>
@@ -139,7 +146,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
                 try
                 {
                     Messenger.Default.Send(new UpdateWaitSpinnerMessage(WaitSpinnerPanel.UpperRight, true));
-                    Task asyncTask =  this.ComputeNode.RefreshAsync();
+                    Task asyncTask = this.ComputeNode.RefreshAsync();
                     if (showTrackedOperation)
                     {
                         AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
@@ -210,7 +217,6 @@ namespace Microsoft.Azure.BatchExplorer.Models
         #endregion
 
         #region Operations on ComputeNodes
-
         /// <summary>
         /// Reboots the ComputeNode.
         /// </summary>
@@ -250,15 +256,15 @@ namespace Microsoft.Azure.BatchExplorer.Models
                 Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
             }
         }
-
+        
         /// <summary>
         /// Disables scheduling on the ComputeNode.
         /// </summary>
-        public async Task DisableSchedlingAsync()
+        public async Task DisableSchedulingAsync()
         {
             try
             {
-                if (this.ComputeNode.SchedulingState != SchedulingState.Disabled)
+                if (this.ComputeNode.SchedulingState != Microsoft.Azure.Batch.Common.SchedulingState.Disabled)
                 {
                     Task asyncTask = this.ComputeNode.DisableSchedulingAsync(DisableComputeNodeSchedulingOption.Requeue);
                     AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
@@ -277,11 +283,11 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// <summary>
         /// Enables scheduling on the ComputeNode.
         /// </summary>
-        public async Task EnableSchedlingAsync()
+        public async Task EnableSchedulingAsync()
         {
             try
             {
-                if (this.ComputeNode.SchedulingState != SchedulingState.Enabled)
+                if (this.ComputeNode.SchedulingState != Microsoft.Azure.Batch.Common.SchedulingState.Enabled)
                 {
                     Task asyncTask = this.ComputeNode.EnableSchedulingAsync();
                     AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(

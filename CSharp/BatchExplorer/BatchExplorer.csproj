@@ -155,6 +155,7 @@
     </ApplicationDefinition>
     <Compile Include="Converters\BoolToVisibilityConverter.cs" />
     <Compile Include="Converters\BooleanAndConverter.cs" />
+    <Compile Include="Converters\EnumToStringConverter.cs" />
     <Compile Include="Converters\InvertedBooleanConverter.cs" />
     <Compile Include="Converters\InvertedBoolToVisibilityConverter.cs" />
     <Compile Include="Converters\IsNotNullToBooleanConverter.cs" />
@@ -187,6 +188,7 @@
     <Compile Include="Messages\CloseGenericPopup.cs" />
     <Compile Include="Messages\AsyncOperationListChangedMessage.cs" />
     <Compile Include="Messages\ModelNotFoundAfterRefresh.cs" />
+    <Compile Include="Messages\NodeSchedulingMessage.cs" />
     <Compile Include="Messages\ShowAddTaskWindow.cs" />
     <Compile Include="Messages\ShowCreateJobWindow.cs" />
     <Compile Include="Messages\ShowResizePoolWindow.cs" />

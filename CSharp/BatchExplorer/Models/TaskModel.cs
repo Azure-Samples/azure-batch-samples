@@ -10,6 +10,7 @@ using Microsoft.Azure.Batch.Common;
 using Microsoft.Azure.BatchExplorer.Helpers;
 using Microsoft.Azure.BatchExplorer.Messages;
 using Microsoft.Azure.BatchExplorer.ViewModels;
+using System.Text;
 
 namespace Microsoft.Azure.BatchExplorer.Models
 {
@@ -78,7 +79,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
         public TimeSpan? RetentionTime { get { return this.Task.Constraints.RetentionTime; } }
-        
+
         /// <summary>
         /// The environmental settings
         /// </summary>
@@ -97,9 +98,18 @@ namespace Microsoft.Azure.BatchExplorer.Models
         [ChangeTracked(ModelRefreshType.Children)]
         public bool HasOutputFiles
         {
-            get { return (this.OutputFiles != null && this.OutputFiles.Any()); }
+            get
+            {
+                if (this.attemptToLoadOutputs && (this.OutputFiles == null || !this.OutputFiles.Any()))
+                {
+                    AsyncOperationTracker.Instance.AddTrackedInternalOperation(
+                        this.RefreshAsync(ModelRefreshType.Children));
+                }
+
+                this.attemptToLoadOutputs = false;
+                return (this.OutputFiles != null && this.OutputFiles.Any());
+            }
         }
-        
         #endregion
 
         #region Public UI Properties
@@ -116,13 +126,36 @@ namespace Microsoft.Azure.BatchExplorer.Models
             }
         }
 
+        private string noOutputFilesReason;
+        public string NoOutputFilesReason
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(this.noOutputFilesReason))
+                {
+                    return "No outputs available. Try refreshing the Task.";
+                }
+
+                return this.noOutputFilesReason;
+            }
+            set
+            {
+                this.noOutputFilesReason = value;
+                this.FirePropertyChangedEvent("NoOutputFilesReason");
+            }
+        }
+
         #endregion
 
+        private bool attemptToLoadOutputs;
         private CloudTask Task { get; set; }
         private IList<SubtaskModel> SubtasksInfo { get; set; }
-        private static readonly List<string> PropertiesToOmitFromDisplay = new List<string> {"FilesToStage"};
+        private static readonly List<string> PropertiesToOmitFromDisplay = new List<string> { "FilesToStage" };
+
         public TaskModel(JobModel parentJob, CloudTask task)
         {
+            this.attemptToLoadOutputs = true;
+
             this.ParentJob = parentJob;
             this.Task = task;
             this.LastUpdatedTime = DateTime.UtcNow;
@@ -138,6 +171,8 @@ namespace Microsoft.Azure.BatchExplorer.Models
 
         public override async System.Threading.Tasks.Task RefreshAsync(ModelRefreshType refreshType, bool showTrackedOperation = true)
         {
+            this.attemptToLoadOutputs = true;
+
             if (refreshType.HasFlag(ModelRefreshType.Basic))
             {
                 try
@@ -198,15 +233,45 @@ namespace Microsoft.Azure.BatchExplorer.Models
                         AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                             asyncTask,
                             new TaskOperation(TaskOperation.ListFiles, this.ParentJob.Id, this.Task.Id)));
-                        
+
                         this.OutputFiles = await asyncTask;
+                    }
+                    catch (BatchException be)
+                    {
+                        StringBuilder noOutputReasonBuilder = new StringBuilder();
+
+                        if (be.RequestInformation != null && be.RequestInformation.AzureError != null)
+                        {
+
+                            if (!string.IsNullOrEmpty(be.RequestInformation.AzureError.Code))
+                            {
+                                noOutputReasonBuilder.AppendLine(be.RequestInformation.AzureError.Code);
+                            }
+
+                            if (be.RequestInformation.AzureError.Message != null && !string.IsNullOrEmpty(be.RequestInformation.AzureError.Message.Value))
+                            {
+                                noOutputReasonBuilder.AppendLine(be.RequestInformation.AzureError.Message.Value);
+                            }
+
+                            if (be.RequestInformation.AzureError.Values != null)
+                            {
+                                noOutputReasonBuilder.AppendLine();
+
+                                foreach (var errorDetail in be.RequestInformation.AzureError.Values)
+                                {
+                                    noOutputReasonBuilder.AppendLine(string.Format("{0}: {1}", errorDetail.Key, errorDetail.Value));
+                                }
+                            }
+
+                            this.NoOutputFilesReason = noOutputReasonBuilder.ToString();
+                        }
                     }
                     catch (Exception)
                     {
                         this.HasLoadedChildren = false; //On exception, we failed to load children so try again next time
                         //Swallow the exception to stop popups from occuring for every bad VM
                     }
-                    
+
                     this.FireChangesOnRefresh(ModelRefreshType.Children);
                 }
                 catch (Exception e)
@@ -223,7 +288,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         #endregion
 
         #region Task operations
-        
+
         /// <summary>
         /// Delete this task
         /// </summary>
@@ -281,7 +346,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         #endregion
 
         #region Private methods
-        
+
         /// <summary>
         /// Lists the task files associated with this task
         /// </summary>
@@ -291,7 +356,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
             IPagedEnumerable<NodeFile> vmFiles = this.Task.ListNodeFiles(recursive: true);
 
             List<NodeFile> results = await vmFiles.ToListAsync();
-            
+
             return results;
         }
 
