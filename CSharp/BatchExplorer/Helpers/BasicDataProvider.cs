@@ -73,6 +73,21 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
             return poolModels;
         }
 
+        public async Task<IList<CertificateModel>> GetCertificatesCollectionAsync()
+        {
+            IPagedEnumerable<Certificate> certificates = this.Service.ListCertificates(null);
+            IList<CertificateModel> certificateModels = new List<CertificateModel>();
+
+            await certificates.ForEachAsync(item => certificateModels.Add(new CertificateModel(item)));
+
+            return certificateModels;
+        }
+
+        public Task CreateCertificateAsync(CreateCertificateOptions options)
+        {
+            return this.Service.CreateCertificateAsync(options);
+        }
+
         public async Task CreatePoolAsync(
             string poolId, 
             string virtualMachineSize, 

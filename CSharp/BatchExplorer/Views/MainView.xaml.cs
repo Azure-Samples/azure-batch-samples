@@ -320,6 +320,19 @@ namespace Microsoft.Azure.BatchExplorer.Views
                     this.genericEmptyWindow = null;
                 });
 
+                Messenger.Default.Register<ShowCreateCertificateWindow>(this, message =>
+                {
+                    this.genericEmptyWindow = new GenericEmptyWindow();
+                    this.genericEmptyWindow.Title = "Add Certificate";
+                    this.genericEmptyWindow.Content = new CreateControls.CreateCertificateControl(new CreateCertificateViewModel(MainViewModel.dataProvider));
+                    this.genericEmptyWindow.Owner = this;
+                    this.genericEmptyWindow.SizeToContent = System.Windows.SizeToContent.Height;
+                    this.IsEnabled = false;
+                    this.genericEmptyWindow.ShowDialog();
+                    this.IsEnabled = true;
+                    this.genericEmptyWindow = null;
+                });
+
                 Messenger.Default.Register<ShowAddTaskWindow>(this, (message) =>
                 {
                     this.genericEmptyWindow = new GenericEmptyWindow();

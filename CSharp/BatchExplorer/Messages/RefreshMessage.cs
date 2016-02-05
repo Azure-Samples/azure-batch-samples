@@ -6,7 +6,8 @@ namespace Microsoft.Azure.BatchExplorer.Messages
     {
         Pools,
         Jobs,
-        JobSchedules
+        JobSchedules,
+        Certificates,
     }
 
     public class RefreshMessage

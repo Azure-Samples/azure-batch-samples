@@ -414,6 +414,43 @@
             </StackPanel>
 
         </ControlTemplate>
+        
+        <ControlTemplate x:Key="CertificateCommands">
+            <StackPanel
+                Orientation="Vertical">
+                <StackPanel
+                    Orientation="Horizontal">
+                    <Button
+                        Margin="4"
+                        Width="48"
+                        Command="{Binding RefreshItem}"
+                        CommandParameter="{Binding SelectedCertificate}"
+                        IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
+                        <Button.Content>
+                            <StackPanel>
+                                <Image Source="../Images/refresh.png" Height="36"/>
+                                <TextBlock HorizontalAlignment="Center" Text="Refresh" FontSize="12" Foreground="Black" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                    <Button
+                        Margin="4"
+                        Width="48"
+                        Command="{Binding Delete}"
+                        CommandParameter="{Binding SelectedCertificate}"
+                        IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
+                        <Button.Content>
+                            <StackPanel>
+                                <Image Source="../Images/delete.png" Height="36"/>
+                                <TextBlock HorizontalAlignment="Center" Text="Delete" FontSize="12" Foreground="Black" />
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                </StackPanel>
+                <TextBlock HorizontalAlignment="Center" Text="Certificate Commands" FontSize="12" Foreground="Gray" FontWeight="Bold" />
+            </StackPanel>
+        </ControlTemplate>
+
     </Window.Resources>
     <Grid x:Name="MainGrid">
         <Grid.RowDefinitions>
@@ -505,6 +542,7 @@
                 <MenuItem Header="Refresh Job _Schedules" Command="{Binding RefreshJobSchedules}" HorizontalAlignment="Stretch"/>
                 <MenuItem Header="Refresh _Jobs" Command="{Binding RefreshJobs}" HorizontalAlignment="Stretch"/>
                 <MenuItem Header="Refresh _Pools" Command="{Binding RefreshPools}" HorizontalAlignment="Stretch"/>
+                <MenuItem Header="Refresh _Certificates" Command="{Binding RefreshCertificates}" HorizontalAlignment="Stretch"/>
                 <MenuItem Header="_Refresh All" Command="{Binding RefreshAll}" HorizontalAlignment="Stretch"/>
             </MenuItem>
 
@@ -770,6 +808,69 @@
                                     </DataGridTextColumn.CellStyle>
                                 </DataGridTextColumn>
                                 <DataGridTextColumn Header="VM Size" Binding="{Binding VirtualMachineSize}"/>
+
+                                <DataGridTextColumn Header="" Width="*" 
+                                                    CanUserReorder="False" CanUserSort="False"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+
+                </TabItem>
+                <TabItem Header="{Binding CertificatesTabTitle}" IsSelected="{Binding CertificatesTabIsSelected}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <StackPanel
+                            Grid.Row="0"
+                            Orientation="Horizontal">
+                            <Button
+                                Margin="4"
+                                Width="48"
+                                Command="{Binding CreateCertificate}"
+                                IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
+                                <Button.Content>
+                                    <StackPanel>
+                                        <Image Source="../Images/add.png" Height="36"/>
+                                        <TextBlock HorizontalAlignment="Center" Text="Add" FontSize="12" Foreground="Black" />
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>
+                            <Button
+                                Margin="4"
+                                Width="48"
+                                Command="{Binding RefreshCertificates}"
+                                IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
+                                <Button.Content>
+                                    <StackPanel>
+                                        <Image Source="../Images/refresh.png" Height="36"/>
+                                        <TextBlock HorizontalAlignment="Center" Text="Refresh" FontSize="12" Foreground="Black" />
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>
+                        </StackPanel>
+                        <DataGrid
+                            Grid.Row="1"
+                            ItemsSource="{Binding Certificates}"
+                            SelectedItem="{Binding SelectedCertificate}">
+                            <DataGrid.InputBindings>
+                                <KeyBinding Command="{Binding RefreshCertificates}" Key="F5" />
+                            </DataGrid.InputBindings>
+                            <DataGrid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Refresh"
+                                              Command="{Binding RefreshItem}"
+                                              CommandParameter="{Binding SelectedCertificate}" />
+                                    <MenuItem Header="Delete"
+                                              Command="{Binding Delete}"
+                                              CommandParameter="{Binding SelectedCertificate}"/>
+                                </ContextMenu>
+                            </DataGrid.ContextMenu>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Thumbprint" Binding="{Binding Thumbprint}"/>
+                                <DataGridTextColumn Header="Algorithm" Binding="{Binding ThumbprintAlgorithm}"/>
+                                <DataGridTextColumn Header="State" Binding="{Binding State}"/>
 
                                 <DataGridTextColumn Header="" Width="*" 
                                                     CanUserReorder="False" CanUserSort="False"/>
@@ -1182,6 +1283,39 @@
                                            Visibility="{Binding SelectedComputeNode.HasFiles, Converter={StaticResource IBVC}, FallbackValue=Hidden}"
                                            VerticalAlignment="Top"/>
                             <toolkit:BusyIndicator IsBusy="{Binding LowerRightSpinnerIsVisible}"/>
+                        </Grid>
+                    </TabItem>
+                </TabControl>
+            </Grid>
+            <Grid Column="1" Visibility="{Binding CertificatesTabIsSelected, Converter={StaticResource BVC}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="2*"/>
+                    <RowDefinition Height="4"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TabControl>
+                    <TabItem Header="Certificate Details">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <StackPanel
+                                Orientation="Horizontal">
+                                <ContentControl
+                                    Grid.Row="0"
+                                    IsEnabled="{Binding SelectedCertificate, Converter={StaticResource IsNotNullToBooleanConverter}}"
+                                    Template="{StaticResource CertificateCommands}"/>
+                            </StackPanel>
+                            <TreeView 
+                                Grid.Row="1"
+                                ItemsSource="{Binding SelectedCertificate.PropertyModel}"
+                                Resources="{StaticResource TreeViewTemplates}"
+                                ItemContainerStyle="{StaticResource TreeViewItemStyle}">
+                                <TreeView.CommandBindings>
+                                    <StaticResource ResourceKey="TreeViewCopyCommand"/>
+                                </TreeView.CommandBindings>
+                            </TreeView>
                         </Grid>
                     </TabItem>
                 </TabControl>
