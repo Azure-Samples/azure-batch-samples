@@ -144,6 +144,41 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
+        private bool certificatesTabIsSelected;
+        /// <summary>
+        /// True if the Certificates tab is selected
+        /// </summary>
+        public bool CertificatesTabIsSelected
+        {
+            get
+            {
+                return this.certificatesTabIsSelected;
+            }
+            set
+            {
+                this.certificatesTabIsSelected = value;
+                FirePropertyChangedEvent("CertificatesTabIsSelected");
+            }
+        }
+
+        private ICollectionView certificatesCollection;
+
+        /// <summary>
+        /// The collection of certificates for an account
+        /// </summary>
+        public ICollectionView Certificates
+        {
+            get
+            {
+                return this.certificatesCollection;
+            }
+            set
+            {
+                this.certificatesCollection = value;
+                FirePropertyChangedEvent("Certificates");
+            }
+        }
+
         private bool leftSpinnerIsVisible;
         /// <summary>
         /// Controls visibility of the wait spinner on the left
@@ -337,18 +372,26 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             get
             {
                 return this.selectedTask;
-                if (this.selectedTask != null)
+            }
+            set
                 {
-                    if (!this.selectedTask.HasLoadedChildren)
-                    {
-                        this.selectedTask.RefreshAsync(ModelRefreshType.Children);
+                this.selectedTask = value;
+                this.FirePropertyChangedEvent("SelectedTask");
                     }
                 }
+
+        private CertificateModel selectedCertificate;
+
+        public CertificateModel SelectedCertificate
+        {
+            get
+            {
+                return this.selectedCertificate;
             }
             set
             {
-                this.selectedTask = value;
-                this.FirePropertyChangedEvent("SelectedTask");
+                this.selectedCertificate = value;
+                FirePropertyChangedEvent("SelectedCertificate");
             }
         }
 
@@ -390,6 +433,8 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
 
         private ObservableCollection<JobModel> jobs;
 
+        private ObservableCollection<CertificateModel> certificates;
+
         private Task asyncOperationCompletionMonitoringTask; 
 
         #region Tab title binding properties
@@ -417,6 +462,15 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             {
                 const string jobTabPrefix = "Jobs";
                 return this.jobs == null ? jobTabPrefix : string.Format(CultureInfo.CurrentCulture, "{0} ({1})", jobTabPrefix, this.jobs.Count);
+            }
+        }
+
+        public string CertificatesTabTitle
+        {
+            get
+            {
+                const string certsTabPrefix = "Certificates";
+                return this.certificates == null ? certsTabPrefix : string.Format(CultureInfo.CurrentCulture, "{0} ({1})", certsTabPrefix, this.certificates.Count);
             }
         }
 
@@ -537,7 +591,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         {
                             dataProvider = new BasicDataProvider(selectedAccount as Account);
                             this.ActiveAccount = (selectedAccount as Account);
-                            GetDataAsync(dataProvider, true, true, true).ContinueWith(
+                            GetDataAsync(dataProvider, true, true, true, true).ContinueWith(
                                 (task) =>
                                 {
                                     FirePropertyChangedEvent("TitleString");
@@ -650,7 +704,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             get
             {
                 return new CommandBase(
-                    (o) => AsyncOperationTracker.Instance.AddTrackedInternalOperation(GetDataAsync(dataProvider, true, true, true)));
+                    (o) => AsyncOperationTracker.Instance.AddTrackedInternalOperation(GetDataAsync(dataProvider, true, true, true, true)));
             }
         }
 
@@ -662,7 +716,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             get
             {
                 return new CommandBase(
-                    (o) => AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.GetDataAsync(dataProvider, jobSchedules: true, jobs: false, pools: false)));
+                    (o) => AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.GetDataAsync(dataProvider, jobSchedules: true, jobs: false, pools: false, certificates: false)));
             }
         }
 
@@ -674,7 +728,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             get
             {
                 return new CommandBase(
-                    (o) => AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.GetDataAsync(dataProvider, jobSchedules: false, jobs: true, pools: false)));
+                    (o) => AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.GetDataAsync(dataProvider, jobSchedules: false, jobs: true, pools: false, certificates: false)));
             }
         }
 
@@ -686,7 +740,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             get
             {
                 return new CommandBase(
-                    (o) => AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.GetDataAsync(dataProvider, jobSchedules: false, jobs: false, pools: true)));
+                    (o) => AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.GetDataAsync(dataProvider, jobSchedules: false, jobs: false, pools: true, certificates: false)));
             }
         }
 
@@ -706,6 +760,18 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                             AsyncOperationTracker.Instance.AddTrackedInternalOperation(jobModel.RefreshAsync(ModelRefreshType.Children));
                         }
                     });
+            }
+        }
+
+        /// <summary>
+        /// Refresh all certificates
+        /// </summary>
+        public CommandBase RefreshCertificates
+        {
+            get
+            {
+                return new CommandBase(
+                    (o) => AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.GetDataAsync(dataProvider, jobSchedules: false, jobs: false, pools: false, certificates: true)));
             }
         }
 
@@ -1061,6 +1127,13 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                                 objectType = "Job Schedule";
                                 objectName = jobScheduleModel.Id;
                             }
+                            else if (itemType == typeof(CertificateModel))
+                            {
+                                CertificateModel certificate = item as CertificateModel;
+
+                                objectType = "Certificate";
+                                objectName = certificate.Thumbprint;
+                            }
 
                             Messenger.Default.Register<MultibuttonDialogReturnMessage>(this, (message) =>
                                 {
@@ -1075,11 +1148,11 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                                         {
                                             TaskModel taskModel = item as TaskModel;
                                             AsyncOperationTracker.Instance.AddTrackedInternalOperation(taskModel.DeleteAsync());
-                                        }
-                                        else if (itemType == typeof(JobModel))
+                                        } 
+                                        else if (itemType == typeof(CertificateModel))
                                         {
-                                            JobModel job = item as JobModel;
-                                            AsyncOperationTracker.Instance.AddTrackedInternalOperation(job.DeleteAsync());
+                                            CertificateModel certificate = item as CertificateModel;
+                                            AsyncOperationTracker.Instance.AddTrackedInternalOperation(certificate.DeleteAsync());
                                         }
                                         else if (itemType == typeof(JobScheduleModel))
                                         {
@@ -1167,6 +1240,20 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                     {
                         // Call a new window to show the Create Job UI
                         Messenger.Default.Send(new ShowCreateJobWindow());
+                    }
+                );
+            }
+        }
+
+        public CommandBase CreateCertificate
+        {
+            get
+            {
+                return new CommandBase(
+                    (o) =>
+                    {
+                        // Call a new window to show the Create Certificate UI
+                        Messenger.Default.Send(new ShowCreateCertificateWindow());
                     }
                 );
             }
@@ -1261,13 +1348,16 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                     switch (message.ItemToRefresh)
                     {
                         case RefreshTarget.Pools:
-                            AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.GetDataAsync(dataProvider, false, false, true));
+                            AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.GetDataAsync(dataProvider, false, false, true, false));
                             break;
                         case RefreshTarget.Jobs:
-                            AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.GetDataAsync(dataProvider, false, true, false));
+                            AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.GetDataAsync(dataProvider, false, true, false, false));
                             break;
                         case RefreshTarget.JobSchedules:
-                            AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.GetDataAsync(dataProvider, true, false, false));
+                            AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.GetDataAsync(dataProvider, true, false, false, false));
+                            break;
+                        case RefreshTarget.Certificates:
+                            AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.GetDataAsync(dataProvider, false, false, false, true));
                             break;
                     }
                 }
@@ -1330,7 +1420,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         /// <param name="jobs">True if job data should be retrieved</param>
         /// <param name="pools">True if pool data should be retrieved</param>
         /// <returns></returns>
-        private async Task GetDataAsync(IDataProvider provider, bool jobSchedules, bool jobs, bool pools)
+        private async Task GetDataAsync(IDataProvider provider, bool jobSchedules, bool jobs, bool pools, bool certificates)
         {
             //Turn on the correct wait spinners
             LeftSpinnerIsVisible = true;
@@ -1398,6 +1488,25 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 }
                 SelectedPool = null;
                 this.SelectedComputeNode = null;
+
+                //
+                // Get all certificates
+                //
+                if (certificates)
+                {
+                    System.Threading.Tasks.Task<IList<CertificateModel>> getCertificatesTask = provider.GetCertificatesCollectionAsync();
+                    AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
+                        getCertificatesTask,
+                        new AccountOperation(AccountOperation.ListCertificates)));
+
+                    this.certificates = new ObservableCollection<CertificateModel>(await getCertificatesTask);
+
+                    Certificates = CollectionViewSource.GetDefaultView(this.certificates);
+                    Certificates.Refresh();
+                    FirePropertyChangedEvent("Certificates");
+                    FirePropertyChangedEvent("CertificatesTabTitle");
+                }
+                SelectedCertificate = null;
             }
             catch (Exception e)
             {
