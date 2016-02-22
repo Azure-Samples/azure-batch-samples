@@ -195,9 +195,11 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
         private async Task LoadAccountsAsync()
         {
             string accountFileName = GetAccountFileName();
-            if (!File.Exists(accountFileName))
+            FileInfo fileInfo = new FileInfo(accountFileName);
+
+            if (!fileInfo.Exists || fileInfo.Length == 0)
             {
-                using (var myFile = File.Create(accountFileName))
+                using (File.Create(accountFileName))
                 {
                 }
                 await this.SaveAccountsAsync().ConfigureAwait(false);
