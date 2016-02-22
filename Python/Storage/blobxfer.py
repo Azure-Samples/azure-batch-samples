@@ -105,7 +105,7 @@ except NameError:  # pragma: no cover
 # pylint: enable=W0622,C0103
 
 # global defines
-_SCRIPT_VERSION = '0.9.9.10'
+_SCRIPT_VERSION = '0.9.9.11'
 _PY2 = sys.version_info.major == 2
 _DEFAULT_MAX_STORAGEACCOUNT_WORKERS = multiprocessing.cpu_count() * 3
 _MAX_BLOB_CHUNK_SIZE_BYTES = 4194304
@@ -1303,7 +1303,7 @@ def azure_request(req, timeout=None, *args, **kwargs):
         IOError if timeout
     """
     start = time.clock()
-    lastwait = 1
+    lastwait = None
     while True:
         try:
             return req(*args, **kwargs)
@@ -1335,8 +1335,8 @@ def azure_request(req, timeout=None, *args, **kwargs):
             raise IOError(
                 'waited {} sec for request {}, exceeded timeout of {}'.format(
                     time.clock() - start, req.__name__, timeout))
-        if lastwait > 8:
-            wait = 2
+        if lastwait is None or lastwait > 8:
+            wait = 1
         else:
             wait = lastwait << 1
         lastwait = wait
@@ -1647,8 +1647,8 @@ def generate_xferspec_download(
             filedesc = open(tmpfilename, 'r+b')
         else:
             filedesc = None
+    chunktoadd = min(chunksize, contentlength)
     for i in xrange(nchunks + 1):
-        chunktoadd = min(chunksize, contentlength)
         if chunktoadd + currfileoffset > contentlength:
             chunktoadd = contentlength - currfileoffset
         # on download, chunktoadd must be offset by 1 as the x-ms-range
@@ -1710,10 +1710,11 @@ def generate_xferspec_upload(
     # partition local file into chunks
     filesize = os.path.getsize(localfile)
     nchunks = filesize // args.chunksizebytes
-    if nchunks >= 50000:
+    if nchunks > 50000:
         raise RuntimeError(
             '{} chunks for file {} exceeds Azure Storage limits for a '
             'single blob'.format(nchunks, localfile))
+    chunktoadd = min(args.chunksizebytes, filesize)
     currfileoffset = 0
     nstorageops = 0
     flock = threading.Lock()
@@ -1725,7 +1726,6 @@ def generate_xferspec_upload(
     signkey = None
     ivmap = None
     for i in xrange(nchunks + 1):
-        chunktoadd = min(args.chunksizebytes, filesize)
         if chunktoadd + currfileoffset > filesize:
             chunktoadd = filesize - currfileoffset
         blockid = '{0:08d}'.format(currfileoffset // args.chunksizebytes)
