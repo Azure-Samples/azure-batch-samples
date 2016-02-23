@@ -3,7 +3,6 @@
 // Companion project to the following article:
 // https://azure.microsoft.com/documentation/articles/batch-parallel-node-tasks/
 
-
 namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
 {
     using System;
@@ -130,7 +129,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
                 Console.WriteLine("Waiting for task completion...");
                 Console.WriteLine();
 
-                if (await batchClient.Utilities.CreateTaskStateMonitor().WaitAllAsync(job.ListTasks(),
+                if (await batchClient.Utilities.CreateTaskStateMonitor().WhenAllAsync(job.ListTasks(),
                                                                    TaskState.Completed,
                                                                    longTaskDurationLimit))
                 {

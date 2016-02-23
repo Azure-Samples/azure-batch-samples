@@ -1,4 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation
+//
+// Companion project to the following article:
+// https://azure.microsoft.com/documentation/articles/batch-dotnet-get-started/
 
 namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
 {
@@ -397,7 +400,7 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
             // We use a TaskStateMonitor to monitor the state of our tasks. In this case, we will wait for all tasks to
             // reach the Completed state.
             TaskStateMonitor taskStateMonitor = batchClient.Utilities.CreateTaskStateMonitor();
-            bool timedOut = await taskStateMonitor.WaitAllAsync(tasks, TaskState.Completed, timeout);
+            bool timedOut = await taskStateMonitor.WhenAllAsync(tasks, TaskState.Completed, timeout);
 
             if (timedOut)
             {
