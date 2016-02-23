@@ -221,7 +221,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
                 // automatic scaling enabled, then we need to ask it to resize
                 if (existingPool.CurrentDedicated != poolTargetNodeCount &&
                     existingPool.AllocationState != AllocationState.Resizing &&
-                    !existingPool.AutoScaleEnabled)
+                    existingPool.AutoScaleEnabled == false)
                 {
                     // Resize the pool to the desired target. Note that provisioning the nodes in the pool may take some time
                     await existingPool.ResizeAsync(poolTargetNodeCount).ConfigureAwait(continueOnCapturedContext: false);
