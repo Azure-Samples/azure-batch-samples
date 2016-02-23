@@ -217,12 +217,13 @@ namespace Microsoft.Azure.Batch.Samples.Common
             {
                 CloudPool existingPool = await batchClient.PoolOperations.GetPoolAsync(poolId).ConfigureAwait(continueOnCapturedContext: false);
 
-                // If the pool doesn't have the right number of nodes and it isn't resizing then we need
-                // to ask it to resize
+                // If the pool doesn't have the right number of nodes, isn't resizing, and doesn't have
+                // automatic scaling enabled, then we need to ask it to resize
                 if (existingPool.CurrentDedicated != poolTargetNodeCount &&
-                    existingPool.AllocationState != AllocationState.Resizing)
+                    existingPool.AllocationState != AllocationState.Resizing &&
+                    !existingPool.AutoScaleEnabled)
                 {
-                    // Resize the pool to the desired target.  Note that provisioning the nodes in the pool may take some time
+                    // Resize the pool to the desired target. Note that provisioning the nodes in the pool may take some time
                     await existingPool.ResizeAsync(poolTargetNodeCount).ConfigureAwait(continueOnCapturedContext: false);
                 }
             }

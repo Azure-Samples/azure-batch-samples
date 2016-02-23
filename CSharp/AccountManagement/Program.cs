@@ -1,4 +1,7 @@
-﻿//Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
+//
+// Companion project to the following article:
+// https://azure.microsoft.com/documentation/articles/batch-management-dotnet/
 
 namespace Microsoft.Azure.Batch.Samples.AccountManagement
 {
@@ -20,11 +23,17 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
     {
         // This sample uses the Active Directory Authentication Library (ADAL) to discover
         // subscriptions in your account and obtain TokenCloudCredentials required by the
-        // Batch Management and Resource Management clients.
+        // Batch Management and Resource Management clients. It then creates a Resource
+        // Group, performs Batch account operations, and then deletes the Resource Group.
 
         // These endpoints are used during authentication and authorization with AAD.
         private const string AuthorityUri = "https://login.microsoftonline.com/common"; // Azure Active Directory "common" endpoint
         private const string ResourceUri  = "https://management.core.windows.net/";     // Azure service management resource
+
+        // The URI to which Azure AD will redirect in response to an OAuth 2.0 request. This value is
+        // specified by you when you register an application with AAD (see ClientId comment). It does not
+        // need to be a real endpoint, but must be a valid URI (e.g. https://accountmgmtsampleapp).
+        private const string RedirectUri = "[specify-your-redirect-uri-here]";
 
         // Specify the unique identifier (the "Client ID") for your application. This is required so that your
         // native client application (i.e. this sample) can access the Microsoft Azure AD Graph API. For information
@@ -32,13 +41,12 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
         // https://azure.microsoft.com/documentation/articles/active-directory-integrating-applications/
         private const string ClientId = "[specify-your-client-id-here]";
 
-        // The URI to which Azure AD will redirect in response to an OAuth 2.0 request. This value is
-        // specified by you when you register an application with AAD (see comment above).
-        private const string RedirectUri = "[specify-your-redirect-uri-here]";
-        
         // These constants are used by the ResourceManagementClient when querying AAD and for resource group creation.
+        // These values should not be modified.
         private const string BatchNameSpace = "Microsoft.Batch";
         private const string BatchAccountResourceType = "batchAccounts";
+
+        // The name of the Resource Group that will be created and deleted.
         private const string ResourceGroupName = "AccountMgmtSampleGroup";
 
         public static void Main(string[] args)

@@ -28,7 +28,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
         {
             // Create and configure an unbound pool with the specified ID
             CloudPool pool = batchClient.PoolOperations.CreatePool(poolId: poolId,
-                                                                   osFamily: "3",
+                                                                   osFamily: "4",
                                                                    virtualMachineSize: nodeSize,
                                                                    targetDedicated: nodeCount);
             

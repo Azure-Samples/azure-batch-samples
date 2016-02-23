@@ -111,7 +111,7 @@ namespace JobPrepRelease
 
                 // Wait for the tasks to complete before proceeding. The long timeout here is to allow time
                 // for the nodes within the pool to be created and started if the pool had not yet been created.
-                if (await batchClient.Utilities.CreateTaskStateMonitor().WaitAllAsync(job.ListTasks(),
+                if (await batchClient.Utilities.CreateTaskStateMonitor().WhenAllAsync(job.ListTasks(),
                                                                    TaskState.Completed,
                                                                    TimeSpan.FromMinutes(30)))
                 {
