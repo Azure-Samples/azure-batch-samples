@@ -137,7 +137,7 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
             // Wait for all tasks to reach the completed state.
             // If the pool is being resized then enough time is needed for the nodes to reach the idle state in order
             // for tasks to run on them.
-            bool timedOut = await taskStateMonitor.WaitAllAsync(ourTasks, TaskState.Completed, TimeSpan.FromMinutes(10));
+            bool timedOut = await taskStateMonitor.WhenAllAsync(ourTasks, TaskState.Completed, TimeSpan.FromMinutes(10));
 
             if (timedOut)
             {

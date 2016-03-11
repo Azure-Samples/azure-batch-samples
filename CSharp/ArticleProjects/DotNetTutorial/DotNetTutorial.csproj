@@ -37,8 +37,8 @@
       <HintPath>packages\Hyak.Common.1.1.0\lib\net45\Hyak.Common.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Microsoft.Azure.Batch, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>packages\Azure.Batch.3.0.0\lib\net45\Microsoft.Azure.Batch.dll</HintPath>
+    <Reference Include="Microsoft.Azure.Batch, Version=3.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>packages\Azure.Batch.3.1.0\lib\net45\Microsoft.Azure.Batch.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.Azure.Common, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">

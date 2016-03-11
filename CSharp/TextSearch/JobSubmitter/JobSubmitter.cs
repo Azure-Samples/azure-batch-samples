@@ -164,7 +164,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                     Console.WriteLine("Waiting for job's tasks to complete");
 
                     TaskStateMonitor taskStateMonitor = batchClient.Utilities.CreateTaskStateMonitor();
-                    bool timedOut = await taskStateMonitor.WaitAllAsync(new List<CloudTask> { boundJobManagerTask }, TaskState.Completed, maxJobCompletionTimeout);
+                    bool timedOut = await taskStateMonitor.WhenAllAsync(new List<CloudTask> { boundJobManagerTask }, TaskState.Completed, maxJobCompletionTimeout);
 
                     Console.WriteLine("Done waiting for job manager task.");
 

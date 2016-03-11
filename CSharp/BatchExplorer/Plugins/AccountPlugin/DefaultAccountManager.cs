@@ -140,7 +140,7 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
         /// </summary>
         /// <param name="account">The account to clone.</param>
         /// <returns>A deep clone of the account.</returns>
-        public async Task<Account> CloneAccountForEditAsync(Account account)
+        public Task<Account> CloneAccountForEditAsync(Account account)
         {
             this.editingIndex = this.Accounts.IndexOf(account);
             if (this.editingIndex < 0)
@@ -157,7 +157,7 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
                 UniqueIdentifier = account.UniqueIdentifier,
                 ParentAccountManager = this
             };
-            return clone;
+            return Task.FromResult<Account>(clone);
         }
 
         /// <summary>

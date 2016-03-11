@@ -151,7 +151,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
             // exits it will kill all of the tasks that are still running under the job.
             TaskStateMonitor taskStateMonitor = batchClient.Utilities.CreateTaskStateMonitor();
 
-            bool timedOut = await taskStateMonitor.WaitAllAsync(tasksToMonitor, TaskState.Completed, TimeSpan.FromMinutes(5));
+            bool timedOut = await taskStateMonitor.WhenAllAsync(tasksToMonitor, TaskState.Completed, TimeSpan.FromMinutes(5));
 
             //Get the list of mapper tasks in order to analyze their state and ensure they completed successfully.
             IPagedEnumerable<CloudTask> asyncEnumerable = batchClient.JobOperations.ListTasks(
@@ -198,7 +198,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
             CloudTask boundReducerTask = await batchClient.JobOperations.GetTaskAsync(this.jobId, Constants.ReducerTaskId);
             TaskStateMonitor taskStateMonitor = batchClient.Utilities.CreateTaskStateMonitor();
 
-            bool timedOut = await taskStateMonitor.WaitAllAsync(new List<CloudTask> { boundReducerTask }, TaskState.Completed, TimeSpan.FromMinutes(2));
+            bool timedOut = await taskStateMonitor.WhenAllAsync(new List<CloudTask> { boundReducerTask }, TaskState.Completed, TimeSpan.FromMinutes(2));
 
             //Refresh the reducer task to get the most recent information about it from the Batch Service.
             await boundReducerTask.RefreshAsync();
