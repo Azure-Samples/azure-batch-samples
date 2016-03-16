@@ -73,7 +73,10 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
                 Console.WriteLine("Creating job [{0}]...", jobId);
                 CloudJob unboundJob = batchClient.JobOperations.CreateJob( jobId,
                     new PoolInformation { PoolId = poolId });
-                unboundJob.UsesTaskDependencies = true; // IMPORTANT: This is REQUIRED for using task dependencies.
+
+                // IMPORTANT: This is REQUIRED for using task dependencies.
+                unboundJob.UsesTaskDependencies = true;
+                
                 await unboundJob.CommitAsync();
 
                 // Create the collection of tasks that will be added to the job.
@@ -97,14 +100,20 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
                     new CloudTask("2", "cmd.exe /c echo 2"),
                     new CloudTask("3", "cmd.exe /c echo 3"),
  
-                    // Task 4 depends on a range of tasks, 1 through 3, and 'Flowers'
+                    // Task 4 depends on a range of tasks, 1 through 3
                     new CloudTask("4", "cmd.exe /c echo 4")
                     {
+                        // To use a range of tasks, their ids must be integer values.
+                        // Note that we pass integers as parameters to TaskIdRange,
+                        // but their ids (above) are string representations of the ids.
+                        DependsOn = TaskDependencies.OnIdRange(1, 3)
+                    },
+
+                    // Task 5 depends on a range of tasks, 1 through 3, and 'Flowers'
+                    new CloudTask("5", "cmd.exe /c echo 5")
+                    {
                         DependsOn = new TaskDependencies(
-                            new [] { "Flowers" },
-                            // To use a range of tasks, their ids must be integer values.
-                            // Note that we pass integers as parameters to TaskIdRange,
-                            // but their ids (above) are string representations of the ids.
+                            new[] { "Flowers" },
                             new[] { new TaskIdRange(1, 3) })
                     },
                 };
@@ -140,7 +149,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
                 }
 
                 Console.Write("Delete pool? [yes] no: ");
-                response = Console.ReadLine();
+                response = Console.ReadLine().ToLower();
                 if (response != "n" && response != "no")
                 {
                     await batchClient.PoolOperations.DeletePoolAsync(poolId);
