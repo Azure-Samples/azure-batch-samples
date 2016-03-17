@@ -14,6 +14,7 @@ This C# console application demonstrates the use of task dependencies in Azure B
    CloudJob myJob = batchClient.JobOperations.CreateJob(
        "MyJob",
        new PoolInformation { PoolId = "MyPool" });
+
    myJob.UsesTaskDependencies = true;
    ```
 
@@ -22,8 +23,8 @@ This C# console application demonstrates the use of task dependencies in Azure B
    ```
    List<CloudTask> tasks = new List<CloudTask>
    {
-       new CloudTask("1", "cmd.exe /c myTaskExecutable.exe -process data1")
-       new CloudTask("2", "cmd.exe /c myTaskExecutable.exe -process data2")
+       new CloudTask("1", "cmd.exe /c MyTaskExecutable.exe -process data1")
+       new CloudTask("2", "cmd.exe /c MyTaskExecutable.exe -process data2")
    };
    ```
 
