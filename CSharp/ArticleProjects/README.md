@@ -13,3 +13,6 @@ The JobPrepRelease sample project backs the code snippets found in [Run job prep
 
 ### [ParallelTasks](./ParallelTasks)
 The ParallelTasks sample project backs the code snippets found in [Maximize Azure Batch compute resource usage with concurrent node tasks](http://azure.microsoft.com/documentation/articles/batch-parallel-node-tasks/). The application demonstrates the creation of a Batch pool whose compute nodes are configured for executing multiple concurrent tasks, and prints node and task information to the console during execution to show how tasks are distributed among compute nodes and node cores.
+
+### [TaskDependencies](./TaskDependencies)
+The TaskDependencies sample project demonstrates the use of the task dependency feature of Azure Batch. With task dependencies, you can create tasks that depend on the completion of other tasks before they are executed.
