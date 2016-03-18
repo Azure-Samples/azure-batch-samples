@@ -5,7 +5,7 @@ VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskDependencies", "TaskDependencies.csproj", "{405407EC-785E-4E30-AFEE-641133DB5DBB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Azure.Batch.Samples.Common", "..\..\..\..\..\Users\marsma\Downloads\azure-batch-samples-master\CSharp\Common\Microsoft.Azure.Batch.Samples.Common.csproj", "{612B170A-1697-4C40-BD57-26A6C8AC6534}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Azure.Batch.Samples.Common", "..\..\Common\Microsoft.Azure.Batch.Samples.Common.csproj", "{612B170A-1697-4C40-BD57-26A6C8AC6534}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
