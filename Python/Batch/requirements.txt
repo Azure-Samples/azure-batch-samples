@@ -1,0 +1,4 @@
+#This is stuff that Batch needs, can be replaced when we just depend on batch?
+msrest==0.1.2
+msrestazure==0.1.1
+azure-storage==0.30.0
