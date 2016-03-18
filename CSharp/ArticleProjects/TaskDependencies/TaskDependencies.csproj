@@ -118,7 +118,7 @@
     <Folder Include="Properties\" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\..\Users\marsma\Downloads\azure-batch-samples-master\CSharp\Common\Microsoft.Azure.Batch.Samples.Common.csproj">
+    <ProjectReference Include="..\..\Common\Microsoft.Azure.Batch.Samples.Common.csproj">
       <Project>{612b170a-1697-4c40-bd57-26a6c8ac6534}</Project>
       <Name>Microsoft.Azure.Batch.Samples.Common</Name>
     </ProjectReference>
