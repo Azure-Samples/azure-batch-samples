@@ -34,35 +34,25 @@ reading this section. The blobxfer utility is a python script that can be used
 on any platform where Python 2.7, 3.3, 3.4 or 3.5 is installable. Depending
 upon the desired mode of authentication with Azure and options, the script
 will require the following packages, some of which will automatically pull
-required dependent packages:
+required dependent packages. Below is a list of required packages:
 
 - Base Requirements
 
-  - ``azure-common`` >= 1.0.0
-  - ``requests`` >= 2.9.1
+  - ``azure-common`` == 1.1.1
+  - ``azure-storage`` == 0.30.0
+  - ``requests`` == 2.9.1
 
 - Encryption Support
 
-  - ``cryptography`` >= 1.2.2
+  - ``cryptography`` >= 1.3
 
-- Management Certificate
+- Service Management Certificate Support
 
-  - ``azure-servicemanagement-legacy`` >= 0.20.1
-  - ``azure-storage`` >= 0.20.3
+  - ``azure-servicemanagement-legacy`` == 0.20.2
 
-- Shared Account Key
-
-  - ``azure-storage`` >= 0.20.3
-
-- SAS Key
-
-  - Covered by base requirements
-
-If you want to utilize any/all of the connection methods to Azure Storage,
-then install all of the requirements as specified above. You can install these
-packages using pip, easy_install or through standard setup.py procedures.
-These dependencies will be automatically installed if using a package-based
-install or setup.py.
+You can install these packages using pip, easy_install or through standard
+setup.py procedures. These dependencies will be automatically installed if
+using a package-based install or setup.py.
 
 Introduction
 ------------
@@ -108,10 +98,10 @@ resource exists. For example:
 
 ::
 
-  blobxfer.py mystorageacct container0 mylocalfile.txt
+  blobxfer mystorageacct container0 mylocalfile.txt
 
-Note: if you downloaded the script via pip or easy_install, you should not
-append .py to the invocation; just blobxfer should suffice.
+Note: if you downloaded the script directly from github, then you should append
+``.py`` to the blobxfer command.
 
 If mylocalfile.txt exists locally, then the script will attempt to upload the
 file to container0 on mystorageacct. If the file does not exist, then it will
@@ -136,7 +126,7 @@ pattern, an example commandline would be:
 
 ::
 
-  blobxfer.py mystorageacct container0 mylocaldir --upload --include '**/*.txt'
+  blobxfer mystorageacct container0 mylocaldir --upload --include '**/*.txt'
 
 This would attempt to recursively upload the contents of mylocaldir
 to container0 for any file matching the wildcard pattern ``*.txt`` within
@@ -150,7 +140,7 @@ commandline would be:
 
 ::
 
-  blobxfer.py mystorageacct container0 mylocaldir --remoteresource .
+  blobxfer mystorageacct container0 mylocaldir --remoteresource .
 
 Assuming mylocaldir directory does not exist, the script will attempt to
 download all of the contents in container0 because “.” is set with
@@ -168,7 +158,7 @@ following commandline:
 
 ::
 
-  blobxfer.py mystorageacct container0 myvhds --upload --collate vhds --autovhd
+  blobxfer mystorageacct container0 myvhds --upload --collate vhds --autovhd
 
 If the directory ``myvhds`` had two vhd files a.vhd and subdir/b.vhd, these
 files would be uploaded into ``container0`` under the virtual directory named
@@ -194,7 +184,7 @@ encrypted, the RSA private key is required.
 
 ::
 
-  blobxfer.py mystorageacct container0 myblobs --upload --rsapublickey mypublickey.pem
+  blobxfer mystorageacct container0 myblobs --upload --rsapublickey mypublickey.pem
 
 The above example commandline would encrypt and upload files contained in
 ``myblobs`` using an RSA public key named ``mypublickey.pem``. An RSA private
@@ -202,7 +192,7 @@ key may be specified instead for uploading (public parts will be used).
 
 ::
 
-  blobxfer.py mystorageacct container0 myblobs --remoteresouorce . --download --rsaprivatekey myprivatekey.pem
+  blobxfer mystorageacct container0 myblobs --remoteresouorce . --download --rsaprivatekey myprivatekey.pem
 
 The above example commandline would download and decrypt all blobs in the
 container ``container0`` using an RSA private key named ``myprivatekey.pem``.
@@ -268,17 +258,21 @@ Performance Notes
   IP address. Futhermore, this number may be defaulted to be set too high if
   encryption is enabled and the machine cannot handle processing multiple
   threads in parallel.
+- Using SAS keys may provide the best performance as the script bypasses
+  the Azure Storage Python SDK and uses requests/urllib3 directly with
+  Azure Storage endpoints.
 - As of requests 2.6.0 and Python versions < 2.7.9 (i.e., interpreter found
   on default Ubuntu 14.04 installations), if certain packages are installed,
   as those found in ``requests[security]`` then the underlying ``urllib3``
   package will utilize the ``ndg-httpsclient`` package which will use
-  `pyOpenSSL`_.
-  This will ensure the peers are `fully validated`_. However, this incurs a
-  rather larger performance penalty. If you understand the potential security
-  risks for disabling this behavior due to high performance requirements, you
-  can either remove ``ndg-httpsclient`` or use the script in a ``virtualenv``
-  environment without the ``ndg-httpsclient`` package. Python versions >=
-  2.7.9 are not affected by this issue.
+  `pyOpenSSL`_. This will ensure the peers are `fully validated`_. However,
+  this incurs a rather larger performance penalty. If you understand the
+  potential security risks for disabling this behavior due to high performance
+  requirements, you can either remove ``ndg-httpsclient`` or use the script
+  in a ``virtualenv`` environment without the ``ndg-httpsclient`` package.
+  Python versions >= 2.7.9 are not affected by this issue. These warnings can
+  be suppressed using ``--disable-urllib-warnings``, but is not recommended
+  unless you understand the security implications.
 
 .. _pyOpenSSL: https://urllib3.readthedocs.org/en/latest/security.html#pyopenssl
 .. _fully validated: https://urllib3.readthedocs.org/en/latest/security.html#insecureplatformwarning
@@ -287,10 +281,12 @@ Performance Notes
 Encryption Notes
 ----------------
 
-- **ENCRYPTION SUPPORT IS CONSIDERED BETA QUALITY. BREAKING CHANGES MAY BE
-  APPLIED TO BLOBXFER PRIOR TO RELEASE CANDIDATE STATUS RENDERING ENCRYPTED
-  DATA WITH PRIOR VERSIONS OF BLOBXFER UNRECOVERABLE. DO NOT USE ENCRYPTION
-  OPTIONS FOR PRODUCTION DATA.**
+- **ENCRYPTION SUPPORT IS CONSIDERED RELEASE CANDIDATE QUALITY. ALTHOUGH WE
+  CONSIDER ENCRYPTION SUPPORT TO BE USABLE, THERE MAY BE A LATE BREAKING CHANGE
+  APPLIED TO BLOBXFER RENDERING ENCRYPTED DATA WITH PRIOR VERSIONS OF BLOBXFER
+  UNRECOVERABLE WITH THE CURRENT VERSION. PLEASE WEIGH THIS POSSIBILITY WHEN
+  USING BLOBXFER WITH ENCRYPTION FOR PRODUCTION DATA. WE PLAN ON REMOVING RC
+  STATUS FROM ENCRYPTION SUPPORT WHEN THE SCRIPT IS CONSIDERED STABLE.**
 - Keys for AES256 block cipher are generated on a per-blob basis. These keys
   are encrypted using RSAES-OAEP.
 - All required information regarding the encryption process is stored on
@@ -327,6 +323,12 @@ Encryption Notes
 Change Log
 ----------
 
+- 0.10.0: update script for compatibility with azure-storage 0.30.0 which
+  is now a required dependency, update cryptography requirement to 1.3,
+  promote encryption to RC status, ``--blobep`` now refers to endpoint suffix
+  rather than blob endpoint (e.g., core.windows.net rather than
+  blob.core.windows.net), added ``--disable-urllib-warnings`` option to
+  suppress urllib3 warnings (use with care)
 - 0.9.9.11: minor bug fixes, update cryptography requirement to 1.2.2, pin
   azure dependencies due to breaking changes
 - 0.9.9.10: fix regression in blob name encoding with Python3

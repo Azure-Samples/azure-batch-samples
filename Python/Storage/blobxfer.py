@@ -34,6 +34,7 @@ See notes in the README.rst file.
 TODO list:
 - convert from threading to multiprocessing
 - move instruction queue data to class
+- migrate connections with sas to azure-storage
 """
 
 # pylint: disable=R0913,R0914
@@ -73,10 +74,7 @@ try:
     import azure.servicemanagement
 except ImportError:  # pragma: no cover
     pass
-try:
-    import azure.storage.blob
-except ImportError:  # pragma: no cover
-    pass
+import azure.storage.blob
 try:
     import cryptography.hazmat.backends
     import cryptography.hazmat.primitives.asymmetric.padding
@@ -105,14 +103,14 @@ except NameError:  # pragma: no cover
 # pylint: enable=W0622,C0103
 
 # global defines
-_SCRIPT_VERSION = '0.9.9.11'
+_SCRIPT_VERSION = '0.10.0'
 _PY2 = sys.version_info.major == 2
 _DEFAULT_MAX_STORAGEACCOUNT_WORKERS = multiprocessing.cpu_count() * 3
 _MAX_BLOB_CHUNK_SIZE_BYTES = 4194304
 _EMPTY_MAX_PAGE_SIZE_MD5 = 'tc+p1sj+vWGPkawoQ9UKHA=='
 _MAX_LISTBLOBS_RESULTS = 1000
 _PAGEBLOB_BOUNDARY = 512
-_DEFAULT_BLOB_ENDPOINT = 'blob.core.windows.net'
+_DEFAULT_BLOB_ENDPOINT = 'core.windows.net'
 _DEFAULT_MANAGEMENT_ENDPOINT = 'management.core.windows.net'
 # encryption defines
 _AES256_KEYLENGTH_BYTES = 32
@@ -440,10 +438,9 @@ class SasBlobList(object):
         obj.metadata = mddict
         obj.properties = type('properties', (object,), {})
         obj.properties.content_length = content_length
+        obj.properties.content_settings = azure.storage.blob.ContentSettings()
         if content_md5 is not None and len(content_md5) > 0:
-            obj.properties.content_md5 = content_md5
-        else:
-            obj.properties.content_md5 = None
+            obj.properties.content_settings.content_md5 = content_md5
         obj.properties.blobtype = blobtype
         self.blobs.append(obj)
 
@@ -514,13 +511,13 @@ class SasBlobService(object):
 
     def list_blobs(
             self, container_name, marker=None,
-            maxresults=_MAX_LISTBLOBS_RESULTS, include=None):
+            max_results=_MAX_LISTBLOBS_RESULTS, include=None):
         """List blobs in container
         Parameters:
             container_name - container name
             marker - marker
-            maxresults - max results
-            include - optional datasets to include in response
+            max_results - max results
+            include - `azure.storage.models.Include` include object
         Returns:
             List of blobs
         Raises:
@@ -532,11 +529,11 @@ class SasBlobService(object):
         reqparams = {
             'restype': 'container',
             'comp': 'list',
-            'maxresults': str(maxresults)}
+            'maxresults': str(max_results)}
         if marker is not None:
             reqparams['marker'] = marker
-        if include is not None:
-            reqparams['include'] = include
+        if include is not None and include.metadata:
+            reqparams['include'] = 'metadata'
         response = azure_request(
             requests.get, url=url, params=reqparams, timeout=self.timeout)
         response.raise_for_status()
@@ -546,21 +543,24 @@ class SasBlobService(object):
                     response.status_code))
         return self._parse_blob_list_xml(response.content)
 
-    def get_blob(self, container_name, blob_name, x_ms_range):
+    def _get_blob(self, container_name, blob_name, start_range, end_range):
         """Get blob
         Parameters:
             container_name - container name
             blob_name - name of blob
-            x_ms_range - byte range
+            start_range - start range of bytes
+            end_range - end range of bytes
         Returns:
-            blob content
+            `azure.storage.blob.Blob` object
         Raises:
             IOError if unexpected status code
         """
         url = '{blobep}{container_name}/{blob_name}{saskey}'.format(
             blobep=self.blobep, container_name=container_name,
             blob_name=blob_name, saskey=self.saskey)
-        reqheaders = {'x-ms-range': x_ms_range}
+        reqheaders = {
+            'x-ms-range': 'bytes={}-{}'.format(start_range, end_range)
+        }
         response = azure_request(
             requests.get, url=url, headers=reqheaders, timeout=self.timeout)
         response.raise_for_status()
@@ -568,7 +568,7 @@ class SasBlobService(object):
             raise IOError(
                 'incorrect status code returned for get_blob: {}'.format(
                     response.status_code))
-        return response.content
+        return azure.storage.blob.Blob(content=response.content)
 
     def get_blob_properties(self, container_name, blob_name):
         """Get blob properties
@@ -576,7 +576,7 @@ class SasBlobService(object):
             container_name - container name
             blob_name - name of blob
         Returns:
-            blob properties (response header)
+            `azure.storage.blob.Blob` object
         Raises:
             IOError if unexpected status code
         """
@@ -590,29 +590,44 @@ class SasBlobService(object):
             raise IOError('incorrect status code returned for '
                           'get_blob_properties: {}'.format(
                               response.status_code))
-        return response.headers
+        # parse response headers into blob object
+        blob = azure.storage.blob.Blob()
+        blob.propertes = azure.storage.blob.BlobProperties()
+        blob.properties.content_length = \
+            long(response.headers['content-length'])
+        blob.properties.content_settings = azure.storage.blob.ContentSettings()
+        if 'content-md5' in response.headers:
+            blob.properties.content_settings.content_md5 = \
+                response.headers['content-md5']
+        # read meta values, all meta values are lowercased
+        mddict = {}
+        for res in response.headers:
+            if res.startswith('x-ms-meta-'):
+                mddict[res[10:]] = response.headers[res]
+        blob.metadata = mddict
+        return blob
 
     def set_blob_metadata(
-            self, container_name, blob_name, x_ms_meta_name_values):
-        """Set blob metadata
+            self, container_name, blob_name, metadata):
+        """Set blob metadata. Clearing is not supported.
         Parameters:
             container_name - container name
             blob_name - name of blob
-            x_ms_meta_name_values - blob metadata dictionary
+            metadata - blob metadata dictionary
         Returns:
             Nothing
         Raises:
             IOError if unexpected status code
         """
-        if x_ms_meta_name_values is None or len(x_ms_meta_name_values) == 0:
+        if metadata is None or len(metadata) == 0:
             return
         url = '{blobep}{container_name}/{blob_name}{saskey}'.format(
             blobep=self.blobep, container_name=container_name,
             blob_name=blob_name, saskey=self.saskey)
         reqparams = {'comp': 'metadata'}
         reqheaders = {}
-        for key in x_ms_meta_name_values:
-            reqheaders['x-ms-meta-' + key] = x_ms_meta_name_values[key]
+        for key in metadata:
+            reqheaders['x-ms-meta-' + key] = metadata[key]
         response = azure_request(
             requests.put, url=url, params=reqparams, headers=reqheaders,
             timeout=self.timeout)
@@ -622,22 +637,16 @@ class SasBlobService(object):
                 'incorrect status code returned for '
                 'set_blob_metadata: {}'.format(response.status_code))
 
-    def put_blob(
-            self, container_name, blob_name, blob, x_ms_blob_type,
-            x_ms_blob_content_type, x_ms_blob_content_md5,
-            x_ms_blob_content_length):
-        """Put blob for initializing page blobs
+    def create_blob(
+            self, container_name, blob_name, content_length, content_settings):
+        """Create blob for initializing page blobs
         Parameters:
             container_name - container name
             blob_name - name of blob
-            blob - should be None for PageBlob (unused)
-            x_ms_blob_type - should be 'PageBlob' or 'BlockBlob'
-            x_ms_blob_content_md5 - blob MD5 hash
-            x_ms_blob_content_type - content-type of blob
-            x_ms_blob_content_length - content length aligned to
-                512-byte boundary if PageBlob
+            content_length - content length aligned to 512-byte boundary
+            content_settings - `azure.storage.blob.ContentSettings` object
         Returns:
-            blob content
+            response content
         Raises:
             IOError if unexpected status code
         """
@@ -645,14 +654,49 @@ class SasBlobService(object):
             blobep=self.blobep, container_name=container_name,
             blob_name=blob_name, saskey=self.saskey)
         reqheaders = {
-            'x-ms-blob-type': x_ms_blob_type}
-        if x_ms_blob_type == 'PageBlob':
-            reqheaders['x-ms-blob-content-length'] = str(
-                x_ms_blob_content_length)
-        if x_ms_blob_content_md5 is not None:
-            reqheaders['x-ms-blob-content-md5'] = x_ms_blob_content_md5
-        if x_ms_blob_content_type is not None:
-            reqheaders['x-ms-blob-content-type'] = x_ms_blob_content_type
+            'x-ms-blob-type': 'PageBlob',
+            'x-ms-blob-content-length': str(content_length),
+        }
+        if content_settings is not None:
+            if content_settings.content_md5 is not None:
+                reqheaders['x-ms-blob-content-md5'] = \
+                    content_settings.content_md5
+            if content_settings.content_type is not None:
+                reqheaders['x-ms-blob-content-type'] = \
+                    content_settings.content_type
+        response = azure_request(
+            requests.put, url=url, headers=reqheaders, timeout=self.timeout)
+        response.raise_for_status()
+        if response.status_code != 201:
+            raise IOError(
+                'incorrect status code returned for create_blob: {}'.format(
+                    response.status_code))
+        return response.content
+
+    def _put_blob(
+            self, container_name, blob_name, blob, content_settings):
+        """Put blob for creating/updated block blobs
+        Parameters:
+            container_name - container name
+            blob_name - name of blob
+            blob - blob content
+            content_settings - `azure.storage.blob.ContentSettings` object
+        Returns:
+            response content
+        Raises:
+            IOError if unexpected status code
+        """
+        url = '{blobep}{container_name}/{blob_name}{saskey}'.format(
+            blobep=self.blobep, container_name=container_name,
+            blob_name=blob_name, saskey=self.saskey)
+        reqheaders = {'x-ms-blob-type': 'BlockBlob'}
+        if content_settings is not None:
+            if content_settings.content_md5 is not None:
+                reqheaders['x-ms-blob-content-md5'] = \
+                    content_settings.content_md5
+            if content_settings.content_type is not None:
+                reqheaders['x-ms-blob-content-type'] = \
+                    content_settings.content_type
         response = azure_request(
             requests.put, url=url, headers=reqheaders, timeout=self.timeout)
         response.raise_for_status()
@@ -662,16 +706,16 @@ class SasBlobService(object):
                     response.status_code))
         return response.content
 
-    def put_page(
-            self, container_name, blob_name, page, x_ms_range,
-            x_ms_page_write, content_md5):
+    def update_page(
+            self, container_name, blob_name, page, start_range, end_range,
+            content_md5):
         """Put page for page blob
         Parameters:
             container_name - container name
             blob_name - name of blob
             page - page data
-            x_ms_range - byte range
-            x_ms_page_write - page write option
+            start_range - start range of bytes
+            end_range - end range of bytes
             content_md5 - md5 hash for page data
         Returns:
             Nothing
@@ -682,8 +726,8 @@ class SasBlobService(object):
             blobep=self.blobep, container_name=container_name,
             blob_name=blob_name, saskey=self.saskey)
         reqheaders = {
-            'x-ms-range': x_ms_range,
-            'x-ms-page-write': x_ms_page_write,
+            'x-ms-range': 'bytes={}-{}'.format(start_range, end_range),
+            'x-ms-page-write': 'update',
             'Content-MD5': content_md5}
         reqparams = {'comp': 'page'}
         response = azure_request(
@@ -692,17 +736,17 @@ class SasBlobService(object):
         response.raise_for_status()
         if response.status_code != 201:
             raise IOError(
-                'incorrect status code returned for put_page: {}'.format(
+                'incorrect status code returned for update_page: {}'.format(
                     response.status_code))
 
     def put_block(
-            self, container_name, blob_name, block, blockid, content_md5):
+            self, container_name, blob_name, block, block_id, content_md5):
         """Put block for blob
         Parameters:
             container_name - container name
             blob_name - name of blob
             block - block data
-            blockid - block id
+            block_id - block id
             content_md5 - md5 hash for block data
         Returns:
             Nothing
@@ -713,7 +757,7 @@ class SasBlobService(object):
             blobep=self.blobep, container_name=container_name,
             blob_name=blob_name, saskey=self.saskey)
         reqheaders = {'Content-MD5': content_md5}
-        reqparams = {'comp': 'block', 'blockid': blockid}
+        reqparams = {'comp': 'block', 'blockid': block_id}
         response = azure_request(
             requests.put, url=url, params=reqparams, headers=reqheaders,
             data=block, timeout=self.timeout)
@@ -725,13 +769,13 @@ class SasBlobService(object):
 
     def put_block_list(
             self, container_name, blob_name, block_list,
-            x_ms_blob_content_type, x_ms_blob_content_md5):
+            content_settings):
         """Put block list for blob
         Parameters:
             container_name - container name
             blob_name - name of blob
-            block_list - block list for blob
-            x_ms_blob_content_md5 - md5 hash for blob
+            block_list - list of `azure.storage.blob.BlobBlock`
+            content_settings - `azure.storage.blob.ContentSettings` object
         Returns:
             Nothing
         Raises:
@@ -740,13 +784,18 @@ class SasBlobService(object):
         url = '{blobep}{container_name}/{blob_name}{saskey}'.format(
             blobep=self.blobep, container_name=container_name,
             blob_name=blob_name, saskey=self.saskey)
-        reqheaders = {'x-ms-blob-content-md5': x_ms_blob_content_md5}
-        if x_ms_blob_content_type is not None:
-            reqheaders['x-ms-blob-content-type'] = x_ms_blob_content_type
+        reqheaders = {}
+        if content_settings is not None:
+            if content_settings.content_md5 is not None:
+                reqheaders['x-ms-blob-content-md5'] = \
+                    content_settings.content_md5
+            if content_settings.content_type is not None:
+                reqheaders['x-ms-blob-content-type'] = \
+                    content_settings.content_type
         reqparams = {'comp': 'blocklist'}
         body = ['<?xml version="1.0" encoding="utf-8"?><BlockList>']
         for block in block_list:
-            body.append('<Latest>{}</Latest>'.format(block))
+            body.append('<Latest>{}</Latest>'.format(block.id))
         body.append('</BlockList>')
         response = azure_request(
             requests.put, url=url, params=reqparams, headers=reqheaders,
@@ -758,12 +807,12 @@ class SasBlobService(object):
                     response.status_code))
 
     def set_blob_properties(
-            self, container_name, blob_name, x_ms_blob_content_md5):
+            self, container_name, blob_name, content_settings):
         """Sets blob properties (MD5 only)
         Parameters:
             container_name - container name
             blob_name - name of blob
-            x_ms_blob_content_md5 - md5 hash for blob
+            content_settings - `azure.storage.blob.ContentSettings` object
         Returns:
             Nothing
         Raises:
@@ -772,7 +821,11 @@ class SasBlobService(object):
         url = '{blobep}{container_name}/{blob_name}{saskey}'.format(
             blobep=self.blobep, container_name=container_name,
             blob_name=blob_name, saskey=self.saskey)
-        reqheaders = {'x-ms-blob-content-md5': x_ms_blob_content_md5}
+        reqheaders = {}
+        if content_settings is not None:
+            if content_settings.content_md5 is not None:
+                reqheaders['x-ms-blob-content-md5'] = \
+                    content_settings.content_md5
         reqparams = {'comp': 'properties'}
         response = azure_request(
             requests.put, url=url, params=reqparams, headers=reqheaders,
@@ -915,17 +968,21 @@ class BlobChunkWorker(threading.Thread):
         if bytestoxfer == 0:
             contentmd5 = compute_md5_for_data_asbase64(b'')
             if as_page_blob(self._pageblob, self._autovhd, localresource):
-                blob_type = 'PageBlob'
                 contentlength = bytestoxfer
+                azure_request(
+                    self.blob_service[1].create_blob, container_name=container,
+                    blob_name=remoteresource, content_length=contentlength,
+                    content_settings=azure.storage.blob.ContentSettings(
+                        content_type=get_mime_type(localresource),
+                        content_md5=contentmd5))
             else:
-                blob_type = 'BlockBlob'
                 contentlength = None
-            azure_request(
-                self.blob_service.put_blob, container_name=container,
-                blob_name=remoteresource, blob=None, x_ms_blob_type=blob_type,
-                x_ms_blob_content_md5=contentmd5,
-                x_ms_blob_content_length=contentlength,
-                x_ms_blob_content_type=get_mime_type(localresource))
+                azure_request(
+                    self.blob_service[0]._put_blob, container_name=container,
+                    blob_name=remoteresource, blob=None,
+                    content_settings=azure.storage.blob.ContentSettings(
+                        content_type=get_mime_type(localresource),
+                        content_md5=contentmd5))
             return
         # read the file at specified offset, must take lock
         data = None
@@ -960,11 +1017,10 @@ class BlobChunkWorker(threading.Thread):
                     return
                 del data_chk_md5
             # upload page range
-            rangestr = 'bytes={}-{}'.format(offset, offset + aligned - 1)
             azure_request(
-                self.blob_service.put_page, container_name=container,
-                blob_name=remoteresource, page=data, x_ms_range=rangestr,
-                x_ms_page_write='update', content_md5=contentmd5,
+                self.blob_service[1].update_page, container_name=container,
+                blob_name=remoteresource, page=data, start_range=offset,
+                end_range=offset + aligned - 1, content_md5=contentmd5,
                 timeout=self.timeout)
         else:
             # encrypt block if required
@@ -997,8 +1053,8 @@ class BlobChunkWorker(threading.Thread):
             # compute block md5
             contentmd5 = compute_md5_for_data_asbase64(data)
             azure_request(
-                self.blob_service.put_block, container_name=container,
-                blob_name=remoteresource, block=data, blockid=blockid,
+                self.blob_service[0].put_block, container_name=container,
+                blob_name=remoteresource, block=data, block_id=blockid,
                 content_md5=contentmd5, timeout=self.timeout)
         del data
 
@@ -1025,18 +1081,24 @@ class BlobChunkWorker(threading.Thread):
         if (encparam[0] is not None and
                 encparam[3] == _ENCRYPTION_MODE_FULLBLOB):
             if offset == 0:
-                rangestr = 'bytes={}-{}'.format(offset, offset + bytestoxfer)
+                start_range = offset
+                end_range = offset + bytestoxfer
             else:
                 # retrieve block size data prior for IV
-                rangestr = 'bytes={}-{}'.format(
-                    offset - _AES256_BLOCKSIZE_BYTES,
-                    offset + bytestoxfer)
+                start_range = offset - _AES256_BLOCKSIZE_BYTES
+                end_range = offset + bytestoxfer
         else:
-            rangestr = 'bytes={}-{}'.format(offset, offset + bytestoxfer)
-        blobdata = azure_request(
-            self.blob_service.get_blob, timeout=self.timeout,
+            start_range = offset
+            end_range = offset + bytestoxfer
+        if as_page_blob(self._pageblob, self._autovhd, localresource):
+            blob_service = self.blob_service[1]
+        else:
+            blob_service = self.blob_service[0]
+        _blob = azure_request(
+            blob_service._get_blob, timeout=self.timeout,
             container_name=container, blob_name=remoteresource,
-            x_ms_range=rangestr)
+            start_range=start_range, end_range=end_range)
+        blobdata = _blob.content
         # decrypt block if required
         if encparam[0] is not None:
             if encparam[3] == _ENCRYPTION_MODE_FULLBLOB:
@@ -1072,16 +1134,18 @@ class BlobChunkWorker(threading.Thread):
             blobdata = decrypt_chunk(
                 encparam[0], encparam[1], blobdata, encparam[3], iv=iv,
                 unpad=unpad)
-        with flock:
-            closefd = False
-            if not filedesc:
-                filedesc = open(localresource, 'r+b')
-                closefd = True
-            filedesc.seek(offset - (encparam[2] or 0), 0)
-            filedesc.write(blobdata)
-            if closefd:
-                filedesc.close()
+        if blobdata is not None:
+            with flock:
+                closefd = False
+                if not filedesc:
+                    filedesc = open(localresource, 'r+b')
+                    closefd = True
+                filedesc.seek(offset - (encparam[2] or 0), 0)
+                filedesc.write(blobdata)
+                if closefd:
+                    filedesc.close()
         del blobdata
+        del _blob
 
 
 def pad_pkcs7(buf):
@@ -1488,19 +1552,18 @@ def get_blob_listing(blob_service, args, metadata=True):
     """
     marker = None
     blobdict = {}
-    incl = 'metadata' if metadata else None
+    incl = azure.storage.blob.Include(metadata=metadata)
     while True:
         try:
             result = azure_request(
                 blob_service.list_blobs, timeout=args.timeout,
-                container_name=args.container, marker=marker,
-                maxresults=_MAX_LISTBLOBS_RESULTS, include=incl)
+                container_name=args.container, marker=marker, include=incl)
         except azure.common.AzureMissingResourceHttpError:
             break
         for blob in result:
             blobdict[blob.name] = [
                 blob.properties.content_length,
-                blob.properties.content_md5, None]
+                blob.properties.content_settings.content_md5, None]
             if (blob.metadata is not None and
                     _ENCRYPTION_METADATA_NAME in blob.metadata):
                 encmeta = EncryptionMetadataJson(
@@ -1549,20 +1612,15 @@ def generate_xferspec_download(
         if not result:
             raise ValueError(
                 'unexpected result for get_blob_properties is None')
-        if 'content-md5' in result:
-            contentmd5 = result['content-md5']
-        contentlength = long(result['content-length'])
-        # read meta values, all meta values are lowercased
-        mddict = {}
-        for res in result:
-            if res.startswith('x-ms-meta-'):
-                mddict[res[10:]] = result[res]
+        contentmd5 = result.properties.content_settings.content_md5
+        contentlength = result.properties.content_length
         if (args.rsaprivatekey is not None and
-                _ENCRYPTION_METADATA_NAME in mddict):
+                _ENCRYPTION_METADATA_NAME in result.metadata):
             encmeta = EncryptionMetadataJson(
                 args, None, None, None, None, None)
             encmeta.parse_metadata_json(
-                remoteresource, args.rsaprivatekey, args.rsapublickey, mddict)
+                remoteresource, args.rsaprivatekey, args.rsapublickey,
+                result.metadata)
     if contentlength < 0:
         raise ValueError(
             'contentlength is invalid for {}'.format(remoteresource))
@@ -1884,27 +1942,26 @@ def main():
             service_name=args.storageaccount)
         blobep = storage_acct.storage_service_properties.endpoints[0]
     else:
-        blobep = 'https://{}.{}/'.format(args.storageaccount, args.blobep)
+        blobep = 'https://{}.blob.{}/'.format(args.storageaccount, args.blobep)
 
-    # create master blob service
+    # create master block and page blob service
     blob_service = None
     if args.storageaccountkey:
         if args.blobep[0] == '.':
-            host_base = args.blobep
-        else:
-            host_base = '.' + args.blobep
-        if args.timeout is None:
-            blob_service = azure.storage.blob.BlobService(
-                account_name=args.storageaccount,
-                account_key=args.storageaccountkey,
-                host_base=host_base)
-        else:
-            blob_service = azure.storage.blob.BlobService(
-                account_name=args.storageaccount,
-                account_key=args.storageaccountkey,
-                host_base=host_base, timeout=args.timeout)
+            args.blobep = args.blobep[1:]
+        block_blob_service = azure.storage.blob.BlockBlobService(
+            account_name=args.storageaccount,
+            account_key=args.storageaccountkey,
+            endpoint_suffix=args.blobep)
+        page_blob_service = azure.storage.blob.PageBlobService(
+            account_name=args.storageaccount,
+            account_key=args.storageaccountkey,
+            endpoint_suffix=args.blobep)
+        blob_service = (block_blob_service, page_blob_service)
     elif args.saskey:
-        blob_service = SasBlobService(blobep, args.saskey, args.timeout)
+        blob_service = (
+            SasBlobService(blobep, args.saskey, args.timeout),
+            SasBlobService(blobep, args.saskey, args.timeout))
         # disable container creation (not possible with SAS)
         args.createcontainer = False
     if blob_service is None:
@@ -1912,8 +1969,8 @@ def main():
 
     # check which way we're transfering
     xfertoazure = False
-    if args.upload or (not args.download and
-                       os.path.exists(args.localresource)):
+    if (args.upload or
+            (not args.download and os.path.exists(args.localresource))):
         xfertoazure = True
     else:
         if args.remoteresource is None:
@@ -1971,6 +2028,14 @@ def main():
                 args.chunksizebytes,
                 (_AES256CBC_HMACSHA256_OVERHEAD_BYTES + 1) << 1))
 
+    # disable urllib3 warnings if specified
+    if args.disableurllibwarnings:
+        print('!!! WARNING: DISABLING URLLIB3 WARNINGS !!!')
+        requests.packages.urllib3.disable_warnings(
+            requests.packages.urllib3.exceptions.InsecurePlatformWarning)
+        requests.packages.urllib3.disable_warnings(
+            requests.packages.urllib3.exceptions.SNIMissingWarning)
+
     # collect package versions
     packages = ['az.common=' + azure.common.__version__]
     try:
@@ -1989,9 +2054,9 @@ def main():
         'req=' + requests.__version__)
 
     # print all parameters
-    print('======================================')
+    print('=======================================')
     print(' azure blobxfer parameters [v{}]'.format(_SCRIPT_VERSION))
-    print('======================================')
+    print('=======================================')
     print('             platform: {}'.format(platform.platform()))
     print('   python interpreter: {} {}'.format(
         platform.python_implementation(), platform.python_version()))
@@ -2050,7 +2115,7 @@ def main():
     if xfertoazure:
         # if skiponmatch is enabled, list blobs first and check
         if args.skiponmatch:
-            blobskipdict = get_blob_listing(blob_service, args)
+            blobskipdict = get_blob_listing(blob_service[0], args)
         else:
             blobskipdict = {}
         if os.path.isdir(args.localresource):
@@ -2106,7 +2171,7 @@ def main():
                 # get blob skip dict if it hasn't been populated
                 if len(blobskipdict) == 0:
                     blobskipdict = get_blob_listing(
-                        blob_service, args, metadata=False)
+                        blob_service[0], args, metadata=False)
                 delblobs = [x for x in blobskipdict if x not in _remotefiles]
             del _remotefiles
         else:
@@ -2134,7 +2199,7 @@ def main():
         if args.createcontainer:
             try:
                 azure_request(
-                    blob_service.create_container, timeout=args.timeout,
+                    blob_service[0].create_container, timeout=args.timeout,
                     container_name=args.container, fail_on_exist=False)
             except azure.common.AzureConflictHttpError:
                 pass
@@ -2143,18 +2208,15 @@ def main():
             print('initializing page blobs')
             for key in filemap:
                 if as_page_blob(args.pageblob, args.autovhd, key):
-                    blob_service.put_blob(
+                    blob_service[1].create_blob(
                         container_name=args.container, blob_name=filemap[key],
-                        blob=None, x_ms_blob_type='PageBlob',
-                        x_ms_blob_content_type=None,
-                        x_ms_blob_content_md5=None,
-                        x_ms_blob_content_length=page_align_content_length(
-                            filesizes[key]))
+                        content_length=page_align_content_length(
+                            filesizes[key]), content_settings=None)
     else:
         if args.remoteresource == '.':
-            print('attempting to copy entire container: {} to {}'.format(
+            print('attempting to copy entire container {} to {}'.format(
                 args.container, args.localresource))
-            blobdict = get_blob_listing(blob_service, args)
+            blobdict = get_blob_listing(blob_service[0], args)
         else:
             blobdict = {args.remoteresource: [None, None, None]}
         if len(blobdict) > 0:
@@ -2183,7 +2245,7 @@ def main():
             # add instructions
             filesize, ops, md5digest, filedesc = \
                 generate_xferspec_download(
-                    blob_service, args, storage_in_queue, localfile,
+                    blob_service[0], args, storage_in_queue, localfile,
                     blob, False, blobdict[blob])
             if filesize is not None:
                 md5map[localfile] = md5digest
@@ -2199,7 +2261,7 @@ def main():
         print('deleting {} remote blobs'.format(len(delblobs)))
         for blob in delblobs:
             azure_request(
-                blob_service.delete_blob, timeout=args.timeout,
+                blob_service[0].delete_blob, timeout=args.timeout,
                 container_name=args.container, blob_name=blob)
         print('deletion complete.')
 
@@ -2275,11 +2337,12 @@ def main():
                 if as_page_blob(args.pageblob, args.autovhd, localresource):
                     if args.computefilemd5:
                         azure_request(
-                            blob_service.set_blob_properties,
+                            blob_service[1].set_blob_properties,
                             timeout=args.timeout,
                             container_name=args.container,
                             blob_name=filemap[localresource],
-                            x_ms_blob_content_md5=md5map[localresource])
+                            content_settings=azure.storage.blob.
+                            ContentSettings(content_md5=md5map[localresource]))
                 else:
                     # only perform put block list on non-zero byte files
                     if filesizes[localresource] > 0:
@@ -2288,15 +2351,20 @@ def main():
                             md5 = base64encode(encparam[2]['md5'].digest())
                         else:
                             md5 = md5map[localresource]
+                        block_list = []
+                        for bid in blockids[localresource]:
+                            block_list.append(
+                                azure.storage.blob.BlobBlock(id=bid))
                         azure_request(
-                            blob_service.put_block_list,
+                            blob_service[0].put_block_list,
                             timeout=args.timeout,
                             container_name=args.container,
                             blob_name=filemap[localresource],
-                            block_list=blockids[localresource],
-                            x_ms_blob_content_type=get_mime_type(
-                                localresource),
-                            x_ms_blob_content_md5=md5)
+                            block_list=block_list,
+                            content_settings=azure.storage.blob.
+                            ContentSettings(
+                                content_type=get_mime_type(localresource),
+                                content_md5=md5))
                         # set blob metadata for encrypted blobs
                         if (args.rsaprivatekey is not None or
                                 args.rsapublickey is not None):
@@ -2313,11 +2381,11 @@ def main():
                                     None, md5map[localresource]
                                 ).construct_metadata_json()
                             azure_request(
-                                blob_service.set_blob_metadata,
+                                blob_service[0].set_blob_metadata,
                                 timeout=args.timeout,
                                 container_name=args.container,
                                 blob_name=filemap[localresource],
-                                x_ms_meta_name_values=encmetadata)
+                                metadata=encmetadata)
         else:
             if (args.rsaprivatekey is not None and
                     encparam[3] == _ENCRYPTION_MODE_FULLBLOB and
@@ -2454,8 +2522,8 @@ def parseargs():  # pragma: no cover
         autovhd=False, blobep=_DEFAULT_BLOB_ENDPOINT,
         chunksizebytes=_MAX_BLOB_CHUNK_SIZE_BYTES, collate=None,
         computefilemd5=True, createcontainer=True, delete=False,
-        encmode=_DEFAULT_ENCRYPTION_MODE, include=None,
-        managementep=_DEFAULT_MANAGEMENT_ENDPOINT,
+        disableurllibwarnings=False, encmode=_DEFAULT_ENCRYPTION_MODE,
+        include=None, managementep=_DEFAULT_MANAGEMENT_ENDPOINT,
         numworkers=_DEFAULT_MAX_STORAGEACCOUNT_WORKERS, overwrite=True,
         pageblob=False, progressbar=True, recursive=True, rsaprivatekey=None,
         rsapublickey=None, rsakeypassphrase=None, skiponmatch=True,
@@ -2483,6 +2551,10 @@ def parseargs():  # pragma: no cover
         '--delete', action='store_true',
         help='delete extraneous remote blobs that have no corresponding '
         'local file when uploading directories')
+    parser.add_argument(
+        '--disable-urllib-warnings', action='store_true',
+        dest='disableurllibwarnings',
+        help='disable urllib warnings (not recommended)')
     parser.add_argument(
         '--download', action='store_true',
         help='force transfer direction to download from Azure')

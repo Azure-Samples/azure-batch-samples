@@ -267,11 +267,13 @@ def test_sasblobservice_listblobs():
     with requests_mock.mock() as m:
         m.get('mock://blobepcontainer?saskey', content=content)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
-        result = sbs.list_blobs('container', 'marker', include='metadata')
+        metamock = MagicMock()
+        metamock.metadata = True
+        result = sbs.list_blobs('container', 'marker', include=metamock)
         assert len(result) == 1
         assert result[0].name == 'blob-name'
         assert result[0].properties.content_length == 2147483648
-        assert result[0].properties.content_md5 == 'abc'
+        assert result[0].properties.content_settings.content_md5 == 'abc'
         assert result[0].properties.blobtype == 'BlockBlob'
         assert result[0].metadata['Name'] == 'value'
         assert result.next_marker == 'nm'
@@ -306,13 +308,13 @@ def test_sasblobservice_getblob():
     with requests_mock.mock() as m:
         m.get('mock://blobepcontainer/blob?saskey', content=b'data')
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
-        results = sbs.get_blob('container', 'blob', 'range')
-        assert results == b'data'
+        results = sbs._get_blob('container', 'blob', 0, 1)
+        assert results.content == b'data'
 
         m.get('mock://blobepcontainer/blob?saskey', status_code=201)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         with pytest.raises(IOError):
-            sbs.get_blob('container', 'blob', 'range')
+            sbs._get_blob('container', 'blob', 0, 1)
 
 
 def test_sasblobservice_getblobproperties():
@@ -322,10 +324,10 @@ def test_sasblobservice_getblobproperties():
 
     with requests_mock.mock() as m:
         m.head('mock://blobepcontainer/blob?saskey',
-               headers={'hello': 'world'})
+               headers={'x-ms-meta-hello': 'world', 'content-length': '1'})
         sbs = blobxfer.SasBlobService('mock://blobep', '?saskey', None)
         results = sbs.get_blob_properties('container', 'blob')
-        assert results['hello'] == 'world'
+        assert results.metadata['hello'] == 'world'
 
         m.head('mock://blobepcontainer/blob?saskey', text='', status_code=201)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
@@ -360,15 +362,17 @@ def test_sasblobservice_putblocklist():
     with requests_mock.mock() as m:
         m.put('mock://blobepcontainer/blob?saskey', status_code=201)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
-        try:
-            sbs.put_block_list('container', 'blob', ['1', '2'], None, 'md5')
-        except Exception:
-            pytest.fail('unexpected Exception raised')
+        block_list = [
+            azure.storage.blob.BlobBlock(id='1'),
+            azure.storage.blob.BlobBlock(id='2')
+        ]
+        cs = azure.storage.blob.ContentSettings(content_md5='md5')
+        sbs.put_block_list('container', 'blob', block_list, cs)
 
         m.put('mock://blobepcontainer/blob?saskey', text='', status_code=200)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         with pytest.raises(IOError):
-            sbs.put_block_list('container', 'blob', ['1', '2'], None, 'md5')
+            sbs.put_block_list('container', 'blob', block_list, cs)
 
 
 def test_sasblobservice_setblobproperties():
@@ -379,15 +383,13 @@ def test_sasblobservice_setblobproperties():
     with requests_mock.mock() as m:
         m.put('mock://blobepcontainer/blob?saskey', status_code=200)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
-        try:
-            sbs.set_blob_properties('container', 'blob', 'md5')
-        except Exception:
-            pytest.fail('unexpected Exception raised')
+        cs = azure.storage.blob.ContentSettings(content_md5='md5')
+        sbs.set_blob_properties('container', 'blob', cs)
 
         m.put('mock://blobepcontainer/blob?saskey', text='', status_code=201)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         with pytest.raises(IOError):
-            sbs.set_blob_properties('container', 'blob', 'md5')
+            sbs.set_blob_properties('container', 'blob', cs)
 
 
 def test_sasblobservice_putblob():
@@ -398,21 +400,34 @@ def test_sasblobservice_putblob():
     with requests_mock.mock() as m:
         m.put('mock://blobepcontainer/blob?saskey', status_code=201)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
-        try:
-            sbs.put_blob('container', 'blob', None, 'PageBlob', None, 'md5', 4)
-        except Exception:
-            pytest.fail('unexpected Exception raised')
+        cs = azure.storage.blob.ContentSettings(
+            content_type='a', content_md5='md5')
+        sbs._put_blob('container', 'blob', None, cs)
 
         m.put('mock://blobepcontainer/blob?saskey', content=b'',
               status_code=200)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         with pytest.raises(IOError):
-            sbs.put_blob('container', 'blob', None, 'PageBlob', None, 'md5', 4)
+            sbs._put_blob('container', 'blob', None, cs)
 
+
+def test_sasblobservice_createblob():
+    session = requests.Session()
+    adapter = requests_mock.Adapter()
+    session.mount('mock', adapter)
+
+    with requests_mock.mock() as m:
         m.put('mock://blobepcontainer/blob?saskey', content=b'',
               status_code=201)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
-        sbs.put_blob('container', 'blob', None, 'BlockBlob', None, 'md5', 0)
+        cs = azure.storage.blob.ContentSettings(content_md5='md5')
+        sbs.create_blob('container', 'blob', 0, cs)
+
+        m.put('mock://blobepcontainer/blob?saskey', content=b'',
+              status_code=200)
+        sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
+        with pytest.raises(IOError):
+            sbs.create_blob('container', 'blob', 0, cs)
 
 
 def test_blobchunkworker_run(tmpdir):
@@ -437,7 +452,7 @@ def test_blobchunkworker_run(tmpdir):
         m.put('mock://blobepcontainer/blob?saskey', status_code=200)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         bcw = blobxfer.BlobChunkWorker(
-            exc_list, sa_in_queue, sa_out_queue, args, sbs, True)
+            exc_list, sa_in_queue, sa_out_queue, args, (sbs, sbs), True)
         with pytest.raises(IOError):
             bcw.putblobdata(lpath, 'container', 'blob', 'blockid',
                             0, 4, None, flock, None)
@@ -447,7 +462,7 @@ def test_blobchunkworker_run(tmpdir):
         m.put('mock://blobepcontainer/blob?saskey', status_code=201)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         bcw = blobxfer.BlobChunkWorker(
-            exc_list, sa_in_queue, sa_out_queue, args, sbs, True)
+            exc_list, sa_in_queue, sa_out_queue, args, (sbs, sbs), True)
         bcw.putblobdata(lpath, 'container', 'blob', 'blockid',
                         0, 4, None, flock, None)
 
@@ -479,7 +494,7 @@ def test_blobchunkworker_run(tmpdir):
     with requests_mock.mock() as m:
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         bcw = blobxfer.BlobChunkWorker(
-            exc_list, sa_in_queue, sa_out_queue, args, sbs, False)
+            exc_list, sa_in_queue, sa_out_queue, args, (sbs, sbs), False)
         m.get('mock://blobepcontainer/blob?saskey', status_code=201)
         bcw.run()
         assert len(exc_list) > 0
@@ -883,7 +898,7 @@ def test_main1(
     args.subscriptionid = None
     args.remoteresource = 'blob'
     args.chunksizebytes = None
-    with patch('azure.storage.blob.BlobService') as mock:
+    with patch('azure.storage.blob.BlockBlobService') as mock:
         mock.return_value = None
         with pytest.raises(ValueError):
             blobxfer.main()
@@ -959,20 +974,20 @@ def test_main1(
     adapter = requests_mock.Adapter()
     session.mount('mock', adapter)
     with requests_mock.mock() as m:
-        m.put('https://blobep.blobep/container/blob?saskey'
+        m.put('https://blobep.blob.blobep/container/blob?saskey'
               '&comp=block&blockid=00000000', status_code=201)
-        m.put('https://blobep.blobep/container' + lpath +
+        m.put('https://blobep.blob.blobep/container' + lpath +
               '?saskey&blockid=00000000&comp=block', status_code=201)
-        m.put('https://blobep.blobep/container' + lpath +
+        m.put('https://blobep.blob.blobep/container' + lpath +
               '?saskey&comp=blocklist', status_code=201)
-        m.put('https://blobep.blobep/container' + lpath +
+        m.put('https://blobep.blob.blobep/container' + lpath +
               '?saskey&comp=block&blockid=00000000', status_code=201)
-        m.put('https://blobep.blobep/container' + lpath +
+        m.put('https://blobep.blob.blobep/container' + lpath +
               '?saskey&comp=metadata', status_code=200)
-        m.get('https://blobep.blobep/container?saskey&comp=list'
+        m.get('https://blobep.blob.blobep/container?saskey&comp=list'
               '&restype=container&maxresults=1000',
               text='<?xml version="1.0" encoding="utf-8"?>'
-              '<EnumerationResults ContainerName="https://blobep.blobep/'
+              '<EnumerationResults ContainerName="https://blobep.blob.blobep/'
               'container"><Blobs><Blob><Name>' + lpath + '</Name>'
               '<Properties><Content-Length>6</Content-Length>'
               '<Content-MD5>md5</Content-MD5><BlobType>BlockBlob</BlobType>'
@@ -990,9 +1005,10 @@ def test_main1(
 
         args.remoteresource = 'blob'
         args.localresource = str(tmpdir)
-        m.head('https://blobep.blobep/container/blob?saskey', headers={
+        m.head('https://blobep.blob.blobep/container/blob?saskey', headers={
             'content-length': '6', 'content-md5': '1qmpM8iq/FHlWsBmK25NSg=='})
-        m.get('https://blobep.blobep/container/blob?saskey', content=b'012345')
+        m.get('https://blobep.blob.blobep/container/blob?saskey',
+              content=b'012345')
         blobxfer.main()
 
         args.pageblob = False
@@ -1016,22 +1032,22 @@ def test_main1(
         args.skiponmatch = True
         args.remoteresource = '.'
         args.keepmismatchedmd5files = False
-        m.get('https://blobep.blobep/container?saskey&comp=list'
+        m.get('https://blobep.blob.blobep/container?saskey&comp=list'
               '&restype=container&maxresults=1000',
               text='<?xml version="1.0" encoding="utf-8"?>'
-              '<EnumerationResults ContainerName="https://blobep.blobep/'
+              '<EnumerationResults ContainerName="https://blobep.blob.blobep/'
               'container"><Blobs><Blob><Name>blob</Name><Properties>'
               '<Content-Length>6</Content-Length><Content-MD5>'
               '</Content-MD5><BlobType>BlockBlob</BlobType></Properties>'
               '<Metadata/></Blob></Blobs></EnumerationResults>')
-        m.get('https://blobep.blobep/container/?saskey')
+        m.get('https://blobep.blob.blobep/container/?saskey')
         with pytest.raises(SystemExit):
             blobxfer.main()
 
-        m.get('https://blobep.blobep/container?saskey&comp=list'
+        m.get('https://blobep.blob.blobep/container?saskey&comp=list'
               '&restype=container&maxresults=1000',
               text='<?xml version="1.0" encoding="utf-8"?>'
-              '<EnumerationResults ContainerName="https://blobep.blobep/'
+              '<EnumerationResults ContainerName="https://blobep.blob.blobep/'
               'container"><Blobs><Blob><Name>blob</Name><Properties>'
               '<Content-Length>6</Content-Length><Content-MD5>md5'
               '</Content-MD5><BlobType>BlockBlob</BlobType></Properties>'
@@ -1051,40 +1067,40 @@ def test_main1(
         args.upload = True
         args.remoteresource = None
         args.skiponmatch = False
-        m.put('https://blobep.blobep/container/test.tmp?saskey'
+        m.put('https://blobep.blob.blobep/container/test.tmp?saskey'
               '&comp=block&blockid=00000000', status_code=200)
-        m.put('https://blobep.blobep/container/test.tmp?saskey&comp=blocklist',
-              status_code=201)
-        m.put('https://blobep.blobep/container' + lpath +
+        m.put('https://blobep.blob.blobep/container/test.tmp?saskey'
+              '&comp=blocklist', status_code=201)
+        m.put('https://blobep.blob.blobep/container' + lpath +
               '?saskey&comp=block&blockid=00000000', status_code=200)
-        m.put('https://blobep.blobep/container' + lpath +
+        m.put('https://blobep.blob.blobep/container' + lpath +
               '?saskey&comp=blocklist', status_code=201)
-        m.put('https://blobep.blobep/container/' + notmp_lpath +
+        m.put('https://blobep.blob.blobep/container/' + notmp_lpath +
               '?saskey&comp=block&blockid=00000000', status_code=200)
-        m.put('https://blobep.blobep/container/' + notmp_lpath +
+        m.put('https://blobep.blob.blobep/container/' + notmp_lpath +
               '?saskey&comp=blocklist', status_code=201)
-        m.get('https://blobep.blobep/container?saskey&comp=list'
+        m.get('https://blobep.blob.blobep/container?saskey&comp=list'
               '&restype=container&maxresults=1000',
               text='<?xml version="1.0" encoding="utf-8"?>'
-              '<EnumerationResults ContainerName="https://blobep.blobep/'
+              '<EnumerationResults ContainerName="https://blobep.blob.blobep/'
               'container"><Blobs><Blob><Name>blob</Name><Properties>'
               '<Content-Length>6</Content-Length><Content-MD5>md5'
               '</Content-MD5><BlobType>BlockBlob</BlobType></Properties>'
               '<Metadata/></Blob></Blobs></EnumerationResults>')
-        m.delete('https://blobep.blobep/container/blob?saskey',
+        m.delete('https://blobep.blob.blobep/container/blob?saskey',
                  status_code=202)
         with pytest.raises(SystemExit):
             blobxfer.main()
 
         args.recursive = False
-        m.put('https://blobep.blobep/container/blob.blobtmp?saskey'
+        m.put('https://blobep.blob.blobep/container/blob.blobtmp?saskey'
               '&comp=blocklist', status_code=201)
-        m.put('https://blobep.blobep/container/test.tmp.blobtmp?saskey'
+        m.put('https://blobep.blob.blobep/container/test.tmp.blobtmp?saskey'
               '&comp=blocklist', status_code=201)
-        m.put('https://blobep.blobep/container/blob.blobtmp?saskey'
+        m.put('https://blobep.blob.blobep/container/blob.blobtmp?saskey'
               '&comp=block&blockid=00000000', status_code=200)
-        m.put('https://blobep.blobep/container/blob?saskey&comp=blocklist',
-              status_code=201)
+        m.put('https://blobep.blob.blobep/container/blob?saskey'
+              '&comp=blocklist', status_code=201)
         with pytest.raises(SystemExit):
             blobxfer.main()
 
@@ -1093,28 +1109,31 @@ def test_main1(
         args.pageblob = True
         args.upload = True
         args.download = False
-        m.put('https://blobep.blobep/container/blob.blobtmp?saskey',
+        m.put('https://blobep.blob.blobep/container/blob.blobtmp?saskey',
               status_code=201)
-        m.put('https://blobep.blobep/container/test.tmp?saskey',
+        m.put('https://blobep.blob.blobep/container/test.tmp?saskey',
               status_code=201)
-        m.put('https://blobep.blobep/container/blob.blobtmp?saskey'
+        m.put('https://blobep.blob.blobep/container/blob.blobtmp?saskey'
               '&comp=properties', status_code=200)
-        m.put('https://blobep.blobep/container/test.tmp?saskey'
+        m.put('https://blobep.blob.blobep/container/test.tmp?saskey'
               '&comp=properties', status_code=200)
-        m.put('https://blobep.blobep/container/blob?saskey', status_code=201)
+        m.put('https://blobep.blob.blobep/container/blob?saskey',
+              status_code=201)
         with pytest.raises(IOError):
             blobxfer.main()
 
         args.stripcomponents = None
-        m.put('https://blobep.blobep/container/blobsaskey', status_code=200)
+        m.put('https://blobep.blob.blobep/container/blobsaskey',
+              status_code=200)
         with pytest.raises(IOError):
             blobxfer.main()
 
         args.stripcomponents = None
         args.pageblob = False
-        m.put('https://blobep.blobep/container/' + notmp_lpath +
+        m.put('https://blobep.blob.blobep/container/' + notmp_lpath +
               '?saskey&comp=blocklist', status_code=201)
-        m.put('https://blobep.blobep/container/blob?saskey', status_code=201)
+        m.put('https://blobep.blob.blobep/container/blob?saskey',
+              status_code=201)
         blobxfer.main()
 
         args.stripcomponents = None
@@ -1138,20 +1157,20 @@ def test_main1(
         with open(pempath, 'wb') as f:
             f.write(pemcontents)
         args.rsaprivatekey = pempath
-        m.put('https://blobep.blobep/container/rsa.pem?saskey&comp=block'
+        m.put('https://blobep.blob.blobep/container/rsa.pem?saskey&comp=block'
               '&blockid=00000000', status_code=201)
-        m.put('https://blobep.blobep/container/rsa.pem?saskey&comp=blocklist',
-              status_code=201)
-        m.put('https://blobep.blobep/container/rsa.pem?saskey&comp=metadata',
-              status_code=200)
-        m.put('https://blobep.blobep/container/blob?saskey&comp=metadata',
-              status_code=200)
-        m.put('https://blobep.blobep/container/blob.blobtmp?saskey'
+        m.put('https://blobep.blob.blobep/container/rsa.pem?saskey'
+              '&comp=blocklist', status_code=201)
+        m.put('https://blobep.blob.blobep/container/rsa.pem?saskey'
               '&comp=metadata', status_code=200)
-        m.put('https://blobep.blobep/container/test.tmp.blobtmp?saskey'
+        m.put('https://blobep.blob.blobep/container/blob?saskey'
               '&comp=metadata', status_code=200)
-        m.put('https://blobep.blobep/container/test.tmp?saskey&comp=metadata',
-              status_code=200)
+        m.put('https://blobep.blob.blobep/container/blob.blobtmp?saskey'
+              '&comp=metadata', status_code=200)
+        m.put('https://blobep.blob.blobep/container/test.tmp.blobtmp?saskey'
+              '&comp=metadata', status_code=200)
+        m.put('https://blobep.blob.blobep/container/test.tmp?saskey'
+              '&comp=metadata', status_code=200)
         blobxfer.main()
 
         args.stripcomponents = None
@@ -1160,9 +1179,10 @@ def test_main1(
         args.rsaprivatekey = pempath
         args.remoteresource = 'blob'
         args.localresource = str(tmpdir)
-        m.head('https://blobep.blobep/container/blob?saskey', headers={
+        m.head('https://blobep.blob.blobep/container/blob?saskey', headers={
             'content-length': '6', 'content-md5': '1qmpM8iq/FHlWsBmK25NSg=='})
-        m.get('https://blobep.blobep/container/blob?saskey', content=b'012345')
+        m.get('https://blobep.blob.blobep/container/blob?saskey',
+              content=b'012345')
         # TODO add encrypted data json
         blobxfer.main()
 
@@ -1184,8 +1204,6 @@ def test_main2(patched_parseargs, tmpdir):
     args.localresource = lpath
     args.blobep = '.blobep'
     args.timeout = 10
-    args.pageblob = False
-    args.autovhd = False
     args.managementep = None
     args.managementcert = None
     args.subscriptionid = None
@@ -1193,6 +1211,7 @@ def test_main2(patched_parseargs, tmpdir):
     args.download = False
     args.upload = True
     args.remoteresource = None
+    args.collate = None
     args.saskey = None
     args.storageaccountkey = 'key'
     with open(lpath, 'wt') as f:
@@ -1202,16 +1221,10 @@ def test_main2(patched_parseargs, tmpdir):
     adapter = requests_mock.Adapter()
     session.mount('mock', adapter)
 
-    with patch('azure.storage.blob.BlobService') as mock:
+    with patch('azure.storage.blob.BlockBlobService') as mock:
         args.createcontainer = True
         args.pageblob = False
         args.autovhd = False
-        args.collate = None
         mock.return_value = MagicMock()
         mock.return_value.create_container = _mock_blobservice_create_container
-        blobxfer.main()
-
-        args.createcontainer = False
-        args.pageblob = True
-        args.autovhd = False
         blobxfer.main()
