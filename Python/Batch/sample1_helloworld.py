@@ -66,8 +66,9 @@ def submit_job_and_add_task(batch_client, job_id, vm_size, vm_count):
 
     task = batchmodels.CloudTask(
         id="HelloWorld",
-        command_line="cmd /c echo Hello world " +
-                     "from the Batch Hello world sample!")
+        command_line=common.helpers.wrap_commands_in_shell(
+            'windows', 'echo Hello world from the Batch Hello world sample!')
+    )
 
     batch_client.task.add(job_id=job.id, task=task)
 

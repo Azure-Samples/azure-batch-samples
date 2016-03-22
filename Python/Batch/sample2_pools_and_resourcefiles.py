@@ -61,9 +61,9 @@ def create_pool(batch_client, block_blob_client, pool_id, vm_size, vm_count):
                    for image_ref in sorted(
                        sku.verified_image_references,
                        key=lambda item: item.sku)
-                   if image_ref.publisher == "Canonical"
-                   and image_ref.offer == "UbuntuServer"
-                   and "14.04" in image_ref.sku]
+                   if image_ref.publisher == "Canonical" and
+                   image_ref.offer == "UbuntuServer" and
+                   "14.04" in image_ref.sku]
     sku_to_use, image_ref_to_use = skus_to_use[-1]
 
     block_blob_client.create_container(

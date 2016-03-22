@@ -114,11 +114,7 @@ def print_configuration(config):
 
 
 def read_file_as_string(
-        batch_client,
-        job_id,
-        task_id,
-        file_name,
-        encoding=None):
+        batch_client, job_id, task_id, file_name, encoding=None):
     """Reads the specified file as a string.
 
     :param batch_client: The batch client to use.
@@ -163,12 +159,49 @@ def create_pool_if_not_exist(batch_client, pool):
             print("Pool {!r} already exists".format(pool.id))
 
 
+def wait_for_node_state(batch_client, pool, node, node_state):
+    """Creates the specified pool if it doesn't already exist
+
+    :param batch_client: The batch client to use.
+    :type batch_client: `batchserviceclient.BatchServiceClient`
+    :param pool: The pool containing the node.
+    :type pool: `batchserviceclient.models.CloudPool`
+    :param node: The compute node.
+    :type node: `batchserviceclient.models.ComputeNode`
+    :param set node_state: node states to wait for
+    :rtype: `batchserviceclient.models.ComputeNode`
+    :return: Compute node reference
+    """
+    print('waiting for node {} in pool {} to reach one of: {}'.format(
+        node.id, pool.id, node_state))
+    while True:
+        _node = batch_client.compute_node.get(pool.id, node.id)
+        if _node.state is not None and _node.state in node_state:
+            return _node
+        time.sleep(2)
+
+
+def create_sas_token(
+        block_blob_client, container_name, blob_name, permission, expiry=None):
+    """Create a blob sas token
+
+    :param block_blob_client: The storage block blob client to use.
+    :type block_blob_client: `azure.storage.blob.BlockBlobService`
+    :param str container_name: The name of the container to upload the blob to.
+    :param str blob_name: The name of the blob to upload the local file to.
+    :param expiry: The SAS expiry time.
+    :type expiry: `datetime.datetime`
+    :return: A SAS token
+    :rtype: str
+    """
+    if expiry is None:
+        expiry = datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
+    return block_blob_client.generate_blob_shared_access_signature(
+        container_name, blob_name, permission=permission, expiry=expiry)
+
+
 def upload_blob_and_create_sas(
-        block_blob_client,
-        container_name,
-        blob_name,
-        file_name,
-        expiry):
+        block_blob_client, container_name, blob_name, file_name, expiry):
     """Uploads a file from local disk to Azure Storage and creates
     a SAS for it.
 
@@ -191,7 +224,8 @@ def upload_blob_and_create_sas(
         blob_name,
         file_name)
 
-    sas_token = block_blob_client.generate_blob_shared_access_signature(
+    sas_token = create_sas_token(
+        block_blob_client,
         container_name,
         blob_name,
         permission=azureblob.BlobPermissions.READ,
@@ -215,3 +249,20 @@ def generate_unique_resource_name(resource_prefix):
     """
     return resource_prefix + "-" + \
         datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+
+
+def wrap_commands_in_shell(ostype, commands):
+    """Wrap commands in a shell
+
+    :param list commands: list of commands to wrap
+    :param str ostype: OS type, linux or windows
+    :rtype: str
+    :return: a shell wrapping commands
+    """
+    if ostype.lower() == 'linux':
+        return '/bin/bash -c \'set -e; set -o pipefail; {}; wait\''.format(
+            ';'.join(commands))
+    elif ostype.lower() == 'windows':
+        return 'cmd.exe /c "{}"'.format('&'.join(commands))
+    else:
+        raise ValueError('unknown ostype: {}'.format(ostype))
