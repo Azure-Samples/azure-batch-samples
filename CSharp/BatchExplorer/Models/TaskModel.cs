@@ -55,13 +55,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
         public IEnumerable<ResourceFile> ResourceFiles { get { return this.Task.ResourceFiles; } }
-
-        /// <summary>
-        /// The set of Subtask information
-        /// </summary>
-        [ChangeTracked(ModelRefreshType.Basic)]
-        public IEnumerable<SubtaskModel> Subtasks { get { return this.SubtasksInfo; } }
-
+        
         /// <summary>
         /// The number of times to retry this task
         /// </summary>
@@ -110,6 +104,13 @@ namespace Microsoft.Azure.BatchExplorer.Models
                 return (this.OutputFiles != null && this.OutputFiles.Any());
             }
         }
+
+        /// <summary>
+        /// The set of Subtask information
+        /// </summary>
+        [ChangeTracked(ModelRefreshType.Children)]
+        public IEnumerable<SubtaskModel> Subtasks { get { return this.SubtasksInfo; } }
+
         #endregion
 
         #region Public UI Properties
@@ -199,12 +200,6 @@ namespace Microsoft.Azure.BatchExplorer.Models
                     this.Task = await asyncTask;
                     this.LastUpdatedTime = DateTime.UtcNow;
 
-                    IPagedEnumerable<SubtaskInformation> subtasks = this.Task.ListSubtasks(OptionsModel.Instance.ListDetailLevel);
-
-                    this.SubtasksInfo = new List<SubtaskModel>();
-
-                    await subtasks.ForEachAsync(item => this.SubtasksInfo.Add(new SubtaskModel(item)));
-
                     //
                     // Fire property change events for this models properties
                     //
@@ -235,6 +230,18 @@ namespace Microsoft.Azure.BatchExplorer.Models
                             new TaskOperation(TaskOperation.ListFiles, this.ParentJob.Id, this.Task.Id)));
 
                         this.OutputFiles = await asyncTask;
+
+                        IPagedEnumerable<SubtaskInformation> subtasks = this.Task.ListSubtasks(OptionsModel.Instance.ListDetailLevel);
+
+                        this.SubtasksInfo = new List<SubtaskModel>();
+
+                        System.Threading.Tasks.Task asyncListSubtasksTask = subtasks.ForEachAsync(item => this.SubtasksInfo.Add(new SubtaskModel(item)));
+
+                        AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
+                            asyncListSubtasksTask,
+                            new TaskOperation(TaskOperation.ListSubtasks, this.ParentJob.Id, this.Task.Id)));
+
+                        await asyncListSubtasksTask;
                     }
                     catch (BatchException be)
                     {

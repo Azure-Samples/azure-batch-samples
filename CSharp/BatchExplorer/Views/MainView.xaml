@@ -1045,7 +1045,7 @@
                             </TreeView>
                         </TabItem>
                         <TabItem Header="Subtasks">
-                            <DataGrid ItemsSource="{Binding Path=SelectedJob.SelectedTask.Subtasks}">
+                            <DataGrid ItemsSource="{Binding Path=SelectedTask.Subtasks}">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Id" Binding="{Binding Id}"/>
                                     <DataGridTextColumn Header="State" Binding="{Binding State}"/>

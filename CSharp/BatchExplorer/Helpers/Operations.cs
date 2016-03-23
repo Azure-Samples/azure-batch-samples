@@ -100,6 +100,7 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         public const string Refresh = "Refresh";
         public const string ListFiles = "ListFiles";
         public const string GetFile = "GetFile";
+        public const string ListSubtasks = "ListSubtasks";
 
         private readonly string jobId;
         private readonly string taskId;
