@@ -1,15 +1,15 @@
-﻿using Microsoft.Azure.Batch;
-using Microsoft.Azure.Batch.Auth;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace BatchMetrics
+﻿namespace BatchMetrics
 {
+    using Microsoft.Azure.Batch;
+    using Microsoft.Azure.Batch.Auth;
+    using System;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.Linq;
+    using System.Text;
+    using System.Threading;
+    using System.Threading.Tasks;
+
     public sealed class MetricMonitor : IDisposable
     {
         private readonly bool _ownsClient;

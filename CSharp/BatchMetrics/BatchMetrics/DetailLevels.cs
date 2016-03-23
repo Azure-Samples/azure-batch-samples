@@ -1,12 +1,12 @@
-﻿using Microsoft.Azure.Batch;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace BatchMetrics
+﻿namespace BatchMetrics
 {
+    using Microsoft.Azure.Batch;
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+    using System.Threading.Tasks;
+
     internal static class DetailLevels
     {
         internal static class IdAndState

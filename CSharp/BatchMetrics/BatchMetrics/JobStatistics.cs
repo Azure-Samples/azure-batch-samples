@@ -1,12 +1,12 @@
-﻿using Microsoft.Azure.Batch.Common;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace BatchMetrics
+﻿namespace BatchMetrics
 {
+    using Microsoft.Azure.Batch.Common;
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+    using System.Threading.Tasks;
+
     public sealed class JobStatistics
     {
         private readonly TimeSpan _listTasksLatency;

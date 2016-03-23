@@ -1,13 +1,13 @@
-﻿using Microsoft.Azure.Batch;
-using Microsoft.Azure.Batch.Common;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace BatchMetricsUsageSample
+﻿namespace BatchMetricsUsageSample
 {
+    using Microsoft.Azure.Batch;
+    using Microsoft.Azure.Batch.Common;
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+    using System.Threading.Tasks;
+
     public class JobSubmitter
     {
         private readonly BatchClient _batchClient;

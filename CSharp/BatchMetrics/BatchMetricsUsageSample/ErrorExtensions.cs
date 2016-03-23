@@ -1,12 +1,12 @@
-﻿using Microsoft.Azure.Batch.Common;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace BatchMetricsUsageSample
+﻿namespace BatchMetricsUsageSample
 {
+    using Microsoft.Azure.Batch.Common;
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+    using System.Threading.Tasks;
+
     internal static class ErrorExtensions
     {
         internal static bool IsBatchErrorCode(this BatchException ex, string errorCode)

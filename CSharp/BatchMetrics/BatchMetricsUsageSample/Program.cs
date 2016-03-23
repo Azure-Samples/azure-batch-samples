@@ -1,17 +1,17 @@
-﻿using BatchMetrics;
-using Microsoft.Azure.Batch;
-using Microsoft.Azure.Batch.Auth;
-using Microsoft.Azure.Batch.Common;
-using Microsoft.Azure.Batch.Samples.Common;
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace BatchMetricsUsageSample
+﻿namespace BatchMetricsUsageSample
 {
+    using BatchMetrics;
+    using Microsoft.Azure.Batch;
+    using Microsoft.Azure.Batch.Auth;
+    using Microsoft.Azure.Batch.Common;
+    using Microsoft.Azure.Batch.Samples.Common;
+    using System;
+    using System.Collections.Generic;
+    using System.Collections.ObjectModel;
+    using System.Linq;
+    using System.Text;
+    using System.Threading.Tasks;
+
     class Program
     {
         static void Main()
