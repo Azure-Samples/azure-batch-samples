@@ -12,9 +12,9 @@
     using System.Text;
     using System.Threading.Tasks;
 
-    class Program
+    internal static class Program
     {
-        static void Main()
+        private static void Main()
         {
             try
             {
@@ -37,7 +37,7 @@
             Console.ReadLine();
         }
 
-        static async Task MainAsync(AccountSettings accountSettings)
+        private static async Task MainAsync(AccountSettings accountSettings)
         {
             var credentials = new BatchSharedKeyCredentials(accountSettings.BatchServiceUrl, accountSettings.BatchAccountName, accountSettings.BatchAccountKey);
             using (var batchClient = await BatchClient.OpenAsync(credentials))
@@ -58,7 +58,7 @@
             }
         }
 
-        static string FormatMetrics(MetricEvent metrics)
+        private static string FormatMetrics(MetricEvent metrics)
         {
             return FormatMetricsCollectionRange(metrics) + Environment.NewLine + FormatMetricsBody(metrics);
         }
@@ -83,7 +83,7 @@
 
         private static readonly ReadOnlyCollection<TaskState> TaskStates = Enum.GetValues(typeof(TaskState)).Cast<TaskState>().ToList().AsReadOnly();
 
-        static string FormatJobStatistics(string jobId, BatchMetrics.JobStatistics statistics, int jobIdFormatLength)
+        private static string FormatJobStatistics(string jobId, BatchMetrics.JobStatistics statistics, int jobIdFormatLength)
         {
             var taskStateCounts = statistics.TaskStateCounts;
             var taskStateInfos = TaskStates.Select(s => new { State = s, Count = statistics.TaskStateCounts[s] })
