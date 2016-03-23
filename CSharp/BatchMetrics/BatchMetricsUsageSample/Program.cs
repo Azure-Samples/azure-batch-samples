@@ -39,7 +39,11 @@
 
         private static async Task MainAsync(AccountSettings accountSettings)
         {
-            var credentials = new BatchSharedKeyCredentials(accountSettings.BatchServiceUrl, accountSettings.BatchAccountName, accountSettings.BatchAccountKey);
+            var credentials = new BatchSharedKeyCredentials(
+                accountSettings.BatchServiceUrl,
+                accountSettings.BatchAccountName,
+                accountSettings.BatchAccountKey);
+
             using (var batchClient = await BatchClient.OpenAsync(credentials))
             {
                 using (var monitor = new MetricMonitor(batchClient))
@@ -65,7 +69,9 @@
 
         private static string FormatMetricsCollectionRange(MetricEvent metrics)
         {
-            return string.Format("Collected from {0:HH:mm:ss} to {1:HH:mm:ss}", metrics.CollectionStarted.ToLocalTime(), metrics.CollectionCompleted.ToLocalTime());
+            return string.Format("Collected from {0:HH:mm:ss} to {1:HH:mm:ss}",
+                metrics.CollectionStarted.ToLocalTime(),
+                metrics.CollectionCompleted.ToLocalTime());
         }
 
         private static string FormatMetricsBody(MetricEvent metrics)
@@ -81,7 +87,9 @@
             return String.Join(Environment.NewLine, jobInfos);
         }
 
-        private static readonly ReadOnlyCollection<TaskState> TaskStates = Enum.GetValues(typeof(TaskState)).Cast<TaskState>().ToList().AsReadOnly();
+        private static readonly ReadOnlyCollection<TaskState> TaskStates = Enum.GetValues(typeof(TaskState))
+                                                                               .Cast<TaskState>()
+                                                                               .ToList().AsReadOnly();
 
         private static string FormatJobStatistics(string jobId, BatchMetrics.JobStatistics statistics, int jobIdFormatLength)
         {
