@@ -1,0 +1,19 @@
+﻿using Microsoft.Azure.Batch.Common;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace BatchMetricsUsageSample
+{
+    internal static class ErrorExtensions
+    {
+        internal static bool IsBatchErrorCode(this BatchException ex, string errorCode)
+        {
+            return ex.RequestInformation != null
+                && ex.RequestInformation.AzureError != null
+                && ex.RequestInformation.AzureError.Code == errorCode;
+        }
+    }
+}
