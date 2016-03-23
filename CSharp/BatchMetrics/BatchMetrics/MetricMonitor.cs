@@ -68,7 +68,7 @@ namespace BatchMetrics
                 var metrics = await CollectMetricsAsync();
                 CurrentMetrics = metrics;
                 OnMetricsUpdated();
-                await Task.Delay(_monitorInterval, _runCancel.Token);
+                await TaskHelpers.CancellableDelay(_monitorInterval, _runCancel.Token);
             }
         }
 

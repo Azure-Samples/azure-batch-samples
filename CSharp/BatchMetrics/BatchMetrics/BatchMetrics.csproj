@@ -114,6 +114,7 @@
     <Compile Include="MetricEvent.cs" />
     <Compile Include="MetricMonitor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TaskHelpers.cs" />
     <Compile Include="TaskStateCache.cs" />
     <Compile Include="TaskStateCounts.cs" />
   </ItemGroup>
