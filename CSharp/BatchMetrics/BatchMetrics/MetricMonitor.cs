@@ -16,6 +16,7 @@
         private readonly BatchClient _batchClient;
         private readonly TimeSpan _monitorInterval;
         private readonly Dictionary<string, TaskStateCache> _jobStateCache = new Dictionary<string, TaskStateCache>();
+
         private Task _runTask;
         private readonly object _runLock = new object();
         private readonly CancellationTokenSource _runCancel = new CancellationTokenSource();
