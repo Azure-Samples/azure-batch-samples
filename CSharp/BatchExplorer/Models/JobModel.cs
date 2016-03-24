@@ -22,7 +22,13 @@ namespace Microsoft.Azure.BatchExplorer.Models
     public class JobModel : ModelBase
     {
         #region Public properties
-        
+
+        /// <summary>
+        /// Marker for multi selection
+        /// </summary>
+        [ChangeTracked(ModelRefreshType.Basic)]
+        public bool IsChecked { get; set; }
+
         /// <summary>
         /// Gets the id of the job
         /// </summary>

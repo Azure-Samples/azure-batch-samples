@@ -733,6 +733,32 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         }
 
         /// <summary>
+        /// Delete selected jobs
+        /// </summary>
+        public CommandBase DeleteSelectedJobs
+        {
+            get
+            {
+                return new CommandBase(
+                    (o) =>
+                    {
+                        foreach (var job in this.jobs)
+                        {
+                            if (job.IsChecked || (o != null && o.ToString() == "All"))
+                            {
+                                System.Threading.Tasks.Task asyncTask = job.DeleteAsync();
+                                AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
+                                    asyncTask,
+                                    new JobOperation(JobOperation.Delete, job.Id)));
+                            }
+                        }
+
+                        Messenger.Default.Send<RefreshMessage>(new RefreshMessage(RefreshTarget.Jobs));
+                    });
+            }
+        }
+
+        /// <summary>
         /// Refresh all pools
         /// </summary>
         public CommandBase RefreshPools

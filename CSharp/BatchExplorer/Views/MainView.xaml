@@ -676,6 +676,30 @@
                                     </StackPanel>
                                 </Button.Content>
                             </Button>
+                            <Button
+                                Margin="4"
+                                Width="48"
+                                Command="{Binding DeleteSelectedJobs}"
+                                IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
+                                <Button.Content>
+                                    <StackPanel>
+                                        <Image Source="../Images/delete.png" Height="36"/>
+                                        <TextBlock HorizontalAlignment="Center" Text="Delete" FontSize="12" Foreground="Black" />
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>
+                            <Button
+                                Margin="4"
+                                Width="48"
+                                Command="{Binding DeleteSelectedJobs}" CommandParameter="All"
+                                IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
+                                <Button.Content>
+                                    <StackPanel>
+                                        <Image Source="../Images/cancel.png" Height="36"/>
+                                        <TextBlock HorizontalAlignment="Center" Text="Clear" FontSize="12" Foreground="Black" />
+                                    </StackPanel>
+                                </Button.Content>
+                            </Button>
                         </StackPanel>
                         <DataGrid
                             Grid.Row="1"
@@ -720,6 +744,13 @@
                                 </ContextMenu>
                             </DataGrid.ContextMenu>
                             <DataGrid.Columns>
+                                <DataGridTemplateColumn>
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding IsChecked, UpdateSourceTrigger=PropertyChanged}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                                 <DataGridTextColumn Header="Id" Binding="{Binding Id}"/>
                                 <DataGridTextColumn Header="Display Name" Binding="{Binding DisplayName}"/>
                                 <DataGridTextColumn Header="State" Binding="{Binding State}">
