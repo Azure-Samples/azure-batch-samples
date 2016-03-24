@@ -19,7 +19,8 @@ script:
   - cd $STORAGE_SAMPLES_DIR
   - flake8 blobxfer.py test/test_blobxfer.py
   - PYTHONPATH=. py.test -l --cov-config ../.coveragerc --cov-report term-missing --cov blobxfer test/test_blobxfer.py
-  - cd $BATCH_SAMPLES_DIR
+  - cd ../../$BATCH_SAMPLES_DIR
+  - pip install -r requirements.txt
   - flake8 . --statistics
 after_success:
   - coveralls --rcfile=../.coveragerc --verbose

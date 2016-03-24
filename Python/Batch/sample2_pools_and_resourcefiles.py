@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # sample2_pools_and_resourcefiles.py Code Sample
 #
 # Copyright (c) Microsoft Corporation
@@ -51,20 +49,16 @@ def create_pool(batch_client, block_blob_client, pool_id, vm_size, vm_count):
 
     :param batch_client: The batch client to use.
     :type batch_client: `batchserviceclient.BatchServiceClient`
+    :param block_blob_client: The storage block blob client to use.
+    :type block_blob_client: `azure.storage.blob.BlockBlobService`
     :param str pool_id: The id of the pool to create.
+    :param str vm_size: vm size (sku)
+    :param int vm_count: number of vms to allocate
     """
-
-    node_agent_skus = batch_client.account.list_node_agent_skus()
-
-    # Pick the latest supported sku for UbuntuServer
-    skus_to_use = [(sku, image_ref) for sku in node_agent_skus
-                   for image_ref in sorted(
-                       sku.verified_image_references,
-                       key=lambda item: item.sku)
-                   if image_ref.publisher == "Canonical" and
-                   image_ref.offer == "UbuntuServer" and
-                   "14.04" in image_ref.sku]
-    sku_to_use, image_ref_to_use = skus_to_use[-1]
+    # pick the latest supported 14.04 sku for UbuntuServer
+    sku_to_use, image_ref_to_use = \
+        common.helpers.select_latest_verified_vm_image_with_node_agent_sku(
+            batch_client, 'Canonical', 'UbuntuServer', '14.04')
 
     block_blob_client.create_container(
         _CONTAINER_NAME,
@@ -81,7 +75,7 @@ def create_pool(batch_client, block_blob_client, pool_id, vm_size, vm_count):
         id=pool_id,
         virtual_machine_configuration=batchmodels.VirtualMachineConfiguration(
             image_reference=image_ref_to_use,
-            node_agent_sku_id=sku_to_use.id),
+            node_agent_sku_id=sku_to_use),
         vm_size=vm_size,
         target_dedicated=vm_count,
         start_task=batchmodels.StartTask(
@@ -150,6 +144,9 @@ def execute_sample(global_config, sample_config):
         'Storage',
         'storageaccountsuffix')
 
+    should_delete_container = sample_config.getboolean(
+        'DEFAULT',
+        'shoulddeletecontainer')
     should_delete_job = sample_config.getboolean(
         'DEFAULT',
         'shoulddeletejob')
@@ -209,10 +206,11 @@ def execute_sample(global_config, sample_config):
 
         common.helpers.print_task_output(batch_client, job_id, task_ids)
     finally:
-        # Delete the storage container
-        block_blob_client.delete_container(
-            _CONTAINER_NAME,
-            fail_not_exist=False)
+        # clean up
+        if should_delete_container:
+            block_blob_client.delete_container(
+                _CONTAINER_NAME,
+                fail_not_exist=False)
         if should_delete_job:
             print("Deleting job: ", job_id)
             batch_client.job.delete(job_id)

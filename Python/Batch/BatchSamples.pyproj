@@ -23,27 +23,25 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="common\helpers.py" />
-    <Compile Include="common\__init__.py" />
-    <Compile Include="resources\simple_task.py" />
-    <Compile Include="sample1_helloworld.py" />
-    <Compile Include="sample2_pools_and_resourcefiles.py">
-      <SubType>Code</SubType>
-    </Compile>
-  </ItemGroup>
-  <ItemGroup>
     <Folder Include="common\" />
     <Folder Include="resources\" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="configuration.cfg" />
-    <Content Include="sample2_pools_and_resourcefiles.cfg">
-      <SubType>Code</SubType>
-    </Content>
+    <Compile Include="common\helpers.py" />
+    <Compile Include="common\__init__.py" />
+    <Content Include="resources\simple_task.py" />
+    <Content Include="resources\docker_starttask.sh" />
+    <Content Include="resources\secret.txt" />
     <Content Include="requirements.txt" />
-    <Content Include="sample1_helloworld.cfg">
+    <Content Include="configuration.cfg" />
+    <Content Include="sample1_helloworld.cfg" />
+    <Compile Include="sample1_helloworld.py">
       <SubType>Code</SubType>
-    </Content>
+    </Compile>
+    <Content Include="sample2_pools_and_resourcefiles.cfg" />
+    <Compile Include="sample2_pools_and_resourcefiles.py" />
+    <Content Include="sample3_encrypted_resourcefiles.cfg" />
+    <Compile Include="sample3_encrypted_resourcefiles.py" />
+    <Content Include="sample4_docker_swarm.cfg" />
+    <Compile Include="sample4_docker_swarm.py" />
   </ItemGroup>
   <ItemGroup>
     <InterpreterReference Include="{9a7a9026-48c1-4688-9d5d-e5699d47d074}\2.7" />

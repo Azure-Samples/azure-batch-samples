@@ -22,6 +22,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
+from __future__ import print_function
 import datetime
 import io
 import time
@@ -40,6 +41,51 @@ class TimeoutError(Exception):
     """
     def __init__(self, message):
         self.message = message
+
+
+def decode_string(string, encoding=None):
+    """Decode a string with specified encoding
+
+    :type string: str or bytes
+    :param string: string to decode
+    :param str encoding: encoding of string to decode
+    :rtype: str
+    :return: decoded string
+    """
+    if isinstance(string, str):
+        return string
+    if encoding is None:
+        encoding = 'utf-8'
+    if isinstance(string, bytes):
+        return string.decode(encoding)
+    raise ValueError('invalid string type: {}'.format(type(string)))
+
+
+def select_latest_verified_vm_image_with_node_agent_sku(
+        batch_client, publisher, offer, sku_starts_with):
+    """Select the latest verified image that Azure Batch supports given
+    a publisher, offer and sku (starts with filter).
+
+    :param batch_client: The batch client to use.
+    :type batch_client: `batchserviceclient.BatchServiceClient`
+    :param str publisher: vm image publisher
+    :param str offer: vm image offer
+    :param str sku_starts_with: vm sku starts with filter
+    :rtype: tuple
+    :return: (node agent sku id to use, vm image ref to use)
+    """
+    # get verified vm image list and node agent sku ids from service
+    node_agent_skus = batch_client.account.list_node_agent_skus()
+    # pick the latest supported sku
+    skus_to_use = [
+        (sku, image_ref) for sku in node_agent_skus for image_ref in sorted(
+            sku.verified_image_references, key=lambda item: item.sku)
+        if image_ref.publisher.lower() == publisher.lower() and
+        image_ref.offer.lower() == offer.lower() and
+        image_ref.sku.startswith(sku_starts_with)
+    ]
+    sku_to_use, image_ref_to_use = skus_to_use[-1]
+    return (sku_to_use.id, image_ref_to_use)
 
 
 def wait_for_tasks_to_complete(batch_client, job_id, timeout):
@@ -77,7 +123,7 @@ def print_task_output(batch_client, job_id, task_ids, encoding=None):
     :param str encoding: The encoding to use when downloading the file.
     """
     for task_id in task_ids:
-        file_text = read_file_as_string(
+        file_text = read_task_file_as_string(
             batch_client,
             job_id,
             task_id,
@@ -88,7 +134,7 @@ def print_task_output(batch_client, job_id, task_ids, encoding=None):
             task_id))
         print(file_text)
 
-        file_text = read_file_as_string(
+        file_text = read_task_file_as_string(
             batch_client,
             job_id,
             task_id,
@@ -113,7 +159,27 @@ def print_configuration(config):
     print(configuration_dict)
 
 
-def read_file_as_string(
+def _read_stream_as_string(stream, encoding):
+    """Read stream as string
+
+    :param stream: input stream generator
+    :param str encoding: The encoding of the file. The default is utf-8.
+    :return: The file content.
+    :rtype: str
+    """
+    output = io.BytesIO()
+    try:
+        for data in stream:
+            output.write(data)
+        if encoding is None:
+            encoding = 'utf-8'
+        return output.getvalue().decode(encoding)
+    finally:
+        output.close()
+    raise RuntimeError('could not write data to stream or decode bytes')
+
+
+def read_task_file_as_string(
         batch_client, job_id, task_id, file_name, encoding=None):
     """Reads the specified file as a string.
 
@@ -122,22 +188,30 @@ def read_file_as_string(
     :param str job_id: The id of the job.
     :param str task_id: The id of the task.
     :param str file_name: The name of the file to read.
+    :param str encoding: The encoding of the file. The default is utf-8.
+    :return: The file content.
+    :rtype: str
+    """
+    stream = batch_client.file.get_from_task(job_id, task_id, file_name)
+    return _read_stream_as_string(stream, encoding)
+
+
+def read_compute_node_file_as_string(
+        batch_client, pool_id, node_id, file_name, encoding=None):
+    """Reads the specified file as a string.
+
+    :param batch_client: The batch client to use.
+    :type batch_client: `batchserviceclient.BatchServiceClient`
+    :param str pool_id: The id of the pool.
+    :param str node_id: The id of the node.
+    :param str file_name: The name of the file to read.
     :param str encoding: The encoding of the file.  The default is utf-8
     :return: The file content.
     :rtype: str
     """
-    if encoding is None:
-        encoding = "utf-8"
-
-    stream = batch_client.file.get_from_task(job_id, task_id, file_name)
-    output = io.BytesIO()
-    for data in stream:
-        output.write(data)
-
-    result = output.getvalue().decode(encoding)
-    output.close()
-
-    return result
+    stream = batch_client.file.get_from_compute_node(
+        pool_id, node_id, file_name)
+    return _read_stream_as_string(stream, encoding)
 
 
 def create_pool_if_not_exist(batch_client, pool):
@@ -149,9 +223,9 @@ def create_pool_if_not_exist(batch_client, pool):
     :type pool: `batchserviceclient.models.CloudPool`
     """
     try:
-        print("Attempting to create pool: ", pool.id)
+        print("Attempting to create pool:", pool.id)
         batch_client.pool.add(pool)
-        print("Created pool: ", pool.id)
+        print("Created pool:", pool.id)
     except batchmodels.BatchErrorException as e:
         if e.error.code != "PoolExists":
             raise
@@ -159,26 +233,36 @@ def create_pool_if_not_exist(batch_client, pool):
             print("Pool {!r} already exists".format(pool.id))
 
 
-def wait_for_node_state(batch_client, pool, node, node_state):
-    """Creates the specified pool if it doesn't already exist
+def wait_for_all_nodes_state(batch_client, pool, node_state):
+    """Waits for all nodes in pool to reach any specified state in set
 
     :param batch_client: The batch client to use.
     :type batch_client: `batchserviceclient.BatchServiceClient`
     :param pool: The pool containing the node.
     :type pool: `batchserviceclient.models.CloudPool`
-    :param node: The compute node.
-    :type node: `batchserviceclient.models.ComputeNode`
     :param set node_state: node states to wait for
-    :rtype: `batchserviceclient.models.ComputeNode`
-    :return: Compute node reference
+    :rtype: list
+    :return: list of `batchserviceclient.models.ComputeNode`
     """
-    print('waiting for node {} in pool {} to reach one of: {}'.format(
-        node.id, pool.id, node_state))
+    print('waiting for all nodes in pool {} to reach one of: {!r}'.format(
+        pool.id, node_state))
+    i = 0
     while True:
-        _node = batch_client.compute_node.get(pool.id, node.id)
-        if _node.state is not None and _node.state in node_state:
-            return _node
-        time.sleep(2)
+        # refresh pool to ensure that there is no resize error
+        pool = batch_client.pool.get(pool.id)
+        if pool.resize_error is not None:
+            raise RuntimeError(
+                'resize error encountered for pool {}: {!r}'.format(
+                    pool.id, pool.resize_error))
+        nodes = list(batch_client.compute_node.list(pool.id))
+        if (len(nodes) >= pool.target_dedicated and
+                all(node.state in node_state for node in nodes)):
+            return nodes
+        i += 1
+        if i % 3 == 0:
+            print('waiting for {} nodes to reach desired state...'.format(
+                pool.target_dedicated))
+        time.sleep(10)
 
 
 def create_sas_token(

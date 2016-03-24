@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # sample1_helloworld.py Code Sample
 #
 # Copyright (c) Microsoft Corporation
