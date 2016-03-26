@@ -114,12 +114,12 @@ return code of the failing command.
 
 If you require executing multiple programs at the same time and cannot split
 the invocation across multiple tasks, ensure you wrap your execution flow in
-a shell and provide the appropriate wait command for all children. For
+a shell and provide the appropriate wait command for all child processes. For
 instance,
 
     /bin/bash -c "command1 &; command2 &; command3 &; wait"
 
-This would ensure that all children processes exit before the parent exits.
+This would ensure that all child processes exit before the parent exits.
 Without the `wait` command, the Azure Batch service will not be able to
 properly track when the compute node has completed execution of the
 backgrounded tasks.
@@ -140,8 +140,8 @@ locale via an environment variable. For example,
     )
 
 would set the `LC_ALL` environment variable to English US locale and UTF-8
-encoding for all tasks add to the job. Alternatively you can set the task or
-job environment variable for the individual task itself:
+encoding for all tasks added to the job. Alternatively you can set environment
+variables for each individual task:
 
     # set environment variables on single task
     task = batchserviceclient.models.CloudTask(
