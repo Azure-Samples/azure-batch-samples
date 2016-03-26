@@ -740,7 +740,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             get
             {
                 return new CommandBase( 
-                    async (arg) =>
+                    async (commandArg) =>
                     {                        
                         if (this.jobs.Any(a => a.IsChecked))
                         {
@@ -808,7 +808,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             get
             {
                 return new CommandBase(
-                    (o) =>
+                    (commandArg) =>
                     {
                         if (this.jobs != null && this.jobs.Count > 0)
                         {
