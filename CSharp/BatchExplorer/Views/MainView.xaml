@@ -687,19 +687,7 @@
                                         <TextBlock HorizontalAlignment="Center" Text="Delete" FontSize="12" Foreground="Black" />
                                     </StackPanel>
                                 </Button.Content>
-                            </Button>
-                            <Button
-                                Margin="4"
-                                Width="48"
-                                Command="{Binding DeleteSelectedJobs}" CommandParameter="All"
-                                IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
-                                <Button.Content>
-                                    <StackPanel>
-                                        <Image Source="../Images/cancel.png" Height="36"/>
-                                        <TextBlock HorizontalAlignment="Center" Text="Clear" FontSize="12" Foreground="Black" />
-                                    </StackPanel>
-                                </Button.Content>
-                            </Button>
+                            </Button>                            
                         </StackPanel>
                         <DataGrid
                             Grid.Row="1"
@@ -745,9 +733,12 @@
                             </DataGrid.ContextMenu>
                             <DataGrid.Columns>
                                 <DataGridTemplateColumn>
+                                    <DataGridTemplateColumn.Header>
+                                        <CheckBox x:Name="selectAllJob" Command="{Binding DataContext.SelectAllJobs, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type DataGrid}}}" CommandParameter="{Binding IsChecked, ElementName=selectAllJob}"/>
+                                    </DataGridTemplateColumn.Header>
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <CheckBox IsChecked="{Binding IsChecked, UpdateSourceTrigger=PropertyChanged}" />
+                                            <CheckBox IsChecked="{Binding IsChecked, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" HorizontalAlignment="Center" />
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>

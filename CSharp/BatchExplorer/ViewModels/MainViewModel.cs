@@ -8,6 +8,7 @@ using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
@@ -362,7 +363,6 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         FirePropertyChangedEvent("TasksTabTitle");
                     }
                 }
-                
             }
         }
 
@@ -739,21 +739,84 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         {
             get
             {
+                return new CommandBase( 
+                    async (arg) =>
+                    {                        
+                        if (this.jobs.Any(a => a.IsChecked))
+                        {
+                            IEnumerable<string> deletedIds = this.jobs.Where(a => a.IsChecked).Select(s=>s.Id);
+                            var result =
+                            MessageBox.Show(
+                                deletedIds.Count() > 1 ? 
+                                $"Are you sure you want to delete {deletedIds.Count()} selected jobs?" :
+                                "Are you sure you want to delete the job?",
+                                "Confirm Delete",
+                                MessageBoxButton.YesNo);
+
+                            if (result == MessageBoxResult.Yes)
+                            {
+                                this.LeftSpinnerIsVisible = true;
+                                foreach (var job in this.jobs)
+                                {
+                                    if (job.IsChecked)
+                                    {
+                                        await job.DeleteAsync(false);
+                                    }
+                                }
+
+                                //This is very hacky as the tab count never updated correctly if we refresh
+                                //just after issueing delete async inspite of awaiting for result. Probably it is by default nature
+                                //So keep on refreshing until we see the deleted record inside the refresh list
+                                bool requiredRefresh = true;
+                                while (requiredRefresh)
+                                {                                    
+                                    var refreshedJobs = await dataProvider.GetJobCollectionAsync();
+                                    requiredRefresh = refreshedJobs.Any(a=>deletedIds.Contains(a.Id));
+                                    if(!requiredRefresh)
+                                    {
+                                        this.jobs = new ObservableCollection<JobModel>(refreshedJobs);
+                                        this.jobCollection = CollectionViewSource.GetDefaultView(this.jobs);
+                                        this.selectedJob = null;
+                                        this.Jobs.Refresh();
+
+                                        //Refresh the job pane
+                                        FirePropertyChangedEvent("Jobs");
+                                        FirePropertyChangedEvent("JobTabTitle");
+
+                                        //Refresh the task pane
+                                        FirePropertyChangedEvent("SelectedJob");
+                                        FirePropertyChangedEvent("TasksTabTitle");
+                                    }
+                                    else
+                                    {
+                                        await Task.Delay(1000);
+                                    }
+                                }
+                                
+                                this.LeftSpinnerIsVisible = false;
+                            }
+                        }
+                    });
+            }
+        }
+
+        /// <summary>
+        /// Select all jobs from header checkbox
+        /// </summary>
+        public CommandBase SelectAllJobs
+        {
+            get
+            {
                 return new CommandBase(
                     (o) =>
                     {
-                        foreach (var job in this.jobs)
+                        if (this.jobs != null && this.jobs.Count > 0)
                         {
-                            if (job.IsChecked || (o != null && o.ToString() == "All"))
+                            foreach (var job in this.jobs)
                             {
-                                System.Threading.Tasks.Task asyncTask = job.DeleteAsync();
-                                AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
-                                    asyncTask,
-                                    new JobOperation(JobOperation.Delete, job.Id)));
+                                job.IsChecked = bool.Parse(o.ToString());
                             }
-                        }
-
-                        Messenger.Default.Send<RefreshMessage>(new RefreshMessage(RefreshTarget.Jobs));
+                        }                      
                     });
             }
         }

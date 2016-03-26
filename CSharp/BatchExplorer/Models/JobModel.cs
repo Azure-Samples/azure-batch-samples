@@ -22,12 +22,23 @@ namespace Microsoft.Azure.BatchExplorer.Models
     public class JobModel : ModelBase
     {
         #region Public properties
-
+               
+        private bool isChecked;
         /// <summary>
         /// Marker for multi selection
         /// </summary>
-        [ChangeTracked(ModelRefreshType.Basic)]
-        public bool IsChecked { get; set; }
+        public bool IsChecked
+        {
+            get
+            {
+                return this.isChecked;
+            }
+            set
+            {
+                this.isChecked = value;
+                this.FirePropertyChangedEvent("IsChecked");
+            }
+        }
 
         /// <summary>
         /// Gets the id of the job
@@ -310,7 +321,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// <summary>
         /// Delete this job
         /// </summary>
-        public async System.Threading.Tasks.Task DeleteAsync()
+        public async System.Threading.Tasks.Task DeleteAsync(bool refresh = true)
         {
             try
             {
@@ -319,7 +330,10 @@ namespace Microsoft.Azure.BatchExplorer.Models
                     asyncTask,
                     new JobOperation(JobOperation.Delete, this.Job.Id)));
                 await asyncTask;
-                Messenger.Default.Send<RefreshMessage>(new RefreshMessage(RefreshTarget.Jobs));
+                if (refresh)
+                {
+                    Messenger.Default.Send<RefreshMessage>(new RefreshMessage(RefreshTarget.Jobs));
+                }
             }
             catch (Exception e)
             {
