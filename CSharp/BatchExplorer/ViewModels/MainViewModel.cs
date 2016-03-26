@@ -814,7 +814,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         {
                             foreach (var job in this.jobs)
                             {
-                                job.IsChecked = bool.Parse(o.ToString());
+                                job.IsChecked = bool.Parse(commandArg.ToString());
                             }
                         }                      
                     });
