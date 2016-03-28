@@ -755,45 +755,57 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
 
                             if (result == MessageBoxResult.Yes)
                             {
-                                this.LeftSpinnerIsVisible = true;
-                                foreach (var job in this.jobs)
+                                try
                                 {
-                                    if (job.IsChecked)
+                                    this.LeftSpinnerIsVisible = true;
+                                    FirePropertyChangedEvent("LeftSpinnerIsVisible");
+
+                                    foreach (var job in this.jobs)
                                     {
-                                        await job.DeleteAsync(false);
+                                        if (job.IsChecked)
+                                        {
+                                            await job.DeleteAsync(false);
+                                        }
+                                    }
+
+                                    //This is very hacky as the tab count never updated correctly if we refresh
+                                    //just after issueing delete async inspite of awaiting for result. Probably it is by default nature
+                                    //So keep on refreshing until we see the deleted record inside the refresh list
+                                    bool requiredRefresh = true;
+                                    while (requiredRefresh)
+                                    {
+                                        var refreshedJobs = await dataProvider.GetJobCollectionAsync();
+                                        requiredRefresh = refreshedJobs.Any(a => deletedIds.Contains(a.Id));
+                                        if (!requiredRefresh)
+                                        {
+                                            this.jobs = new ObservableCollection<JobModel>(refreshedJobs);
+                                            this.jobCollection = CollectionViewSource.GetDefaultView(this.jobs);
+                                            this.selectedJob = null;
+                                            this.Jobs.Refresh();
+
+                                            //Refresh the job pane
+                                            FirePropertyChangedEvent("Jobs");
+                                            FirePropertyChangedEvent("JobTabTitle");
+
+                                            //Refresh the task pane
+                                            FirePropertyChangedEvent("SelectedJob");
+                                            FirePropertyChangedEvent("TasksTabTitle");
+                                        }
+                                        else
+                                        {
+                                            await Task.Delay(1000);
+                                        }
                                     }
                                 }
-
-                                //This is very hacky as the tab count never updated correctly if we refresh
-                                //just after issueing delete async inspite of awaiting for result. Probably it is by default nature
-                                //So keep on refreshing until we see the deleted record inside the refresh list
-                                bool requiredRefresh = true;
-                                while (requiredRefresh)
-                                {                                    
-                                    var refreshedJobs = await dataProvider.GetJobCollectionAsync();
-                                    requiredRefresh = refreshedJobs.Any(a=>deletedIds.Contains(a.Id));
-                                    if(!requiredRefresh)
-                                    {
-                                        this.jobs = new ObservableCollection<JobModel>(refreshedJobs);
-                                        this.jobCollection = CollectionViewSource.GetDefaultView(this.jobs);
-                                        this.selectedJob = null;
-                                        this.Jobs.Refresh();
-
-                                        //Refresh the job pane
-                                        FirePropertyChangedEvent("Jobs");
-                                        FirePropertyChangedEvent("JobTabTitle");
-
-                                        //Refresh the task pane
-                                        FirePropertyChangedEvent("SelectedJob");
-                                        FirePropertyChangedEvent("TasksTabTitle");
-                                    }
-                                    else
-                                    {
-                                        await Task.Delay(1000);
-                                    }
+                                catch(Exception ex)
+                                {
+                                    MessageBox.Show(ex.Message);
                                 }
-                                
-                                this.LeftSpinnerIsVisible = false;
+                                finally
+                                {
+                                    this.LeftSpinnerIsVisible = false;
+                                    FirePropertyChangedEvent("LeftSpinnerIsVisible");
+                                }
                             }
                         }
                     });
