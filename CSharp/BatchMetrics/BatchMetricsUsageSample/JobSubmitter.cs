@@ -2,6 +2,7 @@
 {
     using Microsoft.Azure.Batch;
     using Microsoft.Azure.Batch.Common;
+    using Microsoft.Azure.Batch.Samples.Common;
     using System;
     using System.Collections.Generic;
     using System.Linq;
@@ -40,30 +41,7 @@
                 virtualMachineSize: PoolNodeSize,
                 osFamily: PoolOSFamily);
 
-            try
-            {
-                Console.WriteLine("Attempting to create pool: {0}", pool.Id);
-
-                await pool.CommitAsync();
-
-                Console.WriteLine("Created pool {0} with {1} nodes", PoolId, PoolNodeCount);
-            }
-            catch (BatchException e)
-            {
-                if (e.IsBatchErrorCode(BatchErrorCodeStrings.PoolExists))
-                {
-                    Console.WriteLine("The pool already existed when we tried to create it");
-                }
-                else
-                {
-                    throw; // Any other exception is unexpected
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.ToString());
-                throw;
-            }
+            await GettingStartedCommon.CreatePoolIfNotExistAsync(_batchClient, pool);
         }
 
         private async Task SubmitJobAsync(string jobId)
