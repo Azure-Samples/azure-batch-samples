@@ -15,7 +15,7 @@
 
             internal static ODATADetailLevel OnlyChangedAfter(DateTime time)
             {
-                string timeString = string.Format("DateTime'{0}'", time.ToString("o").Replace(" ", "T"));
+                string timeString = string.Format("DateTime'{0}'", time.ToString("o"));  // ISO8601 time format as required by OData (e.g. "2009-06-15T13:45:30.0000000Z")
                 return new ODATADetailLevel(selectClause: "id, state", filterClause: "stateTransitionTime gt " + timeString);
             }
         }
