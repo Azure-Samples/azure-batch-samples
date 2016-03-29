@@ -55,9 +55,9 @@
                 await job.CommitAsync();
                 _createdJobIds.Add(jobId);
             }
-            catch (BatchException e)
+            catch (BatchException ex)
             {
-                if (e.IsBatchErrorCode(BatchErrorCodeStrings.JobExists))
+                if (ex.IsBatchErrorCode(BatchErrorCodeStrings.JobExists))
                 {
                     Console.WriteLine("The job already existed when we tried to create it");
                     return;  // no point trying to add tasks, as the task IDs probably exist already from a previous run
@@ -101,16 +101,16 @@
                     await Task.Delay(JobInterval);
                 }
             }
-            catch (BatchException be)
+            catch (BatchException ex)
             {
-                if (be.RequestInformation != null && be.RequestInformation.AzureError != null)
+                if (ex.RequestInformation != null && ex.RequestInformation.AzureError != null)
                 {
-                    Console.WriteLine("Batch Exception {0}", be.RequestInformation.AzureError.Message);
+                    Console.WriteLine("Batch Exception {0}", ex.RequestInformation.AzureError.Message);
                 }
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                Console.WriteLine("Exception {0}", e.Message);
+                Console.WriteLine("Exception {0}", ex.Message);
             }
         }
 

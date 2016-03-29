@@ -21,9 +21,9 @@
                 AccountSettings accountSettings = AccountSettings.Default;
                 MainAsync(accountSettings).Wait();
             }
-            catch (AggregateException aggregateException)
+            catch (AggregateException ex)
             {
-                SampleHelpers.PrintAggregateException(aggregateException);
+                SampleHelpers.PrintAggregateException(ex);
                 throw;
             }
 
