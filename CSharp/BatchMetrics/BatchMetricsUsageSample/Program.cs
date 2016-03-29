@@ -23,13 +23,7 @@
             }
             catch (AggregateException aggregateException)
             {
-                // Go through all exceptions and dump useful information
-                foreach (Exception exception in aggregateException.InnerExceptions)
-                {
-                    Console.WriteLine(exception.ToString());
-                    Console.WriteLine();
-                }
-
+                SampleHelpers.PrintAggregateException(aggregateException);
                 throw;
             }
 
