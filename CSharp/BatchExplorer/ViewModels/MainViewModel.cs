@@ -741,77 +741,80 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             {
                 return new CommandBase( 
                     async (commandArg) =>
-                    {                        
+                    {
                         if (this.jobs.Any(a => a.IsChecked))
                         {
-                            IEnumerable<string> deletedIds = this.jobs.Where(a => a.IsChecked).Select(s=>s.Id);
-                            var result =
-                            MessageBox.Show(
-                                deletedIds.Count() > 1 ? 
-                                $"Are you sure you want to delete {deletedIds.Count()} selected jobs?" :
-                                "Are you sure you want to delete the job?",
-                                "Confirm Delete",
-                                MessageBoxButton.YesNo);
-
-                            if (result == MessageBoxResult.Yes)
+                            try
                             {
-                                try
+                                IEnumerable<string> deletedIds = this.jobs.Where(a => a.IsChecked).Select(s => s.Id);
+                                Messenger.Default.Register<MultibuttonDialogReturnMessage>(this, async (message) =>
                                 {
-                                    this.LeftSpinnerIsVisible = true;
-                                    FirePropertyChangedEvent("LeftSpinnerIsVisible");
-
-                                    foreach (var job in this.jobs)
+                                    if (message.MessageBoxResult == MessageBoxResult.Yes)
                                     {
-                                        if (job.IsChecked)
+                                        this.LeftSpinnerIsVisible = true;
+                                        FirePropertyChangedEvent("LeftSpinnerIsVisible");
+                                        foreach (var job in this.jobs)
                                         {
-                                            await job.DeleteAsync(false);
+                                            if (job.IsChecked)
+                                            {
+                                                await job.DeleteAsync(false);
+                                            }
                                         }
                                     }
+                                    Messenger.Default.Unregister<MultibuttonDialogReturnMessage>(this);
+                                });
+                                Messenger.Default.Send<LaunchMultibuttonDialogMessage>(new LaunchMultibuttonDialogMessage()
+                                {
+                                    Caption = "Confirm delete",
+                                    DialogMessage = deletedIds.Count() > 1 ?
+                                                    string.Format("Are you sure you want to delete {0} selected jobs?", deletedIds.Count()) :
+                                                    "Are you sure you want to delete the job?",
+                                    MessageBoxButton = MessageBoxButton.YesNo
+                                });
 
-                                    //This is very hacky as the tab count never updated correctly if we refresh
-                                    //just after issueing delete async inspite of awaiting for result. Probably it is by default nature
-                                    //So keep on refreshing until we see the deleted record inside the refresh list
-                                    bool requiredRefresh = true;
-                                    while (requiredRefresh)
+                                //NOTE: There is an outstanding issue where the tab count does not refresh after awating completion of asynchronous opration.
+                                //So keep on refreshing until we see the deleted record inside the list or timeout the retry after 1 min, which ever is earlier.
+                                bool isRefreshRequired = true;
+                                DateTime startTime = DateTime.Now;
+                                while (isRefreshRequired)
+                                {
+                                    var refreshedJobs = await dataProvider.GetJobCollectionAsync();
+                                    isRefreshRequired = refreshedJobs.Any(a => deletedIds.Contains(a.Id)) && (DateTime.Now - startTime).TotalMilliseconds < 60000;
+                                    if (!isRefreshRequired)
                                     {
-                                        var refreshedJobs = await dataProvider.GetJobCollectionAsync();
-                                        requiredRefresh = refreshedJobs.Any(a => deletedIds.Contains(a.Id));
-                                        if (!requiredRefresh)
-                                        {
-                                            this.jobs = new ObservableCollection<JobModel>(refreshedJobs);
-                                            this.jobCollection = CollectionViewSource.GetDefaultView(this.jobs);
-                                            this.selectedJob = null;
-                                            this.Jobs.Refresh();
+                                        this.jobs = new ObservableCollection<JobModel>(refreshedJobs);
+                                        this.jobCollection = CollectionViewSource.GetDefaultView(this.jobs);
+                                        this.selectedJob = null;
+                                        this.Jobs.Refresh();
 
-                                            //Refresh the job pane
-                                            FirePropertyChangedEvent("Jobs");
-                                            FirePropertyChangedEvent("JobTabTitle");
+                                        //Refresh the job pane
+                                        FirePropertyChangedEvent("Jobs");
+                                        FirePropertyChangedEvent("JobTabTitle");
 
-                                            //Refresh the task pane
-                                            FirePropertyChangedEvent("SelectedJob");
-                                            FirePropertyChangedEvent("TasksTabTitle");
-                                        }
-                                        else
-                                        {
-                                            await Task.Delay(1000);
-                                        }
+                                        //Refresh the task pane
+                                        FirePropertyChangedEvent("SelectedJob");
+                                        FirePropertyChangedEvent("TasksTabTitle");
+                                    }
+                                    else
+                                    {
+                                        await Task.Delay(1000);
                                     }
                                 }
-                                catch(Exception ex)
-                                {
-                                    MessageBox.Show(ex.Message);
-                                }
-                                finally
-                                {
-                                    this.LeftSpinnerIsVisible = false;
-                                    FirePropertyChangedEvent("LeftSpinnerIsVisible");
-                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage(ex.Message));
+                            }
+                            finally
+                            {
+                                this.LeftSpinnerIsVisible = false;
+                                FirePropertyChangedEvent("LeftSpinnerIsVisible");
                             }
                         }
                     });
             }
         }
-
+        
         /// <summary>
         /// Select all jobs from header checkbox
         /// </summary>
