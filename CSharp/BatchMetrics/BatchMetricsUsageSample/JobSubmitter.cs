@@ -81,7 +81,7 @@
             for (int taskIndex = 0; taskIndex < JobTaskCount; taskIndex++)
             {
                 var taskId = string.Format("{0}-{1}{2}", jobId, JobTaskIdPrefix, taskIndex);
-                var taskCommandTimeout = (int)(taskIndex * JobTaskTimeoutIncrement.TotalSeconds);
+                var taskCommandTimeout = (int)((taskIndex + 1) * JobTaskTimeoutIncrement.TotalSeconds);
                 var taskCommandLine = string.Format("cmd /c ping -n {0} 127.0.0.100", taskCommandTimeout);
                 yield return new CloudTask(taskId, taskCommandLine);
             }
