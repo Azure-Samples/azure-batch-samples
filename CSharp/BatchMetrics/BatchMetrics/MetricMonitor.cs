@@ -66,8 +66,7 @@
         {
             while (!_runCancel.IsCancellationRequested)
             {
-                var metrics = await CollectMetricsAsync();
-                CurrentMetrics = metrics;
+                CurrentMetrics = await CollectMetricsAsync();
                 OnMetricsUpdated();
                 await TaskHelpers.CancellableDelay(_monitorInterval, _runCancel.Token);
             }
