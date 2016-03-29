@@ -13,7 +13,7 @@
 
         internal TaskStateCounts()
         {
-            var maxStateIndex = Enum.GetValues(typeof(TaskState)).Cast<int>().Max();
+            var maxStateIndex = EnumHelpers.GetMaxValue(typeof(TaskState));
             _counts = new int[maxStateIndex + 1];
         }
 
