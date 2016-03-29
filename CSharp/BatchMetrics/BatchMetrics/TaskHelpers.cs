@@ -13,7 +13,7 @@
         {
             try
             {
-                await Task.Delay(delay);
+                await Task.Delay(delay, ct);
             }
             catch (TaskCanceledException)
             {
