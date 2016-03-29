@@ -75,8 +75,6 @@
 
         private static IEnumerable<CloudTask> CreateTasks(string jobId)
         {
-            var tasksToRun = new List<CloudTask>();
-
             // Create a set of tasks for each configuration 
             // The runtime for each task increases by the timeout factor
 
