@@ -7,8 +7,8 @@
     <ProjectGuid>{6080556C-76DC-45E9-A1BF-7D2289407F92}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>BatchMetricsUsageSample</RootNamespace>
-    <AssemblyName>BatchMetricsUsageSample</AssemblyName>
+    <RootNamespace>Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample</RootNamespace>
+    <AssemblyName>Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample</AssemblyName>
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />

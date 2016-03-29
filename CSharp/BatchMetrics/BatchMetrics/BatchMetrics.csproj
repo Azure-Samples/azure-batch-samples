@@ -7,8 +7,8 @@
     <ProjectGuid>{1A83F547-21BB-42D3-B546-DD19F58074D4}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>BatchMetrics</RootNamespace>
-    <AssemblyName>BatchMetrics</AssemblyName>
+    <RootNamespace>Microsoft.Azure.Batch.Samples.BatchMetrics</RootNamespace>
+    <AssemblyName>Microsoft.Azure.Batch.Samples.BatchMetrics</AssemblyName>
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />

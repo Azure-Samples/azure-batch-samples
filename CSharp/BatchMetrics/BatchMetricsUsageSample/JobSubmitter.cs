@@ -1,4 +1,4 @@
-﻿namespace BatchMetricsUsageSample
+﻿namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
 {
     using Microsoft.Azure.Batch;
     using Microsoft.Azure.Batch.Common;

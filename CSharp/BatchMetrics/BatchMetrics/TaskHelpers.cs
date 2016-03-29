@@ -1,4 +1,4 @@
-﻿namespace BatchMetrics
+﻿namespace Microsoft.Azure.Batch.Samples.BatchMetrics
 {
     using System;
     using System.Collections.Generic;
