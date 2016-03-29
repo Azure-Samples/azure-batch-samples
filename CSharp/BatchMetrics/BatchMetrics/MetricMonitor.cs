@@ -107,7 +107,7 @@
                 var totalLatencyStopWatch = Stopwatch.StartNew();
 
                 var listJobsTimer = Stopwatch.StartNew();
-                var jobs = await _batchClient.JobOperations.ListJobs(DetailLevels.IdAndState.AllEntities).ToListAsync();
+                var jobs = await _batchClient.JobOperations.ListJobs(DetailLevels.IdAndState.AllEntities).ToListAsync(_runCancel.Token);
                 listJobsTimer.Stop();
 
                 metricsBuilder.ListJobsLatency = listJobsTimer.Elapsed;
@@ -156,7 +156,7 @@
             var tasksToList = firstTime ? DetailLevels.IdAndState.AllEntities : DetailLevels.IdAndState.OnlyChangedAfter(since);
 
             var listTasksTimer = Stopwatch.StartNew();
-            var tasks = await job.ListTasks(tasksToList).ToListAsync();
+            var tasks = await job.ListTasks(tasksToList).ToListAsync(_runCancel.Token);
             listTasksTimer.Stop();
 
             var listTasksLatency = listTasksTimer.Elapsed;
@@ -181,6 +181,8 @@
                     _runTask.Wait();
                 }
             }
+
+            _runCancel.Dispose();
 
             if (_ownsClient)
             {
