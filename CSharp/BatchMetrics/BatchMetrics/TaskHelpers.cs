@@ -19,5 +19,16 @@
             {
             }
         }
+
+        public static void WaitIgnoringCancellations(this Task task)
+        {
+            try
+            {
+                task.Wait();
+            }
+            catch (TaskCanceledException)
+            {
+            }
+        }
     }
 }

@@ -178,7 +178,7 @@
                 if (_runTask != null)
                 {
                     _runCancel.Cancel();
-                    _runTask.Wait();
+                    _runTask.WaitIgnoringCancellations();
                 }
             }
 
