@@ -114,7 +114,6 @@
     <Compile Include="JobStatistics.cs" />
     <Compile Include="MetricEvent.cs" />
     <Compile Include="MetricMonitor.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TaskHelpers.cs" />
     <Compile Include="TaskStateCache.cs" />
     <Compile Include="TaskStateCounts.cs" />
@@ -122,6 +121,9 @@
   <ItemGroup>
     <None Include="app.config" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Properties\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\Microsoft.Bcl.Build.1.0.14\tools\Microsoft.Bcl.Build.targets" Condition="Exists('..\packages\Microsoft.Bcl.Build.1.0.14\tools\Microsoft.Bcl.Build.targets')" />
