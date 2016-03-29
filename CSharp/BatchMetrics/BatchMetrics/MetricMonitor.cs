@@ -152,7 +152,7 @@
 
             // TODO: it would be better to record the time at which the last query was issued and use that,
             // rather than subtracting the monitor interval from the current time
-            DateTime since = DateTime.UtcNow.Add(-(_monitorInterval + MaximumClockSkew));
+            DateTime since = DateTime.UtcNow - (_monitorInterval + MaximumClockSkew);
             var tasksToList = firstTime ? DetailLevels.IdAndState.AllEntities : DetailLevels.IdAndState.OnlyChangedAfter(since);
 
             var listTasksTimer = Stopwatch.StartNew();
