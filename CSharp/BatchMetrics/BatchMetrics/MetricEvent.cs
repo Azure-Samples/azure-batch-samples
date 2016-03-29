@@ -74,7 +74,15 @@
             {
                 throw new InvalidOperationException("Cannot get metrics on collection error event");
             }
-            return _jobStats[jobId];
+
+            try
+            {
+                return _jobStats[jobId];
+            }
+            catch (KeyNotFoundException)
+            {
+                throw new ArgumentException("No metrics collected for job " + jobId, "jobId");
+            }
         }
 
         internal sealed class Builder
