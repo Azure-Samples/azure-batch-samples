@@ -87,9 +87,10 @@
             return String.Join(Environment.NewLine, jobInfos);
         }
 
-        private static readonly ReadOnlyCollection<TaskState> TaskStates = Enum.GetValues(typeof(TaskState))
-                                                                               .Cast<TaskState>()
-                                                                               .ToList().AsReadOnly();
+        private static readonly ReadOnlyCollection<TaskState> TaskStates =
+            Enum.GetValues(typeof(TaskState))
+                .Cast<TaskState>()
+                .ToList().AsReadOnly();
 
         private static string FormatJobStatistics(string jobId, BatchMetrics.JobStatistics statistics, int jobIdFormatLength)
         {

@@ -20,10 +20,12 @@
         public TaskStateCounts GetTaskStateCounts()
         {
             TaskStateCounts taskStateCounts = new TaskStateCounts();
+
             foreach (var kvp in _impl)
             {
                 taskStateCounts.IncrementCount(kvp.Value);
             }
+
             return taskStateCounts;
         }
     }

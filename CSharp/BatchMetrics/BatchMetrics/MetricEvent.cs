@@ -15,7 +15,12 @@
         private readonly IReadOnlyDictionary<string, JobStatistics> _jobStats;
         private readonly Exception _error;
 
-        private MetricEvent(DateTime collectionStarted, DateTime collectionCompleted, TimeSpan totalLatency, TimeSpan listJobsLatency, IDictionary<string, JobStatistics> jobStats)
+        private MetricEvent(
+            DateTime collectionStarted,
+            DateTime collectionCompleted,
+            TimeSpan totalLatency,
+            TimeSpan listJobsLatency,
+            IDictionary<string, JobStatistics> jobStats)
         {
             _collectionStarted = collectionStarted;
             _collectionCompleted = collectionCompleted;

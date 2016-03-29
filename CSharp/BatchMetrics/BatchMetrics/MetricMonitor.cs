@@ -88,6 +88,7 @@
             {
                 throw new ArgumentNullException("batchClient");
             }
+
             if (monitorInterval <= TimeSpan.Zero)
             {
                 throw new ArgumentOutOfRangeException("monitorInterval", "monitorInterval must be positive");
@@ -147,7 +148,7 @@
             // If the monitor API is called for the first time, it has to issue a query to enumerate all the tasks once to get its state.
             // This is a relatively slow query.
             // Subsequent calls to the monitor API will only look for changes to the task state since the last time the query was issued and 
-            // a clock skew (which is within 30 seconds approximately for Azure). Thus if the monitoring API  periodicity is 1 minute, then the query 
+            // a clock skew (which is within 30 seconds approximately for Azure). Thus if the monitoring API periodicity is 1 minute, then the query 
             // should look for changes in the last minute and 30 seconds.
 
             // TODO: it would be better to record the time at which the last query was issued and use that,

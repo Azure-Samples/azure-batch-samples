@@ -11,7 +11,7 @@
     {
         internal static class IdAndState
         {
-            internal static readonly ODATADetailLevel AllEntities = new ODATADetailLevel(selectClause: "id, state");
+            internal static readonly ODATADetailLevel AllEntities = new ODATADetailLevel(selectClause: "id,state");
 
             internal static ODATADetailLevel OnlyChangedAfter(DateTime time)
             {
