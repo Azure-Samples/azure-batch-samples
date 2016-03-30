@@ -1,4 +1,6 @@
-﻿namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
+﻿//Copyright (c) Microsoft Corporation
+
+namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
 {
     using Microsoft.Azure.Batch.Common;
     using System;
