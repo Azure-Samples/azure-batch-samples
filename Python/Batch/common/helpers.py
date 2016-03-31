@@ -28,7 +28,7 @@ import io
 import time
 
 import azure.storage.blob as azureblob
-import batchserviceclient.models as batchmodels
+import azure.batch.models as batchmodels
 
 
 _STANDARD_OUT_FILE_NAME = 'stdout.txt'

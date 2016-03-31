@@ -35,9 +35,9 @@ import os
 import subprocess
 
 import azure.storage.blob as azureblob
-import batchserviceclient as batch
-import batchserviceclient.batch_auth as batchauth
-import batchserviceclient.models as batchmodels
+import azure.batch.batch_service_client as batch
+import azure.batch.batch_auth as batchauth
+import azure.batch.models as batchmodels
 
 import common.helpers
 

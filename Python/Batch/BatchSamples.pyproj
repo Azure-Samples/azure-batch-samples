@@ -6,7 +6,8 @@
     <ProjectGuid>a26febe9-ee8a-4a7d-bfc2-88235b20e4c5</ProjectGuid>
     <ProjectHome>.</ProjectHome>
     <StartupFile>sample1_helloworld.py</StartupFile>
-    <SearchPath>C:\Users\matthchr\Desktop\PythonClient\</SearchPath>
+    <SearchPath>
+    </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
     <Name>BatchSamples</Name>

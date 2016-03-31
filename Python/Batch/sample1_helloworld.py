@@ -32,9 +32,9 @@ except ImportError:
 import datetime
 import os
 
-import batchserviceclient as batch
-import batchserviceclient.batch_auth as batchauth
-import batchserviceclient.models as batchmodels
+import azure.batch.batch_service_client as batch
+import azure.batch.batch_auth as batchauth
+import azure.batch.models as batchmodels
 
 import common.helpers
 
@@ -65,7 +65,7 @@ def submit_job_and_add_task(batch_client, job_id, vm_size, vm_count):
     task = batchmodels.CloudTask(
         id="HelloWorld",
         command_line=common.helpers.wrap_commands_in_shell(
-            'windows', 'echo Hello world from the Batch Hello world sample!')
+            'windows', ['echo Hello world from the Batch Hello world sample!'])
     )
 
     batch_client.task.add(job_id=job.id, task=task)
