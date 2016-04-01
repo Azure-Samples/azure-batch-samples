@@ -57,3 +57,8 @@ docs/_build/
 # PyBuilder
 target/
 
+# Visual Studo 2015 cache/options directory
+.vs/
+
+#PyCharm
+.idea/
