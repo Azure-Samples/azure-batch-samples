@@ -16,8 +16,11 @@ The Azure Batch samples should be kept up to date with the latest Azure.Batch Nu
 
 To update the NuGet reference the easiest way is to just do a textual replace.  This can be done as long as the dependencies have not changed between the old and new versions of the Azure.Batch NuGet package.
 
-The following commands can be used to perform the textual replace: 
+The following commands can be used to perform the textual replace:
 `rep.exe -find:"Azure.Batch.3.0.0" -replace:"Azure.Batch.3.1.0" -r *.csproj`
+
 `rep.exe -find:"Include=\"Microsoft.Azure.Batch, Version=3.0.0.0" -replace:"Include=\"Microsoft.Azure.Batch, Version=3.1.0.0" -r *.csproj`
+
 `rep.exe -find:"package id=\"Azure.Batch\" version=\"3.0.0\"" -replace:"package id=\"Azure.Batch\" version="3.1.0"" -r packages.config`
+
  
