@@ -30,16 +30,10 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
                 "Microsoft.Azure.Batch.Samples.Common.dll",
                 "Microsoft.WindowsAzure.Storage.dll",
                 "Microsoft.Azure.Batch.dll",
-                "Hyak.Common.dll",
-                "Microsoft.Azure.Common.dll",
-                "Microsoft.Azure.Common.NetFramework.dll",
+                "Microsoft.Rest.ClientRuntime.dll",
+                "Microsoft.Rest.ClientRuntime.Azure.dll",
                 "Microsoft.Data.Services.Client.dll",
-                "Microsoft.Threading.Tasks.dll",
-                "Microsoft.Threading.Tasks.Extensions.Desktop.dll",
-                "Microsoft.Threading.Tasks.Extensions.dll",
                 "Newtonsoft.Json.dll",
-                "System.Net.Http.Extensions.dll",
-                "System.Net.Http.Primitives.dll",
                 "Microsoft.Data.Edm.dll",
                 "Microsoft.Data.OData.dll",
                 "System.Spatial.dll",
@@ -143,7 +137,7 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
                 poolId: this.jobManagerSettings.PoolId,
                 targetDedicated: this.jobManagerSettings.PoolTargetNodeCount,
                 virtualMachineSize: this.jobManagerSettings.PoolNodeVirtualMachineSize,
-                osFamily: this.jobManagerSettings.PoolOSFamily);
+                cloudServiceConfiguration: new CloudServiceConfiguration(this.jobManagerSettings.PoolOSFamily));
 
             // Create a new start task to facilitate pool-wide file management or installation.
             // In this case, we just add a single dummy data file to the StartTask.

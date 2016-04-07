@@ -64,7 +64,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
                 Console.WriteLine("Creating pool [{0}]...", poolId);
                 CloudPool unboundPool =
                     batchClient.PoolOperations.CreatePool(poolId: poolId,
-                                                          osFamily: osFamily,
+                                                          cloudServiceConfiguration: new CloudServiceConfiguration(osFamily),
                                                           virtualMachineSize: nodeSize,
                                                           targetDedicated: nodeCount);
                 await unboundPool.CommitAsync();

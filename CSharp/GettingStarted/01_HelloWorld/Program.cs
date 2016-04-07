@@ -104,7 +104,7 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
                     PoolSpecification = new PoolSpecification()
                     {
                         TargetDedicated = configurationSettings.PoolTargetNodeCount,
-                        OSFamily = configurationSettings.PoolOSFamily,
+                        CloudServiceConfiguration = new CloudServiceConfiguration(configurationSettings.PoolOSFamily),
                         VirtualMachineSize = configurationSettings.PoolNodeVirtualMachineSize,                        
                     },
                     KeepAlive = false,

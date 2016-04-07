@@ -199,8 +199,8 @@ namespace Microsoft.Azure.Batch.Samples.Common
             {
                 // Swallow the specific error code PoolExists since that is expected if the pool already exists
                 if (e.RequestInformation != null &&
-                    e.RequestInformation.AzureError != null &&
-                    e.RequestInformation.AzureError.Code == BatchErrorCodeStrings.PoolExists)
+                    e.RequestInformation.BatchError != null &&
+                    e.RequestInformation.BatchError.Code == BatchErrorCodeStrings.PoolExists)
                 {
                     // The pool already existed when we tried to create it
                     successfullyCreatedPool = false;

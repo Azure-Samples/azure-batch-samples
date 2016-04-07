@@ -55,9 +55,9 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                 //http://msdn.microsoft.com/en-us/library/azure/ee924680.aspx
                 CloudPool pool = client.PoolOperations.CreatePool(
                     topNWordsConfiguration.PoolId, 
-                    targetDedicated: topNWordsConfiguration.PoolNodeCount, 
-                    osFamily: "4", 
-                    virtualMachineSize: "small");
+                    targetDedicated: topNWordsConfiguration.PoolNodeCount,
+                    virtualMachineSize: "small",
+                    cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "4"));
                 Console.WriteLine("Adding pool {0}", topNWordsConfiguration.PoolId);
 
                 try

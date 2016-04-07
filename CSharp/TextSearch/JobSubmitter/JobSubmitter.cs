@@ -98,8 +98,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                         VirtualMachineSize = "small",
                         //You can learn more about os families and versions at: 
                         //http://azure.microsoft.com/documentation/articles/cloud-services-guestos-update-matrix
-                        OSFamily = "4",
-                        TargetOSVersion = "*"
+                        CloudServiceConfiguration = new CloudServiceConfiguration(osFamily: "4")
                     };
 
                 //Use the auto pool feature of the Batch Service to create a pool when the job is created.
