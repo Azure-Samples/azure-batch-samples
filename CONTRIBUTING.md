@@ -21,6 +21,6 @@ The following commands can be used to perform the textual replace:
 
 `rep.exe -find:"Include=\"Microsoft.Azure.Batch, Version=3.0.0.0" -replace:"Include=\"Microsoft.Azure.Batch, Version=3.1.0.0" -r *.csproj`
 
-`rep.exe -find:"package id=\"Azure.Batch\" version=\"3.0.0\"" -replace:"package id=\"Azure.Batch\" version="3.1.0"" -r packages.config`
+`rep.exe -find:"package id=\"Azure.Batch\" version=\"3.0.0\"" -replace:"package id=\"Azure.Batch\" version=\"3.1.0\"" -r packages.config`
 
  
