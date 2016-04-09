@@ -294,9 +294,9 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
             // Batch service. This CloudPool instance is therefore considered "unbound," and we can modify its properties.
             CloudPool pool = batchClient.PoolOperations.CreatePool(
                 poolId: poolId,
-                targetDedicated: 3,             // 3 compute nodes
-                virtualMachineSize: "small",    // single-core, 1.75 GB memory, 225 GB disk
-                osFamily: "4");                 // Windows Server 2012 R2
+                targetDedicated: 3,                                                         // 3 compute nodes
+                virtualMachineSize: "small",                                                // single-core, 1.75 GB memory, 225 GB disk
+                cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "4"));   // Windows Server 2012 R2
 
             // Create and assign the StartTask that will be executed when compute nodes join the pool.
             // In this case, we copy the StartTask's resource files (that will be automatically downloaded

@@ -133,7 +133,7 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
                 poolId: this.poolsAndResourceFileSettings.PoolId,
                 targetDedicated: this.poolsAndResourceFileSettings.PoolTargetNodeCount,
                 virtualMachineSize: this.poolsAndResourceFileSettings.PoolNodeVirtualMachineSize,
-                osFamily: this.poolsAndResourceFileSettings.PoolOSFamily);
+                cloudServiceConfiguration: new CloudServiceConfiguration(this.poolsAndResourceFileSettings.PoolOSFamily));
 
             // Create a new start task to facilitate pool-wide file management or installation.
             // In this case, we just add a single dummy data file to the StartTask.

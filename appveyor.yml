@@ -8,7 +8,7 @@ skip_tags: true
 
 # Use a custom script to do MSBuild commands (build CSharp tree recursively)
 build_script:
-  - for /R %%f in (*.sln) do (nuget restore "%%f" & msbuild /m /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" "%%f")
-  
+  - build.bat "C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+
 # No tests for the samples at this time
 test: off
