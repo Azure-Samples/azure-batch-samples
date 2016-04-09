@@ -8,6 +8,7 @@ using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
@@ -362,7 +363,6 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         FirePropertyChangedEvent("TasksTabTitle");
                     }
                 }
-                
             }
         }
 
@@ -729,6 +729,110 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             {
                 return new CommandBase(
                     (o) => AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.GetDataAsync(dataProvider, jobSchedules: false, jobs: true, pools: false, certificates: false)));
+            }
+        }
+
+        /// <summary>
+        /// Delete selected jobs
+        /// </summary>
+        public CommandBase DeleteSelectedJobs
+        {
+            get
+            {
+                return new CommandBase( 
+                    async (commandArg) =>
+                    {
+                        if (this.jobs.Any(a => a.IsChecked))
+                        {
+                            try
+                            {
+                                IEnumerable<string> deletedIds = this.jobs.Where(a => a.IsChecked).Select(s => s.Id);
+                                Messenger.Default.Register<MultibuttonDialogReturnMessage>(this, async (message) =>
+                                {
+                                    if (message.MessageBoxResult == MessageBoxResult.Yes)
+                                    {
+                                        this.LeftSpinnerIsVisible = true;
+                                        FirePropertyChangedEvent("LeftSpinnerIsVisible");
+                                        foreach (var job in this.jobs)
+                                        {
+                                            if (job.IsChecked)
+                                            {
+                                                await job.DeleteAsync(false);
+                                            }
+                                        }
+                                    }
+                                    Messenger.Default.Unregister<MultibuttonDialogReturnMessage>(this);
+                                });
+                                Messenger.Default.Send<LaunchMultibuttonDialogMessage>(new LaunchMultibuttonDialogMessage()
+                                {
+                                    Caption = "Confirm delete",
+                                    DialogMessage = deletedIds.Count() > 1 ?
+                                                    string.Format("Are you sure you want to delete {0} selected jobs?", deletedIds.Count()) :
+                                                    "Are you sure you want to delete the job?",
+                                    MessageBoxButton = MessageBoxButton.YesNo
+                                });
+
+                                //NOTE: There is an outstanding issue where the tab count does not refresh after awating completion of asynchronous opration.
+                                //So keep on refreshing until we see the deleted record inside the list or timeout the retry after 1 min, which ever is earlier.
+                                bool isRefreshRequired = true;
+                                DateTime startTime = DateTime.Now;
+                                while (isRefreshRequired)
+                                {
+                                    var refreshedJobs = await dataProvider.GetJobCollectionAsync();
+                                    isRefreshRequired = refreshedJobs.Any(a => deletedIds.Contains(a.Id)) && (DateTime.Now - startTime).TotalMilliseconds < 60000;
+                                    if (!isRefreshRequired)
+                                    {
+                                        this.jobs = new ObservableCollection<JobModel>(refreshedJobs);
+                                        this.jobCollection = CollectionViewSource.GetDefaultView(this.jobs);
+                                        this.selectedJob = null;
+                                        this.Jobs.Refresh();
+
+                                        //Refresh the job pane
+                                        FirePropertyChangedEvent("Jobs");
+                                        FirePropertyChangedEvent("JobTabTitle");
+
+                                        //Refresh the task pane
+                                        FirePropertyChangedEvent("SelectedJob");
+                                        FirePropertyChangedEvent("TasksTabTitle");
+                                    }
+                                    else
+                                    {
+                                        await Task.Delay(1000);
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage(ex.Message));
+                            }
+                            finally
+                            {
+                                this.LeftSpinnerIsVisible = false;
+                                FirePropertyChangedEvent("LeftSpinnerIsVisible");
+                            }
+                        }
+                    });
+            }
+        }
+        
+        /// <summary>
+        /// Select all jobs from header checkbox
+        /// </summary>
+        public CommandBase SelectAllJobs
+        {
+            get
+            {
+                return new CommandBase(
+                    (commandArg) =>
+                    {
+                        if (this.jobs != null && this.jobs.Count > 0)
+                        {
+                            foreach (var job in this.jobs)
+                            {
+                                job.IsChecked = bool.Parse(commandArg.ToString());
+                            }
+                        }                      
+                    });
             }
         }
 
