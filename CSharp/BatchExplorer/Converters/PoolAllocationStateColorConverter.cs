@@ -16,7 +16,7 @@ namespace Microsoft.Azure.BatchExplorer.Converters
         //TODO: Switch this and other color converters to be colorblind friendly?
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            AllocationState state = AllocationState.Unmapped;
+            AllocationState? state = null;
             if (value != null)
             {
                 state = (AllocationState)value;
@@ -24,16 +24,12 @@ namespace Microsoft.Azure.BatchExplorer.Converters
 
             switch (state)
             {
-                case AllocationState.Invalid:
-                    return new SolidColorBrush(Colors.DarkRed);
                 case AllocationState.Steady:
                     return new SolidColorBrush(Colors.Blue);
                 case AllocationState.Resizing:
                     return new SolidColorBrush(Colors.LightBlue);
                 case AllocationState.Stopping:
                     return new SolidColorBrush(Colors.Red);
-                case AllocationState.Unmapped:
-                    return new SolidColorBrush(Colors.Gray);
                 default:
                     throw new ArgumentOutOfRangeException();
             }

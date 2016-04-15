@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Azure.Batch;
 using Microsoft.Azure.Batch.Common;
 using Microsoft.Azure.BatchExplorer.Models;
 using Microsoft.Azure.BatchExplorer.Service;
@@ -67,8 +68,8 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
             int? targetDedicated, 
             string autoScaleFormula, 
             bool communicationEnabled,
-            string osFamily,
-            string osVersion,
+            CloudServiceConfigurationOptions cloudServiceConfigurationOptions,
+            VirtualMachineConfigurationOptions virtualMachineConfigurationOptions,
             int maxTasksPerComputeNode,
             TimeSpan? timeout,
             StartTaskOptions startTask);
@@ -99,5 +100,11 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         /// Creates a certificate
         /// </summary>
         Task CreateCertificateAsync(CreateCertificateOptions options);
+
+        /// <summary>
+        /// Lists the collection of support node agent skus.
+        /// </summary>
+        /// <returns>A <see cref="Task"/> whose result is a collection of <see cref="NodeAgentSku"/>'s.</returns>
+        Task<IList<NodeAgentSku>> ListNodeAgentSkusAsync();
     }
 }

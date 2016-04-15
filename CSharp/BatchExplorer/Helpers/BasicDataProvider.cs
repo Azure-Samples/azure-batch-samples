@@ -94,13 +94,23 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
             int? targetDedicated, 
             string autoScaleFormula, 
             bool communicationEnabled,
-            string osFamily,
-            string osVersion,
+            CloudServiceConfigurationOptions cloudServiceConfigurationOptions,
+            VirtualMachineConfigurationOptions virtualMachineConfigurationOptions,
             int maxTasksPerComputeNode,
             TimeSpan? timeout,
             StartTaskOptions startTask)
         {
-            await this.Service.CreatePoolAsync(poolId, virtualMachineSize, targetDedicated, autoScaleFormula, communicationEnabled, osFamily, osVersion, maxTasksPerComputeNode, timeout, startTask);
+            await this.Service.CreatePoolAsync(
+                poolId, 
+                virtualMachineSize, 
+                targetDedicated, 
+                autoScaleFormula, 
+                communicationEnabled, 
+                cloudServiceConfigurationOptions, 
+                virtualMachineConfigurationOptions, 
+                maxTasksPerComputeNode, 
+                timeout, 
+                startTask);
         }
 
         public async Task CreateComputeNodeUserAsync(string poolId, string nodeId, string userName, string password, DateTime expiryTime, bool admin)
@@ -111,6 +121,15 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         public async Task ResizePoolAsync(string poolId, int targetDedicated, TimeSpan? timeout, ComputeNodeDeallocationOption? computeNodeDeallocationOption)
         {
             await this.Service.ResizePool(poolId, targetDedicated, timeout, computeNodeDeallocationOption);
+        }
+
+        public async Task<IList<NodeAgentSku>> ListNodeAgentSkusAsync()
+        {
+            IPagedEnumerable<NodeAgentSku> nodeAgentSkus = this.Service.ListNodeAgentSkus();
+
+            IList<NodeAgentSku> results = await nodeAgentSkus.ToListAsync();
+
+            return results;
         }
     }
 }

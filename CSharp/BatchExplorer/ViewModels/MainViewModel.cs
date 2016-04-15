@@ -435,7 +435,9 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
 
         private ObservableCollection<CertificateModel> certificates;
 
-        private Task asyncOperationCompletionMonitoringTask; 
+        private Task asyncOperationCompletionMonitoringTask;
+
+        private Cached<IList<NodeAgentSku>> cachedNodeAgentSkus;
 
         #region Tab title binding properties
         public string JobScheduleTabTitle
@@ -597,6 +599,9 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                                     FirePropertyChangedEvent("TitleString");
                                     FirePropertyChangedEvent("IsAccountConnected");
                                 });
+
+                            //Set up the cache functions for this account
+                            this.cachedNodeAgentSkus = new Cached<IList<NodeAgentSku>>(() => dataProvider.ListNodeAgentSkusAsync(), TimeSpan.FromMinutes(10));
                         }
                         catch (Exception e)
                         {
@@ -1315,7 +1320,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                     (o) =>
                     {
                         // Call a new window to show the Create Pool UI
-                        Messenger.Default.Send(new ShowCreatePoolWindow());
+                        Messenger.Default.Send(new ShowCreatePoolWindow(this.cachedNodeAgentSkus));
                     }
                 );
             }
