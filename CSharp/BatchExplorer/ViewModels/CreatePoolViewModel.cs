@@ -75,6 +75,8 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 this.availableNodeAgentSkus = value;
                 this.FirePropertyChangedEvent("availableNodeAgentSkus");
                 this.FirePropertyChangedEvent("AvailablePublishers");
+                this.FirePropertyChangedEvent("AvailableNodeAgentSkuIds");
+                this.FirePropertyChangedEvent("AvailableImageReferences");
             }
         }
         
@@ -84,7 +86,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             {
                 return this.AvailableNodeAgentSkus.Where(
                     sku => sku.VerifiedImageReferences.Any(imageRef =>
-                        imageRef.Publisher == this.Publisher && imageRef.Offer == this.offer && imageRef.SkuId == this.SkuId)).Select(
+                        imageRef.Publisher == this.Publisher && imageRef.Offer == this.offer && imageRef.SkuId == this.Sku)).Select(
                             sku => sku.Id);
             }
         }
@@ -380,17 +382,17 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
-        private string skuId;
-        public string SkuId
+        private string sku;
+        public string Sku
         {
             get
             {
-                return this.skuId;
+                return this.sku;
             }
             set
             {
-                this.skuId = value;
-                this.FirePropertyChangedEvent("SkuId");
+                this.sku = value;
+                this.FirePropertyChangedEvent("Sku");
                 this.FirePropertyChangedEvent("AvailableNodeAgentSkuIds");
             }
         }
@@ -439,18 +441,19 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
 
         #endregion
 
-
         public CreatePoolViewModel(IDataProvider batchService, Cached<IList<NodeAgentSku>> nodeAgentSkus)
         {
             this.batchService = batchService;
 
             // pre-populate the available VM sizes
             this.AvailableVirtualMachineSizes = Common.SupportedVirtualMachineSizesList;
+            this.AvailableNodeAgentSkus = new List<NodeAgentSku>(); //Initially empty
 
             Task task = nodeAgentSkus.GetDataAsync().ContinueWith(
                 (t) => this.AvailableNodeAgentSkus = new ReadOnlyCollection<NodeAgentSku>(t.Result));
             AsyncOperationTracker.Instance.AddTrackedInternalOperation(task);
 
+            this.Version = "latest"; //Default to latest
             this.AvailableOSVersions = new List<string> { "*" };
             this.TargetDedicated = 1;
             this.MaxTasksPerComputeNode = 1;
@@ -585,7 +588,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                     NodeAgentSkuId = this.NodeAgentSkuId,
                     Offer = this.Offer,
                     Publisher = this.Publisher,
-                    SkuId = this.SkuId
+                    SkuId = this.Sku
                 };
             }
 
