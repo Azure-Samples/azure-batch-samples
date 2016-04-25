@@ -60,7 +60,7 @@ namespace Microsoft.Azure.BatchExplorer.Service
                         PoolLifetimeOption = (PoolLifetimeOption)Enum.Parse(typeof(PoolLifetimeOption), options.AutoPoolOptions.LifeTimeOption),
                         PoolSpecification = new PoolSpecification()
                         {
-                            OSFamily = options.AutoPoolOptions.OSFamily,
+                            CloudServiceConfiguration = new CloudServiceConfiguration(options.AutoPoolOptions.OSFamily),
                             VirtualMachineSize = options.AutoPoolOptions.VirutalMachineSize,
                             TargetDedicated = options.AutoPoolOptions.TargetDedicated
                         }
@@ -129,15 +129,6 @@ namespace Microsoft.Azure.BatchExplorer.Service
         /// <summary>
         /// Creates a pool.
         /// </summary>
-        /// <param name="poolId"></param>
-        /// <param name="virtualMachineSize"></param>
-        /// <param name="targetDedicated"></param>
-        /// <param name="autoScaleFormula"></param>
-        /// <param name="communicationEnabled"></param>
-        /// <param name="osFamily"></param>
-        /// <param name="osVersion"></param>
-        /// <param name="maxTasksPerComputeNode"></param>
-        /// <param name="timeout"></param>
         /// <returns></returns>
         public async Task CreatePoolAsync(
             string poolId, 
@@ -145,19 +136,42 @@ namespace Microsoft.Azure.BatchExplorer.Service
             int? targetDedicated, 
             string autoScaleFormula, 
             bool communicationEnabled,
-            string osFamily,
-            string osVersion,
+            CloudServiceConfigurationOptions cloudServiceConfigurationOptions,
+            VirtualMachineConfigurationOptions virtualMachineConfigurationOptions,
             int maxTasksPerComputeNode,
             TimeSpan? timeout,
             StartTaskOptions startTask)
         {
-            CloudPool unboundPool = this.Client.PoolOperations.CreatePool(
-                poolId, 
-                osFamily: osFamily, 
-                virtualMachineSize: virtualMachineSize, 
-                targetDedicated: targetDedicated);
-                    
-            unboundPool.TargetOSVersion = osVersion;
+            CloudPool unboundPool;
+
+            if (cloudServiceConfigurationOptions != null)
+            {
+                unboundPool = this.Client.PoolOperations.CreatePool(
+                    poolId,
+                    virtualMachineSize: virtualMachineSize,
+                    cloudServiceConfiguration: new CloudServiceConfiguration(cloudServiceConfigurationOptions.OSFamily, cloudServiceConfigurationOptions.OSVersion),
+                    targetDedicated: targetDedicated);
+            }
+            else if (virtualMachineConfigurationOptions != null)
+            {
+                unboundPool = this.Client.PoolOperations.CreatePool(
+                    poolId,
+                    virtualMachineSize: virtualMachineSize,
+                    virtualMachineConfiguration: new VirtualMachineConfiguration(
+                        new ImageReference(
+                            publisher: virtualMachineConfigurationOptions.Publisher,
+                            offer: virtualMachineConfigurationOptions.Offer,
+                            skuId: virtualMachineConfigurationOptions.SkuId,
+                            version: virtualMachineConfigurationOptions.Version),
+                        virtualMachineConfigurationOptions.NodeAgentSkuId,
+                        virtualMachineConfigurationOptions.EnableWindowsAutomaticUpdates.HasValue ? new WindowsConfiguration(virtualMachineConfigurationOptions.EnableWindowsAutomaticUpdates) : null),
+                    targetDedicated: targetDedicated);
+            }
+            else
+            {
+                throw new ArgumentException("Must set cloudServiceConfiguration or virtualMachineConfiguration");
+            }
+
             unboundPool.InterComputeNodeCommunicationEnabled = communicationEnabled;
             unboundPool.ResizeTimeout = timeout;
             unboundPool.MaxTasksPerComputeNode = maxTasksPerComputeNode;
@@ -191,6 +205,11 @@ namespace Microsoft.Azure.BatchExplorer.Service
             await this.Client.PoolOperations.ResizePoolAsync(poolId, targetDedicated, timeout, deallocationOption);
         }
 
+        public IPagedEnumerable<NodeAgentSku> ListNodeAgentSkus()
+        {
+            return this.Client.PoolOperations.ListNodeAgentSkus();
+        }
+
         #endregion
 
         #region Job related operations
@@ -213,7 +232,7 @@ namespace Microsoft.Azure.BatchExplorer.Service
                     PoolLifetimeOption = (PoolLifetimeOption)Enum.Parse(typeof(PoolLifetimeOption), createJobOptions.AutoPoolOptions.LifeTimeOption),
                     PoolSpecification = new PoolSpecification()
                     {
-                        OSFamily = createJobOptions.AutoPoolOptions.OSFamily,
+                        CloudServiceConfiguration = new CloudServiceConfiguration(createJobOptions.AutoPoolOptions.OSFamily),
                         VirtualMachineSize = createJobOptions.AutoPoolOptions.VirutalMachineSize,
                         TargetDedicated = createJobOptions.AutoPoolOptions.TargetDedicated
                     }

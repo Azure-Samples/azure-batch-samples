@@ -4,8 +4,10 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
 {
     using System;
     using System.Collections.Generic;
+    using System.Collections.ObjectModel;
     using System.Linq;
     using System.Threading.Tasks;
+    using Batch;
     using GalaSoft.MvvmLight.Messaging;
     using Microsoft.Azure.BatchExplorer.Helpers;
     using Microsoft.Azure.BatchExplorer.Messages;
@@ -58,6 +60,67 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             {
                 this.availableVirtualMachineSizes = value;
                 this.FirePropertyChangedEvent("availableVirtualMachineSizes");
+            }
+        }
+
+        private IReadOnlyList<NodeAgentSku> availableNodeAgentSkus;
+        public IReadOnlyList<NodeAgentSku> AvailableNodeAgentSkus
+        {
+            get
+            {
+                return this.availableNodeAgentSkus;
+            }
+            set
+            {
+                this.availableNodeAgentSkus = value;
+                this.FirePropertyChangedEvent("availableNodeAgentSkus");
+                this.FirePropertyChangedEvent("AvailablePublishers");
+                this.FirePropertyChangedEvent("AvailableNodeAgentSkuIds");
+                this.FirePropertyChangedEvent("AvailableImageReferences");
+            }
+        }
+        
+        public IEnumerable<string> AvailableNodeAgentSkuIds
+        {
+            get
+            {
+                return this.AvailableNodeAgentSkus.Where(
+                    sku => sku.VerifiedImageReferences.Any(imageRef =>
+                        imageRef.Publisher == this.Publisher && imageRef.Offer == this.offer && imageRef.SkuId == this.Sku)).Select(
+                            sku => sku.Id);
+            }
+        }
+
+        public IEnumerable<ImageReference> AvailableImageReferences
+        {
+            get
+            {
+                return this.AvailableNodeAgentSkus.SelectMany(sku => sku.VerifiedImageReferences);
+            }
+        }
+
+        public IEnumerable<string> AvailablePublishers
+        {
+            get { return this.AvailableImageReferences.Select(imageRef => imageRef.Publisher).Distinct(); }
+        }
+
+        public IEnumerable<string> AvailableOffers
+        {
+            get
+            {
+                return this.AvailableImageReferences.Where(
+                    imageRef => imageRef.Publisher == this.Publisher).Select(
+                    imageRef => imageRef.Offer).Distinct();
+            }
+        }
+
+        public IEnumerable<string> AvailableSkus
+        {
+            get
+            {
+                return this.AvailableImageReferences.Where(
+                    imageRef => imageRef.Publisher == this.Publisher && imageRef.Offer == this.Offer).Select(
+                    imageRef => imageRef.SkuId).Distinct();
             }
         }
 
@@ -144,7 +207,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 this.FirePropertyChangedEvent("AvailableOSFamilies");
             }
         }
-
+        
         private string selectedOSVersion;
         public string SelectedOSVersion
         {
@@ -271,19 +334,131 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 this.FirePropertyChangedEvent("StartTaskRunElevated");
             }
         }
+
+        private bool hasVirtualMachineConfiguration;
+        public bool HasVirtualMachineConfiguration
+        {
+            get
+            {
+                return this.hasVirtualMachineConfiguration;
+            }
+            set
+            {
+                this.hasVirtualMachineConfiguration = value;
+                this.FirePropertyChangedEvent("HasVirtualMachineConfiguration");
+            }
+        }
+
+        private string offer;
+        public string Offer 
+        {
+            get
+            {
+                return this.offer;
+            }
+            set
+            {
+                this.offer = value;
+                this.FirePropertyChangedEvent("Offer");
+                this.FirePropertyChangedEvent("AvailableSkus");
+                this.FirePropertyChangedEvent("AvailableNodeAgentSkuIds");
+            }
+        }
+
+        private string publisher;
+        public string Publisher
+        {
+            get
+            {
+                return this.publisher;
+            }
+            set
+            {
+                this.publisher = value;
+                this.FirePropertyChangedEvent("Publisher");
+                this.FirePropertyChangedEvent("AvailableOffers");
+                this.FirePropertyChangedEvent("AvailableSkus");
+                this.FirePropertyChangedEvent("AvailableNodeAgentSkuIds");
+            }
+        }
+
+        private string sku;
+        public string Sku
+        {
+            get
+            {
+                return this.sku;
+            }
+            set
+            {
+                this.sku = value;
+                this.FirePropertyChangedEvent("Sku");
+                this.FirePropertyChangedEvent("AvailableNodeAgentSkuIds");
+            }
+        }
+
+        private string version;
+        public string Version
+        {
+            get
+            {
+                return this.version;
+            }
+            set
+            {
+                this.version = value;
+                this.FirePropertyChangedEvent("Version");
+            }
+        }
+
+        private string nodeAgentSkuId;
+        public string NodeAgentSkuId
+        {
+            get
+            {
+                return this.nodeAgentSkuId;
+            }
+            set
+            {
+                this.nodeAgentSkuId = value;
+                this.FirePropertyChangedEvent("NodeAgentSkuId");
+            }
+        }
+
+        private bool? enableWindowsAutomaticUpdates;
+        public bool? EnableWindowsAutomaticUpdates
+        {
+            get
+            {
+                return this.enableWindowsAutomaticUpdates;
+            }
+            set
+            {
+                this.enableWindowsAutomaticUpdates = value;
+                this.FirePropertyChangedEvent("EnableWindowsAutomaticUpdates");
+            }
+        }
+
         #endregion
 
-
-        public CreatePoolViewModel(IDataProvider batchService)
+        public CreatePoolViewModel(IDataProvider batchService, Cached<IList<NodeAgentSku>> nodeAgentSkus)
         {
             this.batchService = batchService;
 
             // pre-populate the available VM sizes
             this.AvailableVirtualMachineSizes = Common.SupportedVirtualMachineSizesList;
+            this.AvailableNodeAgentSkus = new List<NodeAgentSku>(); //Initially empty
+
+            Task task = nodeAgentSkus.GetDataAsync().ContinueWith(
+                (t) => this.AvailableNodeAgentSkus = new ReadOnlyCollection<NodeAgentSku>(t.Result));
+            AsyncOperationTracker.Instance.AddTrackedInternalOperation(task);
+
+            this.Version = "latest"; //Default to latest
             this.AvailableOSVersions = new List<string> { "*" };
             this.TargetDedicated = 1;
             this.MaxTasksPerComputeNode = 1;
             this.IsBusy = false;
+            this.HasVirtualMachineConfiguration = false;
             
             this.AvailableOSFamilies = new List<string>(Common.SupportedOSFamilyDictionary.Keys);
         }
@@ -316,17 +491,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 if (this.IsInputValid())
                 {
                     System.Threading.Tasks.Task asyncTask;
-
-                    string osFamilyString;
-                    if (Common.SupportedOSFamilyDictionary.ContainsKey(this.SelectedOSFamily))
-                    {
-                        osFamilyString = Common.SupportedOSFamilyDictionary[this.SelectedOSFamily];
-                    }
-                    else
-                    {
-                        osFamilyString = this.SelectedOSFamily;
-                    }
-
+                    
                     if (!this.UseAutoscale)
                     {
                         asyncTask = this.batchService.CreatePoolAsync(
@@ -335,8 +500,8 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                             this.TargetDedicated,
                             null,
                             this.InterComputeNodeCommunicationEnabled,
-                            osFamilyString,
-                            this.SelectedOSVersion,
+                            this.GetCloudServiceConfigurationOptions(),
+                            this.GetVirtualMachineConfigurationOptions(),
                             this.MaxTasksPerComputeNode,
                             this.Timeout,
                             this.GetStartTaskOptions());
@@ -349,8 +514,8 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                             null,
                             this.AutoscaleFormula,
                             this.InterComputeNodeCommunicationEnabled,
-                            osFamilyString,
-                            this.SelectedOSVersion,
+                            this.GetCloudServiceConfigurationOptions(),
+                            this.GetVirtualMachineConfigurationOptions(),
                             this.MaxTasksPerComputeNode,
                             this.Timeout,
                             this.GetStartTaskOptions());
@@ -382,6 +547,48 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                     CommandLine = this.StartTaskCommandLine,
                     ResourceFiles = ResourceFileStringParser.Parse(this.StartTaskResourceFiles).Files.ToList(),
                     RunElevated = this.StartTaskRunElevated,
+                };
+            }
+
+            return null;
+        }
+
+        private CloudServiceConfigurationOptions GetCloudServiceConfigurationOptions()
+        {
+            if (!this.HasVirtualMachineConfiguration)
+            {
+                string osFamilyString;
+                if (Common.SupportedOSFamilyDictionary.ContainsKey(this.SelectedOSFamily))
+                {
+                    osFamilyString = Common.SupportedOSFamilyDictionary[this.SelectedOSFamily];
+                }
+                else
+                {
+                    osFamilyString = this.SelectedOSFamily;
+                }
+
+                return new CloudServiceConfigurationOptions()
+                {
+                    OSFamily = osFamilyString,
+                    OSVersion = this.SelectedOSVersion
+                };
+            }
+
+            return null;
+        }
+
+        private VirtualMachineConfigurationOptions GetVirtualMachineConfigurationOptions()
+        {
+            if (this.HasVirtualMachineConfiguration)
+            {
+                return new VirtualMachineConfigurationOptions()
+                {
+                    Version = this.Version,
+                    EnableWindowsAutomaticUpdates = this.EnableWindowsAutomaticUpdates,
+                    NodeAgentSkuId = this.NodeAgentSkuId,
+                    Offer = this.Offer,
+                    Publisher = this.Publisher,
+                    SkuId = this.Sku
                 };
             }
 

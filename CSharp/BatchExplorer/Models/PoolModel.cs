@@ -211,7 +211,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         private async Task<List<ComputeNodeModel>> ListComputeNodesAsync()
         {
             List<ComputeNodeModel> results = new List<ComputeNodeModel>();
-            IPagedEnumerable<ComputeNode> jobList = this.Pool.ListComputeNodes(OptionsModel.Instance.ListDetailLevel);
+            IPagedEnumerable<ComputeNode> jobList = this.Pool.ListComputeNodes();
 
             await jobList.ForEachAsync(item => results.Add(new ComputeNodeModel(this, item)));
 
