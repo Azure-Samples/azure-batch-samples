@@ -939,6 +939,7 @@
             <Grid Column="1" Visibility="{Binding JobTabIsSelected, Converter={StaticResource BVC}}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="3*"/>
+                    <RowDefinition Height="4"/>
                     <RowDefinition Height="2*"/>
                 </Grid.RowDefinitions>
                 <TabControl>
@@ -1034,8 +1035,9 @@
                     </TabItem>
 
                 </TabControl>
+                <GridSplitter Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
                 <toolkit:BusyIndicator IsBusy="{Binding UpperRightSpinnerIsVisible}"/>
-                <Grid Grid.Row="1" Visibility="{Binding Path=SelectedTask, Converter={StaticResource NVC}}">
+                <Grid Grid.Row="2" Visibility="{Binding Path=SelectedTask, Converter={StaticResource NVC}}">
                     <TabControl >
                         <TabControl.InputBindings>
                             <KeyBinding Command="{Binding RefreshItem}" CommandParameter="{Binding Path=SelectedTask}" Key="F5" />

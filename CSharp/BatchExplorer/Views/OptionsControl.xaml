@@ -50,7 +50,7 @@
         <Label 
             Grid.Row="2" 
             Grid.Column="0" 
-            Content="Use Stats during list" 
+            Content="Use Stats during list (requires refresh)" 
             VerticalAlignment="Center"
             ToolTip="{Binding Path=UseStatsDuringListDescriptionString, Mode=OneWay}" />
         <CheckBox 
