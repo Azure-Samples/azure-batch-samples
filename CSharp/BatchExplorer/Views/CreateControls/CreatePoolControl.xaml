@@ -280,7 +280,7 @@
                     Grid.Column="1"
                     SelectedIndex="0"
                     IsEditable="True"
-                    Text="{Binding SkuId}"
+                    Text="{Binding Sku}"
                     ItemsSource="{Binding AvailableSkus}"/>
                 
                 <Separator Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2"/>

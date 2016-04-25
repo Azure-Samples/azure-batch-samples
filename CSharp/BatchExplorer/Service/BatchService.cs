@@ -159,10 +159,10 @@ namespace Microsoft.Azure.BatchExplorer.Service
                     virtualMachineSize: virtualMachineSize,
                     virtualMachineConfiguration: new VirtualMachineConfiguration(
                         new ImageReference(
-                            virtualMachineConfigurationOptions.Publisher,
-                            virtualMachineConfigurationOptions.Offer,
-                            virtualMachineConfigurationOptions.SkuId,
-                            virtualMachineConfigurationOptions.Version),
+                            publisher: virtualMachineConfigurationOptions.Publisher,
+                            offer: virtualMachineConfigurationOptions.Offer,
+                            skuId: virtualMachineConfigurationOptions.SkuId,
+                            version: virtualMachineConfigurationOptions.Version),
                         virtualMachineConfigurationOptions.NodeAgentSkuId,
                         virtualMachineConfigurationOptions.EnableWindowsAutomaticUpdates.HasValue ? new WindowsConfiguration(virtualMachineConfigurationOptions.EnableWindowsAutomaticUpdates) : null),
                     targetDedicated: targetDedicated);
