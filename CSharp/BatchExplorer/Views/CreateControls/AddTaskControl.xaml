@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:converter="clr-namespace:Microsoft.Azure.BatchExplorer.Converters"
+             xmlns:toolkit="http://schemas.xceed.com/wpf/xaml/toolkit"
              mc:Ignorable="d">
     <UserControl.Resources>
         <converter:BoolToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
@@ -17,6 +18,7 @@
         </Grid.ColumnDefinitions>
 
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -101,17 +103,40 @@
             Grid.Row="4"
             Grid.Column="1"
             Text="{Binding CommandLine}"/>
+
+        <StackPanel 
+            Orientation="Horizontal"
+            Grid.Row="5" 
+            Grid.Column="0">
+            <TextBlock 
+                VerticalAlignment="Center"
+                Margin="4,0,0,0"
+                Foreground="Red"
+                Text="  " />
+            <TextBlock
+                Margin="8,4"
+                VerticalAlignment="Center"
+                FontSize="12"
+                Text="Max Task Retry Count"/>
+        </StackPanel>
+        <toolkit:ButtonSpinner
+            Grid.Row="5"
+            Grid.Column="1"
+            Spin="ButtonSpinner_Spin">
+            <TextBox Text="{Binding MaxTaskRetryCount, Mode=TwoWay}" HorizontalContentAlignment="Right" />
+        </toolkit:ButtonSpinner>
         
-        <TextBlock Grid.Row="5" Grid.Column="0" Margin="8,4" FontSize="12">Resource Files</TextBlock>
-        <TextBox Grid.Row="5" Grid.Column="1" AcceptsReturn="True" Text="{Binding StartTaskResourceFiles}" ToolTip="List of resource files in format blobSource => filePath, delimited by newlines or semicolons" Margin="0,0,0,2" />
+        
+        <TextBlock Grid.Row="6" Grid.Column="0" Margin="8,4" FontSize="12">Resource Files</TextBlock>
+        <TextBox Grid.Row="6" Grid.Column="1" AcceptsReturn="True" Text="{Binding StartTaskResourceFiles}" ToolTip="List of resource files in format blobSource => filePath, delimited by newlines or semicolons" Margin="0,0,0,2" />
 
-        <CheckBox Content="Run Elevated" Margin="5,4,0,4" Grid.Row="6" VerticalAlignment="Top" Width="125" IsChecked="{Binding RunElevated}" HorizontalAlignment="Left" FontSize="12"/>
+        <CheckBox Content="Run Elevated" Margin="5,4,0,4" Grid.Row="7" VerticalAlignment="Top" Width="125" IsChecked="{Binding RunElevated}" HorizontalAlignment="Left" FontSize="12"/>
 
-        <CheckBox Content="Multi-Instance Task" Margin="5,10,0,10" Grid.Row="7" VerticalAlignment="Top" Width="125" IsChecked="{Binding IsMultiInstanceTask}" HorizontalAlignment="Left" FontSize="12"/>
+        <CheckBox Content="Multi-Instance Task" Margin="5,10,0,10" Grid.Row="8" VerticalAlignment="Top" Width="125" IsChecked="{Binding IsMultiInstanceTask}" HorizontalAlignment="Left" FontSize="12"/>
 
         <StackPanel
             Visibility="{Binding IsMultiInstanceTask, Converter={StaticResource BooleanToVisibilityConverter}}"
-            Grid.Row="8"
+            Grid.Row="9"
             Orientation="Horizontal"
             HorizontalAlignment="Left">
             <TextBlock 
@@ -127,13 +152,13 @@
         </StackPanel>
         <TextBox x:Name="instanceNumber"
             Visibility="{Binding IsMultiInstanceTask, Converter={StaticResource BooleanToVisibilityConverter}}"
-            Grid.Row="8"
+            Grid.Row="9"
             Grid.Column="1"
             Text="{Binding InstanceNumber}"/>
 
         <StackPanel
             Visibility="{Binding IsMultiInstanceTask, Converter={StaticResource BooleanToVisibilityConverter}}"
-            Grid.Row="9"
+            Grid.Row="10"
             Orientation="Horizontal"
             HorizontalAlignment="Left">
             <TextBlock 
@@ -149,13 +174,13 @@
         </StackPanel>
         <TextBox x:Name="bCommandLine"
             Visibility="{Binding IsMultiInstanceTask, Converter={StaticResource BooleanToVisibilityConverter}}"
-            Grid.Row="9"
+            Grid.Row="10"
             Grid.Column="1"
             Text="{Binding BackgroundCommand}"/>
 
         <StackPanel
             Visibility="{Binding IsMultiInstanceTask, Converter={StaticResource BooleanToVisibilityConverter}}"
-            Grid.Row="10"
+            Grid.Row="11"
             Orientation="Horizontal"
             HorizontalAlignment="Left">
             <TextBlock 
@@ -171,17 +196,17 @@
         </StackPanel>
         <TextBox x:Name="resourceFiles"
             Visibility="{Binding IsMultiInstanceTask, Converter={StaticResource BooleanToVisibilityConverter}}"
-            Grid.Row="10"
+            Grid.Row="11"
             Grid.Column="1"
             Text="{Binding CommonResourceFiles}"/>
 
         <!-- Buttons -->
         <Button
-        	VerticalAlignment="Bottom" 
-        	HorizontalAlignment="Right"
-        	Width="100" 
-        	Height="24"
-        	Command="{Binding AddTask}"
-        	Content="Add" Grid.Row="11" Margin="0,20,0,10"/>
+            VerticalAlignment="Bottom" 
+            HorizontalAlignment="Right"
+            Width="100" 
+            Height="24"
+            Command="{Binding AddTask}"
+            Content="Add" Grid.Row="12" Margin="0,20,0,10"/>
     </Grid>
 </UserControl>

@@ -16,6 +16,8 @@ namespace Microsoft.Azure.BatchExplorer.Models
 
         public bool RunElevated { get; set; }
 
+        public int MaxTaskRetryCount { get; set; }
+
         public string BackgroundCommand { get; set; }
 
         public List<ResourceFileInfo> CommonResourceFiles { get; set; }
