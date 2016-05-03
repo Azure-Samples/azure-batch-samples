@@ -119,12 +119,13 @@
                 FontSize="12"
                 Text="Max Task Retry Count"/>
         </StackPanel>
-        <toolkit:ButtonSpinner
+        <toolkit:IntegerUpDown
             Grid.Row="5"
             Grid.Column="1"
-            Spin="ButtonSpinner_Spin">
-            <TextBox Text="{Binding MaxTaskRetryCount, Mode=TwoWay}" HorizontalContentAlignment="Right" />
-        </toolkit:ButtonSpinner>
+            Increment="1"
+            Minimum="-1"
+            Value="{Binding MaxTaskRetryCount}">
+        </toolkit:IntegerUpDown>
         
         
         <TextBlock Grid.Row="6" Grid.Column="0" Margin="8,4" FontSize="12">Resource Files</TextBlock>
