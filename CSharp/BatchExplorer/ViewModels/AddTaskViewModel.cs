@@ -62,6 +62,20 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
+        private int maxTaskRetryCount;
+        public int MaxTaskRetryCount
+        {
+            get
+            {
+                return this.maxTaskRetryCount;
+            }
+            set
+            {
+                this.maxTaskRetryCount = value;
+                this.FirePropertyChangedEvent("MaxTaskRetryCount");
+            }
+        }
+
         private bool runElevated;
         public bool RunElevated
         {
@@ -72,7 +86,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             set
             {
                 this.runElevated = value;
-                this.FirePropertyChangedEvent("runElevated");
+                this.FirePropertyChangedEvent("RunElevated");
             }
         }
 
@@ -192,7 +206,8 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         TaskId = this.TaskId,
                         IsMultiInstanceTask = this.IsMultiInstanceTask,
                         ResourceFiles = ResourceFileStringParser.Parse(this.ResourceFiles).Files.ToList(),
-                        RunElevated = this.RunElevated
+                        RunElevated = this.RunElevated,
+                        MaxTaskRetryCount = this.MaxTaskRetryCount,
                     };
 
                     if (this.IsMultiInstanceTask)
