@@ -364,7 +364,15 @@ namespace Microsoft.Azure.BatchExplorer.Models
         private async System.Threading.Tasks.Task<List<TaskModel>> ListTasksAsync()
         {
             List<TaskModel> results = new List<TaskModel>();
-            IPagedEnumerable<CloudTask> taskList = this.Job.ListTasks(OptionsModel.Instance.ListDetailLevel);
+
+            // Inherit global settings
+            ODATADetailLevel listTaskDetailLevel = new ODATADetailLevel(
+                OptionsModel.Instance.ListDetailLevel.FilterClause,
+                OptionsModel.Instance.ListDetailLevel.SelectClause,
+                OptionsModel.Instance.ListDetailLevel.ExpandClause);
+
+            //listTaskDetailLevel.SelectClause += "id, state, creationTime";
+            IPagedEnumerable<CloudTask> taskList = this.Job.ListTasks(listTaskDetailLevel);
             
             await taskList.ForEachAsync(item => results.Add(new TaskModel(this, item)));
 

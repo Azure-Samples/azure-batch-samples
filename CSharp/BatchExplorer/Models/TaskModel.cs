@@ -55,7 +55,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
         public IEnumerable<ResourceFile> ResourceFiles { get { return this.Task.ResourceFiles; } }
-        
+
         /// <summary>
         /// The number of times to retry this task
         /// </summary>
@@ -97,7 +97,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
                 if (this.attemptToLoadOutputs && (this.OutputFiles == null || !this.OutputFiles.Any()))
                 {
                     AsyncOperationTracker.Instance.AddTrackedInternalOperation(
-                        this.RefreshAsync(ModelRefreshType.Children));
+                        this.RefreshAsync(ModelRefreshType.Basic | ModelRefreshType.Children));
                 }
 
                 this.attemptToLoadOutputs = false;
@@ -353,7 +353,6 @@ namespace Microsoft.Azure.BatchExplorer.Models
         #endregion
 
         #region Private methods
-
         /// <summary>
         /// Lists the task files associated with this task
         /// </summary>
