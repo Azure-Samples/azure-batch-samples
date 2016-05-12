@@ -124,9 +124,30 @@ namespace Microsoft.Azure.BatchExplorer.Models
                         int i = 0;
                         foreach (object enumerableObject in enumerable)
                         {
-                            List<PropertyModel> innerPropertyModels = this.ObjectToPropertyModelRecursive(enumerableObject, propertiesToOmit);
+                            var itemName = prefix + i;
 
-                            collectionModel.Add(new CollectionPropertyModel(prefix + i, innerPropertyModels));
+                            PropertyModel itemModel;
+
+                            if (enumerableObject == null)
+                            {
+                                itemModel = new SimplePropertyModel(itemName, String.Empty);
+                            }
+                            else if ((propertyType == typeof(TimeSpan) || propertyType == typeof(TimeSpan?)) && propertyValue.Equals(TimeSpan.MaxValue))
+                            {
+                                itemModel = new SimplePropertyModel(itemName, "Unlimited");
+                            }
+                            else if (enumerableObject.GetType().GetMethod("ToString", Type.EmptyTypes).DeclaringType != typeof(object))
+                            {
+                                itemModel = new SimplePropertyModel(itemName, enumerableObject.ToString());
+                            }
+                            else
+                            {
+                                List<PropertyModel> innerPropertyModels = this.ObjectToPropertyModelRecursive(enumerableObject, propertiesToOmit);
+
+                                itemModel = new CollectionPropertyModel(itemName, innerPropertyModels);
+                            }
+
+                            collectionModel.Add(itemModel);
                             i++;
                         }
 
