@@ -106,13 +106,17 @@ namespace Microsoft.Azure.BatchExplorer.Models
                         //Don't track null properties in order to keep the list short
                         //propertyModel = new SimplePropertyModel(propInfo.Name, string.Empty);
                     }
+                    else if ((propertyType == typeof(TimeSpan) || propertyType == typeof(TimeSpan?)) && propertyValue.Equals(TimeSpan.MaxValue))
+                    {
+                        propertyModel = new SimplePropertyModel(propInfo.Name, "Unlimited");
+                    }
                     //For other types which have a ToString declared, we want to use the built in ToString()
                     else if (toStringDeclaringType != typeof(object))
                     {
                         propertyModel = new SimplePropertyModel(propInfo.Name, propertyValue.ToString());
                     }
                     //If we have a collection, enumerate the contents
-                    else if (typeof (IEnumerable).IsAssignableFrom(propertyType))
+                    else if (typeof(IEnumerable).IsAssignableFrom(propertyType))
                     {
                         IEnumerable enumerable = propertyValue as IEnumerable;
                         string prefix = CollectionPropertyModel.GetItemDisplayPrefix(enumerable);

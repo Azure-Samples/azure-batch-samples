@@ -325,6 +325,7 @@ namespace Microsoft.Azure.BatchExplorer.Service
                 unboundTask.MultiInstanceSettings.CommonResourceFiles = options.CommonResourceFiles.ConvertAll(f => new ResourceFile(f.BlobSource, f.FilePath));
             }
             unboundTask.RunElevated = options.RunElevated;
+            unboundTask.Constraints = new TaskConstraints(null, null, options.MaxTaskRetryCount);
             unboundTask.ResourceFiles = options.ResourceFiles.ConvertAll(f => new ResourceFile(f.BlobSource, f.FilePath));
             await this.Client.JobOperations.AddTaskAsync(options.JobId, unboundTask);
         }
