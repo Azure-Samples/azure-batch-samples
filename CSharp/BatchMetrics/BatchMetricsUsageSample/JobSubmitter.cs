@@ -41,7 +41,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
                 poolId: PoolId,
                 targetDedicated: PoolNodeCount,
                 virtualMachineSize: PoolNodeSize,
-                osFamily: PoolOSFamily);
+                cloudServiceConfiguration: new CloudServiceConfiguration(PoolOSFamily));
 
             await GettingStartedCommon.CreatePoolIfNotExistAsync(_batchClient, pool);
         }
@@ -105,9 +105,9 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
             }
             catch (BatchException ex)
             {
-                if (ex.RequestInformation != null && ex.RequestInformation.AzureError != null)
+                if (ex.RequestInformation != null && ex.RequestInformation.BatchError != null)
                 {
-                    Console.WriteLine("Batch Exception {0}", ex.RequestInformation.AzureError.Message);
+                    Console.WriteLine("Batch Exception {0}", ex.RequestInformation.BatchError.Message);
                 }
             }
             catch (Exception ex)

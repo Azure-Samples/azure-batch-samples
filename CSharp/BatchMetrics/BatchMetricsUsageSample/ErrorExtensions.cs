@@ -14,8 +14,8 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
         internal static bool IsBatchErrorCode(this BatchException ex, string errorCode)
         {
             return ex.RequestInformation != null
-                && ex.RequestInformation.AzureError != null
-                && ex.RequestInformation.AzureError.Code == errorCode;
+                && ex.RequestInformation.BatchError != null
+                && ex.RequestInformation.BatchError.Code == errorCode;
         }
     }
 }
