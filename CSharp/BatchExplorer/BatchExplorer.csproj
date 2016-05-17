@@ -157,6 +157,7 @@
     <Compile Include="Helpers\ChangeTrackedAttribute.cs" />
     <Compile Include="Helpers\CommandBase.cs" />
     <Compile Include="Helpers\Common.cs" />
+    <Compile Include="Helpers\EnumerableExtensions.cs" />
     <Compile Include="Helpers\Exceptions.cs" />
     <Compile Include="Helpers\IDataProvider.cs" />
     <Compile Include="Converters\TaskStatusColorConverter.cs" />

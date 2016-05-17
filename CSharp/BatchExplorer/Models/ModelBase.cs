@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Azure.BatchExplorer.Helpers;
+using System.Diagnostics;
 
 namespace Microsoft.Azure.BatchExplorer.Models
 {
@@ -71,85 +72,77 @@ namespace Microsoft.Azure.BatchExplorer.Models
             }
             propertiesToOmit.Add("CustomBehaviors");
             
-            List<PropertyModel> result = this.ObjectToPropertyModelRecursive(o, propertiesToOmit);
+            List<PropertyModel> result = ExtractPropertyCollection(o, propertiesToOmit);
             result.Add(new SimplePropertyModel(LastUpdateFromServerString, this.LastUpdatedTime.ToString()));
             return result;
         }
 
-        private List<PropertyModel> ObjectToPropertyModelRecursive(object o, List<string> propertiesToOmit = null)
+        private static List<PropertyModel> ExtractPropertyCollection(object o, List<string> propertiesToOmit)
         {
-            List<PropertyModel> results = new List<PropertyModel>();
+            Debug.Assert(propertiesToOmit != null);
 
-            PropertyInfo[] properties = o.GetType().GetProperties();
-            foreach (PropertyInfo propInfo in properties)
+            if (o == null)
             {
-                //Determine if this property is in the list of properties to omit -- if it is we skip it
-                if (propertiesToOmit != null && propertiesToOmit.Contains(propInfo.Name))
-                {
-                    continue;
-                }
-                
-                try
-                {
-                    PropertyModel propertyModel = null;
-
-                    //Get the property type and value
-                    object propertyValue = propInfo.GetValue(o);
-                    Type propertyType = propertyValue == null ? typeof(object) : propertyValue.GetType();
-
-                    //Find the implementer of the ToString method
-                    Type toStringDeclaringType = propertyType.GetMethod("ToString", Type.EmptyTypes).DeclaringType;
-                
-                    //If the prop value is null, just write string.Empty
-                    if (propertyValue == null)
-                    {
-                        //Don't track null properties in order to keep the list short
-                        //propertyModel = new SimplePropertyModel(propInfo.Name, string.Empty);
-                    }
-                    else if ((propertyType == typeof(TimeSpan) || propertyType == typeof(TimeSpan?)) && propertyValue.Equals(TimeSpan.MaxValue))
-                    {
-                        propertyModel = new SimplePropertyModel(propInfo.Name, "Unlimited");
-                    }
-                    //For other types which have a ToString declared, we want to use the built in ToString()
-                    else if (toStringDeclaringType != typeof(object))
-                    {
-                        propertyModel = new SimplePropertyModel(propInfo.Name, propertyValue.ToString());
-                    }
-                    //If we have a collection, enumerate the contents
-                    else if (typeof(IEnumerable).IsAssignableFrom(propertyType))
-                    {
-                        IEnumerable enumerable = propertyValue as IEnumerable;
-                        string prefix = CollectionPropertyModel.GetItemDisplayPrefix(enumerable);
-                        List<PropertyModel> collectionModel = new List<PropertyModel>();
-                        int i = 0;
-                        foreach (object enumerableObject in enumerable)
-                        {
-                            List<PropertyModel> innerPropertyModels = this.ObjectToPropertyModelRecursive(enumerableObject, propertiesToOmit);
-
-                            collectionModel.Add(new CollectionPropertyModel(prefix + i, innerPropertyModels));
-                            i++;
-                        }
-
-                        propertyModel = new CollectionPropertyModel(propInfo.Name, collectionModel);
-                    }
-                    //For any complex properties without a ToString of their own, we recurse
-                    else
-                    {
-                        propertyModel = new CollectionPropertyModel(propInfo.Name, this.ObjectToPropertyModelRecursive(propertyValue, propertiesToOmit));
-                    }
-
-                    if (propertyModel != null)
-                    {
-                        results.Add(propertyModel);
-                    }
-                }
-                catch (TargetInvocationException)
-                {
-                    // Skip. Cannot access all properties for bound objects
-                }
+                return new List<PropertyModel>();
             }
 
-            return results;
+            return o.GetType()
+                    .GetProperties()
+                    .Where(prop => !propertiesToOmit.Contains(prop.Name))
+                    .SelectMany(prop => ExtractPropertyModel(o, prop, propertiesToOmit))
+                    .ToList();
+        }
+
+        private static IEnumerable<PropertyModel> ExtractPropertyModel(object o, PropertyInfo property, List<string> propertiesToOmit)
+        {
+            Debug.Assert(o != null);
+            Debug.Assert(propertiesToOmit != null);
+
+            try
+            {
+                object propertyValue = property.GetValue(o);
+                return ObjectToPropertyModelRecursive(property.Name, propertyValue, propertiesToOmit);
+            }
+            catch (TargetInvocationException)
+            {
+                // Skip. Cannot access all properties for bound objects
+                return Enumerable.Empty<PropertyModel>();
+            }
+        }
+
+        private static IEnumerable<PropertyModel> ObjectToPropertyModelRecursive(string propertyName, object propertyValue, List<string> propertiesToOmit = null)
+        {
+            if (propertyValue == null)
+            {
+                yield break;
+            }
+
+            Type objectType = propertyValue.GetType();
+            bool isStringable = objectType.GetMethod("ToString", Type.EmptyTypes).DeclaringType != typeof(object);  // declares a nondefault ToString() which we will use to represent the value instead of recursing into a property tree
+            IEnumerable enumerable = propertyValue as IEnumerable;
+
+            if ((objectType == typeof(TimeSpan) || objectType == typeof(TimeSpan?)) && propertyValue.Equals(TimeSpan.MaxValue))
+            {
+                yield return new SimplePropertyModel(propertyName, "Unlimited");
+            }
+            else if (isStringable)
+            {
+                yield return new SimplePropertyModel(propertyName, propertyValue.ToString());
+            }
+            else if (enumerable != null)
+            {
+                string prefix = CollectionPropertyModel.GetItemDisplayPrefix(enumerable);
+
+                List<PropertyModel> collectionModel =
+                    enumerable.SelectMany((item, index) => ObjectToPropertyModelRecursive(prefix + index, item, propertiesToOmit))
+                              .ToList();
+
+                yield return new CollectionPropertyModel(propertyName, collectionModel);
+            }
+            else
+            {
+                yield return new CollectionPropertyModel(propertyName, ExtractPropertyCollection(propertyValue, propertiesToOmit));
+            }
         }
 
         /// <summary>
