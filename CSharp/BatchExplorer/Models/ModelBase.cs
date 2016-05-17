@@ -108,7 +108,6 @@ namespace Microsoft.Azure.BatchExplorer.Models
                 // Skip. Cannot access all properties for bound objects
                 return Enumerable.Empty<PropertyModel>();
             }
-
         }
 
         private static IEnumerable<PropertyModel> ObjectToPropertyModelRecursive(string propertyName, object propertyValue, List<string> propertiesToOmit = null)
