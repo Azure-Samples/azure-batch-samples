@@ -9,6 +9,9 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
     using System.Text;
     using System.Threading.Tasks;
 
+    /// <summary>
+    /// Contains aggregate information about a job at a point in time.
+    /// </summary>
     public sealed class JobMetrics
     {
         private readonly TimeSpan listTasksLatency;
@@ -20,6 +23,9 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
             this.taskStateCounts = taskStateCounts;
         }
 
+        /// <summary>
+        /// Gets the number of tasks in each <see cref="TaskState"/> in the job.
+        /// </summary>
         public TaskStateCounts TaskStateCounts
         {
             get { return this.taskStateCounts; }

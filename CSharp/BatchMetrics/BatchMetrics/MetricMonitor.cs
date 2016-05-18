@@ -12,6 +12,10 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
     using System.Threading;
     using System.Threading.Tasks;
 
+    /// <summary>
+    /// Monitors an Azure Batch account and provides aggregate status and metric information
+    /// about the jobs in that account.
+    /// </summary>
     public sealed class MetricMonitor : IDisposable
     {
         private readonly bool ownsClient;
@@ -26,33 +30,68 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
         private static readonly TimeSpan DefaultMonitorInterval = TimeSpan.FromSeconds(60);
         private static readonly TimeSpan MaximumClockSkew = TimeSpan.FromSeconds(30);
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MetricMonitor"/> class.
+        /// </summary>
+        /// <param name="batchClient">The <see cref="BatchClient"/> to use for accessing the Azure Batch service.</param>
         public MetricMonitor(BatchClient batchClient)
             : this(batchClient, false, DefaultMonitorInterval)
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MetricMonitor"/> class.
+        /// </summary>
+        /// <param name="baseUrl">The Batch service endpoint.</param>
+        /// <param name="accountName">The name of the Batch account.</param>
+        /// <param name="accountKey">The Base64 encoded account access key.</param>
         public MetricMonitor(string baseUrl, string accountName, string accountKey)
             : this(BatchClient.Open(new BatchSharedKeyCredentials(baseUrl, accountName, accountKey)), true, DefaultMonitorInterval)
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MetricMonitor"/> class.
+        /// </summary>
+        /// <param name="batchClient">The <see cref="BatchClient"/> to use for accessing the Azure Batch service.</param>
+        /// <param name="monitorInterval">The interval at which to update the metrics.</param>
         public MetricMonitor(BatchClient batchClient, TimeSpan monitorInterval)
             : this(batchClient, false, monitorInterval)
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MetricMonitor"/> class.
+        /// </summary>
+        /// <param name="baseUrl">The Batch service endpoint.</param>
+        /// <param name="accountName">The name of the Batch account.</param>
+        /// <param name="accountKey">The Base64 encoded account access key.</param>
+        /// <param name="monitorInterval">The interval at which to update the metrics.</param>
         public MetricMonitor(string baseUrl, string accountName, string accountKey, TimeSpan monitorInterval)
             : this(BatchClient.Open(new BatchSharedKeyCredentials(baseUrl, accountName, accountKey)), true, monitorInterval)
         {
         }
 
+        /// <summary>
+        /// Gets the job metrics at the last time the <see cref="MetricMonitor"/> updated them.
+        /// </summary>
+        /// <remarks>If the MetricMonitor has not yet retrieved any metrics, this property is null.
+        /// You must call the <see cref="Start"/> method to start retrieving metrics.</remarks>
         public MetricEvent CurrentMetrics
         {
             get; private set;
         }
 
+        /// <summary>
+        /// Raised when the <see cref="MetricMonitor"/> has updated the <see cref="CurrentMetrics"/>.
+        /// </summary>
         public event EventHandler MetricsUpdated;
 
+        /// <summary>
+        /// Starts monitoring the Azure Batch account and gathering metrics.  Once Start has been called,
+        /// metrics will be updated periodically: the latest metrics can be found in <see cref="CurrentMetrics"/>,
+        /// and the <see cref="MetricsUpdated"/> event is raised on each update.
+        /// </summary>
         public void Start()
         {
             lock (this.runLock)
@@ -173,6 +212,9 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
             metricsBuilder.JobStats.Add(job.Id, new JobMetrics(listTasksLatency, taskStateCounts));
         }
 
+        /// <summary>
+        /// Releases the resources used by the <see cref="MetricMonitor"/>.
+        /// </summary>
         public void Dispose()
         {
             lock (this.runLock)

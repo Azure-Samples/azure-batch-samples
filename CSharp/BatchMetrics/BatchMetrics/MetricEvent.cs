@@ -8,6 +8,9 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
     using System.Text;
     using System.Threading.Tasks;
 
+    /// <summary>
+    /// Represents aggregate information about the jobs in an account at a point in time.
+    /// </summary>
     public sealed class MetricEvent
     {
         private readonly DateTime collectionStarted;
@@ -40,31 +43,49 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
             this.error = error;
         }
 
+        /// <summary>
+        /// Gets whether an error occurred retrieving the data for the <see cref="MetricEvent"/>.
+        /// </summary>
         public bool IsError
         {
             get { return this.error != null; }
         }
 
+        /// <summary>
+        /// Gets the error that occurred retrieving the data for the <see cref="MetricEvent"/>, if any.
+        /// </summary>
         public Exception Error
         {
             get { return this.error; }
         }
 
+        /// <summary>
+        /// Gets the time at which the <see cref="MetricMonitor"/> started gathering data for this <see cref="MetricEvent"/>.
+        /// </summary>
         public DateTime CollectionStarted
         {
             get { return this.collectionStarted; }
         }
 
+        /// <summary>
+        /// Gets the time at which the <see cref="MetricMonitor"/> finished gathering data for this <see cref="MetricEvent"/>.
+        /// </summary>
         public DateTime CollectionCompleted
         {
             get { return this.collectionCompleted; }
         }
 
+        /// <summary>
+        /// Gets information about how long it took the <see cref="MetricMonitor"/> to gather data for this <see cref="MetricEvent"/>.
+        /// </summary>
         public Latency Latency
         {
             get { return this.latency; }
         }
 
+        /// <summary>
+        /// Gets the ids of the jobs for which this <see cref="MetricEvent"/> contains metrics.
+        /// </summary>
         public IEnumerable<string> JobIds
         {
             get
@@ -77,6 +98,11 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
             }
         }
 
+        /// <summary>
+        /// Gets the metrics for the given job.
+        /// </summary>
+        /// <param name="jobId">The job whose metrics to get.</param>
+        /// <returns>The metrics for the job.</returns>
         public JobMetrics GetMetrics(string jobId)
         {
             if (IsError)
