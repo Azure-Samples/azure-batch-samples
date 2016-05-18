@@ -18,6 +18,9 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
     {
         private static void Main()
         {
+            // Call the asynchronous version of the Main() method. This is done so that we can await various
+            // calls to async methods within the "Main" method of this console application.
+
             try
             {
                 AccountSettings accountSettings = AccountSettings.Default;
@@ -35,6 +38,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
 
         private static async Task MainAsync(AccountSettings accountSettings)
         {
+            // Use the AccountSettings from the Common project to initialize a BatchClient.
             var credentials = new BatchSharedKeyCredentials(
                 accountSettings.BatchServiceUrl,
                 accountSettings.BatchAccountName,
@@ -42,21 +46,41 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
 
             using (var batchClient = await BatchClient.OpenAsync(credentials))
             {
+                // Create a MetricMonitor.  Once started, this will periodically fetch job metrics
+                // (specifically, the counts of tasks in different states) from Azure Batch.
+                // The monitor will stop reporting once disposed, so often you would have the monitor
+                // as a long-lived member variable, but for demo purposes we use a 'using' statement
+                // to ensure disposal.
                 using (var monitor = new MetricMonitor(batchClient))
                 {
+                    // For demo purposes, print the latest metrics every time the monitor updates them.
                     monitor.MetricsUpdated += (s, e) =>
                         {
                             Console.WriteLine();
                             Console.WriteLine(FormatMetrics(monitor.CurrentMetrics));
                         };
+                    // Start monitoring.  The monitor will fetch metrics in the background.
                     monitor.Start();
 
+                    // Give the monitor some jobs to report on.
                     var jobSubmitter = new JobSubmitter(batchClient);
                     await jobSubmitter.SubmitJobsAsync();
                     await jobSubmitter.CleanUpJobsAsync();
                 }
             }
         }
+
+        // The next set of methods format a MetricEvent for compact display in the console.  The format
+        // used in this sample is:
+        //
+        // Collected from 11:44:57 to 11:45:02
+        //
+        // sample-job-1:  Act= 14  Pre=  1  Run= 17  Com=155
+        // sample-job-2:  Act=308  Pre=  0  Run=  8  Com= 43
+        //
+        // where Act, Pre, Run and Com represent the number of tasks in the Active, Preparing, Running
+        // and Completed states.  In a real application you might represent these visually or
+        // output them to a CSV file for display in a spreadsheet or data visualisation tool.
 
         private static string FormatMetrics(MetricEvent metrics)
         {

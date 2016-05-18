@@ -11,6 +11,8 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
     using System.Text;
     using System.Threading.Tasks;
 
+    // This class is responsible for submitting and running sample jobs, just so that the
+    // MetricMonitor in the Program class has something to monitor.
     public class JobSubmitter
     {
         private readonly BatchClient batchClient;
@@ -35,6 +37,8 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
             this.batchClient.CustomBehaviors.Add(RetryPolicyProvider.LinearRetryProvider(TimeSpan.FromSeconds(10), 3));
         }
 
+        // Creates a pool so that the sample jobs have somewhere to run, so that they can
+        // make progress and you can see their progress being tracked by the MetricMonitor.
         private async Task CreatePoolAsync()
         {
             var pool = this.batchClient.PoolOperations.CreatePool(
@@ -46,6 +50,9 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
             await GettingStartedCommon.CreatePoolIfNotExistAsync(this.batchClient, pool);
         }
 
+        // Adds a sample job with a few sample tasks to the Batch account.  The tasks
+        // take varying amounts of time to run so you can see the numbers of tasks in
+        // the active, running, and completed states changing over time in each job.
         private async Task SubmitJobAsync(string jobId)
         {
             var job = this.batchClient.JobOperations.CreateJob();
@@ -75,11 +82,11 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
             await this.batchClient.JobOperations.AddTaskAsync(jobId, tasksToRun);
         }
 
+        // Creates a set of sample tasks to allow you to see the MetricMonitor showing
+        // the job progressing.  Each task in the job takes progressively longer than the
+        // previous one.
         private static IEnumerable<CloudTask> CreateTasks(string jobId)
         {
-            // Create a set of tasks for each configuration 
-            // The runtime for each task increases by the timeout factor
-
             for (int taskIndex = 0; taskIndex < JobTaskCount; taskIndex++)
             {
                 var taskId = string.Format("{0}-{1}{2}", jobId, JobTaskIdPrefix, taskIndex);
@@ -89,6 +96,8 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
             }
         }
 
+        // Adds sample jobs to the Batch account.  Jobs are added periodically so that you
+        // can see how each job progresses over time.
         public async Task SubmitJobsAsync()
         {
             try
@@ -113,6 +122,8 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
             }
         }
 
+        // Deletes any jobs that were created specifically for the MetricMonitor
+        // to report on.
         public async Task CleanUpJobsAsync()
         {
             foreach (var jobId in this.createdJobIds)
