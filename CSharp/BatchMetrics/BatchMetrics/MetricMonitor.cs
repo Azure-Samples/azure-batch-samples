@@ -103,6 +103,10 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
             }
         }
 
+        // The main monitoring engine.  This method runs continuously until the monitor
+        // is disposed.  Each time round the loop it calls the Batch service to get task
+        // metrics, then waits for the monitoring interval before going round the loop
+        // again.
         private async Task Run()
         {
             while (!this.runCancel.IsCancellationRequested)
@@ -139,6 +143,14 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
             this.monitorInterval = monitorInterval;
         }
 
+        // Calls the Batch service to get job metrics. This is done in two parts:
+        //
+        // 1. List all jobs in the account.
+        // 2. For each job, collect metrics for that job (see CollectTaskMetricsAsync).
+        //
+        // For simplicity, job metrics (step 2) are collected serially.  You could reduce latency
+        // by performing the CollectTaskMetricsAsync calls in parallel, but would need to
+        // take care to synchronize access to the MetricsBuilder that accumulates the results.
         private async Task<MetricEvent> CollectMetricsAsync()
         {
             MetricEvent.Builder metricsBuilder = new MetricEvent.Builder { CollectionStarted = DateTime.UtcNow };
@@ -170,6 +182,12 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
             }
         }
 
+        // Calls the Batch service to get metrics for a single job.  The first time the
+        // MetricMonitor sees a job, it creates a TaskStateCache to hold task state information,
+        // and queries the states of *all* tasks in the job. Subsequent times, it queries
+        // only for tasks whose states have changed since the previous query -- this significant
+        // reduces download volumes for large jobs. In either case, it then updates the
+        // cached task states and aggregates them into a TaskStateCounts object.
         private async Task CollectTaskMetricsAsync(MetricEvent.Builder metricsBuilder, CloudJob job)
         {
             TaskStateCache taskStateCache;
@@ -213,7 +231,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
         }
 
         /// <summary>
-        /// Releases the resources used by the <see cref="MetricMonitor"/>.
+        /// Stops the <see cref="MetricMonitor"/>, and releases the resources used by the MetricMonitor.
         /// </summary>
         public void Dispose()
         {

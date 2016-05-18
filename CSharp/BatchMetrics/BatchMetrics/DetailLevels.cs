@@ -9,6 +9,8 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
     using System.Text;
     using System.Threading.Tasks;
 
+    // Provides ODATADetailLevel objects for task state queries, both initial (all
+    // entities) and delta (entities changed since a given time).
     internal static class DetailLevels
     {
         internal static class IdAndState

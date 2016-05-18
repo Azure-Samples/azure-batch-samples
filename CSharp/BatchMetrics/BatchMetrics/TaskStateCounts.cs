@@ -19,6 +19,8 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
 
         internal TaskStateCounts()
         {
+            // The counts array is indexed by TaskState. The constructor examines the TaskState
+            // type to determine how to size the array.
             var maxStateIndex = EnumHelpers.GetMaxValue(typeof(TaskState));
             this.counts = new int[maxStateIndex + 1];
         }
