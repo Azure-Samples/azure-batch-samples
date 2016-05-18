@@ -24,5 +24,10 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
         {
             get { return this.taskStateCounts; }
         }
+
+        internal TimeSpan ListTasksLatency
+        {
+            get { return this.listTasksLatency; }
+        }
     }
 }

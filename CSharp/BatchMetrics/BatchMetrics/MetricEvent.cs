@@ -16,6 +16,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
         private readonly TimeSpan listJobsLatency;
         private readonly IReadOnlyDictionary<string, JobStatistics> jobStats;
         private readonly Exception error;
+        private readonly Latency latency;
 
         private MetricEvent(
             DateTime collectionStarted,
@@ -29,6 +30,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
             this.totalLatency = totalLatency;
             this.listJobsLatency = listJobsLatency;
             this.jobStats = new Dictionary<string, JobStatistics>(jobStats);
+            this.latency = new Latency(totalLatency, listJobsLatency, jobStats.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ListTasksLatency));
         }
 
         internal MetricEvent(DateTime collectionStarted, DateTime collectionCompleted, Exception error)
@@ -56,6 +58,11 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
         public DateTime CollectionCompleted
         {
             get { return this.collectionCompleted; }
+        }
+
+        public Latency Latency
+        {
+            get { return this.latency; }
         }
 
         public IEnumerable<string> JobIds
