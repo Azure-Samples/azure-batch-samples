@@ -66,6 +66,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
                     var jobSubmitter = new JobSubmitter(batchClient);
                     await jobSubmitter.SubmitJobsAsync();
                     await jobSubmitter.CleanUpJobsAsync();
+                    await jobSubmitter.CleanUpPoolIfRequiredAsync();
                 }
             }
         }

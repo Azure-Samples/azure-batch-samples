@@ -17,6 +17,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
     {
         private readonly BatchClient batchClient;
         private readonly List<string> createdJobIds = new List<string>();
+        private bool createdNewPool;
 
         private const string PoolId = "batchmetrics-testpool";
         private const int PoolNodeCount = 10;
@@ -47,7 +48,9 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
                 virtualMachineSize: PoolNodeSize,
                 cloudServiceConfiguration: new CloudServiceConfiguration(PoolOSFamily));
 
-            await GettingStartedCommon.CreatePoolIfNotExistAsync(this.batchClient, pool);
+            var createPoolResult = await GettingStartedCommon.CreatePoolIfNotExistAsync(this.batchClient, pool);
+
+            this.createdNewPool = (createPoolResult == CreatePoolResult.CreatedNew);
         }
 
         // Adds a sample job with a few sample tasks to the Batch account.  The tasks
@@ -135,6 +138,23 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
                 catch (Exception ex)
                 {
                     Console.WriteLine("Failed to delete job {0}: {1}", jobId, ex.Message);
+                }
+            }
+        }
+
+        // Deletes the pool that was created specifically for the MetricMonitor
+        // to report on, if a new pool was created.
+        public async Task CleanUpPoolIfRequiredAsync()
+        {
+            if (this.createdNewPool)
+            {
+                try
+                {
+                    await this.batchClient.PoolOperations.DeletePoolAsync(PoolId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Failed to delete pool {0}: {1}", PoolId, ex.Message);
                 }
             }
         }
