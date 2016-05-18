@@ -105,14 +105,11 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
             }
             catch (BatchException ex)
             {
-                if (ex.RequestInformation != null && ex.RequestInformation.BatchError != null)
-                {
-                    Console.WriteLine("Batch Exception {0}", ex.RequestInformation.BatchError.Message);
-                }
+                Console.WriteLine("Batch service exception: {0}" + ex.ToString());
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception {0}", ex.Message);
+                Console.WriteLine("Exception: {0}", ex.ToString());
             }
         }
 
