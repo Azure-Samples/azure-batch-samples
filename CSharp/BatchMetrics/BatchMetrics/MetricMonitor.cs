@@ -14,14 +14,14 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
 
     public sealed class MetricMonitor : IDisposable
     {
-        private readonly bool _ownsClient;
-        private readonly BatchClient _batchClient;
-        private readonly TimeSpan _monitorInterval;
-        private readonly Dictionary<string, TaskStateCache> _jobStateCache = new Dictionary<string, TaskStateCache>();
+        private readonly bool ownsClient;
+        private readonly BatchClient batchClient;
+        private readonly TimeSpan monitorInterval;
+        private readonly Dictionary<string, TaskStateCache> jobStateCache = new Dictionary<string, TaskStateCache>();
 
-        private Task _runTask;
-        private readonly object _runLock = new object();
-        private readonly CancellationTokenSource _runCancel = new CancellationTokenSource();
+        private Task runTask;
+        private readonly object runLock = new object();
+        private readonly CancellationTokenSource runCancel = new CancellationTokenSource();
 
         private static readonly TimeSpan DefaultMonitorInterval = TimeSpan.FromSeconds(60);
         private static readonly TimeSpan MaximumClockSkew = TimeSpan.FromSeconds(30);
@@ -55,22 +55,22 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
 
         public void Start()
         {
-            lock (_runLock)
+            lock (this.runLock)
             {
-                if (_runTask == null)
+                if (this.runTask == null)
                 {
-                    _runTask = Task.Run(() => Run());
+                    this.runTask = Task.Run(() => Run());
                 }
             }
         }
 
         private async Task Run()
         {
-            while (!_runCancel.IsCancellationRequested)
+            while (!this.runCancel.IsCancellationRequested)
             {
                 CurrentMetrics = await CollectMetricsAsync();
                 OnMetricsUpdated();
-                await TaskHelpers.CancellableDelay(_monitorInterval, _runCancel.Token);
+                await TaskHelpers.CancellableDelay(this.monitorInterval, this.runCancel.Token);
             }
         }
 
@@ -95,9 +95,9 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
                 throw new ArgumentOutOfRangeException("monitorInterval", "monitorInterval must be positive");
             }
 
-            _batchClient = batchClient;
-            _ownsClient = ownsClient;
-            _monitorInterval = monitorInterval;
+            this.batchClient = batchClient;
+            this.ownsClient = ownsClient;
+            this.monitorInterval = monitorInterval;
         }
 
         private async Task<MetricEvent> CollectMetricsAsync()
@@ -109,7 +109,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
                 var totalLatencyStopWatch = Stopwatch.StartNew();
 
                 var listJobsTimer = Stopwatch.StartNew();
-                var jobs = await _batchClient.JobOperations.ListJobs(DetailLevels.IdAndState.AllEntities).ToListAsync(_runCancel.Token);
+                var jobs = await this.batchClient.JobOperations.ListJobs(DetailLevels.IdAndState.AllEntities).ToListAsync(this.runCancel.Token);
                 listJobsTimer.Stop();
 
                 metricsBuilder.ListJobsLatency = listJobsTimer.Elapsed;
@@ -135,15 +135,15 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
         {
             TaskStateCache taskStateCache;
 
-            bool firstTime = !_jobStateCache.ContainsKey(job.Id);
+            bool firstTime = !this.jobStateCache.ContainsKey(job.Id);
             if (firstTime)
             {
                 taskStateCache = new TaskStateCache();
-                _jobStateCache.Add(job.Id, taskStateCache);
+                this.jobStateCache.Add(job.Id, taskStateCache);
             }
             else
             {
-                taskStateCache = _jobStateCache[job.Id];
+                taskStateCache = this.jobStateCache[job.Id];
             }
 
             // If the monitor API is called for the first time, it has to issue a query to enumerate all the tasks once to get its state.
@@ -154,11 +154,11 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
 
             // TODO: it would be better to record the time at which the last query was issued and use that,
             // rather than subtracting the monitor interval from the current time
-            DateTime since = DateTime.UtcNow - (_monitorInterval + MaximumClockSkew);
+            DateTime since = DateTime.UtcNow - (this.monitorInterval + MaximumClockSkew);
             var tasksToList = firstTime ? DetailLevels.IdAndState.AllEntities : DetailLevels.IdAndState.OnlyChangedAfter(since);
 
             var listTasksTimer = Stopwatch.StartNew();
-            var tasks = await job.ListTasks(tasksToList).ToListAsync(_runCancel.Token);
+            var tasks = await job.ListTasks(tasksToList).ToListAsync(this.runCancel.Token);
             listTasksTimer.Stop();
 
             var listTasksLatency = listTasksTimer.Elapsed;
@@ -175,20 +175,20 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
 
         public void Dispose()
         {
-            lock (_runLock)
+            lock (this.runLock)
             {
-                if (_runTask != null)
+                if (this.runTask != null)
                 {
-                    _runCancel.Cancel();
-                    _runTask.WaitIgnoringCancellations();
+                    this.runCancel.Cancel();
+                    this.runTask.WaitIgnoringCancellations();
                 }
             }
 
-            _runCancel.Dispose();
+            this.runCancel.Dispose();
 
-            if (_ownsClient)
+            if (this.ownsClient)
             {
-                _batchClient.Dispose();
+                this.batchClient.Dispose();
             }
         }
     }

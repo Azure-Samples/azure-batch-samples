@@ -11,18 +11,18 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
 
     public sealed class JobStatistics
     {
-        private readonly TimeSpan _listTasksLatency;
-        private readonly TaskStateCounts _taskStateCounts;
+        private readonly TimeSpan listTasksLatency;
+        private readonly TaskStateCounts taskStateCounts;
 
         internal JobStatistics(TimeSpan listTasksLatency, TaskStateCounts taskStateCounts)
         {
-            _listTasksLatency = listTasksLatency;
-            _taskStateCounts = taskStateCounts;
+            this.listTasksLatency = listTasksLatency;
+            this.taskStateCounts = taskStateCounts;
         }
 
         public TaskStateCounts TaskStateCounts
         {
-            get { return _taskStateCounts; }
+            get { return this.taskStateCounts; }
         }
     }
 }

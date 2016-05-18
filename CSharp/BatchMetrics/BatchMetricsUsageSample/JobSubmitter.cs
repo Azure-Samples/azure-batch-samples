@@ -13,8 +13,8 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
 
     public class JobSubmitter
     {
-        private readonly BatchClient _batchClient;
-        private readonly List<string> _createdJobIds = new List<string>();
+        private readonly BatchClient batchClient;
+        private readonly List<string> createdJobIds = new List<string>();
 
         private const string PoolId = "batchmetrics-testpool";
         private const int PoolNodeCount = 10;
@@ -31,31 +31,31 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
       
         public JobSubmitter(BatchClient batchClient)
         {
-            _batchClient = batchClient;
-            _batchClient.CustomBehaviors.Add(RetryPolicyProvider.LinearRetryProvider(TimeSpan.FromSeconds(10), 3));
+            this.batchClient = batchClient;
+            this.batchClient.CustomBehaviors.Add(RetryPolicyProvider.LinearRetryProvider(TimeSpan.FromSeconds(10), 3));
         }
 
         private async Task CreatePoolAsync()
         {
-            var pool = _batchClient.PoolOperations.CreatePool(
+            var pool = this.batchClient.PoolOperations.CreatePool(
                 poolId: PoolId,
                 targetDedicated: PoolNodeCount,
                 virtualMachineSize: PoolNodeSize,
                 cloudServiceConfiguration: new CloudServiceConfiguration(PoolOSFamily));
 
-            await GettingStartedCommon.CreatePoolIfNotExistAsync(_batchClient, pool);
+            await GettingStartedCommon.CreatePoolIfNotExistAsync(this.batchClient, pool);
         }
 
         private async Task SubmitJobAsync(string jobId)
         {
-            var job = _batchClient.JobOperations.CreateJob();
+            var job = this.batchClient.JobOperations.CreateJob();
             job.Id = jobId;
             job.PoolInformation = new PoolInformation() { PoolId = PoolId };
 
             try
             {
                 await job.CommitAsync();
-                _createdJobIds.Add(jobId);
+                this.createdJobIds.Add(jobId);
             }
             catch (BatchException ex)
             {
@@ -72,7 +72,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
 
             var tasksToRun = CreateTasks(jobId).ToList();
 
-            await _batchClient.JobOperations.AddTaskAsync(jobId, tasksToRun);
+            await this.batchClient.JobOperations.AddTaskAsync(jobId, tasksToRun);
         }
 
         private static IEnumerable<CloudTask> CreateTasks(string jobId)
@@ -118,11 +118,11 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
 
         public async Task CleanUpJobsAsync()
         {
-            foreach (var jobId in _createdJobIds)
+            foreach (var jobId in this.createdJobIds)
             {
                 try
                 {
-                    await _batchClient.JobOperations.DeleteJobAsync(jobId);
+                    await this.batchClient.JobOperations.DeleteJobAsync(jobId);
                 }
                 catch (Exception ex)
                 {

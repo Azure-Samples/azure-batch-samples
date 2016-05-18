@@ -12,18 +12,18 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
     internal sealed class TaskStateCache
     {
         // The key is the task id
-        private readonly Dictionary<string, TaskState> _impl = new Dictionary<string, TaskState>();
+        private readonly Dictionary<string, TaskState> impl = new Dictionary<string, TaskState>();
 
         public void UpdateTaskState(string taskId, TaskState taskState)
         {
-            _impl[taskId] = taskState;
+            this.impl[taskId] = taskState;
         }
 
         public TaskStateCounts GetTaskStateCounts()
         {
             TaskStateCounts taskStateCounts = new TaskStateCounts();
 
-            foreach (var kvp in _impl)
+            foreach (var kvp in this.impl)
             {
                 taskStateCounts.IncrementCount(kvp.Value);
             }

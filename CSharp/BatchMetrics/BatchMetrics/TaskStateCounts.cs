@@ -11,27 +11,27 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
 
     public sealed class TaskStateCounts
     {
-        private readonly int[] _counts;
+        private readonly int[] counts;
 
         internal TaskStateCounts()
         {
             var maxStateIndex = EnumHelpers.GetMaxValue(typeof(TaskState));
-            _counts = new int[maxStateIndex + 1];
+            this.counts = new int[maxStateIndex + 1];
         }
 
         private TaskStateCounts(int[] snapshot)
         {
-            _counts = snapshot;
+            this.counts = snapshot;
         }
 
         internal void IncrementCount(TaskState taskState)
         {
-            _counts[(int)taskState]++;
+            this.counts[(int)taskState]++;
         }
 
         public int this[TaskState state]
         {
-            get { return _counts[(int)state]; }
+            get { return this.counts[(int)state]; }
         }
     }
 }
