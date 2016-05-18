@@ -20,8 +20,8 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
         private bool createdNewPool;
 
         private const string PoolId = "batchmetrics-testpool";
-        private const int PoolNodeCount = 10;
-        private const string PoolNodeSize = "medium";
+        private const int PoolNodeCount = 5;
+        private const string PoolNodeSize = "small";
         private const string PoolOSFamily = "4";
 
         private const int TestJobCount = 10;
@@ -47,6 +47,8 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
                 targetDedicated: PoolNodeCount,
                 virtualMachineSize: PoolNodeSize,
                 cloudServiceConfiguration: new CloudServiceConfiguration(PoolOSFamily));
+
+            pool.MaxTasksPerComputeNode = 2;
 
             var createPoolResult = await GettingStartedCommon.CreatePoolIfNotExistAsync(this.batchClient, pool);
 
