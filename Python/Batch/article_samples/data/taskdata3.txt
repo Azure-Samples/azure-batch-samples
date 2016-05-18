@@ -1,0 +1,9 @@
+﻿With support for Linux, Windows Server, SQL Server, Oracle, IBM, and SAP, Azure Virtual Machines gives you the flexibility of virtualization for a wide range of computing solutions—development and testing, running applications, and extending your datacenter. It’s the freedom of open-source software configured the way you need it. It’s as if it was another rack in your datacenter, giving you the power to deploy an application in minutes instead of weeks.
+
+It’s all about choice for your virtual machines. Choose Linux or Windows. Choose to be on-premises, in the cloud, or both. Choose your own virtual machine image or download a certified pre-configured image in our marketplace. With Virtual Machines, you’re in control.
+
+Combine the performance of a world-class supercomputer with the scalability of the cloud. Scale from one to thousands of virtual machine instances. Plus, with the growing number of regional Azure datacenters, easily scale globally so you’re closer to where your customers are.
+
+Keep your budget in check with low-cost, per-minute billing. You only pay for the compute time you use.
+
+We’ll help you encrypt sensitive data, protect virtual machines from viruses and malware, secure network traffic, and meet regulatory and compliance requirements.
