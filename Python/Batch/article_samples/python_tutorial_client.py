@@ -52,7 +52,7 @@ _STORAGE_ACCOUNT_KEY = ''
 
 _POOL_ID = 'PythonTutorialPool'
 _POOL_NODE_COUNT = 1
-_POOL_NODE_SIZE = 'STANDARD_A1'
+_POOL_VM_SIZE = 'STANDARD_A1'
 _NODE_OS_DISTRO = 'Ubuntu'
 _NODE_OS_VERSION = '14'
 
@@ -246,7 +246,7 @@ def create_pool(batch_service_client, pool_id,
     new_pool = batch.models.PoolAddParameter(
         id=pool_id,
         virtual_machine_configuration=vm_config,
-        vm_size=_POOL_NODE_SIZE,
+        vm_size=_POOL_VM_SIZE,
         target_dedicated=_POOL_NODE_COUNT,
         start_task=batch.models.StartTask(
             command_line=wrap_commands_in_shell('linux', task_commands),
