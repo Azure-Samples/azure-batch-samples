@@ -25,11 +25,6 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
             this.counts = new int[maxStateIndex + 1];
         }
 
-        private TaskStateCounts(int[] snapshot)
-        {
-            this.counts = snapshot;
-        }
-
         internal void IncrementCount(TaskState taskState)
         {
             this.counts[(int)taskState]++;
