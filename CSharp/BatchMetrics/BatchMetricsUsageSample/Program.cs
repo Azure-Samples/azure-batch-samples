@@ -79,7 +79,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
             }
 
             var jobIdFormatLength = metrics.JobIds.Max(id => id.Length);
-            var jobInfos = metrics.JobIds.Select(id => FormatJobStatistics(id, metrics.GetMetrics(id), jobIdFormatLength));
+            var jobInfos = metrics.JobIds.Select(id => FormatJobMetrics(id, metrics.GetMetrics(id), jobIdFormatLength));
             return String.Join(Environment.NewLine, jobInfos);
         }
 
@@ -88,10 +88,10 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
                 .Cast<TaskState>()
                 .ToList().AsReadOnly();
 
-        private static string FormatJobStatistics(string jobId, BatchMetrics.JobMetrics statistics, int jobIdFormatLength)
+        private static string FormatJobMetrics(string jobId, JobMetrics metrics, int jobIdFormatLength)
         {
-            var taskStateCounts = statistics.TaskStateCounts;
-            var taskStateInfos = TaskStates.Select(s => new { State = s, Count = statistics.TaskStateCounts[s] })
+            var taskStateCounts = metrics.TaskStateCounts;
+            var taskStateInfos = TaskStates.Select(s => new { State = s, Count = metrics.TaskStateCounts[s] })
                                            .Select(c => String.Format("{0}={1,3:##0}", c.State.ToString().Substring(0, 3), c.Count));
 
             var paddedJobId = jobId + ":" + new string(' ', jobIdFormatLength - jobId.Length);
