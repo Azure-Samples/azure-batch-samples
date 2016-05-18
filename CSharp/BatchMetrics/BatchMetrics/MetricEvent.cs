@@ -14,7 +14,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
         private readonly DateTime collectionCompleted;
         private readonly TimeSpan totalLatency;
         private readonly TimeSpan listJobsLatency;
-        private readonly IReadOnlyDictionary<string, JobStatistics> jobStats;
+        private readonly IReadOnlyDictionary<string, JobMetrics> jobMetrics;
         private readonly Exception error;
         private readonly Latency latency;
 
@@ -23,13 +23,13 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
             DateTime collectionCompleted,
             TimeSpan totalLatency,
             TimeSpan listJobsLatency,
-            IDictionary<string, JobStatistics> jobStats)
+            IDictionary<string, JobMetrics> jobStats)
         {
             this.collectionStarted = collectionStarted;
             this.collectionCompleted = collectionCompleted;
             this.totalLatency = totalLatency;
             this.listJobsLatency = listJobsLatency;
-            this.jobStats = new Dictionary<string, JobStatistics>(jobStats);
+            this.jobMetrics = new Dictionary<string, JobMetrics>(jobStats);
             this.latency = new Latency(totalLatency, listJobsLatency, jobStats.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ListTasksLatency));
         }
 
@@ -73,11 +73,11 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
                 {
                     throw new InvalidOperationException("Cannot get JobIds on collection error event");
                 }
-                return this.jobStats.Keys;
+                return this.jobMetrics.Keys;
             }
         }
 
-        public JobStatistics GetMetrics(string jobId)
+        public JobMetrics GetMetrics(string jobId)
         {
             if (IsError)
             {
@@ -86,7 +86,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
 
             try
             {
-                return this.jobStats[jobId];
+                return this.jobMetrics[jobId];
             }
             catch (KeyNotFoundException)
             {
@@ -100,7 +100,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
             public DateTime CollectionCompleted;
             public TimeSpan TotalLatency;
             public TimeSpan ListJobsLatency;
-            public Dictionary<string, JobStatistics> JobStats = new Dictionary<string,JobStatistics>();
+            public Dictionary<string, JobMetrics> JobStats = new Dictionary<string,JobMetrics>();
 
             public MetricEvent Build()
             {

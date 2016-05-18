@@ -170,7 +170,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
 
             var taskStateCounts = taskStateCache.GetTaskStateCounts();
 
-            metricsBuilder.JobStats.Add(job.Id, new JobStatistics(listTasksLatency, taskStateCounts));
+            metricsBuilder.JobStats.Add(job.Id, new JobMetrics(listTasksLatency, taskStateCounts));
         }
 
         public void Dispose()

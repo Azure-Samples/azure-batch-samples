@@ -88,7 +88,7 @@
   <ItemGroup>
     <Compile Include="DetailLevels.cs" />
     <Compile Include="EnumHelpers.cs" />
-    <Compile Include="JobStatistics.cs" />
+    <Compile Include="JobMetrics.cs" />
     <Compile Include="Latency.cs" />
     <Compile Include="MetricEvent.cs" />
     <Compile Include="MetricMonitor.cs" />

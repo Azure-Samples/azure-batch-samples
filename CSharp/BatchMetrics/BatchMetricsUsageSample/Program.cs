@@ -88,7 +88,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
                 .Cast<TaskState>()
                 .ToList().AsReadOnly();
 
-        private static string FormatJobStatistics(string jobId, BatchMetrics.JobStatistics statistics, int jobIdFormatLength)
+        private static string FormatJobStatistics(string jobId, BatchMetrics.JobMetrics statistics, int jobIdFormatLength)
         {
             var taskStateCounts = statistics.TaskStateCounts;
             var taskStateInfos = TaskStates.Select(s => new { State = s, Count = statistics.TaskStateCounts[s] })

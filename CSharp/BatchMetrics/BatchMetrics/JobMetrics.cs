@@ -9,12 +9,12 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
     using System.Text;
     using System.Threading.Tasks;
 
-    public sealed class JobStatistics
+    public sealed class JobMetrics
     {
         private readonly TimeSpan listTasksLatency;
         private readonly TaskStateCounts taskStateCounts;
 
-        internal JobStatistics(TimeSpan listTasksLatency, TaskStateCounts taskStateCounts)
+        internal JobMetrics(TimeSpan listTasksLatency, TaskStateCounts taskStateCounts)
         {
             this.listTasksLatency = listTasksLatency;
             this.taskStateCounts = taskStateCounts;
