@@ -39,7 +39,7 @@ if __name__ == '__main__':
                         help='The path to the text file to process. The path'
                              'may include a compute node\'s environment'
                              'variables, such as'
-                             '$AZ_BATCH_NODE_SHARED_DIR%\\filename.txt')
+                             '$AZ_BATCH_NODE_SHARED_DIR/filename.txt')
     parser.add_argument('--numwords', type=int, required=True,
                         help='The number of words to print top frequency.')
     parser.add_argument('--storageaccount', required=True,

@@ -115,13 +115,14 @@ def print_batch_exception(batch_exception):
     """
     print('-------------------------------------------')
     print('Exception encountered:')
-    try:
+    if batch_exception.error and \
+            batch_exception.error.message and \
+            batch_exception.error.message.value:
         print(batch_exception.error.message.value)
-        print()
-        for mesg in batch_exception.error.values:
-            print('{}:\t{}'.format(mesg.key, mesg.value))
-    except:
-        pass
+        if batch_exception.error.values:
+            print()
+            for mesg in batch_exception.error.values:
+                print('{}:\t{}'.format(mesg.key, mesg.value))
     print('-------------------------------------------')
 
 
@@ -239,7 +240,12 @@ def create_pool(batch_service_client, pool_id,
     # on each node as it joins the pool, and when it's rebooted or re-imaged.
     # We use the start task to prep the node for running our task script.
     task_commands = [
+        # Copy the python_tutorial_client.py script to the "shared" directory
+        # that all tasks that run on the node have access to.
         'cp -r $AZ_BATCH_TASK_WORKING_DIR/* $AZ_BATCH_NODE_SHARED_DIR',
+        # Install pip and then the azure-storage module so that the task
+        # script can access Azure Blob storage
+        'apt-get update',
         'apt-get -y install python-pip',
         'pip install azure-storage']
 
