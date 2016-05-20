@@ -186,28 +186,23 @@ def get_container_sas_token(block_blob_client,
     return container_sas_token
 
 
-def create_pool(batch_service_client, pool_id,
-                resource_files, distro, version):
+def get_vm_config_for_distro(batch_service_client, distro, version):
     """
-    Creates a pool of compute nodes with the specified OS settings.
+    Gets a virtual machine configuration for the specified distro and version
+    from the list of Azure Virtual Machines Marketplace images verified to be
+    compatible with the Batch service.
 
     :param batch_service_client: A Batch service client.
-    :type batch_service_client: `batchserviceclient.BatchServiceClient`
-    :param str pool_id: An ID for the new pool.
-    :param list resource_files: A collection of resource files for the pool's
-    start task.
+    :type batch_service_client: `azure.batch.BatchServiceClient`
     :param str distro: The Linux distribution that should be installed on the
-    compute nodes, e.g. 'Ubuntu' or 'CentOS'.
+    compute nodes, e.g. 'Ubuntu' or 'CentOS'. Supports partial string matching.
     :param str version: The version of the operating system for the compute
-    nodes, e.g. '15' or '14.04'.
+    nodes, e.g. '15' or '14.04'. Supports partial string matching.
+    :rtype: `azure.batch.models.VirtualMachineConfiguration`
+    :return: A virtual machine configuration specifying the Virtual Machines
+    Marketplace image and node agent SKU to install on the compute nodes in
+    a pool.
     """
-    print('Creating pool [{}]...'.format(pool_id))
-
-    # Create a new pool of Linux compute nodes using an Azure Virtual Machines
-    # Marketplace image. For more information about creating pools of Linux
-    # nodes, see:
-    # https://azure.microsoft.com/documentation/articles/batch-linux-nodes/
-
     # Get the list of node agents from the Batch service
     node_agent_skus = batch_service_client.account.list_node_agent_skus()
 
@@ -236,11 +231,36 @@ def create_pool(batch_service_client, pool_id,
         image_reference=img_ref,
         node_agent_sku_id=node_agent.id)
 
+    return vm_config
+
+
+def create_pool(batch_service_client, pool_id,
+                resource_files, distro, version):
+    """
+    Creates a pool of compute nodes with the specified OS settings.
+
+    :param batch_service_client: A Batch service client.
+    :type batch_service_client: `azure.batch.BatchServiceClient`
+    :param str pool_id: An ID for the new pool.
+    :param list resource_files: A collection of resource files for the pool's
+    start task.
+    :param str distro: The Linux distribution that should be installed on the
+    compute nodes, e.g. 'Ubuntu' or 'CentOS'.
+    :param str version: The version of the operating system for the compute
+    nodes, e.g. '15' or '14.04'.
+    """
+    print('Creating pool [{}]...'.format(pool_id))
+
+    # Create a new pool of Linux compute nodes using an Azure Virtual Machines
+    # Marketplace image. For more information about creating pools of Linux
+    # nodes, see:
+    # https://azure.microsoft.com/documentation/articles/batch-linux-nodes/
+
     # Specify the commands for the pool's start task. The start task is run
     # on each node as it joins the pool, and when it's rebooted or re-imaged.
     # We use the start task to prep the node for running our task script.
     task_commands = [
-        # Copy the python_tutorial_client.py script to the "shared" directory
+        # Copy the python_tutorial_task.py script to the "shared" directory
         # that all tasks that run on the node have access to.
         'cp -r $AZ_BATCH_TASK_WORKING_DIR/* $AZ_BATCH_NODE_SHARED_DIR',
         # Install pip and then the azure-storage module so that the task
@@ -248,6 +268,11 @@ def create_pool(batch_service_client, pool_id,
         'apt-get update',
         'apt-get -y install python-pip',
         'pip install azure-storage']
+
+    # Get the virtual machine configuration for the desired distro and version.
+    # For more information about the virtual machine configuration, see:
+    # https://azure.microsoft.com/documentation/articles/batch-linux-nodes/
+    vm_config = get_vm_config_for_distro(batch_service_client, distro, version)
 
     new_pool = batch.models.PoolAddParameter(
         id=pool_id,
@@ -272,8 +297,8 @@ def create_job(batch_service_client, job_id, pool_id):
     """
     Creates a job with the specified ID, associated with the specified pool.
 
-    :param BatchServiceClient batch_service_client: A Batch service client.
-    :type batch_service_client: `batchserviceclient.BatchServiceClient`
+    :param batch_service_client: A Batch service client.
+    :type batch_service_client: `azure.batch.BatchServiceClient`
     :param str job_id: The ID for the job.
     :param str pool_id: The ID for the pool.
     """
@@ -295,8 +320,8 @@ def add_tasks(batch_service_client, job_id, input_files,
     """
     Adds a task for each input file in the collection to the specified job.
 
-    :param BatchServiceClient batch_service_client: A Batch service client.
-    :type batch_service_client: `batchserviceclient.BatchServiceClient`
+    :param batch_service_client: A Batch service client.
+    :type batch_service_client: `azure.batch.BatchServiceClient`
     :param str job_id: The ID of the job to which to add the tasks.
     :param list input_files: A collection of input files. One task will be
      created for each input file.
@@ -335,8 +360,8 @@ def wait_for_tasks_to_complete(batch_service_client, job_id, timeout):
     """
     Returns when all tasks in the specified job reach the Completed state.
 
-    :param BatchServiceClient batch_service_client: A Batch service client.
-    :type batch_service_client: `batchserviceclient.BatchServiceClient`
+    :param batch_service_client: A Batch service client.
+    :type batch_service_client: `azure.batch.BatchServiceClient`
     :param str job_id: The id of the job whose tasks should be to monitored.
     :param timedelta timeout: The duration to wait for task completion. If all
     tasks in the specified job do not reach Completed state within this time
