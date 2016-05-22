@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>a26febe9-ee8a-4a7d-bfc2-88235b20e4c5</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>sample1_helloworld.py</StartupFile>
+    <StartupFile>sample5_docker_batch_task.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -24,6 +24,9 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="sample5_docker_batch_task.py" />
+    <Content Include="resources\docker_batch_task.sh" />
+    <Content Include="sample5_docker_batch_task.cfg" />
     <Folder Include="common\" />
     <Folder Include="resources\" />
     <Compile Include="common\helpers.py" />
