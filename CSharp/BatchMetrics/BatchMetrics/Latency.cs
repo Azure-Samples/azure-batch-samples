@@ -1,12 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿//Copyright (c) Microsoft Corporation
 
 namespace Microsoft.Azure.Batch.Samples.BatchMetrics
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Collections.ObjectModel;
+    using System.Linq;
+    using System.Text;
+    using System.Threading.Tasks;
+
     /// <summary>
     /// Contains information about how long it took a <see cref="MetricMonitor"/> to gather data
     /// for a <see cref="MetricEvent"/>.
