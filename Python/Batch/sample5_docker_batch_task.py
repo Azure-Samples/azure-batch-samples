@@ -128,6 +128,7 @@ def create_pool(batch_client, block_blob_client, pool_id, vm_size, vm_count):
         raise RuntimeError('node(s) of pool {} not in idle state'.format(
             pool.id))
 
+
 def add_docker_batch_task(batch_client, block_blob_client, job_id, pool_id):
     """Submits a docker task via Batch scheduler
 
