@@ -64,6 +64,16 @@ tunnel script to interact with the batch pool after the sample is run. When
 using this option, you will also need to disable the delete pool option as
 well.
 
+####[sample5\_docker\_batch\_task.py](./sample4\_docker\_batch\_task.py)
+This sample shows how to schedule tasks that run a docker container based
+task. Specifically, this samples use pool start up task to install docker
+on Batch VMs which is Ubuntu based. It then uses job preparation tasks to
+pull the application image from docker hub and finally submit a set of simple
+tasks. Each task will launch a docker container to perform ffmpeg transcoding
+on a downloaded mp4 file and upload the result to blob storage. The docker
+image is CentOS based with ffmpeg and blobxfer preinstalled. The docker image
+(yidingz/ffmpeg:v3) is available on docker hub and downloadable to everyone. 
+
 ###Azure Batch on Linux Best Practices
 
 Although some of the Python samples are not specific to Linux, the Azure Batch

@@ -1,4 +1,4 @@
-# sample4_docker_swarm.py Code Sample
+# sample5_docker_batch_task.py Code Sample
 #
 # Copyright (c) Microsoft Corporation
 #
@@ -94,7 +94,7 @@ def create_pool(batch_client, block_blob_client, pool_id, vm_size, vm_count):
         datetime.datetime.utcnow() + datetime.timedelta(hours=1))
 
     # create pool with start task
-    pool = batchmodels.CloudPool(
+    pool = batchmodels.PoolAddParameter(
         id=pool_id,
         enable_inter_node_communication=True,
         virtual_machine_configuration=batchmodels.VirtualMachineConfiguration(
@@ -113,6 +113,20 @@ def create_pool(batch_client, block_blob_client, pool_id, vm_size, vm_count):
     )
     common.helpers.create_pool_if_not_exist(batch_client, pool)
 
+    # Block wait until all nodes are online before submitting job
+    nodes = common.helpers.wait_for_all_nodes_state(
+        batch_client, pool,
+        frozenset(
+            (batchmodels.ComputeNodeState.starttaskfailed,
+             batchmodels.ComputeNodeState.unusable,
+             batchmodels.ComputeNodeState.idle)
+        )
+    )
+
+    # ensure all node are idle
+    if any(node.state != batchmodels.ComputeNodeState.idle for node in nodes):
+        raise RuntimeError('node(s) of pool {} not in idle state'.format(
+            pool.id))
 
 def add_docker_batch_task(batch_client, block_blob_client, job_id, pool_id):
     """Submits a docker task via Batch scheduler
@@ -141,8 +155,8 @@ def add_docker_batch_task(batch_client, block_blob_client, job_id, pool_id):
         azureblob.ContainerPermissions.LIST,
         expiry=datetime.datetime.utcnow() + datetime.timedelta(hours=1))
 
-    # The start task pull docker image yidingz/ffmpeg:v2
-    job = batchmodels.CloudJob(
+    # The start task pulls docker image yidingz/ffmpeg:v3
+    job = batchmodels.JobAddParameter(
         id=job_id,
         pool_info=batchmodels.PoolInformation(pool_id=pool_id),
         job_preparation_task=batchmodels.JobPreparationTask(
@@ -163,7 +177,7 @@ def add_docker_batch_task(batch_client, block_blob_client, job_id, pool_id):
             block_blob_client.account_name)
         # Each task will download a video from chanel9,
         # transcode, and upload to specified output container
-        task = batchmodels.CloudTask(
+        task = batchmodels.TaskAddParameter(
             id=str(index).zfill(4) + '_' + filename.split('.')[0],
             command_line=_TASK_CLI.format(_TASK_RESOURCE_FILE,
                                           _FFMPEG_IMAGE,
@@ -259,8 +273,6 @@ def execute_sample(global_config, sample_config):
             batch_client,
             job_id,
             datetime.timedelta(minutes=25))
-
-        # common.helpers.print_task_output(batch_client, job_id, task_id_list)
 
     finally:
         # perform clean up
