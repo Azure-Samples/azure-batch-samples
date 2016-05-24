@@ -138,7 +138,7 @@ def add_docker_batch_task(batch_client, block_blob_client, job_id, pool_id):
     :type block_blob_client: `azure.storage.blob.BlockBlobService`
     :param str job_id: The id of the job to use.
     :param str pool_id: The id of the pool to use.
-    :rtype: str
+    :rtype: list
     :return: a list of task_id of the task added.
     """
 
