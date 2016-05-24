@@ -139,7 +139,7 @@ def add_docker_batch_task(batch_client, block_blob_client, job_id, pool_id):
     :param str job_id: The id of the job to use.
     :param str pool_id: The id of the pool to use.
     :rtype: str
-    :return: task id of added task
+    :return: a list of task_id of the task added.
     """
 
     task_resource_sas_url = common.helpers.upload_blob_and_create_sas(
@@ -262,7 +262,7 @@ def execute_sample(global_config, sample_config):
             pool_vm_count)
 
         # submit job and add a task
-        print('submitting a docker run task via Azure Batch...')
+        print('submitting docker run tasks via Azure Batch...')
         add_docker_batch_task(
             batch_client,
             block_blob_client,
