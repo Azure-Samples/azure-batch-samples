@@ -71,7 +71,7 @@ def create_pool(batch_client, block_blob_client, pool_id, vm_size, vm_count):
         _SIMPLE_TASK_PATH,
         datetime.datetime.utcnow() + datetime.timedelta(hours=1))
 
-    pool = batchmodels.CloudPool(
+    pool = batchmodels.PoolAddParameter(
         id=pool_id,
         virtual_machine_configuration=batchmodels.VirtualMachineConfiguration(
             image_reference=image_ref_to_use,
@@ -98,7 +98,7 @@ def submit_job_and_add_task(batch_client, block_blob_client, job_id, pool_id):
     :param str job_id: The id of the job to create.
     :param str pool_id: The id of the pool to use.
     """
-    job = batchmodels.CloudJob(
+    job = batchmodels.JobAddParameter(
         id=job_id,
         pool_info=batchmodels.PoolInformation(pool_id=pool_id))
 
@@ -115,7 +115,7 @@ def submit_job_and_add_task(batch_client, block_blob_client, job_id, pool_id):
         _SIMPLE_TASK_PATH,
         datetime.datetime.utcnow() + datetime.timedelta(hours=1))
 
-    task = batchmodels.CloudTask(
+    task = batchmodels.TaskAddParameter(
         id="MyPythonTask",
         command_line="python " + _SIMPLE_TASK_NAME,
         resource_files=[batchmodels.ResourceFile(

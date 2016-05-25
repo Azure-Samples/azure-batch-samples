@@ -58,11 +58,11 @@ def submit_job_and_add_task(batch_client, job_id, vm_size, vm_count):
             keep_alive=False,
             pool_lifetime_option=batchmodels.PoolLifetimeOption.job))
 
-    job = batchmodels.CloudJob(id=job_id, pool_info=pool_info)
+    job = batchmodels.JobAddParameter(id=job_id, pool_info=pool_info)
 
     batch_client.job.add(job)
 
-    task = batchmodels.CloudTask(
+    task = batchmodels.TaskAddParameter(
         id="HelloWorld",
         command_line=common.helpers.wrap_commands_in_shell(
             'windows', ['echo Hello world from the Batch Hello world sample!'])

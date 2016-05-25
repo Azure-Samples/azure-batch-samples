@@ -151,7 +151,7 @@ def designate_master_docker_swarm_node(batch_client, pool_id, nodes, job_id):
     print('master node is: {} nodelist is: {}'.format(master_node, nodelist))
 
     # create job
-    job = batchmodels.CloudJob(
+    job = batchmodels.JobAddParameter(
         id=job_id,
         pool_info=batchmodels.PoolInformation(pool_id=pool_id))
 
@@ -163,7 +163,7 @@ def designate_master_docker_swarm_node(batch_client, pool_id, nodes, job_id):
          '"nodes://{}:2375"').format(nodelist)
     ]
     print('creating docker swarm cluster via Azure Batch task...')
-    task = batchmodels.CloudTask(
+    task = batchmodels.TaskAddParameter(
         id="swarm-master",
         affinity_info=batchmodels.AffinityInformation(
             affinity_id=master_node_id),
@@ -261,7 +261,7 @@ def create_pool_and_wait_for_nodes(
         datetime.datetime.utcnow() + datetime.timedelta(hours=1))
 
     # create pool with start task
-    pool = batchmodels.CloudPool(
+    pool = batchmodels.PoolAddParameter(
         id=pool_id,
         enable_inter_node_communication=True,
         virtual_machine_configuration=batchmodels.VirtualMachineConfiguration(
@@ -316,7 +316,7 @@ def add_docker_batch_task(batch_client, block_blob_client, job_id, pool_id):
         'docker ps -a',
     ]
 
-    task = batchmodels.CloudTask(
+    task = batchmodels.TaskAddParameter(
         id=_TASK_ID,
         command_line=common.helpers.wrap_commands_in_shell(
             'linux', task_commands),

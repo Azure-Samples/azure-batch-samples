@@ -174,7 +174,7 @@ def create_pool_and_wait_for_node(
     ]
 
     # create pool with start task and cert ref with visibility of task
-    pool = batchmodels.CloudPool(
+    pool = batchmodels.PoolAddParameter(
         id=pool_id,
         virtual_machine_configuration=batchmodels.VirtualMachineConfiguration(
             image_reference=image_ref_to_use,
@@ -214,7 +214,7 @@ def submit_job_and_add_task(
     :param str pool_id: The id of the pool to use.
     :param str sha1_cert_tp: sha1 cert thumbprint for cert ref
     """
-    job = batchmodels.CloudJob(
+    job = batchmodels.JobAddParameter(
         id=job_id,
         pool_info=batchmodels.PoolInformation(pool_id=pool_id))
 
@@ -247,7 +247,7 @@ def submit_job_and_add_task(
         'cat {}'.format(resourcefile)
     ]
 
-    task = batchmodels.CloudTask(
+    task = batchmodels.TaskAddParameter(
         id="MyEncryptedResourceTask",
         command_line=common.helpers.wrap_commands_in_shell(
             'linux', task_commands),
