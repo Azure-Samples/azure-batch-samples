@@ -5,10 +5,6 @@
 
 namespace Microsoft.Azure.Batch.Samples.AccountManagement
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Threading.Tasks;
     using Microsoft.Azure;
     using Microsoft.Azure.Batch.Samples.Common;
     using Microsoft.Azure.Management.Batch;
@@ -18,6 +14,13 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
     using Microsoft.Azure.Subscriptions;
     using Microsoft.Azure.Subscriptions.Models;
     using Microsoft.IdentityModel.Clients.ActiveDirectory;
+    using Microsoft.Rest;
+    using Microsoft.Rest.Azure;
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Net;
+    using System.Threading.Tasks;
 
     public class BatchAccountManagementSample
     {
@@ -249,30 +252,30 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
         /// <summary>
         /// Performs various Batch account operations using the Batch Management library.
         /// </summary>
-        /// <param name="creds">The <see cref="Microsoft.Azure.TokenCloudCredentials"/> containing information about the user's
+        /// <param name="accessToken">The location where the Batch account will be created.</param> 
+        /// <param name="subscriptionId">The <see cref="Microsoft.Azure.TokenCloudCredentials"/> containing information about the user's 
         /// Azure account and subscription.</param>
         /// <param name="location">The location where the Batch account will be created.</param>
         /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
         private static async Task PerformBatchAccountOperationsAsync(TokenCloudCredentials creds, string location)
         {
-            using (BatchManagementClient batchManagementClient = new BatchManagementClient(creds))
+            using (BatchManagementClient batchManagementClient = new BatchManagementClient(new TokenCredentials()))
             {
                 // Get the account quota for the subscription
-                SubscriptionQuotasGetResponse quotaResponse = await batchManagementClient.Subscriptions.GetSubscriptionQuotasAsync(location);
+                SubscriptionQuotasGetResult quotaResponse = await batchManagementClient.Subscription.GetSubscriptionQuotasAsync(location);
                 Console.WriteLine("Your subscription can create {0} account(s) in the {1} region.", quotaResponse.AccountQuota, location);
                 Console.WriteLine();
 
                 // Create account
                 string accountName = PromptUserForAccountName();
                 Console.WriteLine("Creating account {0}...", accountName);
-                await batchManagementClient.Accounts.CreateAsync(ResourceGroupName, accountName, new BatchAccountCreateParameters() { Location = location });
+                await batchManagementClient.Account.CreateAsync(ResourceGroupName, accountName, new BatchAccountCreateParameters() { Location = location });
                 Console.WriteLine("Account {0} created", accountName);
                 Console.WriteLine();
 
                 // Get account
                 Console.WriteLine("Getting account {0}...", accountName);
-                BatchAccountGetResponse getResponse = await batchManagementClient.Accounts.GetAsync(ResourceGroupName, accountName);
-                AccountResource account = getResponse.Resource;
+                AccountResource account = await batchManagementClient.Account.GetAsync(ResourceGroupName, accountName);
                 Console.WriteLine("Got account {0}:", account.Name);
                 Console.WriteLine("  Account location: {0}", account.Location);
                 Console.WriteLine("  Account resource type: {0}", account.Type);
@@ -281,31 +284,41 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
 
                 // Print account quotas
                 Console.WriteLine("Quotas for account {0}:", account.Name);
-                Console.WriteLine("  Core quota: {0}", account.Properties.CoreQuota);
-                Console.WriteLine("  Pool quota: {0}", account.Properties.PoolQuota);
-                Console.WriteLine("  Active job and job schedule quota: {0}", account.Properties.ActiveJobAndJobScheduleQuota);
+                Console.WriteLine("  Core quota: {0}", account.CoreQuota);
+                Console.WriteLine("  Pool quota: {0}", account.PoolQuota);
+                Console.WriteLine("  Active job and job schedule quota: {0}", account.ActiveJobAndJobScheduleQuota);
                 Console.WriteLine();
 
                 // Get account keys
                 Console.WriteLine("Getting account keys of account {0}...", account.Name);
-                BatchAccountListKeyResponse accountKeys = await batchManagementClient.Accounts.ListKeysAsync(ResourceGroupName, account.Name);
-                Console.WriteLine("  Primary key of account {0}:   {1}", account.Name, accountKeys.PrimaryKey);
-                Console.WriteLine("  Secondary key of account {0}: {1}", account.Name, accountKeys.SecondaryKey);
+                BatchAccountListKeyResult accountKeys = await batchManagementClient.Account.ListKeysAsync(ResourceGroupName, account.Name);
+                Console.WriteLine("  Primary key of account {0}:   {1}", account.Name, accountKeys.Primary);
+                Console.WriteLine("  Secondary key of account {0}: {1}", account.Name, accountKeys.Secondary);
                 Console.WriteLine();
 
                 // Regenerate primary account key
                 Console.WriteLine("Regenerating the primary key of account {0}...", account.Name);
-                BatchAccountRegenerateKeyResponse newKeys = await batchManagementClient.Accounts.RegenerateKeyAsync(
+                BatchAccountRegenerateKeyResult newKeys = await batchManagementClient.Account.RegenerateKeyAsync(
                     ResourceGroupName, account.Name, 
                     new BatchAccountRegenerateKeyParameters() { KeyName = AccountKeyType.Primary });
-                Console.WriteLine("  New primary key of account {0}: {1}", account.Name, newKeys.PrimaryKey);
-                Console.WriteLine("  Secondary key of account {0}:   {1}", account.Name, newKeys.SecondaryKey);
+                Console.WriteLine("  New primary key of account {0}: {1}", account.Name, newKeys.Primary);
+                Console.WriteLine("  Secondary key of account {0}:   {1}", account.Name, newKeys.Secondary);
                 Console.WriteLine();
 
-                // Print subscription quota information
-                BatchAccountListResponse listResponse = await batchManagementClient.Accounts.ListAsync(new AccountListParameters());
-                IList<AccountResource> accounts = listResponse.Accounts;
-                Console.WriteLine("Total number of Batch accounts under subscription id {0}:  {1}", creds.SubscriptionId, accounts.Count);
+                // List total number of accounts under the subscription id
+                IPage<AccountResource> listResponse = await batchManagementClient.Account.ListAsync();
+                var accounts = new List<AccountResource>();
+                accounts.AddRange(listResponse);
+
+                var nextLink = listResponse.NextPageLink;
+                while (nextLink != null)
+                {
+                    listResponse = await batchManagementClient.Account.ListNextAsync(nextLink);
+                    accounts.AddRange(listResponse);
+                    nextLink = listResponse.NextPageLink;
+                }
+
+                Console.WriteLine("Total number of Batch accounts under subscription id {0}:  {1}", creds.SubscriptionId, accounts.Count());
 
                 // Determine how many additional accounts can be created in the target region
                 int numAccountsInRegion = accounts.Count(o => o.Location == account.Location);
@@ -325,7 +338,19 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
                 Console.Write("Hit ENTER to delete account {0}: ", account.Name);
                 Console.ReadLine();
                 Console.WriteLine("Deleting account {0}...", account.Name);
-                await batchManagementClient.Accounts.DeleteAsync(ResourceGroupName, account.Name);
+
+                try
+                {
+                    await batchManagementClient.Account.DeleteAsync(ResourceGroupName, account.Name);
+                }
+                catch (CloudException ex)
+                {
+                    if (ex.Response.StatusCode != HttpStatusCode.NotFound)
+                    {
+                        throw;
+                    }
+                }
+
                 Console.WriteLine("Account {0} deleted", account.Name);
                 Console.WriteLine();
             }
