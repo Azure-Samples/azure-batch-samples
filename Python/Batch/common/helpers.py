@@ -265,6 +265,29 @@ def wait_for_all_nodes_state(batch_client, pool, node_state):
         time.sleep(10)
 
 
+def create_container_and_create_sas(
+        block_blob_client, container_name, permission, expiry=None):
+    """Create a blob sas token
+
+    :param block_blob_client: The storage block blob client to use.
+    :type block_blob_client: `azure.storage.blob.BlockBlobService`
+    :param str container_name: The name of the container to upload the blob to.
+    :param expiry: The SAS expiry time.
+    :type expiry: `datetime.datetime`
+    :return: A SAS token
+    :rtype: str
+    """
+    if expiry is None:
+        expiry = datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
+
+    block_blob_client.create_container(
+        container_name,
+        fail_on_exist=False)
+
+    return block_blob_client.generate_container_shared_access_signature(
+        container_name=container_name, permission=permission, expiry=expiry)
+
+
 def create_sas_token(
         block_blob_client, container_name, blob_name, permission, expiry=None):
     """Create a blob sas token

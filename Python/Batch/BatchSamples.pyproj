@@ -24,6 +24,9 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="sample5_docker_batch_task.py" />
+    <Content Include="resources\docker_batch_task.sh" />
+    <Content Include="sample5_docker_batch_task.cfg" />
     <Folder Include="common\" />
     <Folder Include="resources\" />
     <Compile Include="common\helpers.py" />
