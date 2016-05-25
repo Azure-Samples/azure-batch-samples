@@ -220,7 +220,7 @@ def create_pool_if_not_exist(batch_client, pool):
     :param batch_client: The batch client to use.
     :type batch_client: `batchserviceclient.BatchServiceClient`
     :param pool: The pool to create.
-    :type pool: `batchserviceclient.models.CloudPool`
+    :type pool: `batchserviceclient.models.PoolAddParameter`
     """
     try:
         print("Attempting to create pool:", pool.id)
