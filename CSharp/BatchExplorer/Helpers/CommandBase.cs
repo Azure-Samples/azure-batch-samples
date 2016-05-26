@@ -54,8 +54,9 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         {
             this.execute(parameter);
         }
-
+#pragma warning disable 67  // we're required to declare this for ICommand interface, but we don't use it in any of our command classes
         public event EventHandler CanExecuteChanged;
+#pragma warning restore
 
         private readonly Action<object> execute;
         private readonly Func<object, bool> canExecute;
