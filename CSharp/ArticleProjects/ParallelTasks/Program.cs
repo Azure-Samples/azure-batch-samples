@@ -51,7 +51,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
             const int taskCount       = 32;
 
             // Ensure there are enough tasks to help avoid hitting some timeout conditions below
-            const int minimumTaskCount = nodeCount * maxTasksPerNode * 2;
+            int minimumTaskCount = nodeCount * maxTasksPerNode * 2;
             if (taskCount < minimumTaskCount)
             {
                 Console.WriteLine("You must specify at least two tasks per node core for this sample ({0} tasks in this configuration).", minimumTaskCount);
