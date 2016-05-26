@@ -235,24 +235,24 @@ namespace Microsoft.Azure.BatchExplorer.Models
                     {
                         StringBuilder noOutputReasonBuilder = new StringBuilder();
 
-                        if (be.RequestInformation != null && be.RequestInformation.AzureError != null)
+                        if (be.RequestInformation != null && be.RequestInformation.BatchError != null)
                         {
 
-                            if (!string.IsNullOrEmpty(be.RequestInformation.AzureError.Code))
+                            if (!string.IsNullOrEmpty(be.RequestInformation.BatchError.Code))
                             {
-                                noOutputReasonBuilder.AppendLine(be.RequestInformation.AzureError.Code);
+                                noOutputReasonBuilder.AppendLine(be.RequestInformation.BatchError.Code);
                             }
 
-                            if (be.RequestInformation.AzureError.Message != null && !string.IsNullOrEmpty(be.RequestInformation.AzureError.Message.Value))
+                            if (be.RequestInformation.BatchError.Message != null && !string.IsNullOrEmpty(be.RequestInformation.BatchError.Message.Value))
                             {
-                                noOutputReasonBuilder.AppendLine(be.RequestInformation.AzureError.Message.Value);
+                                noOutputReasonBuilder.AppendLine(be.RequestInformation.BatchError.Message.Value);
                             }
 
-                            if (be.RequestInformation.AzureError.Values != null)
+                            if (be.RequestInformation.BatchError.Values != null)
                             {
                                 noOutputReasonBuilder.AppendLine();
 
-                                foreach (var errorDetail in be.RequestInformation.AzureError.Values)
+                                foreach (var errorDetail in be.RequestInformation.BatchError.Values)
                                 {
                                     noOutputReasonBuilder.AppendLine(string.Format("{0}: {1}", errorDetail.Key, errorDetail.Value));
                                 }

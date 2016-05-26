@@ -282,7 +282,8 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 {
                     if (!this.selectedComputeNode.HasLoadedChildren)
                     {
-                        this.selectedComputeNode.RefreshAsync(ModelRefreshType.Children);
+                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(
+                            this.selectedComputeNode.RefreshAsync(ModelRefreshType.Children));
                     }
                 }
                 FirePropertyChangedEvent("SelectedComputeNode");
@@ -348,13 +349,14 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 {
                     if (!this.selectedJob.HasLoadedChildren)
                     {
-                        this.selectedJob.RefreshAsync(ModelRefreshType.Children).ContinueWith(
+                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(
+                            this.selectedJob.RefreshAsync(ModelRefreshType.Children).ContinueWith(
                             (t) =>
                             {
                                 FirePropertyChangedEvent("SelectedJob");
                                 FirePropertyChangedEvent("TasksTabTitle");
                             },
-                            TaskContinuationOptions.NotOnFaulted);
+                            TaskContinuationOptions.NotOnFaulted));
                     }
                     else
                     {
@@ -374,11 +376,11 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 return this.selectedTask;
             }
             set
-                {
+            {
                 this.selectedTask = value;
                 this.FirePropertyChangedEvent("SelectedTask");
-                    }
-                }
+            }
+        }
 
         private CertificateModel selectedCertificate;
 
