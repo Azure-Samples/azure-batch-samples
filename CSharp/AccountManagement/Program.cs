@@ -235,7 +235,7 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
         private static async Task CreateResourceGroupAsync(IResourceManagementClient resourceManagementClient, string location)
         {
             bool? existsResult = await resourceManagementClient.ResourceGroups.CheckExistenceAsync(ResourceGroupName);
-            if (!existsResult.Value)
+            if (existsResult == null || !existsResult.Value)
             {
                 Console.WriteLine("Creating resource group {0}", ResourceGroupName);
                 await resourceManagementClient.ResourceGroups.CreateOrUpdateAsync(ResourceGroupName, new ResourceGroup(location));
@@ -264,7 +264,7 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
         /// Performs various Batch account operations using the Batch Management library.
         /// </summary>
         /// <param name="accessToken">The access token to use for authentication.</param>
-        /// <param name="subscriptionId">The subscription id to use for creating Batch management client</param>
+        /// <param name="subscriptionId">The subscription id to use for creating the Batch management client</param>
         /// <param name="location">The location where the Batch account will be created.</param>
         /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
         private static async Task PerformBatchAccountOperationsAsync(string accessToken, string subscriptionId, string location)
