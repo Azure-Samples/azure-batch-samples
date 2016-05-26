@@ -70,7 +70,7 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
             if (batchException != null)
             {
                 if (batchException.RequestInformation != null &&
-                    batchException.RequestInformation.AzureError != null)
+                    batchException.RequestInformation.BatchError != null)
                 {
                     if(batchException.RequestInformation.HttpStatusCode == HttpStatusCode.NotFound)
                     {
