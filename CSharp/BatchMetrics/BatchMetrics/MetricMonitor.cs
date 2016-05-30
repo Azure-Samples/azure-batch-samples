@@ -240,7 +240,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
                 if (this.runTask != null)
                 {
                     this.runCancel.Cancel();
-                    this.runTask.WaitIgnoringCancellations();
+                    this.runTask.WaitForCompletionOrCancellation();
                 }
             }
 

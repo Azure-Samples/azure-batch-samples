@@ -22,7 +22,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
             }
         }
 
-        public static void WaitIgnoringCancellations(this Task task)
+        public static void WaitForCompletionOrCancellation(this Task task)
         {
             try
             {
