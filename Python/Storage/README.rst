@@ -4,8 +4,6 @@
   :target: https://coveralls.io/github/alfpark/azure-batch-samples?branch=master
 .. image:: https://img.shields.io/pypi/v/blobxfer.svg
   :target: https://pypi.python.org/pypi/blobxfer
-.. image:: https://img.shields.io/pypi/dm/blobxfer.svg
-  :target: https://pypi.python.org/pypi/blobxfer
 .. image:: https://img.shields.io/pypi/pyversions/blobxfer.svg
   :target: https://pypi.python.org/pypi/blobxfer
 .. image:: https://img.shields.io/pypi/l/blobxfer.svg
@@ -23,11 +21,22 @@ blobxfer is on PyPI and can be installed via:
 
   pip install blobxfer
 
+blobxfer is compatible with Python 3.3+. To install for Python 3, some
+distributions may use ``pip3`` instead.
+
 If you encounter difficulties installing the script, it may be due to the
 ``cryptography`` dependency. Please ensure that your system is able to install
 binary wheels provided by these dependencies (e.g., on Windows) or is able to
 compile the dependencies (i.e., ensure you have a C compiler, python, ssl,
-and ffi development libraries/headers installed prior to invoking pip).
+and ffi development libraries/headers installed prior to invoking pip). For
+instance, to install blobxfer on a fresh Ubuntu 14.04 installation for
+Python 2, issue the following commands:
+
+::
+
+    apt-get update
+    apt-get install -y build-essential libssl-dev libffi-dev libpython-dev python-dev python-pip
+    pip install --upgrade blobxfer
 
 If you need more fine-grained control on installing dependencies, continue
 reading this section. The blobxfer utility is a python script that can be used
@@ -38,17 +47,17 @@ required dependent packages. Below is a list of required packages:
 
 - Base Requirements
 
-  - ``azure-common`` == 1.1.1
-  - ``azure-storage`` == 0.30.0
-  - ``requests`` == 2.9.1
+  - ``azure-common`` == 1.1.4
+  - ``azure-storage`` == 0.32.0
+  - ``requests`` == 2.10.0
 
 - Encryption Support
 
-  - ``cryptography`` >= 1.3
+  - ``cryptography`` >= 1.4
 
 - Service Management Certificate Support
 
-  - ``azure-servicemanagement-legacy`` == 0.20.2
+  - ``azure-servicemanagement-legacy`` == 0.20.3
 
 You can install these packages using pip, easy_install or through standard
 setup.py procedures. These dependencies will be automatically installed if
@@ -61,9 +70,8 @@ The blobxfer.py script allows interacting with storage accounts using any of
 the following methods: (1) management certificate, (2) shared account key,
 (3) SAS key. The script can, in addition to working with single files, mirror
 entire directories into and out of containers from Azure Storage, respectively.
-Block- and file-level MD5 checksumming for data integrity is supported along
-with various transfer optimizations, built-in retries, and user-specified
-timeouts.
+File and block/page level MD5 integrity checking is supported along with
+various transfer optimizations, built-in retries, and user-specified timeouts.
 
 Program parameters and command-line options can be listed via the ``-h``
 switch. Please invoke this first if you are unfamiliar with blobxfer operation
@@ -281,12 +289,6 @@ Performance Notes
 Encryption Notes
 ----------------
 
-- **ENCRYPTION SUPPORT IS CONSIDERED RELEASE CANDIDATE QUALITY. ALTHOUGH WE
-  CONSIDER ENCRYPTION SUPPORT TO BE USABLE, THERE MAY BE A LATE BREAKING CHANGE
-  APPLIED TO BLOBXFER RENDERING ENCRYPTED DATA WITH PRIOR VERSIONS OF BLOBXFER
-  UNRECOVERABLE WITH THE CURRENT VERSION. PLEASE WEIGH THIS POSSIBILITY WHEN
-  USING BLOBXFER WITH ENCRYPTION FOR PRODUCTION DATA. WE PLAN ON REMOVING RC
-  STATUS FROM ENCRYPTION SUPPORT WHEN THE SCRIPT IS CONSIDERED STABLE.**
 - Keys for AES256 block cipher are generated on a per-blob basis. These keys
   are encrypted using RSAES-OAEP.
 - All required information regarding the encryption process is stored on
@@ -323,6 +325,10 @@ Encryption Notes
 Change Log
 ----------
 
+- 0.10.1: remove RC designation from encryption/decryption functionality.
+  update all dependencies to latest versions. update against breaking changes
+  from azure-storage 0.32.0. add flag for block/page level md5 computation
+  which is now disabled by default.
 - 0.10.0: update script for compatibility with azure-storage 0.30.0 which
   is now a required dependency, update cryptography requirement to 1.3,
   promote encryption to RC status, ``--blobep`` now refers to endpoint suffix

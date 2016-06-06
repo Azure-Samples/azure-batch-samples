@@ -344,14 +344,18 @@ def test_sasblobservice_putblock():
         m.put('mock://blobepcontainer/blob?saskey', status_code=201)
         sbs = blobxfer.SasBlobService('mock://blobep', '?saskey', None)
         try:
-            sbs.put_block('container', 'blob', 'block', 'blockid', 'md5')
+            sbs.put_block(
+                'container', 'blob', 'block', 'blockid',
+                validate_content=False)
         except Exception:
             pytest.fail('unexpected Exception raised')
 
         m.put('mock://blobepcontainer/blob?saskey', text='', status_code=200)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         with pytest.raises(IOError):
-            sbs.put_block('container', 'blob', 'block', 'blockid', 'md5')
+            sbs.put_block(
+                'container', 'blob', 'block', 'blockid',
+                validate_content=False)
 
 
 def test_sasblobservice_putblocklist():
