@@ -103,7 +103,7 @@ except NameError:  # pragma: no cover
 # pylint: enable=W0622,C0103
 
 # global defines
-_SCRIPT_VERSION = '0.10.0'
+_SCRIPT_VERSION = '0.10.1'
 _PY2 = sys.version_info.major == 2
 _DEFAULT_MAX_STORAGEACCOUNT_WORKERS = multiprocessing.cpu_count() * 3
 _MAX_BLOB_CHUNK_SIZE_BYTES = 4194304
@@ -708,14 +708,16 @@ class SasBlobService(object):
 
     def update_page(
             self, container_name, blob_name, page, start_range, end_range,
-            content_md5):
-        """Put page for page blob
+            validate_content=False, content_md5=None):
+        """Put page for page blob. This API differs from the Python storage
+        sdk to maintain efficiency for block md5 computation.
         Parameters:
             container_name - container name
             blob_name - name of blob
             page - page data
             start_range - start range of bytes
             end_range - end range of bytes
+            validate_content - validate content
             content_md5 - md5 hash for page data
         Returns:
             Nothing
@@ -727,8 +729,9 @@ class SasBlobService(object):
             blob_name=blob_name, saskey=self.saskey)
         reqheaders = {
             'x-ms-range': 'bytes={}-{}'.format(start_range, end_range),
-            'x-ms-page-write': 'update',
-            'Content-MD5': content_md5}
+            'x-ms-page-write': 'update'}
+        if validate_content and content_md5 is not None:
+            reqheaders['Content-MD5'] = content_md5
         reqparams = {'comp': 'page'}
         response = azure_request(
             requests.put, url=url, params=reqparams, headers=reqheaders,
@@ -740,14 +743,15 @@ class SasBlobService(object):
                     response.status_code))
 
     def put_block(
-            self, container_name, blob_name, block, block_id, content_md5):
+            self, container_name, blob_name, block, block_id,
+            validate_content=False):
         """Put block for blob
         Parameters:
             container_name - container name
             blob_name - name of blob
             block - block data
             block_id - block id
-            content_md5 - md5 hash for block data
+            validate_content - validate content
         Returns:
             Nothing
         Raises:
@@ -756,7 +760,11 @@ class SasBlobService(object):
         url = '{blobep}{container_name}/{blob_name}{saskey}'.format(
             blobep=self.blobep, container_name=container_name,
             blob_name=blob_name, saskey=self.saskey)
-        reqheaders = {'Content-MD5': content_md5}
+        # compute block md5
+        if validate_content:
+            reqheaders = {'Content-MD5': compute_md5_for_data_asbase64(block)}
+        else:
+            reqheaders = None
         reqparams = {'comp': 'block', 'blockid': block_id}
         response = azure_request(
             requests.put, url=url, params=reqparams, headers=reqheaders,
@@ -890,6 +898,8 @@ class BlobChunkWorker(threading.Thread):
         self.rsaprivatekey = args.rsaprivatekey
         self.rsapublickey = args.rsapublickey
         self.encmode = args.encmode
+        self.computeblockmd5 = args.computeblockmd5
+        self.saskey = args.saskey
 
     def run(self):
         """Thread code
@@ -1017,11 +1027,20 @@ class BlobChunkWorker(threading.Thread):
                     return
                 del data_chk_md5
             # upload page range
-            azure_request(
-                self.blob_service[1].update_page, container_name=container,
-                blob_name=remoteresource, page=data, start_range=offset,
-                end_range=offset + aligned - 1, content_md5=contentmd5,
-                timeout=self.timeout)
+            if self.saskey:
+                azure_request(
+                    self.blob_service[1].update_page, container_name=container,
+                    blob_name=remoteresource, page=data, start_range=offset,
+                    end_range=offset + aligned - 1,
+                    validate_content=self.computeblockmd5,
+                    content_md5=contentmd5, timeout=self.timeout)
+            else:
+                azure_request(
+                    self.blob_service[1].update_page, container_name=container,
+                    blob_name=remoteresource, page=data, start_range=offset,
+                    end_range=offset + aligned - 1,
+                    validate_content=self.computeblockmd5,
+                    timeout=self.timeout)
         else:
             # encrypt block if required
             if (encparam is not None and
@@ -1050,12 +1069,10 @@ class BlobChunkWorker(threading.Thread):
                             len(data) - _AES256_BLOCKSIZE_BYTES:]
                     # compute md5 for encrypted data chunk
                     encparam[2]['md5'].update(data)
-            # compute block md5
-            contentmd5 = compute_md5_for_data_asbase64(data)
             azure_request(
                 self.blob_service[0].put_block, container_name=container,
                 blob_name=remoteresource, block=data, block_id=blockid,
-                content_md5=contentmd5, timeout=self.timeout)
+                validate_content=self.computeblockmd5, timeout=self.timeout)
         del data
 
     def getblobrange(
@@ -2054,9 +2071,9 @@ def main():
         'req=' + requests.__version__)
 
     # print all parameters
-    print('=======================================')
+    print('=====================================')
     print(' azure blobxfer parameters [v{}]'.format(_SCRIPT_VERSION))
-    print('=======================================')
+    print('=====================================')
     print('             platform: {}'.format(platform.platform()))
     print('   python interpreter: {} {}'.format(
         platform.python_implementation(), platform.python_version()))
@@ -2077,6 +2094,7 @@ def main():
     print('  auto vhd->page blob: {}'.format(args.autovhd))
     print('            container: {}'.format(args.container))
     print('   blob container URI: {}'.format(blobep + args.container))
+    print('    compute block MD5: {}'.format(args.computeblockmd5))
     print('     compute file MD5: {}'.format(args.computefilemd5))
     print('    skip on MD5 match: {}'.format(args.skiponmatch))
     print('   chunk size (bytes): {}'.format(args.chunksizebytes))
@@ -2517,13 +2535,14 @@ def parseargs():  # pragma: no cover
         Nothing
     """
     parser = argparse.ArgumentParser(
-        description='Transfer blobs to/from Azure storage')
+        description='Transfer block/page blobs to/from Azure storage')
     parser.set_defaults(
         autovhd=False, blobep=_DEFAULT_BLOB_ENDPOINT,
         chunksizebytes=_MAX_BLOB_CHUNK_SIZE_BYTES, collate=None,
-        computefilemd5=True, createcontainer=True, delete=False,
-        disableurllibwarnings=False, encmode=_DEFAULT_ENCRYPTION_MODE,
-        include=None, managementep=_DEFAULT_MANAGEMENT_ENDPOINT,
+        computeblockmd5=False, computefilemd5=True, createcontainer=True,
+        delete=False, disableurllibwarnings=False,
+        encmode=_DEFAULT_ENCRYPTION_MODE, include=None,
+        managementep=_DEFAULT_MANAGEMENT_ENDPOINT,
         numworkers=_DEFAULT_MAX_STORAGEACCOUNT_WORKERS, overwrite=True,
         pageblob=False, progressbar=True, recursive=True, rsaprivatekey=None,
         rsapublickey=None, rsakeypassphrase=None, skiponmatch=True,
@@ -2543,6 +2562,9 @@ def parseargs():  # pragma: no cover
     parser.add_argument(
         '--collate', nargs='?',
         help='collate all files into a specified path')
+    parser.add_argument(
+        '--computeblockmd5', dest='computeblockmd5', action='store_true',
+        help='compute block/page level MD5 during upload')
     parser.add_argument(
         '--chunksizebytes', type=int,
         help='maximum chunk size to transfer in bytes [{}]'.format(
