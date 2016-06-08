@@ -171,7 +171,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// <param name="batchClient">The BatchClient to create the pool with.</param>
         /// <param name="pool">The pool to create.</param>
         /// <returns>An asynchronous <see cref="Task"/> representing the operation.</returns>
-        public static async Task CreatePoolIfNotExistAsync(BatchClient batchClient, CloudPool pool)
+        public static async Task<CreatePoolResult> CreatePoolIfNotExistAsync(BatchClient batchClient, CloudPool pool)
         {
             bool successfullyCreatedPool = false;
 
@@ -225,8 +225,15 @@ namespace Microsoft.Azure.Batch.Samples.Common
                 {
                     // Resize the pool to the desired target. Note that provisioning the nodes in the pool may take some time
                     await existingPool.ResizeAsync(poolTargetNodeCount).ConfigureAwait(continueOnCapturedContext: false);
+                    return CreatePoolResult.ResizedExisting;
+                }
+                else
+                {
+                    return CreatePoolResult.PoolExisted;
                 }
             }
+
+            return CreatePoolResult.CreatedNew;
         }
 
         /// <summary>

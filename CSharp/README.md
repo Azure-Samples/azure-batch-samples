@@ -23,6 +23,9 @@ These projects contain the sample code backing various articles in [Batch docume
 ### [BatchExplorer](./BatchExplorer)
 The [Azure Batch Explorer](./BatchExplorer) is a GUI application that can be useful in viewing, managing, and debugging entities within an Azure Batch account. View this [blog post](http://blogs.technet.com/b/windowshpc/archive/2015/01/20/azure-batch-explorer-sample-walkthrough.aspx) for more details.
 
+### [BatchMetrics](./BatchMetrics)
+This sample demonstrates efficient list queries and provides a utility library for job progress monitoring.
+
 ### [GettingStarted](./GettingStarted)
 This set of samples is intended to be the starting point for learning the concepts behind Azure Batch and its API. It covers basic features of the service, including jobs, pools, tasks, and more.
 
