@@ -476,9 +476,8 @@ if __name__ == '__main__':
                                                  _BATCH_ACCOUNT_KEY)
 
     batch_client = batch.BatchServiceClient(
-        batch.BatchServiceClientConfiguration(
-            credentials,
-            base_url=_BATCH_ACCOUNT_URL))
+        credentials,
+        base_url=_BATCH_ACCOUNT_URL)
 
     # Create the pool that will contain the compute nodes that will execute the
     # tasks. The resource files we pass in are used for configuring the pool's

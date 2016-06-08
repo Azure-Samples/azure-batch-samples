@@ -53,8 +53,7 @@ def submit_job_and_add_task(batch_client, job_id, vm_size, vm_count):
             pool=batchmodels.PoolSpecification(
                 vm_size=vm_size,
                 target_dedicated=vm_count,
-                cloud_service_configuration=batchmodels.
-                CloudServiceConfiguration(os_family="4")),
+                cloud_service_configuration={'os_family': "4"}),
             keep_alive=False,
             pool_lifetime_option=batchmodels.PoolLifetimeOption.job))
 
@@ -101,14 +100,13 @@ def execute_sample(global_config, sample_config):
     credentials = batchauth.SharedKeyCredentials(
         batch_account_name,
         batch_account_key)
-    client_configuration = batch.BatchServiceClientConfiguration(
+
+    batch_client = batch.BatchServiceClient(
         credentials,
         base_url=batch_service_url)
 
     # Retry 5 times -- default is 3
-    client_configuration.retry_policy.retries = 5
-    batch_client = batch.BatchServiceClient(client_configuration)
-
+    batch_client.config.retry_policy.retries = 5
     job_id = common.helpers.generate_unique_resource_name("HelloWorld")
 
     try:

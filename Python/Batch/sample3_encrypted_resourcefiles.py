@@ -301,13 +301,12 @@ def execute_sample(global_config, sample_config):
     credentials = batchauth.SharedKeyCredentials(
         batch_account_name,
         batch_account_key)
-    client_configuration = batch.BatchServiceClientConfiguration(
+    batch_client = batch.BatchServiceClient(
         credentials,
         base_url=batch_service_url)
 
     # Retry 5 times -- default is 3
-    client_configuration.retry_policy.retries = 5
-    batch_client = batch.BatchServiceClient(client_configuration)
+    batch_client.config.retry_policy.retries = 5
 
     block_blob_client = azureblob.BlockBlobService(
         account_name=storage_account_name,

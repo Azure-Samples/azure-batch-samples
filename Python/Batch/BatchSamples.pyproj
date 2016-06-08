@@ -12,8 +12,10 @@
     <OutputPath>.</OutputPath>
     <Name>BatchSamples</Name>
     <RootNamespace>BatchSamples</RootNamespace>
-    <InterpreterId>{9a7a9026-48c1-4688-9d5d-e5699d47d074}</InterpreterId>
-    <InterpreterVersion>2.7</InterpreterVersion>
+    <InterpreterId>
+    </InterpreterId>
+    <InterpreterVersion>
+    </InterpreterVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -24,9 +26,16 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="article_samples\python_tutorial_client.py" />
+    <Compile Include="article_samples\python_tutorial_task.py" />
     <Compile Include="sample5_docker_batch_task.py" />
+    <Content Include="article_samples\data\taskdata1.txt" />
+    <Content Include="article_samples\data\taskdata2.txt" />
+    <Content Include="article_samples\data\taskdata3.txt" />
     <Content Include="resources\docker_batch_task.sh" />
     <Content Include="sample5_docker_batch_task.cfg" />
+    <Folder Include="article_samples\" />
+    <Folder Include="article_samples\data\" />
     <Folder Include="common\" />
     <Folder Include="resources\" />
     <Compile Include="common\helpers.py" />
@@ -46,9 +55,6 @@
     <Compile Include="sample3_encrypted_resourcefiles.py" />
     <Content Include="sample4_docker_swarm.cfg" />
     <Compile Include="sample4_docker_swarm.py" />
-  </ItemGroup>
-  <ItemGroup>
-    <InterpreterReference Include="{9a7a9026-48c1-4688-9d5d-e5699d47d074}\2.7" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
