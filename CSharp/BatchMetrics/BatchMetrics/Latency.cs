@@ -15,15 +15,15 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
     /// </summary>
     public struct Latency
     {
-        private readonly TimeSpan total;
-        private readonly TimeSpan listJobs;
-        private readonly IReadOnlyDictionary<string, TimeSpan> listTasks;
+        private readonly TimeSpan totalTime;
+        private readonly TimeSpan listJobsTime;
+        private readonly IReadOnlyDictionary<string, TimeSpan> listTasksTimes;
 
-        internal Latency(TimeSpan total, TimeSpan listJobs, IDictionary<string, TimeSpan> listTasks)
+        internal Latency(TimeSpan totalTime, TimeSpan listJobsTime, IDictionary<string, TimeSpan> listTasksTimes)
         {
-            this.total = total;
-            this.listJobs = listJobs;
-            this.listTasks = new ReadOnlyDictionary<string, TimeSpan>(listTasks);
+            this.totalTime = totalTime;
+            this.listJobsTime = listJobsTime;
+            this.listTasksTimes = new ReadOnlyDictionary<string, TimeSpan>(listTasksTimes);
         }
 
         /// <summary>
@@ -31,7 +31,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
         /// </summary>
         public TimeSpan Total
         {
-            get { return this.total; }
+            get { return this.totalTime; }
         }
 
         /// <summary>
@@ -39,7 +39,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
         /// </summary>
         public TimeSpan ListJobs
         {
-            get { return this.listJobs; }
+            get { return this.listJobsTime; }
         }
 
         /// <summary>
@@ -49,7 +49,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
         /// <returns>The time taken to list the task status changes for the given job.</returns>
         public TimeSpan ListTasks(string jobId)
         {
-            return this.listTasks[jobId];
+            return this.listTasksTimes[jobId];
         }
     }
 }

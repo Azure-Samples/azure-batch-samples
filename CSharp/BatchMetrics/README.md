@@ -1,7 +1,7 @@
 ### BatchMetrics
 
-The BatchMetrics sample project demonstrates how to efficiently call the Azure Batch API
-in order to monitor job progress.
+The BatchMetrics sample project demonstrates how to efficiently monitor Azure Batch
+job progress using the Batch API.
 
 This sample application demonstrates the following operations:
 

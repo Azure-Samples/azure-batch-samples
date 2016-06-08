@@ -82,7 +82,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
                 }
             }
 
-            var tasksToRun = CreateTasks(jobId).ToList();
+            var tasksToRun = CreateTasks(jobId);
 
             await this.batchClient.JobOperations.AddTaskAsync(jobId, tasksToRun);
         }

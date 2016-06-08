@@ -64,7 +64,8 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
 
                     // Give the monitor some jobs to report on.
                     var jobSubmitter = new JobSubmitter(batchClient);
-                    await jobSubmitter.SubmitJobsAsync();
+                    await jobSubmitter.SubmitJobsAsync();  // Submit a series of jobs over a period of several minutes
+                    await Task.Delay(TimeSpan.FromMinutes(2));  // Give the last submitted job time to get under way so we can see it progressing
                     await jobSubmitter.CleanUpJobsAsync();
                     await jobSubmitter.CleanUpPoolIfRequiredAsync();
                 }
