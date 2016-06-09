@@ -11,7 +11,7 @@
 
 blobxfer
 ========
-AzCopy-like OS independent Azure storage blob transfer tool
+AzCopy-like OS independent Azure storage blob and file share transfer tool
 
 Installation
 ------------
@@ -21,7 +21,7 @@ blobxfer is on PyPI and can be installed via:
 
   pip install blobxfer
 
-blobxfer is compatible with Python 3.3+. To install for Python 3, some
+blobxfer is compatible with Python 2.7 and 3.3+. To install for Python 3, some
 distributions may use ``pip3`` instead.
 
 If you encounter difficulties installing the script, it may be due to the
@@ -30,7 +30,7 @@ binary wheels provided by these dependencies (e.g., on Windows) or is able to
 compile the dependencies (i.e., ensure you have a C compiler, python, ssl,
 and ffi development libraries/headers installed prior to invoking pip). For
 instance, to install blobxfer on a fresh Ubuntu 14.04 installation for
-Python 2, issue the following commands:
+Python 2.7, issue the following commands:
 
 ::
 
@@ -39,11 +39,10 @@ Python 2, issue the following commands:
     pip install --upgrade blobxfer
 
 If you need more fine-grained control on installing dependencies, continue
-reading this section. The blobxfer utility is a python script that can be used
-on any platform where Python 2.7, 3.3, 3.4 or 3.5 is installable. Depending
-upon the desired mode of authentication with Azure and options, the script
-will require the following packages, some of which will automatically pull
-required dependent packages. Below is a list of required packages:
+reading this section. Depending upon the desired mode of authentication with
+Azure and options, the script will require the following packages, some of
+which will automatically pull required dependent packages. Below is a list of
+dependent packages:
 
 - Base Requirements
 
@@ -69,19 +68,20 @@ Introduction
 The blobxfer.py script allows interacting with storage accounts using any of
 the following methods: (1) management certificate, (2) shared account key,
 (3) SAS key. The script can, in addition to working with single files, mirror
-entire directories into and out of containers from Azure Storage, respectively.
-File and block/page level MD5 integrity checking is supported along with
-various transfer optimizations, built-in retries, and user-specified timeouts.
+entire directories into and out of containers or file shares from Azure
+Storage, respectively. File and block/page level MD5 integrity checking is
+supported along with various transfer optimizations, built-in retries,
+user-specified timeouts, and client-side encryption.
 
 Program parameters and command-line options can be listed via the ``-h``
 switch. Please invoke this first if you are unfamiliar with blobxfer operation
 as not all options are explained below. At the minimum, three positional
-arguments are required: storage account name, container name, local resource.
-Additionally, one of the following authentication switches must be supplied:
-``--subscriptionid`` with ``--managementcert``, ``--storageaccountkey``,
-or ``--saskey``. Do not combine different authentication schemes together. It
-is generally recommended to use SAS keys wherever possible; only HTTPS
-transport is used in the script.
+arguments are required: storage account name, container or share name, and
+local resource. Additionally, one of the following authentication switches
+must be supplied: ``--subscriptionid`` with ``--managementcert``,
+``--storageaccountkey``, or ``--saskey``. Do not combine different
+authentication schemes together. It is generally recommended to use SAS keys
+wherever applicable; only HTTPS transport is used in the script.
 
 Please remember when using SAS keys that only container-level SAS keys will
 allow for entire directory uploading or container downloading. The container
@@ -141,7 +141,8 @@ to container0 for any file matching the wildcard pattern ``*.txt`` within
 all subdirectories. Include patterns can be applied for uploads as well as
 downloads. Note that you will need to prevent globbing by your shell such
 that wildcard expansion does not take place before script interprets the
-argument.
+argument.  If ``--include`` is not specified, all files will be uploaded
+or downloaded for the specific context.
 
 To download an entire container from your storage account, an example
 commandline would be:
@@ -214,6 +215,17 @@ downloads Azure Storage .NET/Java compatible client-side encrypted block blobs.
 Please read important points in the Encryption Notes below for more
 information.
 
+To transfer to an Azure Files share, specify the ``--fileshare`` option and
+specify the share name as the second positional argument.
+
+::
+
+  blobxfer mystorageacct myshare localfiles --fileshare --upload
+
+The above example would upload all files in the ``localfiles`` directory to
+the share named ``myshare``. Encryption/decryption options are compatible with
+Azure Files as the destination or source.
+
 General Notes
 -------------
 
@@ -232,13 +244,14 @@ General Notes
   will force disable container creation if a SAS key is specified.
 - For non-SAS requests, timeouts may not be properly honored due to
   limitations of the Azure Python SDK.
-- In order to skip download/upload matching files via MD5, the
-  computefilemd5 flag must be enabled (it is enabled by default).
+- By default, files with matching MD5 checksums will be skipped for both
+  download (if MD5 information is present on the blob) and upload. Specify
+  ``--no-skiponmatch`` to disable this functionality.
 - When uploading files as page blobs, the content is page boundary
   byte-aligned. The MD5 for the blob is computed using the final aligned
   data if the source is not page boundary byte-aligned. This enables these
   page blobs or files to be skipped during subsequent download or upload,
-  if the skiponmatch parameter is enabled.
+  if the ``--no-skiponmatch`` parameter is not specified.
 - If ``--delete`` is specified, any remote files found that have no
   corresponding local file in directory upload mode will be deleted. Deletion
   occurs prior to any transfers, analogous to the delete-before rsync option.
@@ -249,26 +262,39 @@ General Notes
   the pattern will be applied to the blob name without the container name.
   Globbing of wildcards must be disabled such that the script can read
   the include pattern without the shell expanding the wildcards, if specified.
-- Due to an underlying issue with the Azure Python Storage SDK, file or blob
-  names with ``?`` character in them cannot be uploaded or downloaded using
-  a shared storage account key. Please connect with a SAS key if this
-  functionality is required.
+- Empty directories are not created locally when downloading from an Azure
+  file share which has empty directories.
+- Empty directories are not deleted if ``--delete`` is specified and no
+  files remain in the directory on the Azure file share.
 
 Performance Notes
 -----------------
 
 - Most likely, you will need to tweak the ``--numworkers`` argument that best
   suits your environment. The default is the number of CPUs on the running
-  machine multiplied by 3. Increasing this number (or even using the default)
-  may not provide the optimal balance between concurrency and your network
-  conditions. Additionally, this number may not work properly if you are
-  attempting to run multiple blobxfer sessions in parallel from one machine or
-  IP address. Futhermore, this number may be defaulted to be set too high if
-  encryption is enabled and the machine cannot handle processing multiple
-  threads in parallel.
+  machine multiplied by 3 (except when transferring to/from file shares).
+  Increasing this number (or even using the default) may not provide the
+  optimal balance between concurrency and your network conditions.
+  Additionally, this number may not work properly if you are attempting to
+  run multiple blobxfer sessions in parallel from one machine or IP address.
+  Futhermore, this number may be defaulted to be set too high if encryption
+  is enabled and the machine cannot handle processing multiple threads in
+  parallel.
+- Computing file MD5 can be time consuming for large files. If integrity
+  checking or rsync-like capability is not required, specify
+  ``--no-computefilemd5`` to disable MD5 computation for files.
+- File share performance can be "slow" or become a bottleneck, especially for
+  file shares containing thousands of files as multiple REST calls must be
+  performed for each file. Currently, a single file share has a limit of up
+  to 60 MB/s and 1000 8KB IOPS. Please refer to the
+  `Azure Storage Scalability and Performance Targets`_ for performance targets
+  and limits regarding Azure Storage Blobs and Files. If scalable high
+  performance is required, consider using blob storage or multiple file
+  shares.
 - Using SAS keys may provide the best performance as the script bypasses
   the Azure Storage Python SDK and uses requests/urllib3 directly with
-  Azure Storage endpoints.
+  Azure Storage endpoints. Transfers to/from Azure Files will always use
+  the Azure Storage Python SDK even with SAS keys.
 - As of requests 2.6.0 and Python versions < 2.7.9 (i.e., interpreter found
   on default Ubuntu 14.04 installations), if certain packages are installed,
   as those found in ``requests[security]`` then the underlying ``urllib3``
@@ -282,6 +308,7 @@ Performance Notes
   be suppressed using ``--disable-urllib-warnings``, but is not recommended
   unless you understand the security implications.
 
+.. _Azure Storage Scalability and Performance Targets: https://azure.microsoft.com/en-us/documentation/articles/storage-scalability-targets/
 .. _pyOpenSSL: https://urllib3.readthedocs.org/en/latest/security.html#pyopenssl
 .. _fully validated: https://urllib3.readthedocs.org/en/latest/security.html#insecureplatformwarning
 
@@ -289,8 +316,6 @@ Performance Notes
 Encryption Notes
 ----------------
 
-- Keys for AES256 block cipher are generated on a per-blob basis. These keys
-  are encrypted using RSAES-OAEP.
 - All required information regarding the encryption process is stored on
   each blob's ``encryptiondata`` and ``encryptiondata_authentication``
   metadata. These metadata entries are used on download to configure the proper
@@ -298,6 +323,11 @@ Encryption Notes
   the encryption. Encryption metadata set by blobxfer (or the Azure Storage
   .NET/Java client library) should not be modified or blobs may be
   unrecoverable.
+- Local files can be encrypted by blobxfer and stored in Azure Files and,
+  correspondingly, remote files on Azure File shares can be decrypted by
+  blobxfer as long as the metdata portions remain in-tact.
+- Keys for AES256 block cipher are generated on a per-blob basis. These keys
+  are encrypted using RSAES-OAEP.
 - MD5 for both the pre-encrypted and encrypted version of the file is stored
   in blob metadata. Rsync-like synchronization is still supported transparently
   with encrypted blobs.
@@ -316,7 +346,9 @@ Encryption Notes
   encryption in the script, do not enable the option ``--pageblob``.
   ``--autovhd`` will continue to work transparently where vhd files will be
   uploaded as page blobs in unencrypted form while other files will be
-  uploaded as encrypted block blobs.
+  uploaded as encrypted block blobs. Note that using ``--autovhd`` with
+  encryption will force set the max chunk size to 4 MiB for non-encrypted
+  vhd files.
 - Downloading encrypted blobs may not fully preallocate each file due to
   padding. Script failure can result during transfer if there is insufficient
   disk space.
@@ -325,6 +357,8 @@ Encryption Notes
 Change Log
 ----------
 
+- 0.11.0: Azure Files support, please refer to the General Notes section for
+  limitations. ``--blobep`` option has been renamed to ``--endpoint``.
 - 0.10.1: remove RC designation from encryption/decryption functionality.
   update all dependencies to latest versions. update against breaking changes
   from azure-storage 0.32.0. add flag for block/page level md5 computation

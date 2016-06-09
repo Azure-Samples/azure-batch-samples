@@ -17,7 +17,7 @@ setup(
     version=version,
     author='Microsoft Corporation, Azure Batch and HPC Team',
     author_email='',
-    description='Azure Blob storage transfer tool with AzCopy-like features',
+    description='Azure storage transfer tool with AzCopy-like features',
     long_description=long_description,
     platforms='any',
     url='https://github.com/Azure/azure-batch-samples/Python/Storage',
@@ -49,5 +49,5 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Topic :: Utilities',
     ],
-    keywords='azcopy azure storage blob transfer copy',
+    keywords='azcopy azure storage blob files transfer copy smb',
 )

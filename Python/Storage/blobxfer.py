@@ -75,6 +75,7 @@ try:
 except ImportError:  # pragma: no cover
     pass
 import azure.storage.blob
+import azure.storage.file
 try:
     import cryptography.hazmat.backends
     import cryptography.hazmat.primitives.asymmetric.padding
@@ -103,14 +104,14 @@ except NameError:  # pragma: no cover
 # pylint: enable=W0622,C0103
 
 # global defines
-_SCRIPT_VERSION = '0.10.1'
+_SCRIPT_VERSION = '0.11.0'
 _PY2 = sys.version_info.major == 2
 _DEFAULT_MAX_STORAGEACCOUNT_WORKERS = multiprocessing.cpu_count() * 3
 _MAX_BLOB_CHUNK_SIZE_BYTES = 4194304
 _EMPTY_MAX_PAGE_SIZE_MD5 = 'tc+p1sj+vWGPkawoQ9UKHA=='
 _MAX_LISTBLOBS_RESULTS = 1000
 _PAGEBLOB_BOUNDARY = 512
-_DEFAULT_BLOB_ENDPOINT = 'core.windows.net'
+_DEFAULT_STORAGE_ENDPOINT = 'core.windows.net'
 _DEFAULT_MANAGEMENT_ENDPOINT = 'management.core.windows.net'
 # encryption defines
 _AES256_KEYLENGTH_BYTES = 32
@@ -461,10 +462,10 @@ class SasBlobService(object):
     """BlobService supporting SAS for functions used in the Python SDK.
        create_container method does not exist because it is not a supported
        operation under SAS"""
-    def __init__(self, blobep, saskey, timeout):
+    def __init__(self, endpoint, saskey, timeout):
         """SAS Blob Service ctor
         Parameters:
-            blobep - blob endpoint
+            endpoint - storage endpoint
             saskey - saskey
             timeout - timeout
         Returns:
@@ -472,7 +473,7 @@ class SasBlobService(object):
         Raises:
             Nothing
         """
-        self.blobep = blobep
+        self.endpoint = endpoint
         # normalize sas key
         if saskey[0] != '?':
             self.saskey = '?' + saskey
@@ -523,8 +524,8 @@ class SasBlobService(object):
         Raises:
             IOError if unexpected status code
         """
-        url = '{blobep}{container_name}{saskey}'.format(
-            blobep=self.blobep, container_name=container_name,
+        url = '{endpoint}{container_name}{saskey}'.format(
+            endpoint=self.endpoint, container_name=container_name,
             saskey=self.saskey)
         reqparams = {
             'restype': 'container',
@@ -555,8 +556,8 @@ class SasBlobService(object):
         Raises:
             IOError if unexpected status code
         """
-        url = '{blobep}{container_name}/{blob_name}{saskey}'.format(
-            blobep=self.blobep, container_name=container_name,
+        url = '{endpoint}{container_name}/{blob_name}{saskey}'.format(
+            endpoint=self.endpoint, container_name=container_name,
             blob_name=blob_name, saskey=self.saskey)
         reqheaders = {
             'x-ms-range': 'bytes={}-{}'.format(start_range, end_range)
@@ -580,8 +581,8 @@ class SasBlobService(object):
         Raises:
             IOError if unexpected status code
         """
-        url = '{blobep}{container_name}/{blob_name}{saskey}'.format(
-            blobep=self.blobep, container_name=container_name,
+        url = '{endpoint}{container_name}/{blob_name}{saskey}'.format(
+            endpoint=self.endpoint, container_name=container_name,
             blob_name=blob_name, saskey=self.saskey)
         response = azure_request(
             requests.head, url=url, timeout=self.timeout)
@@ -621,8 +622,8 @@ class SasBlobService(object):
         """
         if metadata is None or len(metadata) == 0:
             return
-        url = '{blobep}{container_name}/{blob_name}{saskey}'.format(
-            blobep=self.blobep, container_name=container_name,
+        url = '{endpoint}{container_name}/{blob_name}{saskey}'.format(
+            endpoint=self.endpoint, container_name=container_name,
             blob_name=blob_name, saskey=self.saskey)
         reqparams = {'comp': 'metadata'}
         reqheaders = {}
@@ -650,8 +651,8 @@ class SasBlobService(object):
         Raises:
             IOError if unexpected status code
         """
-        url = '{blobep}{container_name}/{blob_name}{saskey}'.format(
-            blobep=self.blobep, container_name=container_name,
+        url = '{endpoint}{container_name}/{blob_name}{saskey}'.format(
+            endpoint=self.endpoint, container_name=container_name,
             blob_name=blob_name, saskey=self.saskey)
         reqheaders = {
             'x-ms-blob-type': 'PageBlob',
@@ -686,8 +687,8 @@ class SasBlobService(object):
         Raises:
             IOError if unexpected status code
         """
-        url = '{blobep}{container_name}/{blob_name}{saskey}'.format(
-            blobep=self.blobep, container_name=container_name,
+        url = '{endpoint}{container_name}/{blob_name}{saskey}'.format(
+            endpoint=self.endpoint, container_name=container_name,
             blob_name=blob_name, saskey=self.saskey)
         reqheaders = {'x-ms-blob-type': 'BlockBlob'}
         if content_settings is not None:
@@ -724,8 +725,8 @@ class SasBlobService(object):
         Raises:
             IOError if unexpected status code
         """
-        url = '{blobep}{container_name}/{blob_name}{saskey}'.format(
-            blobep=self.blobep, container_name=container_name,
+        url = '{endpoint}{container_name}/{blob_name}{saskey}'.format(
+            endpoint=self.endpoint, container_name=container_name,
             blob_name=blob_name, saskey=self.saskey)
         reqheaders = {
             'x-ms-range': 'bytes={}-{}'.format(start_range, end_range),
@@ -757,8 +758,8 @@ class SasBlobService(object):
         Raises:
             IOError if unexpected status code
         """
-        url = '{blobep}{container_name}/{blob_name}{saskey}'.format(
-            blobep=self.blobep, container_name=container_name,
+        url = '{endpoint}{container_name}/{blob_name}{saskey}'.format(
+            endpoint=self.endpoint, container_name=container_name,
             blob_name=blob_name, saskey=self.saskey)
         # compute block md5
         if validate_content:
@@ -789,8 +790,8 @@ class SasBlobService(object):
         Raises:
             IOError if unexpected status code
         """
-        url = '{blobep}{container_name}/{blob_name}{saskey}'.format(
-            blobep=self.blobep, container_name=container_name,
+        url = '{endpoint}{container_name}/{blob_name}{saskey}'.format(
+            endpoint=self.endpoint, container_name=container_name,
             blob_name=blob_name, saskey=self.saskey)
         reqheaders = {}
         if content_settings is not None:
@@ -826,8 +827,8 @@ class SasBlobService(object):
         Raises:
             IOError if unexpected status code
         """
-        url = '{blobep}{container_name}/{blob_name}{saskey}'.format(
-            blobep=self.blobep, container_name=container_name,
+        url = '{endpoint}{container_name}/{blob_name}{saskey}'.format(
+            endpoint=self.endpoint, container_name=container_name,
             blob_name=blob_name, saskey=self.saskey)
         reqheaders = {}
         if content_settings is not None:
@@ -855,8 +856,8 @@ class SasBlobService(object):
         Raises:
             IOError if unexpected status code
         """
-        url = '{blobep}{container_name}/{blob_name}{saskey}'.format(
-            blobep=self.blobep, container_name=container_name,
+        url = '{endpoint}{container_name}/{blob_name}{saskey}'.format(
+            endpoint=self.endpoint, container_name=container_name,
             blob_name=blob_name, saskey=self.saskey)
         response = azure_request(
             requests.delete, url=url, timeout=self.timeout)
@@ -867,19 +868,20 @@ class SasBlobService(object):
                     response.status_code))
 
 
-class BlobChunkWorker(threading.Thread):
-    """Chunk worker for a Blob"""
+class StorageChunkWorker(threading.Thread):
+    """Chunk worker for a storage entity"""
     def __init__(
-            self, exc, s_in_queue, s_out_queue, args, blob_service,
-            xfertoazure):
-        """Blob Chunk worker Thread ctor
+            self, exc, s_in_queue, s_out_queue, args, xfertoazure,
+            blob_service, file_service):
+        """Storage Chunk worker Thread ctor
         Parameters:
             exc - exception list
             s_in_queue - storage in queue
             s_out_queue - storage out queue
             args - program arguments
-            blob_service - blob service
             xfertoazure - xfer to azure (direction)
+            blob_service - blob service
+            file_service - file service
         Returns:
             Nothing
         Raises:
@@ -890,16 +892,10 @@ class BlobChunkWorker(threading.Thread):
         self._exc = exc
         self._in_queue = s_in_queue
         self._out_queue = s_out_queue
-        self._pageblob = args.pageblob
-        self._autovhd = args.autovhd
-        self.blob_service = blob_service
-        self.timeout = args.timeout
+        self.args = args
         self.xfertoazure = xfertoazure
-        self.rsaprivatekey = args.rsaprivatekey
-        self.rsapublickey = args.rsapublickey
-        self.encmode = args.encmode
-        self.computeblockmd5 = args.computeblockmd5
-        self.saskey = args.saskey
+        self.blob_service = blob_service
+        self.file_service = file_service
 
     def run(self):
         """Thread code
@@ -923,11 +919,10 @@ class BlobChunkWorker(threading.Thread):
             try:
                 if self.xfertoazure:
                     # if iv is not ready for this chunk, re-add back to queue
-                    if (not as_page_blob(
-                            self._pageblob, self._autovhd, localresource) and
-                            ((self.rsaprivatekey is not None or
-                              self.rsapublickey is not None) and
-                             self.encmode == _ENCRYPTION_MODE_FULLBLOB)):
+                    if (not as_page_blob(self.args, localresource) and
+                            ((self.args.rsaprivatekey is not None or
+                              self.args.rsapublickey is not None) and
+                             self.args.encmode == _ENCRYPTION_MODE_FULLBLOB)):
                         _iblockid = int(blockid)
                         if _iblockid not in encparam[2]:
                             self._in_queue.put(
@@ -938,12 +933,12 @@ class BlobChunkWorker(threading.Thread):
                                      flock, filedesc))))
                             continue
                     # upload block/page
-                    self.putblobdata(
+                    self.put_storage_data(
                         localresource, container, remoteresource, blockid,
                         offset, bytestoxfer, encparam, flock, filedesc)
                 else:
                     # download range
-                    self.getblobrange(
+                    self.get_storage_range(
                         localresource, container, remoteresource, blockid,
                         offset, bytestoxfer, encparam, flock, filedesc)
                 # pylint: disable=W0703
@@ -954,10 +949,10 @@ class BlobChunkWorker(threading.Thread):
             if len(self._exc) > 0:
                 break
 
-    def putblobdata(
+    def put_storage_data(
             self, localresource, container, remoteresource, blockid, offset,
             bytestoxfer, encparam, flock, filedesc):
-        """Puts data (blob or page) into Azure storage
+        """Puts data (blob, page or file bits) into Azure storage
         Parameters:
             localresource - name of local resource
             container - blob container
@@ -977,16 +972,23 @@ class BlobChunkWorker(threading.Thread):
         # file, use put blob instead of page/block ops
         if bytestoxfer == 0:
             contentmd5 = compute_md5_for_data_asbase64(b'')
-            if as_page_blob(self._pageblob, self._autovhd, localresource):
-                contentlength = bytestoxfer
+            if as_page_blob(self.args, localresource):
                 azure_request(
                     self.blob_service[1].create_blob, container_name=container,
-                    blob_name=remoteresource, content_length=contentlength,
+                    blob_name=remoteresource, content_length=bytestoxfer,
                     content_settings=azure.storage.blob.ContentSettings(
                         content_type=get_mime_type(localresource),
                         content_md5=contentmd5))
+            elif self.args.fileshare:
+                fsfile = split_fileshare_path_into_parts(remoteresource)
+                azure_request(
+                    self.file_service.create_file, share_name=container,
+                    directory_name=fsfile[0], file_name=fsfile[1],
+                    content_length=bytestoxfer,
+                    content_settings=azure.storage.file.ContentSettings(
+                        content_type=get_mime_type(localresource),
+                        content_md5=contentmd5))
             else:
-                contentlength = None
                 azure_request(
                     self.blob_service[0]._put_blob, container_name=container,
                     blob_name=remoteresource, blob=None,
@@ -1009,7 +1011,7 @@ class BlobChunkWorker(threading.Thread):
             raise IOError('could not read {}: {} -> {}'.format(
                 localresource, offset, offset + bytestoxfer))
         # issue REST put
-        if as_page_blob(self._pageblob, self._autovhd, localresource):
+        if as_page_blob(self.args, localresource):
             aligned = page_align_content_length(bytestoxfer)
             # fill data to boundary
             if aligned != bytestoxfer:
@@ -1027,28 +1029,28 @@ class BlobChunkWorker(threading.Thread):
                     return
                 del data_chk_md5
             # upload page range
-            if self.saskey:
+            if self.args.saskey:
                 azure_request(
                     self.blob_service[1].update_page, container_name=container,
                     blob_name=remoteresource, page=data, start_range=offset,
                     end_range=offset + aligned - 1,
-                    validate_content=self.computeblockmd5,
-                    content_md5=contentmd5, timeout=self.timeout)
+                    validate_content=self.args.computeblockmd5,
+                    content_md5=contentmd5, timeout=self.args.timeout)
             else:
                 azure_request(
                     self.blob_service[1].update_page, container_name=container,
                     blob_name=remoteresource, page=data, start_range=offset,
                     end_range=offset + aligned - 1,
-                    validate_content=self.computeblockmd5,
-                    timeout=self.timeout)
+                    validate_content=self.args.computeblockmd5,
+                    timeout=self.args.timeout)
         else:
             # encrypt block if required
             if (encparam is not None and
-                    (self.rsaprivatekey is not None or
-                     self.rsapublickey is not None)):
+                    (self.args.rsaprivatekey is not None or
+                     self.args.rsapublickey is not None)):
                 symkey = encparam[0]
                 signkey = encparam[1]
-                if self.encmode == _ENCRYPTION_MODE_FULLBLOB:
+                if self.args.encmode == _ENCRYPTION_MODE_FULLBLOB:
                     _blkid = int(blockid)
                     iv = encparam[2][_blkid]
                     pad = encparam[3]
@@ -1056,9 +1058,9 @@ class BlobChunkWorker(threading.Thread):
                     iv = None
                     pad = True
                 data = encrypt_chunk(
-                    symkey, signkey, data, self.encmode, iv=iv, pad=pad)
+                    symkey, signkey, data, self.args.encmode, iv=iv, pad=pad)
                 with flock:
-                    if self.encmode == _ENCRYPTION_MODE_FULLBLOB:
+                    if self.args.encmode == _ENCRYPTION_MODE_FULLBLOB:
                         # compute hmac for chunk
                         if _blkid == 0:
                             encparam[2]['hmac'].update(iv + data)
@@ -1069,16 +1071,31 @@ class BlobChunkWorker(threading.Thread):
                             len(data) - _AES256_BLOCKSIZE_BYTES:]
                     # compute md5 for encrypted data chunk
                     encparam[2]['md5'].update(data)
-            azure_request(
-                self.blob_service[0].put_block, container_name=container,
-                blob_name=remoteresource, block=data, block_id=blockid,
-                validate_content=self.computeblockmd5, timeout=self.timeout)
+                    if self.args.fileshare:
+                        bytestoxfer = len(data)
+                        encparam[2]['filesize'] += bytestoxfer
+            if self.args.fileshare:
+                fsfile = split_fileshare_path_into_parts(remoteresource)
+                # subtract 1 from end_range
+                azure_request(
+                    self.file_service.update_range, share_name=container,
+                    directory_name=fsfile[0], file_name=fsfile[1],
+                    data=data, start_range=offset,
+                    end_range=offset + bytestoxfer - 1,
+                    validate_content=self.args.computeblockmd5,
+                    timeout=self.args.timeout)
+            else:
+                azure_request(
+                    self.blob_service[0].put_block, container_name=container,
+                    blob_name=remoteresource, block=data, block_id=blockid,
+                    validate_content=self.args.computeblockmd5,
+                    timeout=self.args.timeout)
         del data
 
-    def getblobrange(
+    def get_storage_range(
             self, localresource, container, remoteresource, blockid, offset,
             bytestoxfer, encparam, flock, filedesc):
-        """Get a segment of a blob using range offset downloading
+        """Get a segment of a blob/page/file using range offset downloading
         Parameters:
             localresource - name of local resource
             container - blob container
@@ -1107,14 +1124,22 @@ class BlobChunkWorker(threading.Thread):
         else:
             start_range = offset
             end_range = offset + bytestoxfer
-        if as_page_blob(self._pageblob, self._autovhd, localresource):
-            blob_service = self.blob_service[1]
+        if self.args.fileshare:
+            fsfile = split_fileshare_path_into_parts(remoteresource)
+            _blob = azure_request(
+                self.file_service._get_file, share_name=container,
+                directory_name=fsfile[0], file_name=fsfile[1],
+                start_range=start_range, end_range=end_range,
+                timeout=self.args.timeout)
         else:
-            blob_service = self.blob_service[0]
-        _blob = azure_request(
-            blob_service._get_blob, timeout=self.timeout,
-            container_name=container, blob_name=remoteresource,
-            start_range=start_range, end_range=end_range)
+            if as_page_blob(self.args, localresource):
+                blob_service = self.blob_service[1]
+            else:
+                blob_service = self.blob_service[0]
+            _blob = azure_request(
+                blob_service._get_blob, timeout=self.args.timeout,
+                container_name=container, blob_name=remoteresource,
+                start_range=start_range, end_range=end_range)
         blobdata = _blob.content
         # decrypt block if required
         if encparam[0] is not None:
@@ -1464,7 +1489,7 @@ def encode_blobname(args, blobname):
     Raises:
         Nothing
     """
-    if args.saskey is None:
+    if args.saskey is None or args.fileshare:
         return blobname
     else:
         return urlquote(blobname)
@@ -1540,18 +1565,18 @@ def page_align_content_length(length):
     return length
 
 
-def as_page_blob(pageblob, autovhd, name):
-    """Determines if the file should be a pageblob
+def as_page_blob(args, name):
+    """Determines if the file should be a pageblob depending upon args
     Parameters:
-        pageblob - pageblob arg
-        autovhd - autovhd arg
+        args - program args
         name - file name
     Returns:
         True if file should be a pageblob
     Raises:
         Nothing
     """
-    if pageblob or (autovhd and name.lower().endswith('.vhd')):
+    if not args.fileshare and (
+            args.pageblob or (args.autovhd and name.lower().endswith('.vhd'))):
         return True
     return False
 
@@ -1598,12 +1623,119 @@ def get_blob_listing(blob_service, args, metadata=True):
     return blobdict
 
 
+def get_fileshare_listing(file_service, args, metadata=True):
+    """Retrieve all files and directories under a file share
+    Parameters:
+        file_service - file service
+        args - program args
+        metadata - retrieve metadata
+    Returns:
+        dictionary of files -> list [content length, content md5, enc metadata]
+    Raises:
+        Nothing
+    """
+    blobdict = {}
+    dirs = [None]
+    while len(dirs) > 0:
+        dir = dirs.pop()
+        fsfiles = file_service.list_directories_and_files(
+            share_name=args.container, directory_name=dir,
+            timeout=args.timeout)
+        if dir is None:
+            dir = ''
+        for fsfile in fsfiles:
+            fspath = os.path.join(dir, fsfile.name)
+            if isinstance(fsfile, azure.storage.file.File):
+                fsprop = get_fileshare_file_properties(
+                    file_service, args, fspath)
+                blobdict[fspath] = fsprop[1]
+            else:
+                dirs.append(fspath)
+    return blobdict
+
+
+def split_fileshare_path_into_parts(remotefname):
+    """Split fileshare name into parts
+    Parameters:
+        remotefname - remote file name
+    Returns:
+        tuple of (directory name, file name)
+    Raises:
+        Nothing
+    """
+    fname = remotefname.split(os.path.sep)[-1]
+    dirname = remotefname.rstrip(os.path.sep + fname)
+    return (dirname, fname)
+
+
+def get_fileshare_file_properties(file_service, args, remotefname):
+    """Convenience method for retrieving a file share file's properties and
+    metadata
+    Parameters:
+        file_service - file service
+        args - program arguments
+        remotefname - remote file name
+    Returns:
+        blobdict entry tuple (file name, blobdict value)
+    Raises:
+        Nothing
+    """
+    # split directory and file name
+    dirname, fname = split_fileshare_path_into_parts(remotefname)
+    try:
+        fsfile = file_service.get_file_properties(
+            args.container, dirname, fname, timeout=args.timeout)
+    except azure.common.AzureMissingResourceHttpError:
+        return None
+    fsmeta = file_service.get_file_metadata(
+        args.container, dirname, fname, timeout=args.timeout)
+    entry = [
+        fsfile.properties.content_length,
+        fsfile.properties.content_settings.content_md5, None]
+    if fsmeta is not None and _ENCRYPTION_METADATA_NAME in fsmeta:
+        encmeta = EncryptionMetadataJson(
+            args, None, None, None, None, None)
+        encmeta.parse_metadata_json(
+            fsfile.name, args.rsaprivatekey, args.rsapublickey,
+            fsmeta)
+        entry[1] = encmeta.md5
+        if (args.rsaprivatekey is not None or
+                args.rsapublickey is not None):
+            entry[2] = encmeta
+    return (fsfile.name, entry)
+
+
+def create_all_parent_directories_fileshare(
+        file_service, args, fsfile, dirscreated):
+    """Create all parent directories of a given file share path
+    Parameters
+        file_service - file service
+        args - program args
+        fsfile - file share path
+        dirscreated - directories created set
+    Returns:
+        Nothing
+    Raises:
+        Nothing
+    """
+    dirs = fsfile[0].split(os.path.sep)
+    for i in xrange(0, len(dirs)):
+        dir = os.path.join(*(dirs[0:i + 1]))
+        if dir not in dirscreated:
+            file_service.create_directory(
+                share_name=args.container,
+                directory_name=dir, fail_on_exist=False,
+                timeout=args.timeout)
+            dirscreated.add(dir)
+
+
 def generate_xferspec_download(
-        blob_service, args, storage_in_queue, localfile, remoteresource,
-        addfd, blobprop):
+        blob_service, file_service, args, storage_in_queue, localfile,
+        remoteresource, addfd, blobprop):
     """Generate an xferspec for download
     Parameters:
         blob_service - blob service
+        file_service - file service
         args - program arguments
         storage_in_queue - storage input queue
         localfile - name of local resource
@@ -1620,8 +1752,9 @@ def generate_xferspec_download(
     contentmd5 = blobprop[1]
     encmeta = blobprop[2]
     remoteresource = encode_blobname(args, remoteresource)
-    # get the file metadata
-    if (contentlength is None or contentmd5 is None or
+    # get the blob metadata if missing
+    if not args.fileshare and (
+            contentlength is None or contentmd5 is None or
             (args.rsaprivatekey is not None and encmeta is None)):
         result = azure_request(
             blob_service.get_blob_properties, timeout=args.timeout,
@@ -1766,7 +1899,7 @@ def generate_xferspec_upload(
     if args.computefilemd5:
         print('computing file md5 on: {}'.format(localfile))
         md5digest = compute_md5_for_file_asbase64(
-            localfile, as_page_blob(args.pageblob, args.autovhd, localfile))
+            localfile, as_page_blob(args, localfile))
         # check if upload is needed
         if args.skiponmatch and remoteresource in blobskipdict:
             print('  >> {} <L..R> {} {} '.format(
@@ -1784,12 +1917,18 @@ def generate_xferspec_upload(
         blockids[localfile] = []
     # partition local file into chunks
     filesize = os.path.getsize(localfile)
-    nchunks = filesize // args.chunksizebytes
+    if as_page_blob(args, localfile) and (
+            args.rsaprivatekey is not None or
+            args.rsapublickey is not None):
+        chunksizebytes = _MAX_BLOB_CHUNK_SIZE_BYTES
+    else:
+        chunksizebytes = args.chunksizebytes
+    nchunks = filesize // chunksizebytes
     if nchunks > 50000:
         raise RuntimeError(
             '{} chunks for file {} exceeds Azure Storage limits for a '
             'single blob'.format(nchunks, localfile))
-    chunktoadd = min(args.chunksizebytes, filesize)
+    chunktoadd = min(chunksizebytes, filesize)
     currfileoffset = 0
     nstorageops = 0
     flock = threading.Lock()
@@ -1803,9 +1942,9 @@ def generate_xferspec_upload(
     for i in xrange(nchunks + 1):
         if chunktoadd + currfileoffset > filesize:
             chunktoadd = filesize - currfileoffset
-        blockid = '{0:08d}'.format(currfileoffset // args.chunksizebytes)
+        blockid = '{0:08d}'.format(currfileoffset // chunksizebytes)
         # generate the ivmap for the first block
-        if (not as_page_blob(args.pageblob, args.autovhd, localfile) and
+        if (not as_page_blob(args, localfile) and
                 (args.rsaprivatekey is not None or
                  args.rsapublickey is not None) and currfileoffset == 0):
             # generate sym/signing keys
@@ -1818,6 +1957,7 @@ def generate_xferspec_upload(
             else:
                 ivmap = {}
             ivmap['md5'] = hashlib.md5()
+            ivmap['filesize'] = 0
         blockids[localfile].append(blockid)
         encparam = [symkey, signkey, ivmap, False]
         xferspec = (localfile, args.container,
@@ -1871,8 +2011,8 @@ def main():
     if (len(args.localresource) < 1 or len(args.storageaccount) < 1 or
             len(args.container) < 1):
         raise ValueError('invalid positional arguments')
-    if len(args.blobep) < 1:
-        raise ValueError('blob endpoint is invalid')
+    if len(args.endpoint) < 1:
+        raise ValueError('storage endpoint is invalid')
     if args.upload and args.download:
         raise ValueError(
             'cannot specify both download and upload transfer direction '
@@ -1885,6 +2025,12 @@ def main():
             'cannot specify a management cert without a subscription id')
     if args.storageaccountkey is not None and args.saskey is not None:
         raise ValueError('cannot use both a sas key and storage account key')
+    if args.pageblob and args.fileshare:
+        raise ValueError(
+            'cannot specify both page blob and file share destinations')
+    if args.autovhd and args.fileshare:
+        raise ValueError(
+            'cannot specify both autovhd and file share destination')
     if args.pageblob and args.autovhd:
         raise ValueError('cannot specify both pageblob and autovhd parameters')
     if args.collate is not None and args.stripcomponents is not None:
@@ -1938,6 +2084,9 @@ def main():
     # set valid num workers
     if args.numworkers < 1:
         args.numworkers = 1
+    if (args.fileshare and
+            args.numworkers == _DEFAULT_MAX_STORAGEACCOUNT_WORKERS):
+        args.numworkers //= 2
 
     # expand any paths
     args.localresource = os.path.expanduser(args.localresource)
@@ -1951,38 +2100,58 @@ def main():
             args.chunksizebytes > _MAX_BLOB_CHUNK_SIZE_BYTES):
         args.chunksizebytes = _MAX_BLOB_CHUNK_SIZE_BYTES
 
-    # set blob ep
-    blobep = None
+    # set storage ep
+    endpoint = None
     if sms:
         storage_acct = azure_request(
             sms.get_storage_account_properties, timeout=args.timeout,
             service_name=args.storageaccount)
-        blobep = storage_acct.storage_service_properties.endpoints[0]
+        if args.fileshare:
+            endpoint = storage_acct.storage_service_properties.endpoints[3]
+        else:
+            endpoint = storage_acct.storage_service_properties.endpoints[0]
     else:
-        blobep = 'https://{}.blob.{}/'.format(args.storageaccount, args.blobep)
+        if args.fileshare:
+            endpoint = 'https://{}.file.{}/'.format(
+                args.storageaccount, args.endpoint)
+        else:
+            endpoint = 'https://{}.blob.{}/'.format(
+                args.storageaccount, args.endpoint)
 
-    # create master block and page blob service
+    # create master block blob, page blob and file service
     blob_service = None
     if args.storageaccountkey:
-        if args.blobep[0] == '.':
-            args.blobep = args.blobep[1:]
+        if args.endpoint[0] == '.':
+            args.endpoint = args.endpoint[1:]
         block_blob_service = azure.storage.blob.BlockBlobService(
             account_name=args.storageaccount,
             account_key=args.storageaccountkey,
-            endpoint_suffix=args.blobep)
+            endpoint_suffix=args.endpoint)
         page_blob_service = azure.storage.blob.PageBlobService(
             account_name=args.storageaccount,
             account_key=args.storageaccountkey,
-            endpoint_suffix=args.blobep)
+            endpoint_suffix=args.endpoint)
+        file_service = azure.storage.file.FileService(
+            account_name=args.storageaccount,
+            account_key=args.storageaccountkey,
+            endpoint_suffix=args.endpoint)
         blob_service = (block_blob_service, page_blob_service)
     elif args.saskey:
-        blob_service = (
-            SasBlobService(blobep, args.saskey, args.timeout),
-            SasBlobService(blobep, args.saskey, args.timeout))
-        # disable container creation (not possible with SAS)
+        _bs = SasBlobService(endpoint, args.saskey, args.timeout)
+        blob_service = (_bs, _bs)
+        # normalize sas key for python sdk
+        if args.saskey[0] == '?':
+            args.saskey = args.saskey[1:]
+        file_service = azure.storage.file.FileService(
+            account_name=args.storageaccount,
+            sas_token=args.saskey,
+            endpoint_suffix=args.endpoint)
+        # disable container/share creation (not possible with SAS)
         args.createcontainer = False
     if blob_service is None:
         raise ValueError('blob_service is invalid')
+    if args.fileshare and file_service is None:
+        raise ValueError('file_service is invalid')
 
     # check which way we're transfering
     xfertoazure = False
@@ -2092,8 +2261,9 @@ def main():
     print('              use SAS: {}'.format(True if args.saskey else False))
     print('  upload as page blob: {}'.format(args.pageblob))
     print('  auto vhd->page blob: {}'.format(args.autovhd))
-    print('            container: {}'.format(args.container))
-    print('   blob container URI: {}'.format(blobep + args.container))
+    print(' upload to file share: {}'.format(args.fileshare))
+    print(' container/share name: {}'.format(args.container))
+    print('  container/share URI: {}'.format(endpoint + args.container))
     print('    compute block MD5: {}'.format(args.computeblockmd5))
     print('     compute file MD5: {}'.format(args.computefilemd5))
     print('    skip on MD5 match: {}'.format(args.skiponmatch))
@@ -2132,7 +2302,7 @@ def main():
     filedesc = None
     if xfertoazure:
         # if skiponmatch is enabled, list blobs first and check
-        if args.skiponmatch:
+        if args.skiponmatch and not args.fileshare:
             blobskipdict = get_blob_listing(blob_service[0], args)
         else:
             blobskipdict = {}
@@ -2152,6 +2322,12 @@ def main():
                         remotefname = apply_file_collation_and_strip(
                             args, fname)
                         _remotefiles.add(remotefname)
+                        # manually pull file properties for file service
+                        if args.fileshare and args.skiponmatch:
+                            fsfile = get_fileshare_file_properties(
+                                file_service, args, remotefname)
+                            if fsfile is not None:
+                                blobskipdict[fsfile[0]] = fsfile[1]
                         filesize, ops, md5digest, filedesc = \
                             generate_xferspec_upload(
                                 args, storage_in_queue, blobskipdict,
@@ -2173,6 +2349,12 @@ def main():
                         continue
                     remotefname = apply_file_collation_and_strip(args, fname)
                     _remotefiles.add(remotefname)
+                    # manually pull file properties for file service
+                    if args.fileshare and args.skiponmatch:
+                        fsfile = get_fileshare_file_properties(
+                            file_service, args, remotefname)
+                        if fsfile is not None:
+                            blobskipdict[fsfile[0]] = fsfile[1]
                     filesize, ops, md5digest, filedesc = \
                         generate_xferspec_upload(
                             args, storage_in_queue, blobskipdict,
@@ -2188,8 +2370,12 @@ def main():
             if args.delete:
                 # get blob skip dict if it hasn't been populated
                 if len(blobskipdict) == 0:
-                    blobskipdict = get_blob_listing(
-                        blob_service[0], args, metadata=False)
+                    if args.fileshare:
+                        blobskipdict = get_fileshare_listing(
+                            file_service, args)
+                    else:
+                        blobskipdict = get_blob_listing(
+                            blob_service[0], args, metadata=False)
                 delblobs = [x for x in blobskipdict if x not in _remotefiles]
             del _remotefiles
         else:
@@ -2201,6 +2387,12 @@ def main():
                     args.stripcomponents -= 1
             args.remoteresource = apply_file_collation_and_strip(
                 args, args.remoteresource)
+            # manually pull file properties for file service
+            if args.fileshare and args.skiponmatch:
+                fsfile = get_fileshare_file_properties(
+                    file_service, args, args.remoteresource)
+                if fsfile is not None:
+                    blobskipdict[fsfile[0]] = fsfile[1]
             filesize, nstorageops, md5digest, filedesc = \
                 generate_xferspec_upload(
                     args, storage_in_queue, blobskipdict, blockids,
@@ -2213,30 +2405,82 @@ def main():
                 filesizes[args.localresource] = filesize
                 allfilesize = allfilesize + filesize
         del blobskipdict
-        # create container if needed
+        # create container/file share if needed
         if args.createcontainer:
-            try:
-                azure_request(
-                    blob_service[0].create_container, timeout=args.timeout,
-                    container_name=args.container, fail_on_exist=False)
-            except azure.common.AzureConflictHttpError:
-                pass
-        # initialize page blobs
-        if args.pageblob or args.autovhd:
-            print('initializing page blobs')
-            for key in filemap:
-                if as_page_blob(args.pageblob, args.autovhd, key):
-                    blob_service[1].create_blob(
-                        container_name=args.container, blob_name=filemap[key],
-                        content_length=page_align_content_length(
-                            filesizes[key]), content_settings=None)
+            if args.fileshare:
+                print('creating file share, if needed: {}'.format(
+                    args.container))
+                try:
+                    azure_request(
+                        file_service.create_share, share_name=args.container,
+                        fail_on_exist=False, timeout=args.timeout)
+                except azure.common.AzureConflictHttpError:
+                    pass
+            else:
+                print('creating container, if needed: {}'.format(
+                    args.container))
+                try:
+                    azure_request(
+                        blob_service[0].create_container, timeout=args.timeout,
+                        container_name=args.container, fail_on_exist=False)
+                except azure.common.AzureConflictHttpError:
+                    pass
+        # initialize page blobs or file share files
+        if len(filemap) > 0:
+            if args.pageblob or args.autovhd:
+                print('initializing page blobs')
+                for key in filemap:
+                    if as_page_blob(args, key):
+                        blob_service[1].create_blob(
+                            container_name=args.container,
+                            blob_name=filemap[key],
+                            content_length=page_align_content_length(
+                                filesizes[key]), content_settings=None)
+            elif args.fileshare:
+                print('initializing files on fileshare')
+                dirscreated = set()
+                for key in filemap:
+                    fsfile = split_fileshare_path_into_parts(filemap[key])
+                    if args.rsaprivatekey or args.rsapublickey:
+                        fspad = _AES256_BLOCKSIZE_BYTES
+                    else:
+                        fspad = 0
+                    # try to create the file first, if preconditon failure
+                    # then try creating the parent directory
+                    try:
+                        file_service.create_file(
+                            share_name=args.container,
+                            directory_name=fsfile[0], file_name=fsfile[1],
+                            content_length=filesizes[key] + fspad,
+                            content_settings=None, timeout=args.timeout)
+                    except azure.common.AzureMissingResourceHttpError as exc:
+                        create_all_parent_directories_fileshare(
+                            file_service, args, fsfile, dirscreated)
+                        file_service.create_file(
+                            share_name=args.container,
+                            directory_name=fsfile[0], file_name=fsfile[1],
+                            content_length=filesizes[key] + fspad,
+                            content_settings=None, timeout=args.timeout)
+                del dirscreated
     else:
         if args.remoteresource == '.':
-            print('attempting to copy entire container {} to {}'.format(
+            print('attempting to copy entire {} {} to {}'.format(
+                'file share' if args.fileshare else 'container',
                 args.container, args.localresource))
-            blobdict = get_blob_listing(blob_service[0], args)
+            if args.fileshare:
+                blobdict = get_fileshare_listing(file_service, args)
+            else:
+                blobdict = get_blob_listing(blob_service[0], args)
         else:
-            blobdict = {args.remoteresource: [None, None, None]}
+            if args.fileshare:
+                fsfile = get_fileshare_file_properties(
+                    file_service, args, args.remoteresource)
+                if fsfile is None:
+                    raise RuntimeError('file {} not found on share {}'.format(
+                        args.remoteresource, args.container))
+                blobdict = {args.remoteresource: fsfile[1]}
+            else:
+                blobdict = {args.remoteresource: [None, None, None]}
         if len(blobdict) > 0:
             print('generating local directory structure and '
                   'pre-allocating space')
@@ -2263,8 +2507,8 @@ def main():
             # add instructions
             filesize, ops, md5digest, filedesc = \
                 generate_xferspec_download(
-                    blob_service[0], args, storage_in_queue, localfile,
-                    blob, False, blobdict[blob])
+                    blob_service[0], file_service, args, storage_in_queue,
+                    localfile, blob, False, blobdict[blob])
             if filesize is not None:
                 md5map[localfile] = md5digest
                 filemap[localfile] = localfile + '.blobtmp'
@@ -2276,11 +2520,20 @@ def main():
 
     # delete any remote blobs if specified
     if xfertoazure and delblobs is not None:
-        print('deleting {} remote blobs'.format(len(delblobs)))
-        for blob in delblobs:
-            azure_request(
-                blob_service[0].delete_blob, timeout=args.timeout,
-                container_name=args.container, blob_name=blob)
+        if args.fileshare:
+            print('deleting {} remote files'.format(len(delblobs)))
+            for blob in delblobs:
+                fsfile = split_fileshare_path_into_parts(blob)
+                azure_request(
+                    file_service.delete_file,
+                    share_name=args.container, directory_name=fsfile[0],
+                    file_name=fsfile[1], timeout=args.timeout)
+        else:
+            print('deleting {} remote blobs'.format(len(delblobs)))
+            for blob in delblobs:
+                azure_request(
+                    blob_service[0].delete_blob, timeout=args.timeout,
+                    container_name=args.container, blob_name=blob)
         print('deletion complete.')
 
     if nstorageops == 0:
@@ -2294,7 +2547,11 @@ def main():
             if fsize[1] == 0:
                 emptyfiles += 1
         print('detected {} empty files to upload'.format(emptyfiles))
-        if args.pageblob:
+        if args.fileshare:
+            print('performing {} put ranges and {} set file properties'.format(
+                nstorageops, len(blockids) - emptyfiles))
+            progress_text = 'ranges'
+        elif args.pageblob:
             print('performing {} put pages/blobs and {} set blob '
                   'properties'.format(
                       nstorageops, len(blockids) - emptyfiles))
@@ -2320,9 +2577,9 @@ def main():
     exc_list = []
     threads = []
     for _ in xrange(maxworkers):
-        thr = BlobChunkWorker(
-            exc_list, storage_in_queue, storage_out_queue, args, blob_service,
-            xfertoazure)
+        thr = StorageChunkWorker(
+            exc_list, storage_in_queue, storage_out_queue, args, xfertoazure,
+            blob_service, file_service)
         thr.start()
         threads.append(thr)
 
@@ -2352,7 +2609,7 @@ def main():
                 localresource] + 1
             if completed_blockids[localresource] == len(
                     blockids[localresource]):
-                if as_page_blob(args.pageblob, args.autovhd, localresource):
+                if as_page_blob(args, localresource):
                     if args.computefilemd5:
                         azure_request(
                             blob_service[1].set_blob_properties,
@@ -2361,6 +2618,54 @@ def main():
                             blob_name=filemap[localresource],
                             content_settings=azure.storage.blob.
                             ContentSettings(content_md5=md5map[localresource]))
+                elif args.fileshare:
+                    fsfile = split_fileshare_path_into_parts(
+                        filemap[localresource])
+                    # set file metadata for encrypted files
+                    if filesizes[localresource] > 0 and (
+                            args.rsaprivatekey is not None or
+                            args.rsapublickey is not None):
+                        if args.encmode == _ENCRYPTION_MODE_FULLBLOB:
+                            encmetadata = EncryptionMetadataJson(
+                                args, encparam[0], encparam[1],
+                                encparam[2][0],
+                                encparam[2]['hmac'].digest(),
+                                md5map[localresource]
+                            ).construct_metadata_json()
+                        else:
+                            encmetadata = EncryptionMetadataJson(
+                                args, encparam[0], encparam[1], None,
+                                None, md5map[localresource]
+                            ).construct_metadata_json()
+                        azure_request(
+                            file_service.set_file_metadata,
+                            share_name=args.container,
+                            directory_name=fsfile[0], file_name=fsfile[1],
+                            metadata=encmetadata,
+                            timeout=args.timeout)
+                        # resize file to final encrypted size if required
+                        if (filesizes[localresource] +
+                                _AES256_BLOCKSIZE_BYTES !=
+                                encparam[2]['filesize']):
+                            azure_request(
+                                file_service.resize_file,
+                                share_name=args.container,
+                                directory_name=fsfile[0], file_name=fsfile[1],
+                                content_length=encparam[2]['filesize'],
+                                timeout=args.timeout)
+                    if args.computefilemd5:
+                        if (args.rsaprivatekey is not None or
+                                args.rsapublickey is not None):
+                            md5 = base64encode(encparam[2]['md5'].digest())
+                        else:
+                            md5 = md5map[localresource]
+                        azure_request(
+                            file_service.set_file_properties,
+                            share_name=args.container,
+                            directory_name=fsfile[0], file_name=fsfile[1],
+                            content_settings=azure.storage.file.
+                            ContentSettings(content_md5=md5),
+                            timeout=args.timeout)
                 else:
                     # only perform put block list on non-zero byte files
                     if filesizes[localresource] > 0:
@@ -2407,8 +2712,7 @@ def main():
         else:
             if (args.rsaprivatekey is not None and
                     encparam[3] == _ENCRYPTION_MODE_FULLBLOB and
-                    not as_page_blob(
-                        args.pageblob, args.autovhd, localresource) and
+                    not as_page_blob(args, localresource) and
                     encparam[4]['hmac']['hmac'] is not None):
                 hmacs[localresource] = encparam[4]['hmac']
         done_ops += 1
@@ -2535,20 +2839,22 @@ def parseargs():  # pragma: no cover
         Nothing
     """
     parser = argparse.ArgumentParser(
-        description='Transfer block/page blobs to/from Azure storage')
+        description='Transfer files/blobs to/from Azure blob or file storage')
     parser.set_defaults(
-        autovhd=False, blobep=_DEFAULT_BLOB_ENDPOINT,
+        autovhd=False, endpoint=_DEFAULT_STORAGE_ENDPOINT,
         chunksizebytes=_MAX_BLOB_CHUNK_SIZE_BYTES, collate=None,
         computeblockmd5=False, computefilemd5=True, createcontainer=True,
         delete=False, disableurllibwarnings=False,
-        encmode=_DEFAULT_ENCRYPTION_MODE, include=None,
+        encmode=_DEFAULT_ENCRYPTION_MODE, fileshare=False, include=None,
         managementep=_DEFAULT_MANAGEMENT_ENDPOINT,
         numworkers=_DEFAULT_MAX_STORAGEACCOUNT_WORKERS, overwrite=True,
         pageblob=False, progressbar=True, recursive=True, rsaprivatekey=None,
         rsapublickey=None, rsakeypassphrase=None, skiponmatch=True,
         stripcomponents=None, timeout=None)
     parser.add_argument('storageaccount', help='name of storage account')
-    parser.add_argument('container', help='name of blob container')
+    parser.add_argument(
+        'container',
+        help='name of blob container or file share')
     parser.add_argument(
         'localresource',
         help='name of the local file or directory, if mirroring. "."=use '
@@ -2556,9 +2862,6 @@ def parseargs():  # pragma: no cover
     parser.add_argument(
         '--autovhd', action='store_true',
         help='automatically upload files ending in .vhd as page blobs')
-    parser.add_argument(
-        '--blobep',
-        help='blob storage endpoint [{}]'.format(_DEFAULT_BLOB_ENDPOINT))
     parser.add_argument(
         '--collate', nargs='?',
         help='collate all files into a specified path')
@@ -2583,6 +2886,12 @@ def parseargs():  # pragma: no cover
     parser.add_argument(
         '--encmode',
         help='encryption mode [{}]'.format(_DEFAULT_ENCRYPTION_MODE))
+    parser.add_argument(
+        '--endpoint',
+        help='storage endpoint [{}]'.format(_DEFAULT_STORAGE_ENDPOINT))
+    parser.add_argument(
+        '--fileshare', action='store_true',
+        help='transfer to a file share rather than block/page blob')
     parser.add_argument(
         '--include', type=str,
         help='include pattern (Unix shell-style wildcards)')

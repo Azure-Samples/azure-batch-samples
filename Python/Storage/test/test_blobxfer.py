@@ -434,7 +434,7 @@ def test_sasblobservice_createblob():
             sbs.create_blob('container', 'blob', 0, cs)
 
 
-def test_blobchunkworker_run(tmpdir):
+def test_storagechunkworker_run(tmpdir):
     lpath = str(tmpdir.join('test.tmp'))
     with open(lpath, 'wt') as f:
         f.write(str(uuid.uuid4()))
@@ -443,6 +443,7 @@ def test_blobchunkworker_run(tmpdir):
     args.pageblob = True
     args.autovhd = False
     args.timeout = None
+    args.fileshare = False
 
     session = requests.Session()
     adapter = requests_mock.Adapter()
@@ -455,41 +456,42 @@ def test_blobchunkworker_run(tmpdir):
     with requests_mock.mock() as m:
         m.put('mock://blobepcontainer/blob?saskey', status_code=200)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
-        bcw = blobxfer.BlobChunkWorker(
-            exc_list, sa_in_queue, sa_out_queue, args, (sbs, sbs), True)
+        bcw = blobxfer.StorageChunkWorker(
+            exc_list, sa_in_queue, sa_out_queue, args, True, (sbs, sbs), None)
         with pytest.raises(IOError):
-            bcw.putblobdata(lpath, 'container', 'blob', 'blockid',
-                            0, 4, None, flock, None)
+            bcw.put_storage_data(
+                lpath, 'container', 'blob', 'blockid', 0, 4, None, flock, None)
 
     args.pageblob = False
     with requests_mock.mock() as m:
         m.put('mock://blobepcontainer/blob?saskey', status_code=201)
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
-        bcw = blobxfer.BlobChunkWorker(
-            exc_list, sa_in_queue, sa_out_queue, args, (sbs, sbs), True)
-        bcw.putblobdata(lpath, 'container', 'blob', 'blockid',
-                        0, 4, None, flock, None)
+        bcw = blobxfer.StorageChunkWorker(
+            exc_list, sa_in_queue, sa_out_queue, args, True, (sbs, sbs), None)
+        bcw.put_storage_data(
+            lpath, 'container', 'blob', 'blockid', 0, 4, None, flock, None)
 
         m.get('mock://blobepcontainer/blob?saskey', status_code=200)
-        bcw.getblobrange(lpath, 'container', 'blob', 0, 0, 4,
-                         [None, None, None, None, None, False], flock, None)
+        bcw.get_storage_range(
+            lpath, 'container', 'blob', 0, 0, 4,
+            [None, None, None, None, None, False], flock, None)
 
         # test zero-length putblob
-        bcw.putblobdata(
+        bcw.put_storage_data(
             lpath, 'container', 'blob', 'blockid', 0, 0, None, flock, None)
         bcw._pageblob = True
-        bcw.putblobdata(
+        bcw.put_storage_data(
             lpath, 'container', 'blob', 'blockid', 0, 0, None, flock, None)
 
         # test empty page
         with open(lpath, 'wb') as f:
             f.write(b'\0' * 4 * 1024 * 1024)
-        bcw.putblobdata(
+        bcw.put_storage_data(
             lpath, 'container', 'blob', 'blockid', 0, 4 * 1024 * 1024,
             None, flock, None)
         with open(lpath, 'wb') as f:
             f.write(b'\0' * 4 * 1024)
-        bcw.putblobdata(
+        bcw.put_storage_data(
             lpath, 'container', 'blob', 'blockid', 0, 4 * 1024,
             None, flock, None)
 
@@ -497,11 +499,45 @@ def test_blobchunkworker_run(tmpdir):
                          [None, None, None, None], flock, None)))
     with requests_mock.mock() as m:
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
-        bcw = blobxfer.BlobChunkWorker(
-            exc_list, sa_in_queue, sa_out_queue, args, (sbs, sbs), False)
+        bcw = blobxfer.StorageChunkWorker(
+            exc_list, sa_in_queue, sa_out_queue, args, False, (sbs, sbs), None)
         m.get('mock://blobepcontainer/blob?saskey', status_code=201)
         bcw.run()
         assert len(exc_list) > 0
+
+
+@patch('azure.storage.file.FileService.update_range')
+@patch('azure.storage.file.FileService._get_file')
+def test_storagechunkworker_files_run(
+        patched_get_file, patched_update_range, tmpdir):
+    lpath = str(tmpdir.join('test.tmp'))
+    with open(lpath, 'wt') as f:
+        f.write(str(uuid.uuid4()))
+    args = MagicMock()
+    args.rsakey = None
+    args.pageblob = False
+    args.autovhd = False
+    args.timeout = None
+    args.fileshare = True
+
+    exc_list = []
+    flock = threading.Lock()
+    sa_in_queue = queue.PriorityQueue()
+    sa_out_queue = queue.Queue()
+    fs = azure.storage.file.FileService(account_name='sa', account_key='key')
+    bcw = blobxfer.StorageChunkWorker(
+        exc_list, sa_in_queue, sa_out_queue, args, True, None, fs)
+    patched_update_range.return_value = MagicMock()
+    bcw.put_storage_data(
+        lpath, 'container', 'blob', 'blockid', 0, 4, None, flock, None)
+
+    bcw = blobxfer.StorageChunkWorker(
+        exc_list, sa_in_queue, sa_out_queue, args, False, None, fs)
+    patched_get_file.return_value = MagicMock()
+    patched_get_file.return_value.content = b''
+    bcw.get_storage_range(
+        lpath, 'container', 'blob', 0, 0, 4,
+        [None, None, None, None, None, False], flock, None)
 
 
 @patch('blobxfer.azure_request', return_value=None)
@@ -512,6 +548,7 @@ def test_generate_xferspec_download_invalid(patched_azure_request):
     args.storageaccountkey = 'saskey'
     args.chunksizebytes = 5
     args.timeout = None
+    args.fileshare = False
     sa_in_queue = queue.PriorityQueue()
 
     with requests_mock.mock() as m:
@@ -520,7 +557,7 @@ def test_generate_xferspec_download_invalid(patched_azure_request):
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         with pytest.raises(ValueError):
             blobxfer.generate_xferspec_download(
-                sbs, args, sa_in_queue, 'tmppath', 'blob', True,
+                sbs, None, args, sa_in_queue, 'tmppath', 'blob', True,
                 [None, None, None])
 
 
@@ -533,6 +570,7 @@ def test_generate_xferspec_download(tmpdir):
     args.storageaccountkey = 'saskey'
     args.chunksizebytes = 5
     args.timeout = None
+    args.fileshare = False
     sa_in_queue = queue.PriorityQueue()
 
     session = requests.Session()
@@ -545,13 +583,14 @@ def test_generate_xferspec_download(tmpdir):
         sbs = blobxfer.SasBlobService('mock://blobep', 'saskey', None)
         with pytest.raises(ValueError):
             blobxfer.generate_xferspec_download(
-                sbs, args, sa_in_queue, lpath, 'blob', True,
+                sbs, None, args, sa_in_queue, lpath, 'blob', True,
                 [None, None, None])
         assert sa_in_queue.qsize() == 0
         m.head('mock://blobepcontainer/blob?saskey', headers={
             'content-length': '6', 'content-md5': 'md5'})
         cl, nsops, md5, fd = blobxfer.generate_xferspec_download(
-            sbs, args, sa_in_queue, lpath, 'blob', True, [None, None, None])
+            sbs, None, args, sa_in_queue, lpath, 'blob', True,
+            [None, None, None])
         assert sa_in_queue.qsize() == 2
         assert 2 == nsops
         assert 6 == cl
@@ -560,7 +599,8 @@ def test_generate_xferspec_download(tmpdir):
         assert fd is not None
         fd.close()
         cl, nsops, md5, fd = blobxfer.generate_xferspec_download(
-            sbs, args, sa_in_queue, lpath, 'blob', False, [None, None, None])
+            sbs, None, args, sa_in_queue, lpath, 'blob', False,
+            [None, None, None])
         assert 2 == nsops
         assert fd is None
         assert sa_in_queue.qsize() == 4
@@ -569,7 +609,8 @@ def test_generate_xferspec_download(tmpdir):
         m.head('mock://blobepcontainer/blob?saskey', headers={
             'content-length': '6', 'content-md5': '1qmpM8iq/FHlWsBmK25NSg=='})
         cl, nsops, md5, fd = blobxfer.generate_xferspec_download(
-            sbs, args, sa_in_queue, lpath, 'blob', True, [None, None, None])
+            sbs, None, args, sa_in_queue, lpath, 'blob', True,
+            [None, None, None])
         assert nsops is None
         assert cl is None
         assert sa_in_queue.qsize() == 4
@@ -609,7 +650,7 @@ def test_generate_xferspec_download(tmpdir):
         m.head('mock://blobepcontainer/blob?saskey', headers=headers)
         with pytest.raises(RuntimeError):
             blobxfer.generate_xferspec_download(
-                sbs, args, sa_in_queue, lpath, 'blob', False,
+                sbs, None, args, sa_in_queue, lpath, 'blob', False,
                 [None, None, None])
 
         # switch to full blob mode tests
@@ -634,7 +675,7 @@ def test_generate_xferspec_download(tmpdir):
         m.head('mock://blobepcontainer/blob?saskey', headers=headers)
         with pytest.raises(RuntimeError):
             blobxfer.generate_xferspec_download(
-                sbs, args, sa_in_queue, lpath, 'blob', False,
+                sbs, None, args, sa_in_queue, lpath, 'blob', False,
                 [None, None, None])
 
         encjson = copy.deepcopy(goodencjson)
@@ -645,7 +686,7 @@ def test_generate_xferspec_download(tmpdir):
         m.head('mock://blobepcontainer/blob?saskey', headers=headers)
         with pytest.raises(RuntimeError):
             blobxfer.generate_xferspec_download(
-                sbs, args, sa_in_queue, lpath, 'blob', False,
+                sbs, None, args, sa_in_queue, lpath, 'blob', False,
                 [None, None, None])
 
         encjson = copy.deepcopy(goodencjson)
@@ -656,7 +697,7 @@ def test_generate_xferspec_download(tmpdir):
         m.head('mock://blobepcontainer/blob?saskey', headers=headers)
         with pytest.raises(RuntimeError):
             blobxfer.generate_xferspec_download(
-                sbs, args, sa_in_queue, lpath, 'blob', False,
+                sbs, None, args, sa_in_queue, lpath, 'blob', False,
                 [None, None, None])
 
         encjson = copy.deepcopy(goodencjson)
@@ -667,7 +708,7 @@ def test_generate_xferspec_download(tmpdir):
         m.head('mock://blobepcontainer/blob?saskey', headers=headers)
         with pytest.raises(RuntimeError):
             blobxfer.generate_xferspec_download(
-                sbs, args, sa_in_queue, lpath, 'blob', False,
+                sbs, None, args, sa_in_queue, lpath, 'blob', False,
                 [None, None, None])
 
         authjson = copy.deepcopy(goodauthjson)
@@ -679,7 +720,7 @@ def test_generate_xferspec_download(tmpdir):
         m.head('mock://blobepcontainer/blob?saskey', headers=headers)
         with pytest.raises(RuntimeError):
             blobxfer.generate_xferspec_download(
-                sbs, args, sa_in_queue, lpath, 'blob', False,
+                sbs, None, args, sa_in_queue, lpath, 'blob', False,
                 [None, None, None])
 
         authjson = copy.deepcopy(goodauthjson)
@@ -692,7 +733,7 @@ def test_generate_xferspec_download(tmpdir):
         m.head('mock://blobepcontainer/blob?saskey', headers=headers)
         with pytest.raises(RuntimeError):
             blobxfer.generate_xferspec_download(
-                sbs, args, sa_in_queue, lpath, 'blob', False,
+                sbs, None, args, sa_in_queue, lpath, 'blob', False,
                 [None, None, None])
 
         authjson = copy.deepcopy(goodauthjson)
@@ -705,7 +746,7 @@ def test_generate_xferspec_download(tmpdir):
         m.head('mock://blobepcontainer/blob?saskey', headers=headers)
         with pytest.raises(RuntimeError):
             blobxfer.generate_xferspec_download(
-                sbs, args, sa_in_queue, lpath, 'blob', False,
+                sbs, None, args, sa_in_queue, lpath, 'blob', False,
                 [None, None, None])
 
         authjson = copy.deepcopy(goodauthjson)
@@ -718,7 +759,7 @@ def test_generate_xferspec_download(tmpdir):
         m.head('mock://blobepcontainer/blob?saskey', headers=headers)
         with pytest.raises(RuntimeError):
             blobxfer.generate_xferspec_download(
-                sbs, args, sa_in_queue, lpath, 'blob', False,
+                sbs, None, args, sa_in_queue, lpath, 'blob', False,
                 [None, None, None])
 
         args.chunksizebytes = 5
@@ -732,7 +773,7 @@ def test_generate_xferspec_download(tmpdir):
             json.dumps(goodauthjson)
         hcl = int(headers['content-length'])
         cl, nsops, md5, fd = blobxfer.generate_xferspec_download(
-            sbs, args, sa_in_queue, lpath, 'blob', False,
+            sbs, None, args, sa_in_queue, lpath, 'blob', False,
             [hcl, headers['content-md5'], metajson])
         assert hcl == cl
         calcops = hcl // args.chunksizebytes
@@ -807,6 +848,33 @@ def test_apply_file_collation_and_strip():
     assert rfname == 'file0'
 
 
+@patch('azure.storage.file.FileService.create_directory')
+def test_create_all_parent_directories_fileshare(patched_cd):
+    patched_cd.return_value = MagicMock()
+    fsfile = ['tmp/a/b', None]
+    file_service = MagicMock()
+    args = MagicMock()
+    args.container = 'fshare'
+    args.timeout = None
+    dirscreated = set()
+    blobxfer.create_all_parent_directories_fileshare(
+        file_service, args, fsfile, dirscreated)
+    assert len(dirscreated) == 3
+    assert 'tmp' in dirscreated
+    assert 'tmp/a' in dirscreated
+    assert 'tmp/a/b' in dirscreated
+    fsfile = ['tmp/a/b/c', None]
+    blobxfer.create_all_parent_directories_fileshare(
+        file_service, args, fsfile, dirscreated)
+    assert len(dirscreated) == 4
+    assert 'tmp/a/b/c' in dirscreated
+    fsfile = ['x/a/b/c', None]
+    blobxfer.create_all_parent_directories_fileshare(
+        file_service, args, fsfile, dirscreated)
+    assert len(dirscreated) == 8
+    assert 'x/a/b/c' in dirscreated
+
+
 def _mock_get_storage_account_keys(timeout=None, service_name=None):
     ret = MagicMock()
     ret.storage_service_keys.primary = 'mmkey'
@@ -847,14 +915,15 @@ def test_main1(
     args.chunksizebytes = 5
     args.pageblob = False
     args.autovhd = False
+    args.fileshare = False
     patched_parseargs.return_value = args
     with pytest.raises(ValueError):
         blobxfer.main()
     args.localresource = lpath
-    args.blobep = ''
+    args.endpoint = ''
     with pytest.raises(ValueError):
         blobxfer.main()
-    args.blobep = 'blobep'
+    args.endpoint = 'blobep'
     args.upload = True
     args.download = True
     with pytest.raises(ValueError):
@@ -887,8 +956,16 @@ def test_main1(
     args.autovhd = True
     with pytest.raises(ValueError):
         blobxfer.main()
-    args.pageblob = False
     args.autovhd = False
+    args.fileshare = True
+    with pytest.raises(ValueError):
+        blobxfer.main()
+    args.pageblob = False
+    args.autovhd = True
+    with pytest.raises(ValueError):
+        blobxfer.main()
+    args.autovhd = False
+    args.fileshare = False
     with patch('azure.servicemanagement.ServiceManagementService') as mock:
         mock.return_value = MagicMock()
         mock.return_value.get_storage_account_keys = \
@@ -1206,7 +1283,7 @@ def test_main2(patched_parseargs, tmpdir):
     args.container = 'container'
     args.chunksizebytes = 5
     args.localresource = lpath
-    args.blobep = '.blobep'
+    args.endpoint = '.blobep'
     args.timeout = 10
     args.managementep = None
     args.managementcert = None
@@ -1218,6 +1295,7 @@ def test_main2(patched_parseargs, tmpdir):
     args.collate = None
     args.saskey = None
     args.storageaccountkey = 'key'
+    args.fileshare = False
     with open(lpath, 'wt') as f:
         f.write(str(uuid.uuid4()))
 
@@ -1232,3 +1310,95 @@ def test_main2(patched_parseargs, tmpdir):
         mock.return_value = MagicMock()
         mock.return_value.create_container = _mock_blobservice_create_container
         blobxfer.main()
+
+
+@patch('azure.storage.file.FileService.create_share')
+@patch('azure.storage.file.FileService.create_file')
+@patch('azure.storage.file.FileService.create_directory')
+@patch('azure.storage.file.FileService.get_file_properties')
+@patch('azure.storage.file.FileService.get_file_metadata')
+@patch('azure.storage.file.FileService.list_directories_and_files')
+@patch('azure.storage.file.FileService.update_range')
+@patch('azure.storage.file.FileService._get_file')
+@patch('azure.storage.file.FileService.set_file_properties')
+@patch('azure.storage.file.FileService.set_file_metadata')
+@patch('azure.storage.file.FileService.resize_file')
+@patch('blobxfer.parseargs')
+def test_main3(
+        patched_parseargs, patched_rf, patched_sfm, patched_sfp,
+        patched_get_file, patched_update_range, patched_ldaf, patched_gfm,
+        patched_gfp, patched_cd, patched_cf, patched_cs, tmpdir):
+    lpath = str(tmpdir.join('test.tmp'))
+    args = MagicMock()
+    patched_parseargs.return_value = args
+    args.include = None
+    args.stripcomponents = 1
+    args.delete = False
+    args.rsaprivatekey = None
+    args.rsapublickey = None
+    args.numworkers = 64
+    args.storageaccount = 'sa'
+    args.container = 'myshare'
+    args.chunksizebytes = 5
+    args.localresource = lpath
+    args.endpoint = 'core.windows.net'
+    args.timeout = 10
+    args.managementep = None
+    args.managementcert = None
+    args.subscriptionid = None
+    args.chunksizebytes = None
+    args.download = False
+    args.upload = True
+    args.remoteresource = None
+    args.collate = None
+    args.saskey = None
+    args.storageaccountkey = 'key'
+    args.pageblob = False
+    args.autovhd = False
+    args.fileshare = True
+    args.computefilemd5 = True
+    args.skiponmatch = True
+    with open(lpath, 'wt') as f:
+        f.write(str(uuid.uuid4()))
+
+    patched_cs.return_value = MagicMock()
+    patched_cf.return_value = MagicMock()
+    patched_gfp.return_value = MagicMock()
+    patched_update_range.return_value = MagicMock()
+    patched_get_file.return_value = MagicMock()
+    patched_get_file.return_value.content = b'\0' * 8
+
+    pemcontents = _RSAKEY.private_bytes(
+        encoding=cryptography.hazmat.primitives.serialization.
+        Encoding.PEM,
+        format=cryptography.hazmat.primitives.serialization.
+        PrivateFormat.PKCS8,
+        encryption_algorithm=cryptography.hazmat.primitives.
+        serialization.NoEncryption())
+    pempath = str(tmpdir.join('rsa.pem'))
+    with open(pempath, 'wb') as f:
+        f.write(pemcontents)
+
+    args.rsaprivatekey = pempath
+    args.rsakeypassphrase = None
+    args.encmode = blobxfer._ENCRYPTION_MODE_FULLBLOB
+    blobxfer.main()
+
+    args.download = True
+    args.upload = False
+    args.rsaprivatekey = pempath
+    args.remoteresource = '.'
+    with pytest.raises(SystemExit):
+        blobxfer.main()
+
+    patched_ldaf.return_value = [azure.storage.file.File(name='test.tmp')]
+    patched_gfp.return_value = MagicMock()
+    patched_gfp.return_value.properties = MagicMock()
+    patched_gfp.return_value.properties.content_length = 1
+    patched_gfp.return_value.properties.content_settings = MagicMock()
+    patched_gfp.return_value.properties.content_settings.content_md5 = 'md5'
+    args.rsaprivatekey = pempath
+    args.localresource = lpath.rstrip(os.path.sep + 'test.tmp')
+    blobxfer.main()
+
+    os.remove(pempath)
