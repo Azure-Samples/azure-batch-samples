@@ -10,17 +10,17 @@ python:
   # disable pypy3 until 3.3 compliance
   #- pypy3
 env:
-  - STORAGE_SAMPLES_DIR=Python/Storage BATCH_SAMPLES_DIR=Python/Batch
+  - BATCH_SAMPLES_DIR=Python/Batch STORAGE_SAMPLES_DIR=Python/Storage
 install:
   - pip install -e $STORAGE_SAMPLES_DIR
+  - pip install -r $BATCH_SAMPLES_DIR/requirements.txt
   - pip install coveralls flake8 pytest pytest-cov requests_mock
 script:
-  - cd $STORAGE_SAMPLES_DIR
+  - cd $BATCH_SAMPLES_DIR
+  - flake8 . --statistics
+  - cd ../../$STORAGE_SAMPLES_DIR
   - flake8 blobxfer.py test/test_blobxfer.py
   - PYTHONPATH=. py.test -l --cov-config ../.coveragerc --cov-report term-missing --cov blobxfer test/test_blobxfer.py
-  - cd ../../$BATCH_SAMPLES_DIR
-  - pip install -r requirements.txt
-  - flake8 . --statistics
 after_success:
   - coveralls --rcfile=../.coveragerc --verbose
 
