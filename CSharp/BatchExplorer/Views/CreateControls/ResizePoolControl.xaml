@@ -4,7 +4,14 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:toolkit="clr-namespace:Xceed.Wpf.Toolkit;assembly=Xceed.Wpf.Toolkit"
+             xmlns:converter="clr-namespace:Microsoft.Azure.BatchExplorer.Converters"
              mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+        <converter:InvertedBooleanConverter x:Key="InvertedBoolConverter" />      
+    </UserControl.Resources>
+
     <Grid Background="WhiteSmoke"
           Name="MainGrid"
           Height="Auto"
@@ -70,29 +77,39 @@
 
         <Separator Grid.Row="3" Grid.ColumnSpan="2"/>
 
-        <StackPanel 
-            Orientation="Horizontal"
-            Grid.Row="6" 
-            Grid.Column="0">
+        <GroupBox Grid.Row="4" Grid.ColumnSpan="2" Header="Scale">
+            <Grid Name="Scale" Grid.Row="5" Height="Auto" Width="Auto">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
-            <TextBlock 
-                VerticalAlignment="Center"
-                Margin="4,0,0,0"
-                Foreground="Red"
-                Text="*" />
-            <TextBlock
-                Margin="8,4"
-                VerticalAlignment="Center"
-                FontSize="12"
-                Text="Target Dedicated"/>
-        </StackPanel>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-        <TextBox 
-            Grid.Row="6"
-            Grid.Column="1"
-            Text="{Binding TargetDedicated}"/>
+                <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="5">
+                    <RadioButton x:Name="Fixed" Content="Fixed" GroupName="ScaleType" IsChecked="{Binding IsFixed}"/>
+                    <RadioButton x:Name="AutoScale" Content="Auto Scale" GroupName="ScaleType" Margin="5,0,0,0" IsChecked="{Binding IsAutoScale}"/>
+                </StackPanel>
 
-        <Separator Grid.Row="7" Grid.ColumnSpan="2"/>
+                <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="0" Margin="5">
+                    <TextBlock VerticalAlignment="Center" Foreground="Red" Text="*" Margin="-1,0,0,0"/>
+                    <TextBlock Margin="5" VerticalAlignment="Center" FontSize="12" Text="Target Dedicated" Visibility="{Binding ElementName=Fixed, Path=IsChecked, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    <TextBlock Margin="5" VerticalAlignment="Center" FontSize="12" Text="Auto Scale Formula" Visibility="{Binding ElementName=AutoScale, Path=IsChecked, Converter={StaticResource BoolToVisibilityConverter}}"/>                   
+                   </StackPanel>
+
+                <TextBox Grid.Row="1" Grid.Column="1" Height="20" Width="120" Text="{Binding TargetDedicated}" Visibility="{Binding ElementName=Fixed, Path=IsChecked, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                <TextBox Grid.Row="1" Grid.Column="1" Height="80" Width="150" TextWrapping="Wrap" AcceptsReturn="True" Text="{Binding AutoScaleFormula}" Visibility="{Binding ElementName=AutoScale, Path=IsChecked, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+                <Button Grid.Row="2" HorizontalAlignment="Right" Grid.ColumnSpan="2" Margin="5" Height="20" Width="60" Command="{Binding Evaluate}" Content="Evaluate" Visibility="{Binding ElementName=AutoScale, Path=IsChecked, Converter={StaticResource BoolToVisibilityConverter}}"/>              
+
+            </Grid>
+        </GroupBox>
+
+        <Separator Grid.Row="8" Grid.ColumnSpan="2"/>
 
         <TextBlock
                 Margin="8,4"
@@ -106,7 +123,7 @@
             Grid.Column="1"
             Orientation="Vertical">
             <toolkit:TimeSpanUpDown
-                Value="{Binding Timeout}"/>
+                Value="{Binding Timeout}" IsEnabled="{Binding ElementName=AutoScale, Path=IsChecked, Converter={StaticResource InvertedBoolConverter}}"/>
         </StackPanel>
         <Separator Grid.Row="11" Grid.ColumnSpan="2"/>
 
@@ -122,20 +139,32 @@
             Grid.Row="12" 
             Grid.Column="1"
             ItemsSource="{Binding DeallocationOptionValues}"
-            SelectedItem="{Binding DeallocationOptionString}"/>
+            SelectedItem="{Binding DeallocationOptionString}"
+            IsEnabled="{Binding ElementName=AutoScale, Path=IsChecked, Converter={StaticResource InvertedBoolConverter}}"/>
 
         <Separator Grid.Row="18" Grid.ColumnSpan="2"/>
 
         <Button 
             Grid.Row="19"
             Grid.Column="1"
-            Margin="0,12,0,0"
+            Margin="8"
             VerticalAlignment="Bottom" 
             HorizontalAlignment="Right"
             Width="100" 
             Height="24"
             Command="{Binding ResizePool}"
-            Content="Resize">
-        </Button>
+            Content="Resize"/>
+        
+        <Button 
+            Grid.Row="19"
+            Grid.Column="1"
+            Margin="8"
+            VerticalAlignment="Bottom" 
+            HorizontalAlignment="Right"
+            Width="110" 
+            Height="24"
+            Command="{Binding EnableAutoScale}"
+            Content="Apply Autoscaling"
+            Visibility="{Binding ElementName=AutoScale, Path=IsChecked, Converter={StaticResource BoolToVisibilityConverter}}"/>
     </Grid>
 </UserControl>

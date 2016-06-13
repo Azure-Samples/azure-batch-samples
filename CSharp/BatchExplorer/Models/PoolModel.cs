@@ -67,6 +67,15 @@ namespace Microsoft.Azure.BatchExplorer.Models
         [ChangeTracked(ModelRefreshType.Children)]
         public ICollectionView ComputeNodeCollection { get; set; }
 
+        /// <summary>
+        /// Gets or sets the current automatic scale formula.
+        /// </summary>
+        /// <value>
+        /// The current automatic scale formula.
+        /// </value>
+        [ChangeTracked(ModelRefreshType.Basic)]
+        public string CurrentAutoScaleFormula { get { return this.Pool.AutoScaleFormula; } }
+
 
         #endregion
 

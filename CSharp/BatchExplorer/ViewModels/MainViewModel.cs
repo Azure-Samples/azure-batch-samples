@@ -1292,7 +1292,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                     (o) =>
                     {
                         PoolModel pool = (PoolModel)o;
-                        Messenger.Default.Send<ShowResizePoolWindow>(new ShowResizePoolWindow(pool.Id, pool.CurrentDedicated));
+                        Messenger.Default.Send<ShowResizePoolWindow>(new ShowResizePoolWindow(pool.Id, pool.CurrentDedicated, pool.CurrentAutoScaleFormula));
                     });
             }
         }

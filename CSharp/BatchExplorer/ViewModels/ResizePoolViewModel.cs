@@ -46,6 +46,20 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
+        private string autoScaleFormula;
+        public string AutoScaleFormula
+        {
+            get
+            {
+                return this.autoScaleFormula;
+            }
+            set
+            {
+                this.autoScaleFormula = value;
+                this.FirePropertyChangedEvent("AutoScaleFormula");
+            }
+        }
+
         private TimeSpan? timeout;
         public TimeSpan? Timeout
         {
@@ -74,6 +88,34 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
+        private bool isFixed;
+        public bool IsFixed
+        {
+            get
+            {
+                return this.isFixed;
+            }
+            set
+            {
+                this.isFixed = value;
+                this.FirePropertyChangedEvent("IsFixed");
+            }
+        }
+
+        private bool isAutoScale;
+        public bool IsAutoScale
+        {
+            get
+            {
+                return this.isAutoScale;
+            }
+            set
+            {
+                this.isAutoScale = value;
+                this.FirePropertyChangedEvent("IsAutoScale");
+            }
+        }
+
         private static readonly List<string> deallocationOptionValues;
         
         public List<string> DeallocationOptionValues
@@ -90,14 +132,18 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             deallocationOptionValues.AddRange(Enum.GetNames(typeof (ComputeNodeDeallocationOption)));
         }
 
-        public ResizePoolViewModel(IDataProvider batchService, string poolId, int? currentDedicated)
+        public ResizePoolViewModel(IDataProvider batchService, string poolId, int? currentDedicated, string currentAutoScaleFormula)
         {
             this.batchService = batchService;
 
             this.PoolId = poolId;
             this.TargetDedicated = currentDedicated ?? 0;
             this.DeallocationOptionString = null;
-
+            if (string.IsNullOrEmpty(currentAutoScaleFormula))
+                this.IsFixed = true;
+            else
+                this.isAutoScale = true;
+            this.AutoScaleFormula = currentAutoScaleFormula ?? string.Format("$TargetDedicated={0};",currentDedicated ?? 1);
             this.IsBusy = false;
         }
 
@@ -112,6 +158,48 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         try
                         {
                             await this.ResizePoolAsync();
+                        }
+                        finally
+                        {
+                            this.IsBusy = false;
+                        }
+                    }
+                );
+            }
+        }
+
+        public CommandBase EnableAutoScale
+        {
+            get
+            {
+                return new CommandBase(
+                    async (o) =>
+                    {
+                        this.IsBusy = true;
+                        try
+                        {
+                            await this.EnableAutoScaleAsync();
+                        }
+                        finally
+                        {
+                            this.IsBusy = false;
+                        }
+                    }
+                );
+            }
+        }
+
+        public CommandBase Evaluate
+        {
+            get
+            {
+                return new CommandBase(
+                    async (o) =>
+                    {
+                        this.IsBusy = true;
+                        try
+                        {
+                            await this.EvaluateAsync();
                         }
                         finally
                         {
@@ -143,6 +231,62 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             {
                 Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
             }
+        }
+
+        private async Task EnableAutoScaleAsync()
+        {
+            try
+            {
+                if (this.IsAutoScale && IsInputValidForAutoScaling())
+                {
+                    Task asyncTask = this.batchService.EnableAutoScaleAsync(this.PoolId, this.AutoScaleFormula);
+
+                    AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
+                        asyncTask,
+                        new PoolOperation(PoolOperation.EnableAutoScale, this.poolId)));
+
+                    await asyncTask;
+                    Messenger.Default.Send(new CloseGenericPopup());
+                }
+            }
+            catch (Exception e)
+            {
+                Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
+            }
+        }
+
+        private async Task EvaluateAsync()
+        {
+            try
+            {
+                if (this.IsAutoScale && IsInputValidForAutoScaling())
+                {
+                    Task<string> asyncTask = this.batchService.EvaluateAutoScaleFormulaAsync(this.PoolId, this.AutoScaleFormula);
+
+                    AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
+                        asyncTask,
+                        new PoolOperation(PoolOperation.EvaluateAutoScaleFormula, this.poolId)));
+                    
+                    string result = await asyncTask;
+
+                    Messenger.Default.Send(new GenericDialogMessage(result));
+                }
+            }
+            catch (Exception e)
+            {
+                Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
+            }
+        }
+
+        private bool IsInputValidForAutoScaling()
+        {         
+            if (string.IsNullOrWhiteSpace(this.AutoScaleFormula))
+            {
+                Messenger.Default.Send(new GenericDialogMessage("Invalid value for Auto scale formula"));
+                return false;
+            }
+
+            return true;
         }
 
         private bool IsInputValid(out ComputeNodeDeallocationOption? deallocationOption)

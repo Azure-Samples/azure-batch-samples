@@ -131,5 +131,15 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
 
             return results;
         }
+
+        public async Task<string> EvaluateAutoScaleFormulaAsync(string poolId, string autoScaleFormula)
+        {
+            return await this.Service.EvaluateAutoScaleFormula(poolId, autoScaleFormula);
+        }
+
+        public async Task EnableAutoScaleAsync(string poolId, string autoScaleFormula)
+        {
+            await this.Service.EnableAutoScale(poolId, autoScaleFormula);
+        }
     }
 }
