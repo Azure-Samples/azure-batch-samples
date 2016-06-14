@@ -224,7 +224,10 @@ specify the share name as the second positional argument.
 
 The above example would upload all files in the ``localfiles`` directory to
 the share named ``myshare``. Encryption/decryption options are compatible with
-Azure Files as the destination or source.
+Azure Files as the destination or source. Please refer to this `MSDN article`_
+for features not supported by the Azure File Service.
+
+.. _MSDN article: https://msdn.microsoft.com/en-us/library/azure/dn744326.aspx
 
 General Notes
 -------------
