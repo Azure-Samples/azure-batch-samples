@@ -16,7 +16,7 @@ Some features of the Batch Explorer:
 
 ### Using the Batch Explorer
 
-To manage entities in your Batch account with the Batch Explorer, you must first configure it by adding your account information. **Build** and **run** the application using *Visual Studio 2013 or above*, then perform the following to add your account information and connect to the Batch service:
+To manage entities in your Batch account with the Batch Explorer, you must first configure it by adding your account information. **Build** and **run** the application using *Visual Studio 2015 or above*, then perform the following to add your account information and connect to the Batch service:
 
 1. Click **Accounts** > **Add** > **Default Account Manager**
 2. In the *Add Account* dialog that is displayed, add an **Account Alias**, a unique identifier for this account within Batch Explorer
