@@ -208,7 +208,7 @@ namespace Microsoft.Azure.BatchExplorer.Service
                 await this.Client.PoolOperations.DisableAutoScaleAsync(poolId);
                 if (!await this.WaitForResizingOperationToFinish(poolId))
                 {
-                    throw new Exception("Autoscale disable operation is already in progress. Please try again after sometime to Resize the pool.");
+                    throw new InvalidOperationException("Autoscale disable operation is already in progress. Please try again after sometime to Resize the pool.");
                 }
             }
 
@@ -233,24 +233,16 @@ namespace Microsoft.Azure.BatchExplorer.Service
         /// <returns>Result of evaluation</returns>
         public async Task<string> EvaluateAutoScaleFormula(string poolId, string autoScaleformula)
         {
-            CloudPool pool = this.Client.PoolOperations.GetPool(poolId);
-            if (pool.AutoScaleEnabled.HasValue && pool.AutoScaleEnabled.Value)
-            {
-                AutoScaleRun eval = await this.Client.PoolOperations.EvaluateAutoScaleAsync(pool.Id, autoScaleformula);
+            AutoScaleRun eval = await this.Client.PoolOperations.EvaluateAutoScaleAsync(poolId, autoScaleformula);
 
-                if (eval.Error == null)
-                {
-                    return eval.Results;
-                }
-                else
-                {                    
-                    return eval.Error.Message;
-                }
+            if (eval.Error == null)
+            {
+                return eval.Results;
             }
             else
-            {
-                return "Enable autoscale before evaluating the formula";
-            }
+            {                    
+                return eval.Error.Message;
+            }         
         }
 
         #endregion

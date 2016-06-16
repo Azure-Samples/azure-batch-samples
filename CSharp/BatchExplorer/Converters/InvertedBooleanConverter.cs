@@ -13,17 +13,27 @@ namespace Microsoft.Azure.BatchExplorer.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (targetType != typeof (bool))
-            {
-                throw new InvalidOperationException("The target must be a bool.");
-            }
-
-            return !(bool)value;
-        }
+            return _Convert(value, targetType);
+        }       
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            throw new NotImplementedException();
+            return _Convert(value, targetType);
+        }
+
+        private static object _Convert(object value, Type targetType)
+        {
+            if (targetType != typeof(bool) && targetType != typeof(bool?))
+            {
+                throw new InvalidOperationException("The target must be a bool or nullable bool");
+            }
+
+            if (targetType == typeof(bool?))
+            {
+                return !(bool?)value;
+            }
+
+            return !(bool)value;
         }
     }
 }

@@ -91,8 +91,8 @@
                 </Grid.RowDefinitions>
 
                 <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="5">
-                    <RadioButton x:Name="Fixed" Content="Fixed" GroupName="ScaleType" IsChecked="{Binding IsFixed}"/>
-                    <RadioButton x:Name="AutoScale" Content="Auto Scale" GroupName="ScaleType" Margin="5,0,0,0" IsChecked="{Binding IsAutoScale}"/>
+                    <RadioButton x:Name="Fixed" Content="Fixed" IsChecked="{Binding ElementName=AutoScale, Path=IsChecked, Converter={StaticResource InvertedBoolConverter}}"/>
+                    <RadioButton x:Name="AutoScale" Content="Auto Scale" Margin="5,0,0,0" IsChecked="{Binding IsAutoScale}"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="0" Margin="5">

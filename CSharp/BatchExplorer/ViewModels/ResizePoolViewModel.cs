@@ -86,21 +86,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 this.deallocationOptionString = value;
                 this.FirePropertyChangedEvent("DeallocationOptionString");
             }
-        }
-
-        private bool isFixed;
-        public bool IsFixed
-        {
-            get
-            {
-                return this.isFixed;
-            }
-            set
-            {
-                this.isFixed = value;
-                this.FirePropertyChangedEvent("IsFixed");
-            }
-        }
+        }       
 
         private bool isAutoScale;
         public bool IsAutoScale
@@ -139,10 +125,11 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             this.PoolId = poolId;
             this.TargetDedicated = currentDedicated ?? 0;
             this.DeallocationOptionString = null;
-            if (string.IsNullOrEmpty(currentAutoScaleFormula))
-                this.IsFixed = true;
-            else
-                this.isAutoScale = true;
+            if (!string.IsNullOrEmpty(currentAutoScaleFormula))
+            {
+                this.IsAutoScale = true;
+            }
+
             this.AutoScaleFormula = currentAutoScaleFormula ?? string.Format("$TargetDedicated={0};",currentDedicated ?? 1);
             this.IsBusy = false;
         }
@@ -282,7 +269,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         {         
             if (string.IsNullOrWhiteSpace(this.AutoScaleFormula))
             {
-                Messenger.Default.Send(new GenericDialogMessage("Invalid value for Auto scale formula"));
+                Messenger.Default.Send(new GenericDialogMessage("Auto scale formula cannot be empty"));
                 return false;
             }
 
