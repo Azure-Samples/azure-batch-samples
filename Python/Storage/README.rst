@@ -201,7 +201,7 @@ key may be specified instead for uploading (public parts will be used).
 
 ::
 
-  blobxfer mystorageacct container0 myblobs --remoteresouorce . --download --rsaprivatekey myprivatekey.pem
+  blobxfer mystorageacct container0 myblobs --remoteresource . --download --rsaprivatekey myprivatekey.pem
 
 The above example commandline would download and decrypt all blobs in the
 container ``container0`` using an RSA private key named ``myprivatekey.pem``.
