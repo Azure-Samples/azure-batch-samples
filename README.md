@@ -10,3 +10,6 @@ Before you can interact with the Batch service, you will need a Batch service ac
 ### Azure Storage viewer
 
 You will find it useful to have an Azure Storage viewer available to assist with managing containers and blobs, as well as observing interaction of the samples with Storage. There are a number of free viewers available.
+
+* * *
+This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
