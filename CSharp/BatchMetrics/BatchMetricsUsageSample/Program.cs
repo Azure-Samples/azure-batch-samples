@@ -104,6 +104,11 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
                 return error.GetType().Name + ": " + error.Message;
             }
 
+            if (!metrics.JobIds.Any())
+            {
+                return "No jobs in account";
+            }
+
             var jobIdFormatLength = metrics.JobIds.Max(id => id.Length);
             var jobInfos = metrics.JobIds.Select(id => FormatJobMetrics(id, metrics.GetMetrics(id), jobIdFormatLength));
             return String.Join(Environment.NewLine, jobInfos);
