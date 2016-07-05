@@ -1,2 +1,2 @@
-This is a test text.
+This is test text.
 It will be printed after batch task is completed.

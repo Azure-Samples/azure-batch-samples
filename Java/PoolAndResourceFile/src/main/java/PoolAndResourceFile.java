@@ -16,17 +16,18 @@ public class PoolAndResourceFile {
 
     // Create IaaS pool if pool isn't exist
     private static CloudPool CreatePool(BatchClient client, String poolId) throws BatchErrorException, IllegalArgumentException, IOException, InterruptedException, TimeoutException {
-        // Pool only have 3 D1 VM
+        // Pool only have 1 A1 VM
         String osPublisher = "OpenLogic";
         String osOffer = "CentOS";
-        String poolVMSize = "STANDARD_D1";
+        String poolVMSize = "STANDARD_A1";
         int poolVMCount = 1;
         long POOL_STEADY_TIMEOUT = 5 * 60 * 1000;
         long VM_READY_TIMEOUT = 20 * 60 * 1000;
 
-        // Check pool existing
+        // Check if pool exists
         if (!client.getPoolOperations().existsPool(poolId)) {
 
+            // See detail of creating IaaS pool at https://blogs.technet.microsoft.com/windowshpc/2016/03/29/introducing-linux-support-on-azure-batch/
             // Get the sku image reference
             List<NodeAgentSku> skus = client.getAccountOperations().listNodeAgentSkus();
             String skuId = null;
@@ -56,7 +57,7 @@ public class PoolAndResourceFile {
         long elapsedTime = 0L;
         boolean steady = false;
 
-        // Let's wait max 5 minute for VM to be allocated
+        // Wait for a maximum of 5 minutes for the VM to be allocated
         while (elapsedTime < POOL_STEADY_TIMEOUT) {
             CloudPool pool = client.getPoolOperations().getPool(poolId);
             if (pool.getAllocationState() == AllocationState.STEADY) {
@@ -69,16 +70,16 @@ public class PoolAndResourceFile {
         }
 
         if (!steady) {
-            throw new TimeoutException("Pool wasn't steady at time");
+            throw new TimeoutException("The pool did not reach a stead state in the allotted time");
         }
 
-        // VMs of the pool don't need to be IDLE state in order to submit job
-        // The following code just an example to check VM state
+        // The VMs in the pool don't need to be in and IDLE state in order to submit a job.
+        // The following code is just an example of how to poll for the VM state
         startTime = System.currentTimeMillis();
         elapsedTime = 0L;
         boolean hasIdleVM = false;
 
-        // Let's wait max 20 minutes for at least 1 VM to start up
+        // Wait for a maximum of 20 minutes for at least 1 VM to reach the IDLE state
         while (elapsedTime < VM_READY_TIMEOUT) {
 
 
@@ -94,13 +95,13 @@ public class PoolAndResourceFile {
                 break;
             }
 
-            System.out.println("wait 30 seconds for vm start...");
+            System.out.println("wait 30 seconds for VM start...");
             Thread.sleep(30 * 1000);
             elapsedTime = (new Date()).getTime() - startTime;
         }
 
         if (!hasIdleVM) {
-            throw new TimeoutException("Vm wasn't ready at time");
+            throw new TimeoutException("The node did not reach an IDLE state in the allotted time");
         }
 
         return client.getPoolOperations().getPool(poolId);
@@ -201,7 +202,7 @@ public class PoolAndResourceFile {
                 return true;
             }
 
-            System.out.println("wait 10 seconds for tasks complete...");
+            System.out.println("wait 10 seconds for tasks to complete...");
 
             // Check again after 10 seconds
             Thread.sleep(10 * 1000);
