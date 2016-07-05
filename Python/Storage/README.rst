@@ -15,7 +15,7 @@ AzCopy-like OS independent Azure storage blob and file share transfer tool
 
 Installation
 ------------
-blobxfer is on PyPI and can be installed via:
+`blobxfer`_ is on PyPI and can be installed via:
 
 ::
 
@@ -46,21 +46,28 @@ dependent packages:
 
 - Base Requirements
 
-  - ``azure-common`` == 1.1.4
-  - ``azure-storage`` == 0.32.0
-  - ``requests`` == 2.10.0
+  - `azure-common`_ == 1.1.4
+  - `azure-storage`_ == 0.32.0
+  - `requests`_ == 2.10.0
 
 - Encryption Support
 
-  - ``cryptography`` >= 1.4
+  - `cryptography`_ >= 1.4
 
 - Service Management Certificate Support
 
-  - ``azure-servicemanagement-legacy`` == 0.20.3
+  - `azure-servicemanagement-legacy`_ == 0.20.3
 
 You can install these packages using pip, easy_install or through standard
 setup.py procedures. These dependencies will be automatically installed if
 using a package-based install or setup.py.
+
+.. _blobxfer: https://pypi.python.org/pypi/blobxfer
+.. _azure-common: https://pypi.python.org/pypi/azure-common
+.. _azure-storage: https://pypi.python.org/pypi/azure-storage
+.. _requests: https://pypi.python.org/pypi/requests
+.. _cryptography: https://pypi.python.org/pypi/cryptography
+.. _azure-servicemanagement-legacy: https://pypi.python.org/pypi/azure-servicemanagement-legacy
 
 Introduction
 ------------
@@ -80,18 +87,18 @@ arguments are required: storage account name, container or share name, and
 local resource. Additionally, one of the following authentication switches
 must be supplied: ``--subscriptionid`` with ``--managementcert``,
 ``--storageaccountkey``, or ``--saskey``. Do not combine different
-authentication schemes together. It is generally recommended to use SAS keys
-wherever applicable; only HTTPS transport is used in the script.
+authentication schemes together.
 
-Please remember when using SAS keys that only container-level SAS keys will
-allow for entire directory uploading or container downloading. The container
-must also have been created beforehand, as containers cannot be created
+Environment variables ``BLOBXFER_STORAGEACCOUNTKEY`` or ``BLOBXFER_SASKEY``
+can take the place of ``--storageaccountkey`` or ``--saskey``, respectively if
+you do not want to expose credentials on a command line.
+
+It is generally recommended to use SAS keys wherever appropriate; only HTTPS
+transport is used in the script. Please note that when using SAS keys that
+only container- or fileshare-level SAS keys will allow for entire directory
+uploading or container/fileshare downloading. The container/fileshare must
+also have been created beforehand, as containers/fileshares cannot be created
 using SAS keys.
-
-Please refer to the Microsoft HPC and Azure Batch Team `blog post`_ for code
-sample explanations.
-
-.. _blog post: http://blogs.technet.com/b/windowshpc/archive/2015/04/16/linux-blob-transfer-python-code-sample.aspx
 
 Example Usage
 -------------
@@ -99,7 +106,8 @@ Example Usage
 The following examples show how to invoke the script with commonly used
 options. Note that the authentication parameters are missing from the below
 examples. You will need to select a preferred method of authenticating with
-Azure and add the authentication switches as noted above.
+Azure and add the authentication switches (or as environment variables) as
+noted above.
 
 The script will attempt to perform a smart transfer, by detecting if the local
 resource exists. For example:
@@ -329,30 +337,30 @@ Encryption Notes
 - Local files can be encrypted by blobxfer and stored in Azure Files and,
   correspondingly, remote files on Azure File shares can be decrypted by
   blobxfer as long as the metdata portions remain in-tact.
-- Keys for AES256 block cipher are generated on a per-blob basis. These keys
-  are encrypted using RSAES-OAEP.
+- Keys for AES256 block cipher are generated on a per-blob/file basis. These
+  keys are encrypted using RSAES-OAEP.
 - MD5 for both the pre-encrypted and encrypted version of the file is stored
-  in blob metadata. Rsync-like synchronization is still supported transparently
-  with encrypted blobs.
+  in blob/file metadata. Rsync-like synchronization is still supported
+  transparently with encrypted blobs/files.
 - Whole file MD5 checks are skipped if a message authentication code is found
   to validate the integrity of the encrypted data.
 - Attempting to upload the same file as an encrypted blob with a different RSA
   key or under a different encryption mode will not occur if the file content
   MD5 is the same. This behavior can be overridden by including the option
   ``--no-skiponmatch``.
-- If one wishes to apply encryption to a blob already uploaded to Storage
-  that has not changed, the upload will not occur since the underlying file
-  content MD5 has not changed; this behavior can be overriden by including
-  the option ``--no-skiponmatch``.
-- Encryption is only applied to block blobs. Encrypted page blobs appear to
-  be of minimal value stored in Azure. Thus, if uploading VHDs while enabling
-  encryption in the script, do not enable the option ``--pageblob``.
-  ``--autovhd`` will continue to work transparently where vhd files will be
-  uploaded as page blobs in unencrypted form while other files will be
-  uploaded as encrypted block blobs. Note that using ``--autovhd`` with
-  encryption will force set the max chunk size to 4 MiB for non-encrypted
-  vhd files.
-- Downloading encrypted blobs may not fully preallocate each file due to
+- If one wishes to apply encryption to a blob/file already uploaded to Azure
+  Storage that has not changed, the upload will not occur since the underlying
+  file content MD5 has not changed; this behavior can be overriden by
+  including the option ``--no-skiponmatch``.
+- Encryption is only applied to block blobs (or fileshare files). Encrypted
+  page blobs appear to be of minimal value stored in Azure Storage via
+  blobxfer. Thus, if uploading VHDs while enabling encryption in the script,
+  do not enable the option ``--pageblob``. ``--autovhd`` will continue to work
+  transparently where vhd files will be uploaded as page blobs in unencrypted
+  form while other files will be uploaded as encrypted block blobs. Note that
+  using ``--autovhd`` with encryption will force set the max chunk size to
+  4 MiB for non-encrypted vhd files.
+- Downloading encrypted blobs/files may not fully preallocate each file due to
   padding. Script failure can result during transfer if there is insufficient
   disk space.
 - Zero-byte (empty) files are not encrypted.
@@ -360,6 +368,8 @@ Encryption Notes
 Change Log
 ----------
 
+- 0.11.1: Allow storage account or sas key credentials to be passed as
+  environment variables.
 - 0.11.0: Azure Files support, please refer to the General Notes section for
   limitations. ``--blobep`` option has been renamed to ``--endpoint``.
 - 0.10.1: remove RC designation from encryption/decryption functionality.

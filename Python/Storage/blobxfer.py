@@ -104,7 +104,7 @@ except NameError:  # pragma: no cover
 # pylint: enable=W0622,C0103
 
 # global defines
-_SCRIPT_VERSION = '0.11.0'
+_SCRIPT_VERSION = '0.11.1'
 _PY2 = sys.version_info.major == 2
 _DEFAULT_MAX_STORAGEACCOUNT_WORKERS = multiprocessing.cpu_count() * 3
 _MAX_BLOB_CHUNK_SIZE_BYTES = 4194304
@@ -113,6 +113,8 @@ _MAX_LISTBLOBS_RESULTS = 1000
 _PAGEBLOB_BOUNDARY = 512
 _DEFAULT_STORAGE_ENDPOINT = 'core.windows.net'
 _DEFAULT_MANAGEMENT_ENDPOINT = 'management.core.windows.net'
+_ENVVAR_STORAGEACCOUNTKEY = 'BLOBXFER_STORAGEACCOUNTKEY'
+_ENVVAR_SASKEY = 'BLOBXFER_SASKEY'
 # encryption defines
 _AES256_KEYLENGTH_BYTES = 32
 _AES256_BLOCKSIZE_BYTES = 16
@@ -2007,6 +2009,12 @@ def main():
     # get command-line args
     args = parseargs()
 
+    # populate args from env vars
+    if args.storageaccountkey is None:
+        args.storageaccountkey = os.getenv(_ENVVAR_STORAGEACCOUNTKEY)
+    if args.saskey is None:
+        args.saskey = os.getenv(_ENVVAR_SASKEY)
+
     # check some parameters
     if (len(args.localresource) < 1 or len(args.storageaccount) < 1 or
             len(args.container) < 1):
@@ -2952,10 +2960,12 @@ def parseargs():  # pragma: no cover
     parser.add_argument(
         '--saskey',
         help='SAS key to use, if recursive upload or container download, '
-        'this must be a container SAS')
+        'this must be a container SAS; can be specified as '
+        '{} environment variable instead'.format(_ENVVAR_SASKEY))
     parser.add_argument(
         '--storageaccountkey',
-        help='storage account shared key')
+        help='storage account shared key; can be specified as '
+        '{} environment variable instead'.format(_ENVVAR_STORAGEACCOUNTKEY))
     parser.add_argument(
         '--strip-components', dest='stripcomponents', type=int,
         help='strip N leading components from path on upload [1]')
