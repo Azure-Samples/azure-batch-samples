@@ -1,8 +1,8 @@
 import java.io.*;
 import java.net.URISyntaxException;
-import java.nio.charset.Charset;
 import java.security.InvalidKeyException;
 import java.util.*;
+import java.util.concurrent.TimeoutException;
 
 import com.microsoft.azure.storage.*;
 import com.microsoft.azure.storage.blob.*;
@@ -15,12 +15,14 @@ import com.microsoft.azure.batch.protocol.models.*;
 public class PoolAndResourceFile {
 
     // Create IaaS pool if pool isn't exist
-    private static CloudPool CreatePool(BatchClient client, String poolId) throws BatchErrorException, IllegalArgumentException, IOException, InterruptedException {
+    private static CloudPool CreatePool(BatchClient client, String poolId) throws BatchErrorException, IllegalArgumentException, IOException, InterruptedException, TimeoutException {
         // Pool only have 3 D1 VM
         String osPublisher = "OpenLogic";
         String osOffer = "CentOS";
         String poolVMSize = "STANDARD_D1";
         int poolVMCount = 1;
+        long POOL_STEADY_TIMEOUT = 5 * 60 * 1000;
+        long VM_READY_TIMEOUT = 20 * 60 * 1000;
 
         // Check pool existing
         if (!client.getPoolOperations().existsPool(poolId)) {
@@ -55,21 +57,19 @@ public class PoolAndResourceFile {
         boolean steady = false;
 
         // Let's wait max 5 minute for VM to be allocated
-        while (elapsedTime < 5*60*1000) {
+        while (elapsedTime < POOL_STEADY_TIMEOUT) {
             CloudPool pool = client.getPoolOperations().getPool(poolId);
             if (pool.getAllocationState() == AllocationState.STEADY) {
                 steady = true;
                 break;
             }
-            System.out.println("wait for pool steady");
+            System.out.println("wait 30 seconds for pool steady...");
             Thread.sleep(30 * 1000);
             elapsedTime = (new Date()).getTime() - startTime;
         }
 
         if (!steady) {
-            System.out.println("Pool wasn't steady at time");
-            // We keep the pool even it is not ready, so we can reuse it later
-            return null;
+            throw new TimeoutException("Pool wasn't steady at time");
         }
 
         // VMs of the pool don't need to be IDLE state in order to submit job
@@ -79,7 +79,7 @@ public class PoolAndResourceFile {
         boolean hasIdleVM = false;
 
         // Let's wait max 20 minutes for at least 1 VM to start up
-        while (elapsedTime < 20*60*1000) {
+        while (elapsedTime < VM_READY_TIMEOUT) {
 
 
             List<ComputeNode> nodeCollection = client.getComputeNodeOperations().listComputeNodes(poolId);
@@ -94,15 +94,13 @@ public class PoolAndResourceFile {
                 break;
             }
 
-            System.out.println("wait for tvm start");
+            System.out.println("wait 30 seconds for vm start...");
             Thread.sleep(30 * 1000);
             elapsedTime = (new Date()).getTime() - startTime;
         }
 
         if (!hasIdleVM) {
-            System.out.println("TVM wasn't ready at time");
-            // We keep the pool even it is not ready, so we can reuse it later
-            return null;
+            throw new TimeoutException("Vm wasn't ready at time");
         }
 
         return client.getPoolOperations().getPool(poolId);
@@ -170,6 +168,7 @@ public class PoolAndResourceFile {
 
         String sas = uploadFileToCloud(container);
 
+        // Associate resource file with task
         ResourceFile file = new ResourceFile();
         file.setFilePath(FILE_NAME);
         file.setBlobSource(sas);
@@ -202,8 +201,10 @@ public class PoolAndResourceFile {
                 return true;
             }
 
-            System.out.println("wait for tasks complete");
-            Thread.sleep(30 * 1000);
+            System.out.println("wait 10 seconds for tasks complete...");
+
+            // Check again after 10 seconds
+            Thread.sleep(10 * 1000);
             elapsedTime = (new Date()).getTime() - startTime;
         }
 
@@ -225,6 +226,9 @@ public class PoolAndResourceFile {
         Boolean shouldDeleteJob = true;
         Boolean shouldDeletePool = false;
 
+        long TASK_COMPLETE_TIMEOUT = 10 * 60 * 1000;
+        String STANDARD_CONSOLE_OUTPUT_FILENAME = "stdout.txt";
+
         // Create batch client
         BatchSharedKeyCredentials cred = new BatchSharedKeyCredentials(batchUri, batchAccount, batchKey);
         BatchClient client = BatchClient.Open(cred);
@@ -240,15 +244,16 @@ public class PoolAndResourceFile {
         {
             CloudPool sharedPool = CreatePool(client, poolId);
             submitJobAndAddTask(client, container, sharedPool.getId(), jobId);
-            if (waitForTasksToComplete(client, jobId, 10*60*1000)) {
-                // Let's get the task command output file
+            if (waitForTasksToComplete(client, jobId, TASK_COMPLETE_TIMEOUT)) {
+                // Get the task command output file
                 CloudTask task = client.getTaskOperations().getTask(jobId, "mytask");
 
-                String StandardOutFileName = "stdout.txt";
-                InputStream stream = client.getFileOperations().getFileFromTask(jobId, task.getId(), StandardOutFileName);
-                Charset encoding = Charset.defaultCharset();
-                String fileContent = IOUtils.toString(stream, encoding);
+                InputStream stream = client.getFileOperations().getFileFromTask(jobId, task.getId(), STANDARD_CONSOLE_OUTPUT_FILENAME);
+                String fileContent = IOUtils.toString(stream, "UTF-8");
                 System.out.println(fileContent);
+            }
+            else {
+                throw new TimeoutException("Task wasn't completed at time");
             }
         }
         catch (BatchErrorException err) {
@@ -267,7 +272,7 @@ public class PoolAndResourceFile {
             System.out.println(ex);
         }
         finally {
-            // Clean up the resource
+            // Clean up the resource if necessary
             if (shouldDeleteJob) {
                 try {
                     client.getJobOperations().deleteJob(jobId);
