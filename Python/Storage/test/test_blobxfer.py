@@ -17,7 +17,6 @@ import sys
 import threading
 import uuid
 # non-stdlib imports
-import azure
 import azure.common
 import azure.storage.blob
 import cryptography.exceptions
@@ -911,7 +910,8 @@ def test_main1(
     args.localresource = ''
     args.storageaccount = 'blobep'
     args.container = 'container'
-    args.storageaccountkey = 'saskey'
+    args.storageaccountkey = None
+    os.environ[blobxfer._ENVVAR_STORAGEACCOUNTKEY] = 'saskey'
     args.chunksizebytes = 5
     args.pageblob = False
     args.autovhd = False
@@ -932,6 +932,7 @@ def test_main1(
     args.download = None
     with pytest.raises(ValueError):
         blobxfer.main()
+    os.environ.pop(blobxfer._ENVVAR_STORAGEACCOUNTKEY)
     args.storageaccountkey = None
     args.timeout = -1
     args.saskey = ''
@@ -984,7 +985,8 @@ def test_main1(
         with pytest.raises(ValueError):
             blobxfer.main()
     args.storageaccountkey = None
-    args.saskey = 'saskey'
+    args.saskey = None
+    os.environ[blobxfer._ENVVAR_SASKEY] = 'saskey'
     args.remoteresource = None
     args.download = True
     with pytest.raises(ValueError):
@@ -1009,6 +1011,7 @@ def test_main1(
         blobxfer.main()
 
     args.saskey = None
+    os.environ.pop(blobxfer._ENVVAR_SASKEY)
     with pytest.raises(ValueError):
         blobxfer.main()
     args.managementcert = '0'
@@ -1047,7 +1050,7 @@ def test_main1(
     args.managementcert = None
     args.managementep = None
     args.subscriptionid = None
-    args.saskey = 'saskey'
+    os.environ[blobxfer._ENVVAR_SASKEY] = 'saskey'
     with open(lpath, 'wt') as f:
         f.write(str(uuid.uuid4()))
 
@@ -1266,6 +1269,8 @@ def test_main1(
               content=b'012345')
         # TODO add encrypted data json
         blobxfer.main()
+
+        os.environ.pop(blobxfer._ENVVAR_SASKEY)
 
 
 @patch('blobxfer.parseargs')
