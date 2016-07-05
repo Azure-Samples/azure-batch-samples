@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.URISyntaxException;
 import java.security.InvalidKeyException;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.TimeoutException;
 
@@ -182,11 +183,11 @@ public class PoolAndResourceFile {
     }
 
     // Wait all tasks under a specified job to be completed
-    private static boolean waitForTasksToComplete(BatchClient client, String jobId, long expiryTime) throws BatchErrorException, IOException, InterruptedException {
+    private static boolean waitForTasksToComplete(BatchClient client, String jobId, Duration expiryTime) throws BatchErrorException, IOException, InterruptedException {
         long startTime = System.currentTimeMillis();
         long elapsedTime = 0L;
 
-        while (elapsedTime < expiryTime) {
+        while (elapsedTime < expiryTime.toMillis()) {
             List<CloudTask> taskCollection = client.getTaskOperations().listTasks(jobId, new DetailLevel.Builder().selectClause("id, state").build());
 
             boolean allComplete = true;
@@ -227,7 +228,7 @@ public class PoolAndResourceFile {
         Boolean shouldDeleteJob = true;
         Boolean shouldDeletePool = false;
 
-        long TASK_COMPLETE_TIMEOUT = 10 * 60 * 1000;
+        Duration TASK_COMPLETE_TIMEOUT = Duration.ofMinutes(10);
         String STANDARD_CONSOLE_OUTPUT_FILENAME = "stdout.txt";
 
         // Create batch client
