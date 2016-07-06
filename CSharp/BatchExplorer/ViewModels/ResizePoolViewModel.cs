@@ -204,14 +204,15 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 ComputeNodeDeallocationOption? deallocationOption;
                 if (this.IsInputValid(out deallocationOption))
                 {
-                    Task asyncTask = this.batchService.ResizePoolAsync(this.PoolId, this.TargetDedicated, this.Timeout, deallocationOption);
+                    Task asyncTask = this.batchService.ResizePoolAsync(this.PoolId, this.TargetDedicated, this.Timeout, deallocationOption);                   
 
                     AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                         asyncTask,
                         new PoolOperation(PoolOperation.Resize, this.poolId)));
-                    await asyncTask;
-
+                     
                     Messenger.Default.Send(new CloseGenericPopup());
+
+                    await asyncTask;                                    
                 }
             }
             catch (Exception e)

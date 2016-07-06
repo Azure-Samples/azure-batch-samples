@@ -201,7 +201,7 @@ namespace Microsoft.Azure.BatchExplorer.Service
             int targetDedicated,
             TimeSpan? timeout,
             ComputeNodeDeallocationOption? deallocationOption)
-        {
+        {           
             var pool = await this.GetPoolAsync(poolId);
             if (pool.AutoScaleEnabled.HasValue && pool.AutoScaleEnabled.Value)
             {
@@ -459,7 +459,9 @@ namespace Microsoft.Azure.BatchExplorer.Service
             while (count < waitForSeconds)
             {
                 if (pool.AllocationState == AllocationState.Steady)
+                {
                     return true;
+                }
                 else
                 {
                     await Task.Delay(1000);

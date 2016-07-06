@@ -13,15 +13,15 @@ namespace Microsoft.Azure.BatchExplorer.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            return _Convert(value, targetType);
+            return ConvertImpl(value, targetType);
         }       
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            return _Convert(value, targetType);
+            return ConvertImpl(value, targetType);
         }
 
-        private static object _Convert(object value, Type targetType)
+        private static object ConvertImpl(object value, Type targetType)
         {
             if (targetType != typeof(bool) && targetType != typeof(bool?))
             {
