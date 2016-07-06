@@ -27,7 +27,7 @@ public class PoolAndResourceFile {
      * @throws TimeoutException
      */
     private static CloudPool createPoolIfNotExists(BatchClient client, String poolId) throws BatchErrorException, IllegalArgumentException, IOException, InterruptedException, TimeoutException {
-        // Pool only have 1 A1 VM
+        // Create a pool with 1 A1 VM
         String osPublisher = "OpenLogic";
         String osOffer = "CentOS";
         String poolVMSize = "STANDARD_A1";
@@ -81,7 +81,7 @@ public class PoolAndResourceFile {
         }
 
         if (!steady) {
-            throw new TimeoutException("The pool did not reach a stead state in the allotted time");
+            throw new TimeoutException("The pool did not reach a steady state in the allotted time");
         }
 
         // The VMs in the pool don't need to be in and IDLE state in order to submit a job.
