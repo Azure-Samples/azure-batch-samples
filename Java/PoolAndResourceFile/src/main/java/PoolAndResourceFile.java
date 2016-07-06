@@ -15,15 +15,25 @@ import com.microsoft.azure.batch.protocol.models.*;
 
 public class PoolAndResourceFile {
 
-    // Create IaaS pool if pool isn't exist
-    private static CloudPool CreatePool(BatchClient client, String poolId) throws BatchErrorException, IllegalArgumentException, IOException, InterruptedException, TimeoutException {
+    /**
+     * Create IaaS pool if pool isn't exist
+     * @param client batch client instance
+     * @param poolId the pool id
+     * @return the pool instance
+     * @throws BatchErrorException
+     * @throws IllegalArgumentException
+     * @throws IOException
+     * @throws InterruptedException
+     * @throws TimeoutException
+     */
+    private static CloudPool createPoolIfNotExists(BatchClient client, String poolId) throws BatchErrorException, IllegalArgumentException, IOException, InterruptedException, TimeoutException {
         // Pool only have 1 A1 VM
         String osPublisher = "OpenLogic";
         String osOffer = "CentOS";
         String poolVMSize = "STANDARD_A1";
         int poolVMCount = 1;
-        long POOL_STEADY_TIMEOUT = 5 * 60 * 1000;
-        long VM_READY_TIMEOUT = 20 * 60 * 1000;
+        Duration POOL_STEADY_TIMEOUT = Duration.ofMinutes(5);
+        Duration VM_READY_TIMEOUT = Duration.ofMinutes(20);
 
         // Check if pool exists
         if (!client.getPoolOperations().existsPool(poolId)) {
@@ -58,8 +68,8 @@ public class PoolAndResourceFile {
         long elapsedTime = 0L;
         boolean steady = false;
 
-        // Wait for a maximum of 5 minutes for the VM to be allocated
-        while (elapsedTime < POOL_STEADY_TIMEOUT) {
+        // Wait for the VM to be allocated
+        while (elapsedTime < POOL_STEADY_TIMEOUT.toMillis()) {
             CloudPool pool = client.getPoolOperations().getPool(poolId);
             if (pool.getAllocationState() == AllocationState.STEADY) {
                 steady = true;
@@ -80,19 +90,11 @@ public class PoolAndResourceFile {
         elapsedTime = 0L;
         boolean hasIdleVM = false;
 
-        // Wait for a maximum of 20 minutes for at least 1 VM to reach the IDLE state
-        while (elapsedTime < VM_READY_TIMEOUT) {
-
-
-            List<ComputeNode> nodeCollection = client.getComputeNodeOperations().listComputeNodes(poolId);
-            for (ComputeNode node : nodeCollection) {
-                if (node.getState() == ComputeNodeState.IDLE) {
-                    hasIdleVM = true;
-                    break;
-                }
-            }
-
-            if (hasIdleVM) {
+        // Wait for at least 1 VM to reach the IDLE state
+        while (elapsedTime < VM_READY_TIMEOUT.toMillis()) {
+            List<ComputeNode> nodeCollection = client.getComputeNodeOperations().listComputeNodes(poolId, new DetailLevel.Builder().selectClause("id, state").filterClause("state eq 'idle'").build());
+            if (!nodeCollection.isEmpty()) {
+                hasIdleVM = true;
                 break;
             }
 
@@ -108,7 +110,14 @@ public class PoolAndResourceFile {
         return client.getPoolOperations().getPool(poolId);
     }
 
-    // Create blob container in order to upload file
+    /**
+     * Create blob container in order to upload file
+     * @param storageAccountName storage account name
+     * @param storageAccountKey storage account key
+     * @return CloudBlobContainer instance
+     * @throws URISyntaxException
+     * @throws StorageException
+     */
     private static CloudBlobContainer createBlobContainer(String storageAccountName, String storageAccountKey) throws URISyntaxException, StorageException {
         String CONTAINER_NAME = "poolsandresourcefiles";
 
@@ -126,17 +135,24 @@ public class PoolAndResourceFile {
         return blobClient.getContainerReference(CONTAINER_NAME);
     }
 
-    // Upload file to blob container and return sas key
-    private static String uploadFileToCloud(CloudBlobContainer container) throws URISyntaxException, IOException, InvalidKeyException, StorageException {
-        String FILE_NAME = "test.txt";
-        String FILE_PATH = "./" + FILE_NAME;
-
+    /**
+     * Upload file to blob container and return sas key
+     * @param container blob container
+     * @param fileName the file name of blob
+     * @param filePath the local file path
+     * @return SAS key for the uploaded file
+     * @throws URISyntaxException
+     * @throws IOException
+     * @throws InvalidKeyException
+     * @throws StorageException
+     */
+    private static String uploadFileToCloud(CloudBlobContainer container, String fileName, String filePath) throws URISyntaxException, IOException, InvalidKeyException, StorageException {
         // Create the container if it does not exist.
         container.createIfNotExists();
 
         // Upload file
-        CloudBlockBlob blob = container.getBlockBlobReference(FILE_NAME);
-        File source = new File(FILE_PATH);
+        CloudBlockBlob blob = container.getBlockBlobReference(fileName);
+        File source = new File(filePath);
         blob.upload(new FileInputStream(source), source.length());
 
         // Create policy with 1 day read permission
@@ -154,9 +170,22 @@ public class PoolAndResourceFile {
         return blob.getUri() + "?" + sas;
     }
 
-    // Create a job with a single task
+    /**
+     * Create a job with a single task
+     * @param client batch client instance
+     * @param container blob container to upload the resource file
+     * @param poolId pool id
+     * @param jobId job id
+     * @throws BatchErrorException
+     * @throws IOException
+     * @throws StorageException
+     * @throws InvalidKeyException
+     * @throws URISyntaxException
+     */
     private static void submitJobAndAddTask(BatchClient client, CloudBlobContainer container, String poolId, String jobId) throws BatchErrorException, IOException, StorageException, InvalidKeyException, URISyntaxException {
-        String FILE_NAME = "mytest.txt";
+        String BLOB_FILE_NAME = "test.txt";
+        String LOCAL_FILE_PATH = "./" + BLOB_FILE_NAME;
+        String RESOURCE_FILE_NAME = "mytest.txt";
 
         // Create job run at the specified pool
         PoolInformation poolInfo = new PoolInformation();
@@ -166,13 +195,13 @@ public class PoolAndResourceFile {
         // Create task
         TaskAddParameter taskToAdd = new TaskAddParameter();
         taskToAdd.setId("mytask");
-        taskToAdd.setCommandLine(String.format("cat %s", FILE_NAME));
+        taskToAdd.setCommandLine(String.format("cat %s", BLOB_FILE_NAME));
 
-        String sas = uploadFileToCloud(container);
+        String sas = uploadFileToCloud(container, BLOB_FILE_NAME, LOCAL_FILE_PATH);
 
         // Associate resource file with task
         ResourceFile file = new ResourceFile();
-        file.setFilePath(FILE_NAME);
+        file.setFilePath(BLOB_FILE_NAME);
         file.setBlobSource(sas);
         List<ResourceFile> files = new ArrayList<ResourceFile>();
         files.add(file);
@@ -182,7 +211,16 @@ public class PoolAndResourceFile {
         client.getTaskOperations().createTask(jobId, taskToAdd);
     }
 
-    // Wait all tasks under a specified job to be completed
+    /**
+     * Wait all tasks under a specified job to be completed
+     * @param client batch client instance
+     * @param jobId job id
+     * @param expiryTime the waiting period
+     * @return if task completed in time, return true, otherwise, return false
+     * @throws BatchErrorException
+     * @throws IOException
+     * @throws InterruptedException
+     */
     private static boolean waitForTasksToComplete(BatchClient client, String jobId, Duration expiryTime) throws BatchErrorException, IOException, InterruptedException {
         long startTime = System.currentTimeMillis();
         long elapsedTime = 0L;
@@ -214,8 +252,23 @@ public class PoolAndResourceFile {
         return false;
     }
 
-    public static void main(String argv[]) throws Exception {
+    /**
+     * print BatchErrorException to console
+     * @param err BatchErrorException instance
+     */
+    private static void printBatchException(BatchErrorException err) {
+        System.out.println(String.format("BatchError %s", err.toString()));
+        if (err.getBody() != null) {
+            System.out.println(String.format("BatchError code = %s, message = %s", err.getBody().getCode(), err.getBody().getMessage().getValue()));
+            if (err.getBody().getValues() != null) {
+                for (BatchErrorDetail detail : err.getBody().getValues()) {
+                    System.out.println(String.format("Detail %s=%s", detail.getKey(), detail.getValue()));
+                }
+            }
+        }
+    }
 
+    public static void main(String argv[]) throws Exception {
         // Get batch and storage account information from environment
         String batchAccount = System.getenv("AZURE_BATCH_ACCOUNT");
         String batchKey = System.getenv("AZURE_BATCH_ACCESS_KEY");
@@ -228,7 +281,7 @@ public class PoolAndResourceFile {
         Boolean shouldDeleteJob = true;
         Boolean shouldDeletePool = false;
 
-        Duration TASK_COMPLETE_TIMEOUT = Duration.ofMinutes(10);
+        Duration TASK_COMPLETE_TIMEOUT = Duration.ofMinutes(1);
         String STANDARD_CONSOLE_OUTPUT_FILENAME = "stdout.txt";
 
         // Create batch client
@@ -244,7 +297,7 @@ public class PoolAndResourceFile {
 
         try
         {
-            CloudPool sharedPool = CreatePool(client, poolId);
+            CloudPool sharedPool = createPoolIfNotExists(client, poolId);
             submitJobAndAddTask(client, container, sharedPool.getId(), jobId);
             if (waitForTasksToComplete(client, jobId, TASK_COMPLETE_TIMEOUT)) {
                 // Get the task command output file
@@ -255,20 +308,11 @@ public class PoolAndResourceFile {
                 System.out.println(fileContent);
             }
             else {
-                throw new TimeoutException("Task wasn't completed at time");
+                throw new TimeoutException("Task did not complete within the specified timeout");
             }
         }
         catch (BatchErrorException err) {
-            System.out.println(String.format("BatchError %s", err.toString()));
-            if (err.getBody() != null) {
-                System.out.println(String.format("BatchError code = %s, message = %s", err.getBody().getCode(), err.getBody().getMessage().getValue()));
-                if (err.getBody().getValues() != null) {
-                    for (BatchErrorDetail detail : err.getBody().getValues()) {
-                        System.out.println(String.format("Detail %s=%s", detail.getKey(), detail.getValue()));
-                    }
-                }
-            }
-            throw err;
+            printBatchException(err);
         }
         catch (Exception ex) {
             System.out.println(ex);
@@ -279,7 +323,7 @@ public class PoolAndResourceFile {
                 try {
                     client.getJobOperations().deleteJob(jobId);
                 } catch (BatchErrorException err) {
-                    System.out.println(String.format("BatchError %s", err.getMessage()));
+                    printBatchException(err);
                 }
             }
 
@@ -287,7 +331,7 @@ public class PoolAndResourceFile {
                 try {
                     client.getJobOperations().deleteJob(poolId);
                 } catch (BatchErrorException err) {
-                    System.out.println(String.format("BatchError %s", err.getMessage()));
+                    printBatchException(err);
                 }
             }
 
