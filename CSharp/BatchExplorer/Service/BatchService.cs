@@ -201,13 +201,48 @@ namespace Microsoft.Azure.BatchExplorer.Service
             int targetDedicated,
             TimeSpan? timeout,
             ComputeNodeDeallocationOption? deallocationOption)
-        {
+        {           
+            var pool = await this.GetPoolAsync(poolId);
+            if (pool.AutoScaleEnabled.HasValue && pool.AutoScaleEnabled.Value)
+            {
+                await this.Client.PoolOperations.DisableAutoScaleAsync(poolId);
+                if (!await this.WaitForResizingOperationToFinish(poolId))
+                {
+                    throw new InvalidOperationException("Autoscale disable operation is already in progress. Please try again after sometime to Resize the pool.");
+                }
+            }
+
             await this.Client.PoolOperations.ResizePoolAsync(poolId, targetDedicated, timeout, deallocationOption);
+        }
+
+        public async Task EnableAutoScale(string poolId, string autoScaleformula)
+        {
+            await this.Client.PoolOperations.EnableAutoScaleAsync(poolId, autoScaleformula);
         }
 
         public IPagedEnumerable<NodeAgentSku> ListNodeAgentSkus()
         {
             return this.Client.PoolOperations.ListNodeAgentSkus();
+        }
+
+        /// <summary>
+        /// Evaluates the autoscale formula.
+        /// </summary>
+        /// <param name="poolId">The pool identifier.</param>
+        /// <param name="autoScaleformula">The autoscale formula.</param>
+        /// <returns>Result of evaluation</returns>
+        public async Task<string> EvaluateAutoScaleFormula(string poolId, string autoScaleformula)
+        {
+            AutoScaleRun eval = await this.Client.PoolOperations.EvaluateAutoScaleAsync(poolId, autoScaleformula);
+
+            if (eval.Error == null)
+            {
+                return eval.Results;
+            }
+            else
+            {                    
+                return eval.Error.Message;
+            }         
         }
 
         #endregion
@@ -413,6 +448,29 @@ namespace Microsoft.Azure.BatchExplorer.Service
             }
 
             this.disposed = true;
+        }
+
+        private async Task<bool> WaitForResizingOperationToFinish(string poolId)
+        {
+            var pool = await this.GetPoolAsync(poolId);
+
+            int waitForSeconds = 10;
+            int count = 1;
+            while (count < waitForSeconds)
+            {
+                if (pool.AllocationState == AllocationState.Steady)
+                {
+                    return true;
+                }
+                else
+                {
+                    await Task.Delay(1000);
+                    count++;
+                    await pool.RefreshAsync();
+                }
+            }
+
+            return false;
         }
     }
 }

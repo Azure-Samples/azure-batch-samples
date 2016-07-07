@@ -106,5 +106,21 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         /// </summary>
         /// <returns>A <see cref="Task"/> whose result is a collection of <see cref="NodeAgentSku"/>'s.</returns>
         Task<IList<NodeAgentSku>> ListNodeAgentSkusAsync();
+
+        /// <summary>
+        /// Evaluates the automatic scale formula supplied on the specified pool asynchronously.
+        /// </summary>
+        /// <param name="poolId">The pool identifier.</param>
+        /// <param name="autoScaleFormula">The autoscale formula.</param>
+        /// <returns>Returns the result of evaluation</returns>
+        Task<string> EvaluateAutoScaleFormulaAsync(string poolId, string autoScaleFormula);
+
+        /// <summary>
+        /// Enables an autoscale formula on the specified pool asynchronously.
+        /// </summary>
+        /// <param name="poolId">The pool identifier.</param>
+        /// <param name="autoScaleformula">The autoscale formula.</param>
+        /// <returns></returns>
+        Task EnableAutoScaleAsync(string poolId, string autoScaleformula);
     }
 }

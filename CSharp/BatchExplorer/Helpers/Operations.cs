@@ -128,6 +128,8 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         public const string Refresh = "Refresh";
         public const string ListComputeNodes = "ListComputeNodes";
         public const string GetPool = "GetPool";
+        public const string EvaluateAutoScaleFormula = "EvaluateAutoScaleFormula";
+        public const string EnableAutoScale = "EnableAutoScale";
 
         private readonly string poolId;
         private const string OperationTargetFormatString = @"Pool: {0}";
