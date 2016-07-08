@@ -1,0 +1,37 @@
+#!/bin/bash
+#Command script to run OpenFoam application on multiple machines as MPI task on Azure Batch.
+#Usage: application [nodes] [cores_per_node] [CFD iterations]
+env
+#mnt=$AZ_BATCH_TASK_SHARED_DIR
+mnt=$4
+source /opt/intel/impi/5.1.3.181/bin64/mpivars.sh
+export MPI_ROOT=$I_MPI_ROOT
+export FOAM_INST_DIR=$mnt/share/OpenFOAM
+source $mnt/share/OpenFOAM/OpenFOAM-2.3.x/etc/bashrc
+export I_MPI_FABRICS=shm:dapl
+export I_MPI_DAPL_PROVIDER=ofa-v2-ib0
+export I_MPI_DYNAMIC_CONNECTION=0
+export LD_LIBRARY_PATH=$mnt/share/OpenFOAM/intel64_lin:$LD_LIBRARY_PATH
+(( numProc = $1 * $2 ))
+cd $mnt/share/OpenFOAM/motorBike
+echo $numProc
+sed -i.bak "s/SUB1/$numProc/g" system/decomposeParDict
+sed -i.bak2 "s/SUB2/$1/g" system/decomposeParDict
+sed -i.bak "s/SUB1/$3/g" system/controlDict
+decomposePar
+ls -d processor* | xargs -I {} rm -rf ./{}/0
+ls -d processor* | xargs -I {} cp -r 0.org ./{}/0
+#mpirun -np $numProc -ppn $2 --host $AZ_BATCH_HOST_LIST -wdir $mnt/share/OpenFOAM/motorBike simpleFoam -parallel
+mpirun -np $numProc -ppn $2 --host $5 -wdir $mnt/share/OpenFOAM/motorBike simpleFoam -parallel
+reconstructPar -latestTime
+foamToVTK -latestTime
+cp $4/genimages.py VTK/
+cp $4/stdout.txt VTK/
+cp $4/stderr.txt VTK/
+cd VTK
+mv motorBike*/*.vtk .
+mmv "*:*.vtk" "#1#2.vtk"
+mmv "*%*.vtk" "#1#2.vtk"
+#Below command currently needs to run in windows machine once results are downloaded there
+#$mnt/share/OpenFOAM/ParaView-3.14.1-Linux-64bit/bin/pvpython genimages.py
+tar -czf $4/VTK.tgz ../VTK/
