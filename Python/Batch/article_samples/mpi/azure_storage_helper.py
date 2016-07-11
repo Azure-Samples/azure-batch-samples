@@ -1,4 +1,4 @@
-# python_tutorial_task.py - Batch Python SDK tutorial sample
+# azure_storage_helper.py - Azure storage helper to upload files to storage
 #
 # Copyright (c) Microsoft Corporation
 #
@@ -33,25 +33,25 @@ import azure.storage.blob as azureblob
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--filepath', required=True,
-                        help='The path to the text file to process. The path'
-                             'may include a compute node\'s environment'
-                             'variables, such as'
+                        help='The path to the text file to process. The path '
+                             'may include a compute node\'s environment '
+                             'variables, such as '
                              '$AZ_BATCH_NODE_SHARED_DIR/filename.txt')
     parser.add_argument('--blobname', required=True,
                         help='Name of blob to create or update')
     parser.add_argument('--storageaccount', required=True,
-                        help='The name the Azure Storage account that owns the'
-                             'blob storage container to which to upload'
+                        help='The name the Azure Storage account that owns the '
+                             'blob storage container to which to upload '
                              'results.')
     parser.add_argument('--storagecontainer', required=True,
-                        help='The Azure Blob storage container to which to'
+                        help='The Azure Blob storage container to which to '
                              'upload results.')
     parser.add_argument('--sastoken', required=True,
-                        help='The SAS token providing write access to the'
+                        help='The SAS token providing write access to the '
                              'Storage container.')
     args = parser.parse_args()
 
-    output_file_path = os.path.realpath(args.filepath)
+    input_file_path = os.path.realpath(args.filepath)
     # Create the blob client using the container's SAS token.
     # This allows us to create a client that provides write
     # access only to the container.
@@ -61,16 +61,15 @@ if __name__ == '__main__':
     print(
         'Uploading file {} container [{}], python {}/azure_storage_helper.py '
         '--filepath {} --blobname {} --storageaccount {} --storagecontainer {}'
-        ' --sastoken {}...'.format(
-            output_file_path,
+        ' --sastoken ...'.format(
+            input_file_path,
             args.storagecontainer,
             '$AZ_BATCH_TASK_SHARED_DIR',
             args.filepath,
             args.blobname,
             args.storageaccount,
-            args.storagecontainer,
-            args.sastoken))
+            args.storagecontainer))
 
     blob_client.create_blob_from_path(args.storagecontainer,
                                       args.blobname,
-                                      output_file_path)
+                                      input_file_path)

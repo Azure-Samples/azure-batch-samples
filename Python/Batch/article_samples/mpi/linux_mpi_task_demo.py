@@ -70,6 +70,7 @@ _NUM_INSTANCES = _POOL_NODE_COUNT
 _NUM_PROCESSES_PER_VM = 16
 _NUM_ITERATIONS_OPENFOAM = 500
 
+
 if __name__ == '__main__':
 
     start_time = datetime.datetime.now().replace(microsecond=0)
@@ -103,8 +104,8 @@ if __name__ == '__main__':
     # Paths to the pool starttask script.  This script will be executed on all
     # compute nodes in pool
     pool_starttask_file_paths = [os.path.realpath(
-        './article_samples/mpi/data/{}/{}/nodeprep-cmd').format(_OS_NAME,
-                                                                _APP_NAME)]
+        './article_samples/mpi/data/{}/{}/nodeprep-cmd'.format(_OS_NAME,
+                                                                _APP_NAME))]
     # Upload the application scripts/files to Azure Storage.
     pool_starttask_files = [
         common.helpers.upload_file_to_container(
@@ -115,7 +116,7 @@ if __name__ == '__main__':
     # We use the start task to prep the node for running our task script.
     start_task_commands = ['nodeprep-cmd']
     # start_task_commands = ['hostname']
-    start_task_command_line = \
+    start_task_cmdline = \
         common.helpers.wrap_commands_in_shell(_OS_NAME, start_task_commands)
 
     # The collection of scripts/data files that are to be used/processed by
@@ -164,10 +165,11 @@ if __name__ == '__main__':
         common.helpers.upload_file_to_container(
             blob_client, input_container_name, file_path, timeout=120)
         for file_path in common_file_paths]
+
     # Command to run on all subtasks including primary before starting
     # application command on primary.
     coordination_cmdline = [
-        # This creates/setup NFS share, and download input data files etc.
+        # This creates/setup NFS share, and download input data files, etc.
         '$AZ_BATCH_TASK_SHARED_DIR/coordination-cmd']
 
     # Create a Batch service client.  We'll now be interacting with the Batch
@@ -178,18 +180,14 @@ if __name__ == '__main__':
                                             base_url=_BATCH_ACCOUNT_URL)
 
     # Create the pool that will contain the compute nodes that will execute the
-    # tasks.  The resource files we pass in are used for configuring the pool's
+    # tasks. The resource files we pass in are used for configuring the pool's
     # start task, which is executed each time a node first joins the pool (or
     # is rebooted or re-imaged).
-    multi_task_helpers.create_pool(batch_client,
-                                   _POOL_ID,
-                                   start_task_command_line,
-                                   pool_starttask_files,
-                                   True,
-                                   _NODE_OS_DISTRO,
-                                   _NODE_OS_VERSION,
-                                   _POOL_VM_SIZE,
-                                   _POOL_NODE_COUNT)
+    multi_task_helpers.\
+        create_pool_and_wait_for_vms(batch_client, _POOL_ID, _NODE_OS_DISTRO,
+                                     _NODE_OS_VERSION, _POOL_VM_SIZE,
+                                     _POOL_NODE_COUNT, start_task_cmdline,
+                                     pool_starttask_files, run_elevated=True)
 
     # Create the job that will run the tasks.
     common.helpers.create_job(batch_client, _JOB_ID, _POOL_ID)
@@ -197,26 +195,22 @@ if __name__ == '__main__':
     # Add the tasks to the job.  We need to supply a container shared access
     # signature (SAS) token for the tasks so that they can upload their output
     # to Azure Storage.
-    multi_task_helpers.add_task(batch_client, _JOB_ID, _TASK_ID,
-                                common.helpers.
-                                wrap_commands_in_shell(_OS_NAME,
+    multi_task_helpers.\
+        add_task(batch_client, _JOB_ID, _TASK_ID,
+                 common.helpers.wrap_commands_in_shell(_OS_NAME,
                                                        application_cmdline),
-                                input_files,
-                                True,
-                                _NUM_INSTANCES,
-                                common.helpers.
-                                wrap_commands_in_shell(_OS_NAME,
+                 input_files, True, _NUM_INSTANCES,
+                 common.helpers.wrap_commands_in_shell(_OS_NAME,
                                                        coordination_cmdline),
-                                common_files)
+                 common_files)
 
     # Pause execution until task (and all subtasks for a multiinstance task)
     # reach Completed state.
-    multi_task_helpers.wait_for_tasks_to_complete(batch_client,
-                                                  _JOB_ID,
-                                                  datetime.timedelta(
-                                                      minutes=120))
+    multi_task_helpers.\
+        wait_for_tasks_to_complete(batch_client, _JOB_ID,
+                                   datetime.timedelta(minutes=120))
 
-    print("  Success! All tasks reached the 'Completed' state within the "
+    print("Success! Task reached the 'Completed' state within the "
           "specified timeout period.")
 
     # Print out some timing info

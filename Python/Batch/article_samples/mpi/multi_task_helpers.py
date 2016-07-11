@@ -42,20 +42,15 @@ sys.path.append('.')
 import common.helpers  # noqa
 
 
-def create_pool(batch_service_client, pool_id, command_line,
-                resource_files, run_elevated, distro, version, vm_size,
-                target_dedicated):
+def create_pool_and_wait_for_vms(batch_service_client, pool_id, distro,
+                                 version, vm_size, target_dedicated,
+                                 command_line, resource_files, run_elevated):
     """
     Creates a pool of compute nodes with the specified OS settings.
 
     :param batch_service_client: A Batch service client.
     :type batch_service_client: `azure.batch.BatchServiceClient`
     :param str pool_id: An ID for the new pool.
-    :param str command_line: command line for the pool's start task.
-    :param list resource_files: A collection of resource files for the pool's
-    start task.
-    :param bool run_elevated: flag determining if start task should run as
-     elevated
     :param str distro: The Linux distribution that should be installed on the
     compute nodes, e.g. 'Ubuntu' or 'CentOS'.
     :param str version: The version of the operating system for the compute
@@ -65,6 +60,11 @@ def create_pool(batch_service_client, pool_id, command_line,
     https://azure.microsoft.com/en-us/documentation/articles/
     virtual-machines-windows-sizes/
     :param int target_dedicated: Number of target VMs for the pool
+    :param str command_line: command line for the pool's start task.
+    :param list resource_files: A collection of resource files for the pool's
+    start task.
+    :param bool run_elevated: flag determining if start task should run as
+     elevated
     """
     print('Creating pool [{}]...'.format(pool_id))
 
