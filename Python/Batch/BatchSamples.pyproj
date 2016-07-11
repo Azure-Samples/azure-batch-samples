@@ -26,10 +26,8 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="article_samples\mpi\windows_mpi_task_demo.py" />
     <Compile Include="article_samples\python_tutorial_client.py" />
     <Compile Include="article_samples\python_tutorial_task.py" />
-    <Compile Include="article_samples\__init__.py" />
     <Compile Include="article_samples\mpi\linux_mpi_task_demo.py" />
     <Compile Include="article_samples\mpi\multi_task_helpers.py" />
     <Compile Include="article_samples\mpi\azure_storage_helper.py" />
@@ -41,8 +39,6 @@
     <Content Include="article_samples\mpi\data\linux\openfoam\nodeprep-cmd" />
     <Content Include="article_samples\mpi\data\linux\openfoam\coordination-cmd" />
     <Content Include="article_samples\mpi\data\linux\openfoam\application-cmd" />
-    <Content Include="article_samples\mpi\data\windows\namd\application.cmd" />
-    <Content Include="article_samples\mpi\data\windows\namd\nodeprep.ps1" />
     <Content Include="resources\docker_batch_task.sh" />
     <Content Include="sample5_docker_batch_task.cfg" />
     <Folder Include="article_samples\" />
@@ -51,8 +47,6 @@
     <Folder Include="article_samples\mpi\data" />
     <Folder Include="article_samples\mpi\data\linux" />
     <Folder Include="article_samples\mpi\data\linux\openfoam" />
-    <Folder Include="article_samples\mpi\data\windows\" />
-    <Folder Include="article_samples\mpi\data\windows\namd\" />
     <Folder Include="common\" />
     <Folder Include="resources\" />
     <Compile Include="common\helpers.py" />
