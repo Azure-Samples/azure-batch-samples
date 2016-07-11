@@ -1,4 +1,4 @@
-# python_base_client.py - Base functions for Batch Python SDK sample to
+# multi_task_helpers.py - Helper functions for Batch Python SDK sample to
 # run multiinstance task
 #
 # Copyright (c) Microsoft Corporation

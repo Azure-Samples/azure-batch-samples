@@ -40,8 +40,8 @@ if __name__ == '__main__':
     parser.add_argument('--blobname', required=True,
                         help='Name of blob to create or update')
     parser.add_argument('--storageaccount', required=True,
-                        help='The name the Azure Storage account that owns the '
-                             'blob storage container to which to upload '
+                        help='The name the Azure Storage account that owns '
+                             'the blob storage container to which to upload '
                              'results.')
     parser.add_argument('--storagecontainer', required=True,
                         help='The Azure Blob storage container to which to '

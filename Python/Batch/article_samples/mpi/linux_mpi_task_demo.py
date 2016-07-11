@@ -1,4 +1,4 @@
-# python_linux_client.py - Batch Python SDK tutorial sample for multi-instance
+# linux_mpi_task_demo.py - Batch Python tutorial sample for multi-instance
 # tasks in linux (OpenFoam application)
 #
 # Copyright (c) Microsoft Corporation
@@ -105,12 +105,13 @@ if __name__ == '__main__':
     # compute nodes in pool
     pool_starttask_file_paths = [os.path.realpath(
         './article_samples/mpi/data/{}/{}/nodeprep-cmd'.format(_OS_NAME,
-                                                                _APP_NAME))]
+                                                               _APP_NAME))]
     # Upload the application scripts/files to Azure Storage.
     pool_starttask_files = [
         common.helpers.upload_file_to_container(
             blob_client, app_container_name, file_path, timeout=120)
         for file_path in pool_starttask_file_paths]
+
     # Specify the commands for the pool's start task.  The start task is run
     # on each node as it joins the pool, and when it's rebooted or re-imaged.
     # We use the start task to prep the node for running our task script.
@@ -131,6 +132,7 @@ if __name__ == '__main__':
         common.helpers.upload_file_to_container(
             blob_client, input_container_name, file_path, timeout=120)
         for file_path in input_file_paths]
+
     # Main application command to execute multiinstance task on a group of
     # nodes, eg. MPI.
     true_application_cmdline = 'sudo -u _azbatch ' \
@@ -146,7 +148,8 @@ if __name__ == '__main__':
         'python $AZ_BATCH_TASK_WORKING_DIR/azure_storage_helper.py '
         '--filepath {} --blobname {} --storageaccount {} '
         '--storagecontainer {} --sastoken "{}"'.format(
-            _TASK_OUTPUT_FILE_PATH_ON_VM, _TASK_OUTPUT_BLOB_NAME,
+            _TASK_OUTPUT_FILE_PATH_ON_VM,
+            _TASK_OUTPUT_BLOB_NAME,
             _STORAGE_ACCOUNT_NAME,
             output_container_name,
             output_container_sas_token)]
