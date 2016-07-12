@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+#Command script to run on all nodes as Azure Batch node start task, to install prerequisites etc.
+yum -y update
+yum -y install epel-release
+yum -y install python-pip
+pip install azure-storage
+yum -y install nfs-utils
+systemctl enable rpcbind
+systemctl enable nfs-server
+systemctl enable nfs-lock
+systemctl enable nfs-idmap
+systemctl start rpcbind
+systemctl start nfs-server
+systemctl start nfs-lock
+systemctl start nfs-idmap
+# Disable requiretty to allow run sudo within scripts
+sed -i -e 's/Defaults    requiretty.*/ #Defaults    requiretty/g' /etc/sudoers
+rpm -Uvh http://li.nux.ro/download/nux/dextop/el7/x86_64/nux-dextop-release-0-1.el7.nux.noarch.rpm
+yum -y install mmv
