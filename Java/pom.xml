@@ -7,7 +7,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.microsoft.azure</groupId>
   <version>1.0.0</version>
-  <artifactId>azure-example</artifactId>
+  <artifactId>azure-batch-example</artifactId>
   <packaging>pom</packaging>
 
   <name>Microsoft Azure Batch SDK Sample</name>
@@ -20,12 +20,6 @@
       <distribution>repo</distribution>
     </license>
   </licenses>
-
-  <scm>
-    <url>scm:git:https://github.com/Azure/azure-sdk-for-java</url>
-    <connection>scm:git:git@github.com:Azure/azure-sdk-for-java.git</connection>
-    <tag>HEAD</tag>
-  </scm>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
