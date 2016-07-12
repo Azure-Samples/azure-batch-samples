@@ -172,7 +172,8 @@ if __name__ == '__main__':
     # Command to run on all subtasks including primary before starting
     # application command on primary.
     coordination_cmdline = [
-        # This creates/setup NFS share, and download input data files, etc.
+        # This creates/sets up the NFS share and downloads the input data
+        # files, etc
         '$AZ_BATCH_TASK_SHARED_DIR/coordination-cmd']
 
     # Create a Batch service client.  We'll now be interacting with the Batch
