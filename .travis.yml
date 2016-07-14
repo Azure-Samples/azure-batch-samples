@@ -9,14 +9,28 @@ python:
   #- pypy
   # disable pypy3 until 3.3 compliance
   #- pypy3
+addons:
+  apt:
+    packages:
+      - oracle-java8-installer
 env:
   - BATCH_SAMPLES_DIR=Python/Batch STORAGE_SAMPLES_DIR=Python/Storage
 install:
   - pip install -e $STORAGE_SAMPLES_DIR
   - pip install -r $BATCH_SAMPLES_DIR/requirements.txt
   - pip install coveralls flake8 pytest pytest-cov requests_mock
+  # install Java stuff
+  - export PATH="/usr/lib/jvm/java-8-oracle:$PATH"
+  - export JAVA_HOME="/usr/lib/jvm/java-8-oracle"
+  - mkdir mvn
+  - wget "http://www-eu.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz"
+  - tar -zxvf apache-maven-3.3.9-bin.tar.gz -C ./mvn
+  - export PATH=`pwd`/mvn/bin:$PATH
+  - mvn -v
 script:
-  - cd $BATCH_SAMPLES_DIR
+  - cd Java
+  - mvn install
+  - cd ../$BATCH_SAMPLES_DIR
   - flake8 . --statistics
   - cd ../../$STORAGE_SAMPLES_DIR
   - flake8 blobxfer.py test/test_blobxfer.py
