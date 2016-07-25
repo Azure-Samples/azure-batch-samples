@@ -54,7 +54,8 @@ openssl invocations (i.e., `openssl.exe` instead of `openssl`).
 
 ####[sample4\_docker\_swarm.py](./sample4\_docker\_swarm.py)
 This sample shows how to create a pool of compute nodes that are also
-clustered into a docker swarm. Additionally, this sample shows how to connect
+clustered into a docker swarm and how to schedule docker run tasks to the
+compute pool. Additionally, this sample shows how to connect
 to the docker swarm locally through an ssh tunnel. This sample showcases a
 variety of Azure Batch interaction including: creating a inter-node
 communication enabled pool, adding a compute node user with an ssh key,
