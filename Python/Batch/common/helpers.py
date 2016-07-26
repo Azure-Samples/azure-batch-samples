@@ -341,7 +341,7 @@ def wait_for_all_nodes_state(batch_client, pool, node_state):
 
 def create_container_and_create_sas(
         block_blob_client, container_name, permission, expiry=None,
-        timeout=30):
+        timeout=None):
     """Create a blob sas token
 
     :param block_blob_client: The storage block blob client to use.
@@ -350,13 +350,15 @@ def create_container_and_create_sas(
     :param expiry: The SAS expiry time.
     :type expiry: `datetime.datetime`
     :param int timeout: timeout in minutes from now for expiry,
-                        will only be used if expiry is not specified
+        will only be used if expiry is not specified
     :return: A SAS token
     :rtype: str
     """
     if expiry is None:
-        expiry = datetime.datetime.utcnow() + \
-                 datetime.timedelta(minutes=timeout)
+        if timeout is None:
+            timeout = 30
+        expiry = datetime.datetime.utcnow() + datetime.timedelta(
+            minutes=timeout)
 
     block_blob_client.create_container(
         container_name,
@@ -368,7 +370,7 @@ def create_container_and_create_sas(
 
 def create_sas_token(
         block_blob_client, container_name, blob_name, permission, expiry=None,
-        timeout=30):
+        timeout=None):
     """Create a blob sas token
 
     :param block_blob_client: The storage block blob client to use.
@@ -378,20 +380,22 @@ def create_sas_token(
     :param expiry: The SAS expiry time.
     :type expiry: `datetime.datetime`
     :param int timeout: timeout in minutes from now for expiry,
-                        will only be used if expiry is not specified
+        will only be used if expiry is not specified
     :return: A SAS token
     :rtype: str
     """
     if expiry is None:
-        expiry = datetime.datetime.utcnow() + \
-                 datetime.timedelta(minutes=timeout)
+        if timeout is None:
+            timeout = 30
+        expiry = datetime.datetime.utcnow() + datetime.timedelta(
+            minutes=timeout)
     return block_blob_client.generate_blob_shared_access_signature(
         container_name, blob_name, permission=permission, expiry=expiry)
 
 
 def upload_blob_and_create_sas(
         block_blob_client, container_name, blob_name, file_name, expiry,
-        timeout):
+        timeout=None):
     """Uploads a file from local disk to Azure Storage and creates
     a SAS for it.
 
@@ -403,7 +407,7 @@ def upload_blob_and_create_sas(
     :param expiry: The SAS expiry time.
     :type expiry: `datetime.datetime`
     :param int timeout: timeout in minutes from now for expiry,
-                        will only be used if expiry is not specified
+        will only be used if expiry is not specified
     :return: A SAS URL to the blob with the specified expiry time.
     :rtype: str
     """
@@ -432,8 +436,8 @@ def upload_blob_and_create_sas(
     return sas_url
 
 
-def upload_file_to_container(block_blob_client, container_name, file_path,
-                             timeout):
+def upload_file_to_container(
+        block_blob_client, container_name, file_path, timeout):
     """
     Uploads a local file to an Azure Blob storage container.
 
@@ -442,32 +446,30 @@ def upload_file_to_container(block_blob_client, container_name, file_path,
     :param str container_name: The name of the Azure Blob storage container.
     :param str file_path: The local path to the file.
     :param int timeout: timeout in minutes from now for expiry,
-                        will only be used if expiry is not specified
+        will only be used if expiry is not specified
     :rtype: `azure.batch.models.ResourceFile`
     :return: A ResourceFile initialized with a SAS URL appropriate for Batch
     tasks.
     """
     blob_name = os.path.basename(file_path)
-    print('Uploading file {} to container [{}]...'.format(file_path,
-                                                          container_name))
-    sas_url = upload_blob_and_create_sas(block_blob_client, container_name,
-                                         blob_name, file_path, expiry=None,
-                                         timeout=timeout)
-    return batchmodels.ResourceFile(file_path=blob_name,
-                                    blob_source=sas_url)
+    print('Uploading file {} to container [{}]...'.format(
+        file_path, container_name))
+    sas_url = upload_blob_and_create_sas(
+        block_blob_client, container_name, blob_name, file_path, expiry=None,
+        timeout=timeout)
+    return batchmodels.ResourceFile(
+        file_path=blob_name, blob_source=sas_url)
 
 
-def download_blob_from_container(block_blob_client,
-                                 container_name,
-                                 blob_name,
-                                 directory_path):
+def download_blob_from_container(
+        block_blob_client, container_name, blob_name, directory_path):
     """
     Downloads specified blob from the specified Azure Blob storage container.
 
     :param block_blob_client: A blob service client.
     :type block_blob_client: `azure.storage.blob.BlockBlobService`
     :param container_name: The Azure Blob storage container from which to
-     download file.
+        download file.
     :param blob_name: The name of blob to be downloaded
     :param directory_path: The local directory to which to download the file.
     """
@@ -476,14 +478,11 @@ def download_blob_from_container(block_blob_client,
 
     destination_file_path = os.path.join(directory_path, blob_name)
 
-    block_blob_client.get_blob_to_path(container_name,
-                                       blob_name,
-                                       destination_file_path)
+    block_blob_client.get_blob_to_path(
+        container_name, blob_name, destination_file_path)
 
     print('  Downloaded blob [{}] from container [{}] to {}'.format(
-         blob_name,
-         container_name,
-         destination_file_path))
+        blob_name, container_name, destination_file_path))
 
     print('  Download complete!')
 
@@ -538,9 +537,8 @@ def print_batch_exception(batch_exception):
     """
     print('-------------------------------------------')
     print('Exception encountered:')
-    if batch_exception.error and \
-            batch_exception.error.message and \
-            batch_exception.error.message.value:
+    if (batch_exception.error and batch_exception.error.message and
+            batch_exception.error.message.value):
         print(batch_exception.error.message.value)
         if batch_exception.error.values:
             print()

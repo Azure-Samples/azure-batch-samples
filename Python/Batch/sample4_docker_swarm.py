@@ -53,7 +53,8 @@ _SSH_TUNNEL_SCRIPT = 'ssh_tunnel_batch_docker_swarm.sh'
 def connect_to_remote_docker_swarm_master(
         batch_client, pool_id, nodes, master_node_id, username,
         ssh_private_key, generate_ssh_tunnel_script):
-    """Adds an administrative user to the Batch Compute Node
+    """Connects to the remote docker swarm master to run sample commands and
+    optionally generates an ssh tunnel script
 
     :param batch_client: The batch client to use.
     :type batch_client: `batchserviceclient.BatchServiceClient`
