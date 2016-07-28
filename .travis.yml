@@ -14,9 +14,8 @@ addons:
     packages:
       - oracle-java8-installer
 env:
-  - BATCH_SAMPLES_DIR=Python/Batch STORAGE_SAMPLES_DIR=Python/Storage
+  - BATCH_SAMPLES_DIR=Python/Batch
 install:
-  - pip install -e $STORAGE_SAMPLES_DIR
   - pip install -r $BATCH_SAMPLES_DIR/requirements.txt
   - pip install coveralls flake8 pytest pytest-cov requests_mock
   # install Java stuff
@@ -32,9 +31,4 @@ script:
   - mvn install
   - cd ../$BATCH_SAMPLES_DIR
   - flake8 . --statistics
-  - cd ../../$STORAGE_SAMPLES_DIR
-  - flake8 blobxfer.py test/test_blobxfer.py
-  - PYTHONPATH=. py.test -l --cov-config ../.coveragerc --cov-report term-missing --cov blobxfer test/test_blobxfer.py
-after_success:
-  - coveralls --rcfile=../.coveragerc --verbose
 
