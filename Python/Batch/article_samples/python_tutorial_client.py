@@ -335,7 +335,7 @@ def add_tasks(batch_service_client, job_id, input_files,
 
     tasks = list()
 
-    for input_file in input_files:
+    for idx, input_file in enumerate(input_files):
 
         command = ['python $AZ_BATCH_NODE_SHARED_DIR/python_tutorial_task.py '
                    '--filepath {} --numwords {} --storageaccount {} '
@@ -347,7 +347,7 @@ def add_tasks(batch_service_client, job_id, input_files,
                     output_container_sas_token)]
 
         tasks.append(batch.models.TaskAddParameter(
-                'topNtask{}'.format(input_files.index(input_file)),
+                'topNtask{}'.format(idx),
                 wrap_commands_in_shell('linux', command),
                 resource_files=[input_file]
                 )
