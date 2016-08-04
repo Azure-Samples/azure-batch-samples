@@ -16,9 +16,17 @@ namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs
     using System.Collections.Generic;
     using System.Linq;
 
-    class Program
+    // This sample application demonstrates how to use the Azure Batch File Conventions
+    // library to persist task output to Azure Storage, and retrieve the stored output
+    // using the library.
+
+    // REQUIRED: You must first build the PersistOutputsTask project and upload it and its
+    // dependencies as a Batch application package. See the following for instruction:
+    // https://azure.microsoft.com/documentation/articles/batch-application-packages/
+
+    public class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             // Configure your AccountSettings in the Microsoft.Azure.Batch.Samples.Common project within this solution
             BatchSharedKeyCredentials cred = new BatchSharedKeyCredentials(AccountSettings.Default.BatchServiceUrl,
@@ -28,11 +36,11 @@ namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs
             StorageCredentials storageCred = new StorageCredentials(AccountSettings.Default.StorageAccountName,
                                                                     AccountSettings.Default.StorageAccountKey);
 
-            string jobId = Guid.NewGuid().ToString();
-            string poolId = "PersistOutputsSamplePool";
-            int nodeCount = 3;
-            string appPackageId = "PersistOutputTask";
-            string appPackageVersion = "1.1";
+            string jobId = "PersistOutput-" + DateTime.Now.ToString("yyyyMMdd-HHmmss");
+            const string poolId = "PersistOutputsSamplePool";
+            const int nodeCount = 1;
+            const string appPackageId = "PersistOutputTask";
+            const string appPackageVersion = "1.0";
 
             using (BatchClient batchClient = BatchClient.Open(cred))
             {
@@ -42,18 +50,21 @@ namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs
                     targetDedicated: nodeCount,
                     cloudServiceConfiguration: new CloudServiceConfiguration("4"));
 
-                // Specify the application and version to deploy to the compute nodes
+                // Specify the application and version to deploy to the compute nodes. You must
+                // first build PersistOutputsTask, then upload it as an application package.
+                // See https://azure.microsoft.com/documentation/articles/batch-application-packages/
                 pool.ApplicationPackageReferences = new List<ApplicationPackageReference>
                 {
-                    new ApplicationPackageReference {
+                    new ApplicationPackageReference
+                    {
                         ApplicationId = appPackageId,
-                        Version = appPackageVersion }
+                        Version = appPackageVersion
+                    }
                 };
 
                 // Commit the pool to the Batch service
                 pool.Commit();
-
-
+                
                 CloudJob job = batchClient.JobOperations.CreateJob(jobId, new PoolInformation { PoolId = poolId });
 
                 CloudStorageAccount linkedStorageAccount = new CloudStorageAccount(storageCred, true);
@@ -65,7 +76,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs
                 // task application can reference when persisting its outputs.
                 string containerName = job.OutputStorageContainerName();
                 CloudBlobContainer container = linkedStorageAccount.CreateCloudBlobClient().GetContainerReference(containerName);
-                string containerSas = container.GetSharedAccessSignature(FullAccessPolicy());
+                string containerSas = container.GetSharedAccessSignature(CreateFullAccessPolicy());
                 string containerUrl = container.Uri.AbsoluteUri + containerSas;
                 job.CommonEnvironmentSettings = new[] { new EnvironmentSetting("JOB_CONTAINER_URL", containerUrl) };
 
@@ -88,7 +99,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs
                 Console.WriteLine($"All tasks added to job {job.Id}");
                 Console.WriteLine();
 
-                foreach (CloudTask task in CompletedTasks(batchClient, job))
+                foreach (CloudTask task in CompletedTasks(job))
                 {
                     Console.Write($"Task {task.Id} completed, ");
                     foreach (OutputFileReference output in task.OutputStorage(linkedStorageAccount).ListOutputs(TaskOutputKind.TaskOutput))
@@ -99,7 +110,8 @@ namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs
                 }
 
                 Console.WriteLine();
-                Console.WriteLine("All tasks completed, you may now view the outputs in the Azure portal.");
+                Console.WriteLine("All tasks completed and outputs downloaded. You can view the task outputs in the Azure portal");
+                Console.WriteLine("before deleting the job.");
 
                 // Clean up the resources we've created (job, pool, and blob storage container)
                 Console.WriteLine();
@@ -134,22 +146,23 @@ namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs
         /// Monitors the specified job's tasks and returns each as they complete. When all
         /// of the tasks in the job have completed, the method returns.
         /// </summary>
-        /// <param name="client">The <see cref="<see cref="BatchClient"/>" for the account containing the job.</param>
         /// <param name="job">The <see cref="CloudJob"/> containing the tasks to monitor.</param>
         /// <returns>One or more completed <see cref="CloudTask"/>.</returns>
-        private static IEnumerable<CloudTask> CompletedTasks(BatchClient client, CloudJob job)
+        private static IEnumerable<CloudTask> CompletedTasks(CloudJob job)
         {
             HashSet<string> yieldedTasks = new HashSet<string>();
 
+            ODATADetailLevel detailLevel = new ODATADetailLevel();
+            detailLevel.SelectClause = "id,state,url";
+
             while (true)
             {
-                List<CloudTask> tasks = job.ListTasks().ToList();
+                List<CloudTask> tasks = job.ListTasks(detailLevel).ToList();
 
-                List<CloudTask> newlyCompleted = tasks.Where(t => t.State == Microsoft.Azure.Batch.Common.TaskState.Completed)
-                                          .Where(t => !yieldedTasks.Contains(t.Id))
-                                          .ToList();
+                IEnumerable<CloudTask> newlyCompleted = tasks.Where(t => t.State == Microsoft.Azure.Batch.Common.TaskState.Completed)
+                                          .Where(t => !yieldedTasks.Contains(t.Id));
 
-                foreach (var task in newlyCompleted)
+                foreach (CloudTask task in newlyCompleted)
                 {
                     yield return task;
                     yieldedTasks.Add(task.Id);
@@ -166,7 +179,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs
         /// Gets a <see cref="SharedAccessBlobPolicy"/> with full CRUD permissions, valid for 1 day.
         /// </summary>
         /// <returns>Full-access <see cref="SharedAccessBlobPolicy"/>.</returns>
-        private static SharedAccessBlobPolicy FullAccessPolicy()
+        private static SharedAccessBlobPolicy CreateFullAccessPolicy()
         {
             return new SharedAccessBlobPolicy
             {

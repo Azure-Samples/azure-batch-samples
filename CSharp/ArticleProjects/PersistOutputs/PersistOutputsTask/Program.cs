@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation
 //
 // Companion project to the following article:
-// https://azure.microsoft.com/documentation/articles/ARTICLE-SLUG-HERE/
+// https://azure.microsoft.com/documentation/articles/batch-task-output/
 
 namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs.PersistOutputsTask
 {
@@ -17,9 +17,11 @@ namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs.PersistOutputsTa
     // as a task OUTPUT, and creates a file containing just the mean and standard deviation which
     // is saved as a task PREVIEW.
 
-    class Program
+    public class Program
     {
-        static int Main(string[] args)
+        private static readonly Random random = new Random();
+
+        public static int Main(string[] args)
         {
             // Obtain service-defined environment variables
             string jobId = Environment.GetEnvironmentVariable("AZ_BATCH_JOB_ID");
@@ -48,13 +50,13 @@ namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs.PersistOutputsTa
                     {
                         output.WriteLine($"# Task {taskId}");
 
-                        int runCount = 1000000;
+                        const int runCount = 1000000;
                         int[] results = new int[runCount];
                         double resultTotal = 0;
 
                         for (int i = 0; i < runCount; ++i)
                         {
-                            var runResult = PerformSingleRunMonteCarloSimulation();
+                            int runResult = PerformSingleRunMonteCarloSimulation();
                             output.WriteLine($"{i}, {runResult}");
                             results[i] = runResult;
                             resultTotal += runResult;
@@ -97,12 +99,10 @@ namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs.PersistOutputsTa
             return Path.Combine(Environment.GetEnvironmentVariable("AZ_BATCH_TASK_WORKING_DIR"), path);
         }
 
-        private static readonly Random _random = new Random();
-
         private static int PerformSingleRunMonteCarloSimulation()
         {
             Thread.Sleep(TimeSpan.FromMilliseconds(0.1));
-            return _random.Next(100);
+            return random.Next(100);
         }
     }
 }
