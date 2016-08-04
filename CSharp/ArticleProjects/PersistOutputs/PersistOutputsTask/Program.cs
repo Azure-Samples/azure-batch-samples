@@ -33,8 +33,8 @@ namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs.PersistOutputsTa
             // The task will use the TaskOutputStorage to store both its output and log updates
             TaskOutputStorage taskStorage = new TaskOutputStorage(new Uri(jobContainerUrl), taskId);
 
-            // The primary task logic is wrapped in a using statement that sends updates to stdout.txt
-            // in Storage every 15 seconds while the task code runs.
+            // The primary task logic is wrapped in a using statement that sends updates to the
+            // stdout.txt blob in Storage every 15 seconds while the task code runs.
             using (Task<ITrackedSaveOperation> stdout = taskStorage.SaveTrackedAsync(
                 TaskOutputKind.TaskLog, 
                 RootDir("stdout.txt"), 

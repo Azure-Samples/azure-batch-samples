@@ -7,5 +7,5 @@ To run the sample, follow these steps:
 1. Open the project in **Visual Studio 2015**.
 2. Add your Batch and Storage **account credentials** to **AccountSettings.settings** in the Microsoft.Azure.Batch.Samples.Common project.
 3. **Build** (but do not run) the solution. Restore any NuGet packages if prompted.
-4. Use the Azure portal to upload an [application package](http://azure.microsoft.com/documentation/articles/batch-application-packages/) for **PersistOutputTask**. Include the `PersistOutputTask.exe` and its dependent assemblies in the .zip package, set the application ID to "PersistOutputTask", and the application package version to "1.0".
+4. Use the Azure portal to upload an [application package](http://azure.microsoft.com/documentation/articles/batch-application-packages/) for **PersistOutputsTask**. Include the `PersistOutputsTask.exe` and its dependent assemblies in the .zip package, set the application ID to "PersistOutputsTask", and the application package version to "1.0".
 5. **Start** (run) the **PersistOutputs** project.

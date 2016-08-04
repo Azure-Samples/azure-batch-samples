@@ -39,7 +39,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs
             string jobId = "PersistOutput-" + DateTime.Now.ToString("yyyyMMdd-HHmmss");
             const string poolId = "PersistOutputsSamplePool";
             const int nodeCount = 1;
-            const string appPackageId = "PersistOutputTask";
+            const string appPackageId = "PersistOutputsTask";
             const string appPackageVersion = "1.0";
 
             using (BatchClient batchClient = BatchClient.Open(cred))
@@ -48,7 +48,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs
                 CloudPool pool = batchClient.PoolOperations.CreatePool(poolId: poolId,
                     virtualMachineSize: "small",
                     targetDedicated: nodeCount,
-                    cloudServiceConfiguration: new CloudServiceConfiguration("4"));
+                    cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "4"));
 
                 // Specify the application and version to deploy to the compute nodes. You must
                 // first build PersistOutputsTask, then upload it as an application package.
