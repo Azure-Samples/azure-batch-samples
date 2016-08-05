@@ -76,7 +76,7 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
                     if (!string.IsNullOrEmpty(jobId) && helloWorldConfigurationSettings.ShouldDeleteJob)
                     {
                         Console.WriteLine("Deleting job: {0}", jobId);
-                        batchClient.JobOperations.DeleteJob(jobId);
+                        await batchClient.JobOperations.DeleteJobAsync(jobId);
                     }
                 }
             }

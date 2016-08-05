@@ -194,7 +194,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                     if (this.textSearchSettings.ShouldDeleteJob)
                     {
                         Console.WriteLine("Deleting job {0}", jobId);
-                        batchClient.JobOperations.DeleteJob(jobId);
+                        await batchClient.JobOperations.DeleteJobAsync(jobId);
                     }
 
                     //Note that there were files uploaded to a container specified in the 

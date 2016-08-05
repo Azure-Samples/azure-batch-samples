@@ -94,10 +94,9 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
                 finally
                 {
                     // Delete the pool (if configured) and job
-                    // TODO: In C# 6 we can await here instead of .Wait()
-                    
+
                     // Delete Azure Storage container data
-                    SampleHelpers.DeleteContainersAsync(cloudStorageAccount, blobContainerNames).Wait();
+                    await SampleHelpers.DeleteContainersAsync(cloudStorageAccount, blobContainerNames);
 
                     // Delete Azure Batch resources
                     List<string> jobIdsToDelete = new List<string>();
@@ -113,7 +112,7 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
                         poolIdsToDelete.Add(this.poolsAndResourceFileSettings.PoolId);
                     }
 
-                    SampleHelpers.DeleteBatchResourcesAsync(batchClient, jobIdsToDelete, poolIdsToDelete).Wait();
+                    await SampleHelpers.DeleteBatchResourcesAsync(batchClient, jobIdsToDelete, poolIdsToDelete);
                 }
             }
         }
