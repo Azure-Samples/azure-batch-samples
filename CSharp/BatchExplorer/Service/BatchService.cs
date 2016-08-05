@@ -161,7 +161,7 @@ namespace Microsoft.Azure.BatchExplorer.Service
                         new ImageReference(
                             publisher: virtualMachineConfigurationOptions.Publisher,
                             offer: virtualMachineConfigurationOptions.Offer,
-                            skuId: virtualMachineConfigurationOptions.SkuId,
+                            sku: virtualMachineConfigurationOptions.SkuId,
                             version: virtualMachineConfigurationOptions.Version),
                         virtualMachineConfigurationOptions.NodeAgentSkuId,
                         virtualMachineConfigurationOptions.EnableWindowsAutomaticUpdates.HasValue ? new WindowsConfiguration(virtualMachineConfigurationOptions.EnableWindowsAutomaticUpdates) : null),

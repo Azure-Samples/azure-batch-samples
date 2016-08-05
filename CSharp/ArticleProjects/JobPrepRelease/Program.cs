@@ -111,19 +111,13 @@ namespace JobPrepRelease
 
                 // Wait for the tasks to complete before proceeding. The long timeout here is to allow time
                 // for the nodes within the pool to be created and started if the pool had not yet been created.
-                if (await batchClient.Utilities.CreateTaskStateMonitor().WhenAllAsync(job.ListTasks(),
-                                                                   TaskState.Completed,
-                                                                   TimeSpan.FromMinutes(30)))
-                {
-                    Console.WriteLine("Operation timed out while waiting for submitted tasks to reach state {0}", TaskState.Completed);
+                await batchClient.Utilities.CreateTaskStateMonitor().WhenAll(
+                    job.ListTasks(),
+                    TaskState.Completed,
+                    TimeSpan.FromMinutes(30));
 
-                    return;
-                }
-                else
-                {
-                    Console.WriteLine("All tasks completed.");
-                    Console.WriteLine();
-                }
+                Console.WriteLine("All tasks completed.");
+                Console.WriteLine();
 
                 // Print the contents of the shared text file modified by the job preparation and other tasks.
                 ODATADetailLevel nodeDetail = new ODATADetailLevel(selectClause: "id, state");

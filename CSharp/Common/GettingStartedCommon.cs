@@ -112,12 +112,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
             // Wait until the tasks are in completed state.
             List<CloudTask> ourTasks = tasks.ToList();
 
-            bool timedOut = await taskStateMonitor.WhenAllAsync(ourTasks, TaskState.Completed, timeout).ConfigureAwait(continueOnCapturedContext: false);
-
-            if (timedOut)
-            {
-                throw new TimeoutException("Timed out waiting for tasks");
-            }
+            await taskStateMonitor.WhenAll(ourTasks, TaskState.Completed, timeout).ConfigureAwait(continueOnCapturedContext: false);
 
             // dump task output
             foreach (CloudTask t in ourTasks)

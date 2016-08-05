@@ -86,7 +86,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             {
                 return this.AvailableNodeAgentSkus.Where(
                     sku => sku.VerifiedImageReferences.Any(imageRef =>
-                        imageRef.Publisher == this.Publisher && imageRef.Offer == this.offer && imageRef.SkuId == this.Sku)).Select(
+                        imageRef.Publisher == this.Publisher && imageRef.Offer == this.offer && imageRef.Sku == this.Sku)).Select(
                             sku => sku.Id);
             }
         }
@@ -120,7 +120,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             {
                 return this.AvailableImageReferences.Where(
                     imageRef => imageRef.Publisher == this.Publisher && imageRef.Offer == this.Offer).Select(
-                    imageRef => imageRef.SkuId).Distinct();
+                    imageRef => imageRef.Sku).Distinct();
             }
         }
 

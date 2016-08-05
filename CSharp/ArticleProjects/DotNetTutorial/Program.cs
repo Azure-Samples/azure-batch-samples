@@ -400,52 +400,50 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
             // We use a TaskStateMonitor to monitor the state of our tasks. In this case, we will wait for all tasks to
             // reach the Completed state.
             TaskStateMonitor taskStateMonitor = batchClient.Utilities.CreateTaskStateMonitor();
-            bool timedOut = await taskStateMonitor.WhenAllAsync(tasks, TaskState.Completed, timeout);
-
-            if (timedOut)
+            try
             {
-                allTasksSuccessful = false;
-
-                await batchClient.JobOperations.TerminateJobAsync(jobId, failureMessage);
-
-                Console.WriteLine(failureMessage);
+                await taskStateMonitor.WhenAll(tasks, TaskState.Completed, timeout);
             }
-            else
+            catch (TimeoutException)
             {
-                await batchClient.JobOperations.TerminateJobAsync(jobId, successMessage);
+                await batchClient.JobOperations.TerminateJobAsync(jobId, failureMessage);
+                Console.WriteLine(failureMessage);
+                return false;
+            }
 
-                // All tasks have reached the "Completed" state, however, this does not guarantee all tasks completed successfully.
-                // Here we further check each task's ExecutionInfo property to ensure that it did not encounter a scheduling error
-                // or return a non-zero exit code.
+            await batchClient.JobOperations.TerminateJobAsync(jobId, successMessage);
 
-                // Update the detail level to populate only the task id and executionInfo properties.
-                // We refresh the tasks below, and need only this information for each task.
-                detail.SelectClause = "id, executionInfo";
+            // All tasks have reached the "Completed" state, however, this does not guarantee all tasks completed successfully.
+            // Here we further check each task's ExecutionInfo property to ensure that it did not encounter a scheduling error
+            // or return a non-zero exit code.
 
-                foreach (CloudTask task in tasks)
+            // Update the detail level to populate only the task id and executionInfo properties.
+            // We refresh the tasks below, and need only this information for each task.
+            detail.SelectClause = "id, executionInfo";
+
+            foreach (CloudTask task in tasks)
+            {
+                // Populate the task's properties with the latest info from the Batch service
+                await task.RefreshAsync(detail);
+
+                if (task.ExecutionInformation.SchedulingError != null)
                 {
-                    // Populate the task's properties with the latest info from the Batch service
-                    await task.RefreshAsync(detail);
+                    // A scheduling error indicates a problem starting the task on the node. It is important to note that
+                    // the task's state can be "Completed," yet still have encountered a scheduling error.
 
-                    if (task.ExecutionInformation.SchedulingError != null)
-                    {
-                        // A scheduling error indicates a problem starting the task on the node. It is important to note that
-                        // the task's state can be "Completed," yet still have encountered a scheduling error.
+                    allTasksSuccessful = false;
 
-                        allTasksSuccessful = false;
+                    Console.WriteLine("WARNING: Task [{0}] encountered a scheduling error: {1}", task.Id, task.ExecutionInformation.SchedulingError.Message);
+                }
+                else if (task.ExecutionInformation.ExitCode != 0)
+                {
+                    // A non-zero exit code may indicate that the application executed by the task encountered an error
+                    // during execution. As not every application returns non-zero on failure by default (e.g. robocopy),
+                    // your implementation of error checking may differ from this example.
 
-                        Console.WriteLine("WARNING: Task [{0}] encountered a scheduling error: {1}", task.Id, task.ExecutionInformation.SchedulingError.Message);
-                    }
-                    else if (task.ExecutionInformation.ExitCode != 0)
-                    {
-                        // A non-zero exit code may indicate that the application executed by the task encountered an error
-                        // during execution. As not every application returns non-zero on failure by default (e.g. robocopy),
-                        // your implementation of error checking may differ from this example.
+                    allTasksSuccessful = false;
 
-                        allTasksSuccessful = false;
-
-                        Console.WriteLine("WARNING: Task [{0}] returned a non-zero exit code - this may indicate task execution or completion failure.", task.Id);
-                    }
+                    Console.WriteLine("WARNING: Task [{0}] returned a non-zero exit code - this may indicate task execution or completion failure.", task.Id);
                 }
             }
 

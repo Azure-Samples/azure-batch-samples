@@ -163,18 +163,18 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                     Console.WriteLine("Waiting for job's tasks to complete");
 
                     TaskStateMonitor taskStateMonitor = batchClient.Utilities.CreateTaskStateMonitor();
-                    bool timedOut = await taskStateMonitor.WhenAllAsync(new List<CloudTask> { boundJobManagerTask }, TaskState.Completed, maxJobCompletionTimeout);
-
-                    Console.WriteLine("Done waiting for job manager task.");
-
-                    await boundJobManagerTask.RefreshAsync();
-
-                    //Check to ensure the job manager task exited successfully.
-                    await Helpers.CheckForTaskSuccessAsync(boundJobManagerTask, dumpStandardOutOnTaskSuccess: false);
-
-                    if (timedOut)
+                    try
                     {
-                        throw new TimeoutException(string.Format("Timed out waiting for job manager task to complete."));
+                        await taskStateMonitor.WhenAll(new List<CloudTask> { boundJobManagerTask }, TaskState.Completed, maxJobCompletionTimeout);
+                    }
+                    finally
+                    {
+                        Console.WriteLine("Done waiting for job manager task.");
+
+                        await boundJobManagerTask.RefreshAsync();
+
+                        //Check to ensure the job manager task exited successfully.
+                        await Helpers.CheckForTaskSuccessAsync(boundJobManagerTask, dumpStandardOutOnTaskSuccess: false);
                     }
 
                     //

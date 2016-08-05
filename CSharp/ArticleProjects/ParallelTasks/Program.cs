@@ -129,11 +129,16 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
                 Console.WriteLine("Waiting for task completion...");
                 Console.WriteLine();
 
-                if (await batchClient.Utilities.CreateTaskStateMonitor().WhenAllAsync(job.ListTasks(),
-                                                                   TaskState.Completed,
-                                                                   longTaskDurationLimit))
+                try
                 {
-                    Console.WriteLine("Operation timed out while waiting for submitted tasks to reach state {0}", TaskState.Completed); 
+                    await batchClient.Utilities.CreateTaskStateMonitor().WhenAll(
+                        job.ListTasks(),
+                        TaskState.Completed,
+                        longTaskDurationLimit);
+                }
+                catch (TimeoutException e)
+                {
+                    Console.WriteLine(e.ToString());
                 }
 
                 stopwatch.Stop();
