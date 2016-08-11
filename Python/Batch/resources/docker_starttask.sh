@@ -9,7 +9,6 @@ apt-get update
 apt-get purge -y lxc-docker
 apt-get install -y docker-engine
 service docker stop
-ipaddress=`ip addr list eth0 | grep "inet " | cut -d' ' -f6 | cut -d/ -f1`
-echo DOCKER_OPTS=\"-H tcp://$ipaddress:2375 -H unix:///var/run/docker.sock\" >> /etc/default/docker
+echo DOCKER_OPTS=\"-H tcp://127.0.0.1:2375 -H unix:///var/run/docker.sock\" >> /etc/default/docker
 rm -f /var/lib/docker/network/files/local-kv.db
 service docker start

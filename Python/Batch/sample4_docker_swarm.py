@@ -84,7 +84,7 @@ def connect_to_remote_docker_swarm_master(
         ssh_args = [
             'ssh', '-o', 'StrictHostKeyChecking=no', '-o',
             'UserKnownHostsFile=/dev/null', '-i', ssh_private_key,
-            '-p', ssh_port, '-N', '-L', '3375:localhost:3375',
+            '-p', ssh_port, '-N', '-L', '2375:localhost:2375',
             '{}@{}'.format(username, remote_ip)
         ]
         sshproc = subprocess.Popen(ssh_args)
@@ -97,26 +97,30 @@ def connect_to_remote_docker_swarm_master(
                 fd.write(' '.join(ssh_args))
             os.chmod(_SSH_TUNNEL_SCRIPT, 0o755)
 
-        # issue docker ps and info against swarm endpoint
-        print('>>local>> docker ps -a:')
-        docker_ps = subprocess.check_output(
-            ['docker', '-H', 'tcp://localhost:3375', 'ps', '-a'])
-        print(common.helpers.decode_string(docker_ps))
+        # issue docker info and node ls against swarm endpoint
         print('>>local>> docker info:')
         docker_info = subprocess.check_output(
-            ['docker', '-H', 'tcp://localhost:3375', 'info'])
+            ['docker', '-H', 'tcp://localhost:2375', 'info'])
+        print(common.helpers.decode_string(docker_info))
+        print('>>local>> docker node ls:')
+        docker_info = subprocess.check_output(
+            ['docker', '-H', 'tcp://localhost:2375', 'node', 'ls'])
         print(common.helpers.decode_string(docker_info))
 
         # issue a docker run command locally
+        print('>>local>> docker ps -a:')
+        docker_ps = subprocess.check_output(
+            ['docker', '-H', 'tcp://localhost:2375', 'ps', '-a'])
+        print(common.helpers.decode_string(docker_ps))
         print('>>local>> docker run hello-world:')
         docker_run = subprocess.check_output(
-            ['docker', '-H', 'tcp://localhost:3375', 'run', '-i',
+            ['docker', '-H', 'tcp://localhost:2375', 'run', '-i',
              'hello-world']
         )
         print(common.helpers.decode_string(docker_run))
         print('>>local>> docker ps -a:')
         docker_ps = subprocess.check_output(
-            ['docker', '-H', 'tcp://localhost:3375', 'ps', '-a'])
+            ['docker', '-H', 'tcp://localhost:2375', 'ps', '-a'])
         print(common.helpers.decode_string(docker_ps))
     finally:
         # kill ssh tunnel
@@ -130,26 +134,24 @@ def connect_to_remote_docker_swarm_master(
 def designate_master_docker_swarm_node(batch_client, pool_id, nodes, job_id):
     """Designate a master docker swarm node by selecting a node in the
     pool to be the swarm manager. This is accomplished via IP selection in
-    the pool of nodes and running the swarm manage command via an
-    affinitized task.
+    the pool of nodes and running the swarm init command via an
+    affinitized task. This is for Docker 1.12+.
 
     :param batch_client: The batch client to use.
     :type batch_client: `batchserviceclient.BatchServiceClient`
-    :param str pool_id: The id of the pool to create.
+    :param str pool_id: The id of the pool.
     :param list nodes: list of `batchserviceclient.models.ComputeNode`
     :param str job_id: The id of the job to create.
     :rtype: tuple
-    :return: (ipaddress, master node id)
+    :return: ((master ipaddress, master node id), swarm token)
     """
     # designate the lowest ip address node as the master
     nodes = sorted(nodes, key=lambda node: node.ip_address)
     master_node_ip_address = nodes[0].ip_address
     master_node_id = nodes[0].id
+    master_node_affinity_id = nodes[0].affinity_id
     master_node = (master_node_ip_address, master_node_id)
-    # create a node list based on the number of nodes and master
-    lastoctet = int(master_node_ip_address.split('.')[-1])
-    nodelist = '10.0.0.[{}:{}]'.format(lastoctet, lastoctet + len(nodes) - 1)
-    print('master node is: {} nodelist is: {}'.format(master_node, nodelist))
+    print('master node is: {}'.format(master_node))
 
     # create job
     job = batchmodels.JobAddParameter(
@@ -159,15 +161,18 @@ def designate_master_docker_swarm_node(batch_client, pool_id, nodes, job_id):
     batch_client.job.add(job)
 
     # add docker swarm manage as an affinitized task to run on the master node
+    # NOTE: task affinity is weak. if the node has no available scheduling
+    # slots, the task may be executed on a different node. for this example,
+    # it is not an issue since this node should be available for scheduling.
     task_commands = [
-        ('docker run -d -p 3375:3375 -t swarm manage -H tcp://0.0.0.0:3375 '
-         '"nodes://{}:2375"').format(nodelist)
+        'docker swarm init --advertise-addr {}'.format(master_node_ip_address),
+        'docker swarm join-token -q worker',
     ]
-    print('creating docker swarm cluster via Azure Batch task...')
+    print('initializing docker swarm cluster via Azure Batch task...')
     task = batchmodels.TaskAddParameter(
-        id="swarm-master",
+        id='swarm-manager',
         affinity_info=batchmodels.AffinityInformation(
-            affinity_id=master_node_id),
+            affinity_id=master_node_affinity_id),
         command_line=common.helpers.wrap_commands_in_shell(
             'linux', task_commands),
         run_elevated=True,
@@ -179,9 +184,59 @@ def designate_master_docker_swarm_node(batch_client, pool_id, nodes, job_id):
         batch_client,
         job_id,
         datetime.timedelta(minutes=5))
-    print('docker swarm cluster created.')
 
-    return master_node
+    # retrieve the swarm token
+    stdout = common.helpers.read_task_file_as_string(
+        batch_client,
+        job.id,
+        task.id,
+        common.helpers._STANDARD_OUT_FILE_NAME)
+    token = stdout.splitlines()[-1].strip()
+    print('swarm token: {}'.format(token))
+
+    return master_node, token
+
+
+def add_nodes_to_swarm(
+        batch_client, pool_id, nodes, job_id, master_node, swarm_token):
+    """Add compute nodes to swarm
+
+    :param batch_client: The batch client to use.
+    :type batch_client: `batchserviceclient.BatchServiceClient`
+    :param str pool_id: The id of the pool to create.
+    :param list nodes: list of `batchserviceclient.models.ComputeNode`
+    :param str job_id: The id of the job.
+    :param tuple master_node: master node info
+    :param str swarm_token: swarm token
+    """
+    task_commands = [
+        'docker swarm join --token {} {}:2377'.format(
+            swarm_token, master_node[0]),
+    ]
+    print('joining docker swarm for each compute node via Azure Batch task...')
+    i = 0
+    for node in nodes:
+        # manager node is already part of the swarm, so skip it
+        if node.id == master_node[1]:
+            continue
+        task = batchmodels.TaskAddParameter(
+            id='swarm-join-{0:03d}'.format(i),
+            affinity_info=batchmodels.AffinityInformation(
+                affinity_id=node.affinity_id),
+            command_line=common.helpers.wrap_commands_in_shell(
+                'linux', task_commands),
+            run_elevated=True,
+        )
+        batch_client.task.add(job_id=job_id, task=task)
+        i += 1
+
+    # wait for task to complete
+    common.helpers.wait_for_tasks_to_complete(
+        batch_client,
+        job_id,
+        datetime.timedelta(minutes=5))
+
+    print('docker swarm cluster created.')
 
 
 def generate_ssh_keypair(key_fileprefix):
@@ -408,8 +463,12 @@ def execute_sample(global_config, sample_config):
                 batch_client, pool_id, node, _NODE_USERNAME, public_key)
 
         # designate a swarm master node
-        master_node = designate_master_docker_swarm_node(
+        master_node, swarm_token = designate_master_docker_swarm_node(
             batch_client, pool_id, nodes, job_id)
+
+        # add nodes to swarm
+        add_nodes_to_swarm(
+            batch_client, pool_id, nodes, job_id, master_node, swarm_token)
 
         # connect to docker remotely
         connect_to_remote_docker_swarm_master(
