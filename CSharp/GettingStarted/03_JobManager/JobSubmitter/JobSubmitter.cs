@@ -101,8 +101,6 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
                 }
                 finally
                 {
-                    // TODO: In C# 6 we can await here instead of .Wait()
-
                     // Delete Azure Batch resources
                     List<string> jobIdsToDelete = new List<string>();
                     List<string> poolIdsToDelete = new List<string>();
@@ -117,7 +115,7 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
                         poolIdsToDelete.Add(this.jobManagerSettings.PoolId);
                     }
 
-                    SampleHelpers.DeleteBatchResourcesAsync(batchClient, jobIdsToDelete, poolIdsToDelete).Wait();
+                    await SampleHelpers.DeleteBatchResourcesAsync(batchClient, jobIdsToDelete, poolIdsToDelete);
                 }
             }
         }
