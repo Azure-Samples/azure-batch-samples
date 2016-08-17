@@ -267,7 +267,7 @@ def create_pool(batch_service_client, pool_id,
         # script can access Azure Blob storage
         'apt-get update',
         'apt-get -y install python-pip',
-        'pip install azure-storage']
+        'pip install azure-storage==0.30.0']
 
     # Get the virtual machine configuration for the desired distro and version.
     # For more information about the virtual machine configuration, see:
