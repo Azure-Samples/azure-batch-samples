@@ -91,6 +91,8 @@ namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs.PersistOutputsTa
                     taskStorage.SaveAsync(TaskOutputKind.TaskPreview, summaryFile)
                     );
 
+                // We are tracking the disk file to save our standard output, but the node agent may take
+                // up to 3 seconds to flush the stdout stream to disk. So give the file a moment to catch up.
                 await Task.Delay(stdoutFlushDelay);
 
                 return 0;
