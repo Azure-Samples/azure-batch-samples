@@ -20,8 +20,14 @@ namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs.PersistOutputsTa
     public class Program
     {
         private static readonly Random random = new Random();
+        private static readonly TimeSpan stdoutFlushDelay = TimeSpan.FromSeconds(3);
 
         public static int Main(string[] args)
+        {
+            return RunTaskAsync().GetAwaiter().GetResult();
+        }
+
+        public static async Task<int> RunTaskAsync()
         {
             // Obtain service-defined environment variables
             string jobId = Environment.GetEnvironmentVariable("AZ_BATCH_JOB_ID");
@@ -35,7 +41,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs.PersistOutputsTa
 
             // The primary task logic is wrapped in a using statement that sends updates to the
             // stdout.txt blob in Storage every 15 seconds while the task code runs.
-            using (Task<ITrackedSaveOperation> stdout = taskStorage.SaveTrackedAsync(
+            using (ITrackedSaveOperation stdout = await taskStorage.SaveTrackedAsync(
                 TaskOutputKind.TaskLog, 
                 RootDir("stdout.txt"), 
                 "stdout.txt", 
@@ -84,6 +90,10 @@ namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs.PersistOutputsTa
                     taskStorage.SaveAsync(TaskOutputKind.TaskOutput, outputFile),
                     taskStorage.SaveAsync(TaskOutputKind.TaskPreview, summaryFile)
                     );
+
+                // We are tracking the disk file to save our standard output, but the node agent may take
+                // up to 3 seconds to flush the stdout stream to disk. So give the file a moment to catch up.
+                await Task.Delay(stdoutFlushDelay);
 
                 return 0;
             }
