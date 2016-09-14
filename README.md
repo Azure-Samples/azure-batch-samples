@@ -4,12 +4,13 @@
 This GitHub repository contains a set of HPC and Batch related samples that demonstrate the usage of Microsoft Azure Batch services along with some general purpose utilities. See [http://azure.microsoft.com/services/batch/](http://azure.microsoft.com/services/batch/) for more information on the Azure Batch service.
 
 ### Batch Account
-
 Before you can interact with the Batch service, you will need a Batch service account. For detailed information on creating a Batch account, see [Create and manage an Azure Batch account in the Azure portal](https://azure.microsoft.com/documentation/articles/batch-account-create-portal/).
 
 ### Azure Storage viewer
+You will find it useful to have an Azure Storage viewer available to assist with managing containers and blobs, as well as observing interaction of the samples with Storage. There are a number of free viewers available including the [Microsoft Azure Storage Explorer](http://storageexplorer.com/) which is cross-platform, free, and from Microsoft.
 
-You will find it useful to have an Azure Storage viewer available to assist with managing containers and blobs, as well as observing interaction of the samples with Storage. There are a number of free viewers available.
+### Docker Support
+Want to use Docker containers with Azure Batch? No problem! Visit [Batch Shipyard](https://github.com/Azure/batch-shipyard/) for more information.
 
 * * *
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.

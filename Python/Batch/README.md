@@ -41,23 +41,32 @@ sku ids, selecting a publisher, offer and sku for the Linux VM gallery image.
 
 ####[sample3\_encrypted\_resourcefiles.py](./sample3_encrypted_resourcefiles.py)
 This sample shows how to generate on-demand encryption keys in conjunction with
-[blobxfer](../Storage) to encrypt local files into Azure Storage which will
-then be decrypted for the task when it executes which ensures encrypted files
-not only in transit but encrypted in storage immediately. This sample
-showcases a variety of Azure Batch interaction including: adding certificates
-to an account, creating a pool with a certificate reference, and accessing
-certificates on a Linux Batch compute node. This sample is geared towards
-Linux with the assumption of a locally available OpenSSL and blobxfer
-installation that is accessible from the sample path invocation. This sample
-can be run on Windows with an appropriate openssl binary and modified
-openssl invocations (i.e., `openssl.exe` instead of `openssl`).
+[blobxfer](https://github.com/Azure/blobxfer) to encrypt local files into Azure
+Storage which will then be decrypted for the task when it executes which
+ensures encrypted files not only in transit but encrypted in storage
+immediately. This sample showcases a variety of Azure Batch interaction
+including: adding certificates to an account, creating a pool with a
+certificate reference, and accessing certificates on a Linux Batch compute
+node. This sample is geared towards Linux with the assumption of a locally
+available OpenSSL and blobxfer installation that is accessible from the sample
+path invocation. This sample can be run on Windows with an appropriate openssl
+binary and modified openssl invocations (i.e., `openssl.exe` instead of
+`openssl`).
 
 ####[sample4\_docker\_swarm.py](./sample4\_docker\_swarm.py)
-This sample shows how to create a pool of compute nodes that are also
+**Note:** Please take a look at the
+[Batch Shipyard](https://github.com/Azure/batch-shipyard) toolkit for
+managing batch-style Docker workloads on Azure Batch. This toolkit provides
+a vast array of features from automatic Docker Host engine installation
+and image deployment to support for GPUs and Infiniband/RDMA in Docker
+containers.
+
+If you wish to manually manage your Docker containers on Azure Batch then
+this sample shows how to create a pool of compute nodes that are also
 clustered into a docker swarm and how to schedule docker run tasks to the
-compute pool. Additionally, this sample shows how to connect
-to the docker swarm locally through an ssh tunnel. This sample showcases a
-variety of Azure Batch interaction including: creating a inter-node
+compute pool through the Batch scheduler. Additionally, this sample shows how
+to connect to the docker swarm locally through an ssh tunnel. This sample
+showcases a variety of Azure Batch interaction including: creating a inter-node
 communication enabled pool, adding a compute node user with an ssh key,
 retrieving remote login settings for a compute node, and adding an affinitized
 task for a compute node. This sample is geared towards Linux with the
@@ -66,16 +75,6 @@ sample. There is an additional configuration option to generate an ssh
 tunnel script to interact with the batch pool after the sample is run. When
 using this option, you will also need to disable the delete pool option as
 well.
-
-####[sample5\_docker\_batch\_task.py](./sample5\_docker\_batch\_task.py)
-This sample shows how to schedule tasks that run a docker container.
-Specifically, this sample uses pool start up task to install docker
-on Batch VMs which is Ubuntu based. It then uses job preparation tasks to
-pull the application image from docker hub and finally submit a set of simple
-tasks. Each task will launch a docker container to perform ffmpeg transcoding
-on a downloaded mp4 file and upload the result to blob storage. The docker
-image is CentOS based with ffmpeg and blobxfer preinstalled. The docker image
-(yidingz/ffmpeg:v3) is available on docker hub.
 
 ##Azure Batch on Linux Best Practices
 
