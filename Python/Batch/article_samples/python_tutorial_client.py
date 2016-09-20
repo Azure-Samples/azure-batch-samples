@@ -46,12 +46,12 @@ import common.helpers  # noqa
 # Update the Batch and Storage account credential strings below with the values
 # unique to your accounts. These are used when constructing connection strings
 # for the Batch and Storage client objects.
-_BATCH_ACCOUNT_NAME = 'azbatch002'
-_BATCH_ACCOUNT_KEY = 'DSFQMTQb17QemMLeN6fvQIOmewbIF8BoJSY51kDUtD2qx0sNLXJwGpE9R6hixtA5kLcLEQm5X5bjV9FJI6KMLQ=='
-_BATCH_ACCOUNT_URL = 'https://azbatch002.westus.batch.azure.com'
+_BATCH_ACCOUNT_NAME = ''
+_BATCH_ACCOUNT_KEY = ''
+_BATCH_ACCOUNT_URL = ''
 
-_STORAGE_ACCOUNT_NAME = 'azstorage002'
-_STORAGE_ACCOUNT_KEY = 'Kw+jyG9I3f/3ZaZYeOi/MV7tRBN1QK5sr/tK5GEZWt/9o2SASfeMcRLjEU7V1UuaQMKwVEhhQT7TtdyBF9S07g=='
+_STORAGE_ACCOUNT_NAME = ''
+_STORAGE_ACCOUNT_KEY = ''
 
 _POOL_ID = 'PythonTutorialPool'
 _POOL_NODE_COUNT = 1
