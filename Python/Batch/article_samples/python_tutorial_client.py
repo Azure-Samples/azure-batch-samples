@@ -183,9 +183,9 @@ def create_pool(batch_service_client, pool_id,
     :param str pool_id: An ID for the new pool.
     :param list resource_files: A collection of resource files for the pool's
     start task.
-    :param str publisher: Marketplace Image publisher
-    :param str offer: Marketplace Image offer
-    :param str sku: Marketplace Image sku
+    :param str publisher: Marketplace image publisher
+    :param str offer: Marketplace image offer
+    :param str sku: Marketplace image sku
     """
     print('Creating pool [{}]...'.format(pool_id))
 
@@ -201,7 +201,7 @@ def create_pool(batch_service_client, pool_id,
         # Copy the python_tutorial_task.py script to the "shared" directory
         # that all tasks that run on the node have access to.
         'cp -r $AZ_BATCH_TASK_WORKING_DIR/* $AZ_BATCH_NODE_SHARED_DIR',
-        # Install pip and the dependencies for cryptography (for azure-storage)
+        # Install pip and the dependencies for cryptography
         'apt-get update',
         'apt-get -y install python-pip',
         'apt-get -y install build-essential libssl-dev libffi-dev python-dev',
