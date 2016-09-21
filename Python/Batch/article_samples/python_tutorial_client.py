@@ -200,11 +200,13 @@ def create_pool(batch_service_client, pool_id,
         # Copy the python_tutorial_task.py script to the "shared" directory
         # that all tasks that run on the node have access to.
         'cp -r $AZ_BATCH_TASK_WORKING_DIR/* $AZ_BATCH_NODE_SHARED_DIR',
-        # Install pip and then the azure-storage module so that the task
-        # script can access Azure Blob storage
+        # Install pip and the dependencies for cryptography (for azure-storage)
         'apt-get update',
         'apt-get -y install python-pip',
-        'pip install azure-storage==0.30.0']
+        'apt-get -y install build-essential libssl-dev libffi-dev python-dev',
+        # Install the azure-storage module so that the task script can access
+        # Azure Blob storage
+        'pip install azure-storage']
 
     # Get the node agent SKU and image reference for the virtual machine
     # configuration.
