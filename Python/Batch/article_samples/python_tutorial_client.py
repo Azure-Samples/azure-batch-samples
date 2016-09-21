@@ -59,7 +59,7 @@ _POOL_NODE_COUNT = 1
 _POOL_VM_SIZE = 'STANDARD_A1'
 _NODE_OS_PUBLISHER = 'Canonical'
 _NODE_OS_OFFER = 'UbuntuServer'
-_NODE_OS_SKU = '16.04'
+_NODE_OS_SKU = '14'
 
 _JOB_ID = 'PythonTutorialJob'
 
