@@ -215,12 +215,12 @@ def get_vm_config_for_distro(batch_service_client, distro, version):
                       version.lower() in image_ref.sku.lower())
 
     # Get the last image reference from the list of verified references
-    # for the node agent we obtained. Typically, the verified image
-    # references are returned in ascending release order so this should give us
+    # for the node agent we obtained. The verified image references are
+    # returned in descending release order so this should give us
     # the newest image.
     img_ref = [image_ref for image_ref in node_agent.verified_image_references
                if distro.lower() in image_ref.offer.lower() and
-               version.lower() in image_ref.sku.lower()][-1]
+               version.lower() in image_ref.sku.lower()][0]
 
     # Create the VirtualMachineConfiguration, specifying the VM image
     # reference and the Batch node agent to be installed on the node.
@@ -284,7 +284,7 @@ def create_pool(batch_service_client, pool_id,
             run_elevated=True,
             wait_for_success=True,
             resource_files=resource_files),
-        )
+    )
 
     try:
         batch_service_client.pool.add(new_pool)
@@ -340,17 +340,16 @@ def add_tasks(batch_service_client, job_id, input_files,
         command = ['python $AZ_BATCH_NODE_SHARED_DIR/python_tutorial_task.py '
                    '--filepath {} --numwords {} --storageaccount {} '
                    '--storagecontainer {} --sastoken "{}"'.format(
-                    input_file.file_path,
-                    '3',
-                    _STORAGE_ACCOUNT_NAME,
-                    output_container_name,
-                    output_container_sas_token)]
+                       input_file.file_path,
+                       '3',
+                       _STORAGE_ACCOUNT_NAME,
+                       output_container_name,
+                       output_container_sas_token)]
 
         tasks.append(batch.models.TaskAddParameter(
-                'topNtask{}'.format(idx),
-                wrap_commands_in_shell('linux', command),
-                resource_files=[input_file]
-                )
+            'topNtask{}'.format(idx),
+            wrap_commands_in_shell('linux', command),
+            resource_files=[input_file])
         )
 
     batch_service_client.task.add_collection(job_id, tasks)

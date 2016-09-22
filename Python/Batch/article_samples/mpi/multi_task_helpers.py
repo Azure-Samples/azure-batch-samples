@@ -42,19 +42,18 @@ sys.path.append('.')
 import common.helpers  # noqa
 
 
-def create_pool_and_wait_for_vms(batch_service_client, pool_id, distro,
-                                 version, vm_size, target_dedicated,
-                                 command_line, resource_files, run_elevated):
+def create_pool_and_wait_for_vms(
+        batch_service_client, pool_id, publisher, offer, sku, vm_size,
+        target_dedicated, command_line, resource_files, run_elevated):
     """
     Creates a pool of compute nodes with the specified OS settings.
 
     :param batch_service_client: A Batch service client.
     :type batch_service_client: `azure.batch.BatchServiceClient`
     :param str pool_id: An ID for the new pool.
-    :param str distro: The Linux distribution that should be installed on the
-    compute nodes, e.g. 'Ubuntu' or 'CentOS'.
-    :param str version: The version of the operating system for the compute
-    nodes, e.g. '15' or '14.04'.
+    :param str publisher: Marketplace Image publisher
+    :param str offer: Marketplace Image offer
+    :param str sku: Marketplace Image sku
     :param str vm_size: The size of VM, eg 'Standard_A1' or 'Standard_D1'
      as per
     https://azure.microsoft.com/en-us/documentation/articles/
@@ -76,11 +75,14 @@ def create_pool_and_wait_for_vms(batch_service_client, pool_id, distro,
     # Get the virtual machine configuration for the desired distro and version.
     # For more information about the virtual machine configuration, see:
     # https://azure.microsoft.com/documentation/articles/batch-linux-nodes/
-    vm_config = common.helpers.\
-        get_vm_config_for_distro(batch_service_client, distro, version)
+    sku_to_use, image_ref_to_use = \
+        common.helpers.select_latest_verified_vm_image_with_node_agent_sku(
+            batch_service_client, publisher, offer, sku)
     new_pool = batch.models.PoolAddParameter(
         id=pool_id,
-        virtual_machine_configuration=vm_config,
+        virtual_machine_configuration=batchmodels.VirtualMachineConfiguration(
+            image_reference=image_ref_to_use,
+            node_agent_sku_id=sku_to_use),
         vm_size=vm_size,
         target_dedicated=target_dedicated,
         resize_timeout=datetime.timedelta(minutes=15),

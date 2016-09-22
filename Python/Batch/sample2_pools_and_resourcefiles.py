@@ -55,10 +55,10 @@ def create_pool(batch_client, block_blob_client, pool_id, vm_size, vm_count):
     :param str vm_size: vm size (sku)
     :param int vm_count: number of vms to allocate
     """
-    # pick the latest supported 14.04 sku for UbuntuServer
+    # pick the latest supported 16.04 sku for UbuntuServer
     sku_to_use, image_ref_to_use = \
         common.helpers.select_latest_verified_vm_image_with_node_agent_sku(
-            batch_client, 'Canonical', 'UbuntuServer', '14.04')
+            batch_client, 'Canonical', 'UbuntuServer', '16.04')
 
     block_blob_client.create_container(
         _CONTAINER_NAME,

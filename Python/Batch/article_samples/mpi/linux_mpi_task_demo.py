@@ -59,8 +59,9 @@ _POOL_ID = common.helpers.generate_unique_resource_name(
     'pool_{}_{}'.format(_OS_NAME, _APP_NAME))
 _POOL_NODE_COUNT = 3
 _POOL_VM_SIZE = 'STANDARD_A9'
-_NODE_OS_DISTRO = 'CentOS-HPC'
-_NODE_OS_VERSION = '7.1'
+_NODE_OS_PUBLISHER = 'OpenLogic'
+_NODE_OS_OFFER = 'CentOS-HPC'
+_NODE_OS_SKU = '7.1'
 _JOB_ID = 'job-{}'.format(_POOL_ID)
 _TASK_ID = common.helpers.generate_unique_resource_name(
     'task_{}_{}'.format(_OS_NAME, _APP_NAME))
@@ -187,11 +188,10 @@ if __name__ == '__main__':
     # tasks. The resource files we pass in are used for configuring the pool's
     # start task, which is executed each time a node first joins the pool (or
     # is rebooted or re-imaged).
-    multi_task_helpers.\
-        create_pool_and_wait_for_vms(batch_client, _POOL_ID, _NODE_OS_DISTRO,
-                                     _NODE_OS_VERSION, _POOL_VM_SIZE,
-                                     _POOL_NODE_COUNT, start_task_cmdline,
-                                     pool_starttask_files, run_elevated=True)
+    multi_task_helpers.create_pool_and_wait_for_vms(
+        batch_client, _POOL_ID, _NODE_OS_PUBLISHER, _NODE_OS_OFFER,
+        _NODE_OS_SKU, _POOL_VM_SIZE, _POOL_NODE_COUNT, start_task_cmdline,
+        pool_starttask_files, run_elevated=True)
 
     # Create the job that will run the tasks.
     common.helpers.create_job(batch_client, _JOB_ID, _POOL_ID)

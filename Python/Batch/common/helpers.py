@@ -85,7 +85,8 @@ def select_latest_verified_vm_image_with_node_agent_sku(
         image_ref.offer.lower() == offer.lower() and
         image_ref.sku.startswith(sku_starts_with)
     ]
-    sku_to_use, image_ref_to_use = skus_to_use[-1]
+    # skus are listed in reverse order, pick first for latest
+    sku_to_use, image_ref_to_use = skus_to_use[0]
     return (sku_to_use.id, image_ref_to_use)
 
 
@@ -213,54 +214,6 @@ def read_compute_node_file_as_string(
     stream = batch_client.file.get_from_compute_node(
         pool_id, node_id, file_name)
     return _read_stream_as_string(stream, encoding)
-
-
-def get_vm_config_for_distro(batch_service_client, distro, version):
-    """
-    Gets a virtual machine configuration for the specified distro and version
-    from the list of Azure Virtual Machines Marketplace images verified to be
-    compatible with the Batch service.
-
-    :param batch_service_client: A Batch service client.
-    :type batch_service_client: `azure.batch.BatchServiceClient`
-    :param str distro: The Linux distribution that should be installed on the
-    compute nodes, e.g. 'Ubuntu' or 'CentOS'. Supports partial string matching.
-    :param str version: The version of the operating system for the compute
-    nodes, e.g. '15' or '14.04'. Supports partial string matching.
-    :rtype: `azure.batch.models.VirtualMachineConfiguration`
-    :return: A virtual machine configuration specifying the Virtual Machines
-    Marketplace image and node agent SKU to install on the compute nodes in
-    a pool.
-    """
-    # Get the list of node agents from the Batch service
-    node_agent_skus = batch_service_client.account.list_node_agent_skus()
-
-    # Get the first node agent that is compatible with the specified distro.
-    # Note that 'distro' in this case actually maps to the 'offer' property of
-    # the ImageReference.
-    node_agent = next(agent for agent in node_agent_skus
-                      for image_ref in agent.verified_image_references
-                      if distro.lower() in image_ref.offer.lower() and
-                      version.lower() in image_ref.sku.lower())
-
-    # Get the last image reference from the list of verified references
-    # for the node agent we obtained. Typically, the verified image
-    # references are returned in ascending release order so this should give us
-    # the newest image.
-    img_ref = [image_ref for image_ref in node_agent.verified_image_references
-               if distro.lower() in image_ref.offer.lower() and
-               version.lower() in image_ref.sku.lower()][-1]
-
-    # Create the VirtualMachineConfiguration, specifying the VM image
-    # reference and the Batch node agent to be installed on the node.
-    # Note that these commands are valid for a pool of Ubuntu-based compute
-    # nodes, and that you may need to adjust the commands for execution
-    # on other distros.
-    vm_config = batchmodels.VirtualMachineConfiguration(
-        image_reference=img_ref,
-        node_agent_sku_id=node_agent.id)
-
-    return vm_config
 
 
 def create_pool_if_not_exist(batch_client, pool):
