@@ -225,8 +225,8 @@ def create_pool(batch_service_client, pool_id,
         vm_size=_POOL_VM_SIZE,
         target_dedicated=_POOL_NODE_COUNT,
         start_task=batch.models.StartTask(
-            command_line=
-            common.helpers.wrap_commands_in_shell('linux', task_commands),
+            command_line=common.helpers.wrap_commands_in_shell('linux',
+                                                               task_commands),
             run_elevated=True,
             wait_for_success=True,
             resource_files=resource_files),
