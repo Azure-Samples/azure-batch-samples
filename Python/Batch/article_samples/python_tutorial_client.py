@@ -40,6 +40,10 @@ import azure.batch.batch_service_client as batch
 import azure.batch.batch_auth as batchauth
 import azure.batch.models as batchmodels
 
+sys.path.append('.')
+sys.path.append('..')
+import common.helpers  # noqa
+
 # Update the Batch and Storage account credential strings below with the values
 # unique to your accounts. These are used when constructing connection strings
 # for the Batch and Storage client objects.
@@ -53,8 +57,9 @@ _STORAGE_ACCOUNT_KEY = ''
 _POOL_ID = 'PythonTutorialPool'
 _POOL_NODE_COUNT = 1
 _POOL_VM_SIZE = 'STANDARD_A1'
-_NODE_OS_DISTRO = 'Ubuntu'
-_NODE_OS_VERSION = '14'
+_NODE_OS_PUBLISHER = 'Canonical'
+_NODE_OS_OFFER = 'UbuntuServer'
+_NODE_OS_SKU = '14'
 
 _JOB_ID = 'PythonTutorialJob'
 
@@ -87,24 +92,6 @@ def query_yes_no(question, default="yes"):
             return valid[choice[0]]
         except (KeyError, IndexError):
             print("Please respond with 'yes' or 'no' (or 'y' or 'n').\n")
-
-
-def wrap_commands_in_shell(os_type, commands):
-    """
-    Wraps commands in a shell appropriate for the specified OS.
-
-    :param list commands: List of commands to wrap.
-    :param str os_type: OS type, linux or windows
-    :rtype: str
-    :return: A command line wrapping the specified commands in a command shell.
-    """
-    if os_type.lower() == 'linux':
-        return "/bin/bash -c 'set -e; set -o pipefail; {}; wait'".format(
-            ';'.join(commands))
-    elif os_type.lower() == 'windows':
-        return 'cmd.exe /c "{}"'.format('&'.join(commands))
-    else:
-        raise ValueError('Unknown os_type: {}'.format(os_type))
 
 
 def print_batch_exception(batch_exception):
@@ -186,56 +173,8 @@ def get_container_sas_token(block_blob_client,
     return container_sas_token
 
 
-def get_vm_config_for_distro(batch_service_client, distro, version):
-    """
-    Gets a virtual machine configuration for the specified distro and version
-    from the list of Azure Virtual Machines Marketplace images verified to be
-    compatible with the Batch service.
-
-    :param batch_service_client: A Batch service client.
-    :type batch_service_client: `azure.batch.BatchServiceClient`
-    :param str distro: The Linux distribution that should be installed on the
-    compute nodes, e.g. 'Ubuntu' or 'CentOS'. Supports partial string matching.
-    :param str version: The version of the operating system for the compute
-    nodes, e.g. '15' or '14.04'. Supports partial string matching.
-    :rtype: `azure.batch.models.VirtualMachineConfiguration`
-    :return: A virtual machine configuration specifying the Virtual Machines
-    Marketplace image and node agent SKU to install on the compute nodes in
-    a pool.
-    """
-    # Get the list of node agents from the Batch service
-    node_agent_skus = batch_service_client.account.list_node_agent_skus()
-
-    # Get the first node agent that is compatible with the specified distro.
-    # Note that 'distro' in this case actually maps to the 'offer' property of
-    # the ImageReference.
-    node_agent = next(agent for agent in node_agent_skus
-                      for image_ref in agent.verified_image_references
-                      if distro.lower() in image_ref.offer.lower() and
-                      version.lower() in image_ref.sku.lower())
-
-    # Get the last image reference from the list of verified references
-    # for the node agent we obtained. The verified image references are
-    # returned in descending release order so this should give us
-    # the newest image.
-    img_ref = [image_ref for image_ref in node_agent.verified_image_references
-               if distro.lower() in image_ref.offer.lower() and
-               version.lower() in image_ref.sku.lower()][0]
-
-    # Create the VirtualMachineConfiguration, specifying the VM image
-    # reference and the Batch node agent to be installed on the node.
-    # Note that these commands are valid for a pool of Ubuntu-based compute
-    # nodes, and that you may need to adjust the commands for execution
-    # on other distros.
-    vm_config = batchmodels.VirtualMachineConfiguration(
-        image_reference=img_ref,
-        node_agent_sku_id=node_agent.id)
-
-    return vm_config
-
-
 def create_pool(batch_service_client, pool_id,
-                resource_files, distro, version):
+                resource_files, publisher, offer, sku):
     """
     Creates a pool of compute nodes with the specified OS settings.
 
@@ -244,10 +183,9 @@ def create_pool(batch_service_client, pool_id,
     :param str pool_id: An ID for the new pool.
     :param list resource_files: A collection of resource files for the pool's
     start task.
-    :param str distro: The Linux distribution that should be installed on the
-    compute nodes, e.g. 'Ubuntu' or 'CentOS'.
-    :param str version: The version of the operating system for the compute
-    nodes, e.g. '15' or '14.04'.
+    :param str publisher: Marketplace image publisher
+    :param str offer: Marketplace image offer
+    :param str sku: Marketplace image sku
     """
     print('Creating pool [{}]...'.format(pool_id))
 
@@ -263,24 +201,32 @@ def create_pool(batch_service_client, pool_id,
         # Copy the python_tutorial_task.py script to the "shared" directory
         # that all tasks that run on the node have access to.
         'cp -r $AZ_BATCH_TASK_WORKING_DIR/* $AZ_BATCH_NODE_SHARED_DIR',
-        # Install pip and then the azure-storage module so that the task
-        # script can access Azure Blob storage
+        # Install pip and the dependencies for cryptography
         'apt-get update',
         'apt-get -y install python-pip',
-        'pip install azure-storage==0.30.0']
+        'apt-get -y install build-essential libssl-dev libffi-dev python-dev',
+        # Install the azure-storage module so that the task script can access
+        # Azure Blob storage
+        'pip install azure-storage']
 
-    # Get the virtual machine configuration for the desired distro and version.
+    # Get the node agent SKU and image reference for the virtual machine
+    # configuration.
     # For more information about the virtual machine configuration, see:
     # https://azure.microsoft.com/documentation/articles/batch-linux-nodes/
-    vm_config = get_vm_config_for_distro(batch_service_client, distro, version)
+    sku_to_use, image_ref_to_use = \
+        common.helpers.select_latest_verified_vm_image_with_node_agent_sku(
+            batch_service_client, publisher, offer, sku)
 
     new_pool = batch.models.PoolAddParameter(
         id=pool_id,
-        virtual_machine_configuration=vm_config,
+        virtual_machine_configuration=batchmodels.VirtualMachineConfiguration(
+            image_reference=image_ref_to_use,
+            node_agent_sku_id=sku_to_use),
         vm_size=_POOL_VM_SIZE,
         target_dedicated=_POOL_NODE_COUNT,
         start_task=batch.models.StartTask(
-            command_line=wrap_commands_in_shell('linux', task_commands),
+            command_line=common.helpers.wrap_commands_in_shell('linux',
+                                                               task_commands),
             run_elevated=True,
             wait_for_success=True,
             resource_files=resource_files),
@@ -347,9 +293,10 @@ def add_tasks(batch_service_client, job_id, input_files,
                        output_container_sas_token)]
 
         tasks.append(batch.models.TaskAddParameter(
-            'topNtask{}'.format(idx),
-            wrap_commands_in_shell('linux', command),
-            resource_files=[input_file])
+                'topNtask{}'.format(idx),
+                common.helpers.wrap_commands_in_shell('linux', command),
+                resource_files=[input_file]
+                )
         )
 
     batch_service_client.task.add_collection(job_id, tasks)
@@ -485,8 +432,9 @@ if __name__ == '__main__':
     create_pool(batch_client,
                 _POOL_ID,
                 application_files,
-                _NODE_OS_DISTRO,
-                _NODE_OS_VERSION)
+                _NODE_OS_PUBLISHER,
+                _NODE_OS_OFFER,
+                _NODE_OS_SKU)
 
     # Create the job that will run the tasks.
     create_job(batch_client, _JOB_ID, _POOL_ID)
