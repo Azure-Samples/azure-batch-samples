@@ -230,7 +230,7 @@ def create_pool(batch_service_client, pool_id,
             run_elevated=True,
             wait_for_success=True,
             resource_files=resource_files),
-        )
+    )
 
     try:
         batch_service_client.pool.add(new_pool)
@@ -286,11 +286,11 @@ def add_tasks(batch_service_client, job_id, input_files,
         command = ['python $AZ_BATCH_NODE_SHARED_DIR/python_tutorial_task.py '
                    '--filepath {} --numwords {} --storageaccount {} '
                    '--storagecontainer {} --sastoken "{}"'.format(
-                    input_file.file_path,
-                    '3',
-                    _STORAGE_ACCOUNT_NAME,
-                    output_container_name,
-                    output_container_sas_token)]
+                       input_file.file_path,
+                       '3',
+                       _STORAGE_ACCOUNT_NAME,
+                       output_container_name,
+                       output_container_sas_token)]
 
         tasks.append(batch.models.TaskAddParameter(
                 'topNtask{}'.format(idx),

@@ -157,10 +157,10 @@ def create_pool_and_wait_for_node(
     :param int vm_count: number of vms to allocate
     :param str sha1_cert_tp: sha1 cert thumbprint for cert ref
     """
-    # pick the latest supported 14.04 sku for UbuntuServer
+    # pick the latest supported 16.04 sku for UbuntuServer
     sku_to_use, image_ref_to_use = \
         common.helpers.select_latest_verified_vm_image_with_node_agent_sku(
-            batch_client, 'Canonical', 'UbuntuServer', '14.04')
+            batch_client, 'Canonical', 'UbuntuServer', '16.04')
 
     # create start task commands
     # 1. update repository
