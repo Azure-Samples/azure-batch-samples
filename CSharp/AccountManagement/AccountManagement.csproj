@@ -47,8 +47,8 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>packages\Microsoft.Azure.Common.2.1.0\lib\net45\Microsoft.Azure.Common.NetFramework.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.Azure.Management.Batch, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>packages\Microsoft.Azure.Management.Batch.2.0.0\lib\net45\Microsoft.Azure.Management.Batch.dll</HintPath>
+    <Reference Include="Microsoft.Azure.Management.Batch, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>packages\Microsoft.Azure.Management.Batch.3.0.0\lib\net45\Microsoft.Azure.Management.Batch.dll</HintPath>
       <SpecificVersion>False</SpecificVersion>
     </Reference>
     <Reference Include="Microsoft.Azure.Management.ResourceManager, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
