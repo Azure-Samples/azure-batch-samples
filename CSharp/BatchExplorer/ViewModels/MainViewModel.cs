@@ -508,6 +508,9 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         /// </summary>
         public MainViewModel()
         {
+            AddAccount = new CommandBase(this.AddAccountImpl);
+            EditAccount = new CommandBase(this.EditAccountImpl);
+
             this.RegisterMessages();
 
             //TODO: Should do this all in an "onload" or something to avoid overloaded constructor work?
@@ -529,55 +532,50 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             //Begin a background thread which monitors the status of internal async operations and observes any exceptions
             asyncOperationCompletionMonitoringTask = AsyncOperationTracker.InternalOperationResultHandler();
         }
-        
+
         #region Account operations
 
         /// <summary>
         /// Add an account
         /// </summary>
-        public CommandBase AddAccount
+        public CommandBase AddAccount { get; }
+
+        private void AddAccountImpl(object o)
         {
-            get
+            try
             {
-                return new CommandBase(
-                    (o) =>
+                AccountManagerContainer managerContainer = (AccountManagerContainer)o;
+
+                //Make sure we are prepared to respond to a confirm AND a cancel message - don't forget to unregister both listeners
+                Messenger.Default.Register<ConfirmAccountAddMessage>(this, message =>
+                {
+                    //We got a confirm, so extract the account from the message and add it
+                    try
                     {
-                        try
-                        {
-                            AccountManagerContainer managerContainer = (AccountManagerContainer)o;
-                        
-                            //Make sure we are prepared to respond to a confirm AND a cancel message - don't forget to unregister both listeners
-                            Messenger.Default.Register<ConfirmAccountAddMessage>(this, (message) =>
-                                {
-                                    //We got a confirm, so extract the account from the message and add it
-                                    try
-                                    {
-                                        managerContainer.AccountManager.AddAccountAsync(message.AccountToAdd).Wait();
-                                        Messenger.Default.Send(new CloseGenericPopup()); //Inform the view to close
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
-                                    }
-                                });
+                        message.AccountManager.AddAccountAsync(message.AccountToAdd).Wait();
+                        Messenger.Default.Send(new CloseGenericPopup()); //Inform the view to close
+                    }
+                    catch (Exception e)
+                    {
+                        Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
+                    }
+                });
 
-                            Messenger.Default.Register<CloseGenericPopup>(this, message =>
-                                {
-                                    Messenger.Default.Unregister<ConfirmAccountAddMessage>(this);
-                                    Messenger.Default.Unregister<CloseGenericPopup>(this);
-                                });
+                Messenger.Default.Register<CloseGenericPopup>(this, message =>
+                {
+                    Messenger.Default.Unregister<ConfirmAccountAddMessage>(this);
+                    Messenger.Default.Unregister<CloseGenericPopup>(this);
+                });
 
 
-                            Messenger.Default.Send<AddAccountMessage>(new AddAccountMessage()
-                            {
-                                AccountDialogViewModel = new AccountDialogViewModel(managerContainer.AccountManager.OperationFactory)
-                            });
-                        }
-                        catch (Exception e)
-                        {
-                            Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
-                        }
-                    });
+                Messenger.Default.Send<AddAccountMessage>(new AddAccountMessage()
+                {
+                    AccountDialogViewModel = new AccountDialogViewModel(managerContainer.AccountManager, managerContainer.AccountManager.OperationFactory)
+                });
+            }
+            catch (Exception e)
+            {
+                Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
             }
         }
 
@@ -616,49 +614,44 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         /// <summary>
         /// Edit an account
         /// </summary>
-        public CommandBase EditAccount
+        public CommandBase EditAccount { get; }
+
+        private void EditAccountImpl(object selectedAccount)
         {
-            get
+            try
             {
-                return new CommandBase(
-                    (selectedAccount) =>
+                Account account = selectedAccount as Account;
+                IAccountManager accountManager = account.ParentAccountManager;
+
+                //Make sure we are set up to respond to both a confirm AND a cancel message  - don't forget to unregister both listeners
+                Messenger.Default.Register<ConfirmAccountEditMessage>(this, (message) =>
+                {
+                    try
                     {
-                        try
-                        {
-                            Account account = selectedAccount as Account;
-                            IAccountManager accountManager = account.ParentAccountManager;
+                        message.AccountManager.CommitEditAsync(message.AccountToEdit).Wait();
+                        Messenger.Default.Send(new CloseGenericPopup());
+                    }
+                    catch (Exception e)
+                    {
+                        Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
+                    }
+                });
 
-                            //Make sure we are set up to respond to both a confirm AND a cancel message  - don't forget to unregister both listeners
-                            Messenger.Default.Register<ConfirmAccountEditMessage>(this, (message) =>
-                            {
-                                try
-                                {
-                                    accountManager.CommitEditAsync(message.AccountToEdit).Wait();
-                                    Messenger.Default.Send(new CloseGenericPopup());
-                                }
-                                catch (Exception e)
-                                {
-                                    Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
-                                }
-                            });
+                Messenger.Default.Register<CloseGenericPopup>(this, message =>
+                {
+                    Messenger.Default.Unregister<ConfirmAccountEditMessage>(this);
+                    Messenger.Default.Unregister<CloseGenericPopup>(this);
+                });
 
-                            Messenger.Default.Register<CloseGenericPopup>(this, message =>
-                            {
-                                Messenger.Default.Unregister<ConfirmAccountEditMessage>(this);
-                                Messenger.Default.Unregister<CloseGenericPopup>(this);
-                            });
-
-                            Account tempAccount = accountManager.CloneAccountForEditAsync(account).Result;
-                            Messenger.Default.Send<EditAccountMessage>(new EditAccountMessage()
-                            {
-                                AccountDialogViewModel = new AccountDialogViewModel(tempAccount, accountManager.OperationFactory)
-                            });
-                        }
-                        catch (Exception e)
-                        {
-                            Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
-                        }
-                    });
+                Account tempAccount = accountManager.CloneAccountForEditAsync(account).Result;
+                Messenger.Default.Send<EditAccountMessage>(new EditAccountMessage()
+                {
+                    AccountDialogViewModel = new AccountDialogViewModel(tempAccount, accountManager, accountManager.OperationFactory)
+                });
+            }
+            catch (Exception e)
+            {
+                Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
             }
         }
 
