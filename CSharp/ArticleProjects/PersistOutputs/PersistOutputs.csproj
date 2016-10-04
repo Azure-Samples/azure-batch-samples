@@ -34,7 +34,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.Azure.Batch">
-      <HintPath>packages\Azure.Batch.5.0.1\lib\net45\Microsoft.Azure.Batch.dll</HintPath>
+      <HintPath>packages\Azure.Batch.5.1.2\lib\net45\Microsoft.Azure.Batch.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.Azure.Batch.Conventions.Files, Version=0.9.4.0, Culture=neutral, processorArchitecture=MSIL">
