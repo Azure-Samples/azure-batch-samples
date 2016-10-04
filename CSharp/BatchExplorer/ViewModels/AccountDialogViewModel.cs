@@ -12,12 +12,13 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
     public class AccountDialogViewModel : EntityBase
     {
         private readonly AccountManagementOperation accountOperation;
+        private readonly IAccountManager accountManager;
 
         /// <summary>
         /// Use this constructor when creating a dialog that will be used on a new account
         /// </summary>
-        public AccountDialogViewModel(IAccountOperationFactory factory)
-            : this(null, factory)
+        public AccountDialogViewModel(IAccountManager accountManager, IAccountOperationFactory factory)
+            : this(null, accountManager, factory)
         { }
 
         /// <summary>
@@ -25,8 +26,10 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         /// </summary>
         /// <param name="account">the existing account to be edited</param>
         /// <param name="factory"></param>
-        public AccountDialogViewModel(Account account, IAccountOperationFactory factory)
+        public AccountDialogViewModel(Account account, IAccountManager accountManager, IAccountOperationFactory factory)
         {
+            this.accountManager = accountManager;
+
             if (account != null)
             {
                 this.accountOperation = factory.CreateEditAccountOperation(account);
@@ -57,12 +60,12 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
 
         private void ConfirmNew(object o)
         {
-            Messenger.Default.Send(new ConfirmAccountAddMessage() { AccountToAdd = this.accountOperation.Complete() });
+            Messenger.Default.Send(new ConfirmAccountAddMessage() { AccountManager = this.accountManager, AccountToAdd = this.accountOperation.Complete() });
         }
 
         private void ConfirmEdit(object o)
         {
-            Messenger.Default.Send(new ConfirmAccountEditMessage() { AccountToEdit = this.accountOperation.Complete() });
+            Messenger.Default.Send(new ConfirmAccountEditMessage() { AccountManager = this.accountManager, AccountToEdit = this.accountOperation.Complete() });
         }
 
         private void CancelNew(object o)
