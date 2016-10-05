@@ -58,7 +58,7 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
             using (BatchClient batchClient = await BatchClient.OpenAsync(credentials))
             {
                 // add a retry policy. The built-in policies are No Retry (default), Linear Retry, and Exponential Retry
-                batchClient.CustomBehaviors.Add(RetryPolicyProvider.LinearRetryProvider(TimeSpan.FromSeconds(10), 3));
+                batchClient.CustomBehaviors.Add(RetryPolicyProvider.ExponentialRetryProvider(TimeSpan.FromSeconds(5), 3));
 
                 string jobId = GettingStartedCommon.CreateJobId("HelloWorldJob");
 

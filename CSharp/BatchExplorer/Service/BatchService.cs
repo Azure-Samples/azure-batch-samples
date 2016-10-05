@@ -24,7 +24,7 @@ namespace Microsoft.Azure.BatchExplorer.Service
         {
             this.Client = BatchClient.Open(credentials);
             this.Credentials = credentials;
-            this.retryPolicy = new LinearRetry(TimeSpan.FromSeconds(10), 5);
+            this.retryPolicy = new ExponentialRetry(TimeSpan.FromSeconds(5), 3);
 
             this.Client.CustomBehaviors.Add(new RetryPolicyProvider(this.retryPolicy));
         }

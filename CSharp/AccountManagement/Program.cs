@@ -274,20 +274,20 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
                 batchManagementClient.SubscriptionId = subscriptionId;
 
                 // Get the account quota for the subscription
-                SubscriptionQuotasGetResult quotaResponse = await batchManagementClient.Subscription.GetSubscriptionQuotasAsync(location);
+                BatchLocationQuota quotaResponse = await batchManagementClient.Location.GetQuotasAsync(location);
                 Console.WriteLine("Your subscription can create {0} account(s) in the {1} region.", quotaResponse.AccountQuota, location);
                 Console.WriteLine();
 
                 // Create account
                 string accountName = PromptUserForAccountName();
                 Console.WriteLine("Creating account {0}...", accountName);
-                await batchManagementClient.Account.CreateAsync(ResourceGroupName, accountName, new BatchAccountCreateParameters() { Location = location });
+                await batchManagementClient.BatchAccount.CreateAsync(ResourceGroupName, accountName, new BatchAccountCreateParameters() { Location = location });
                 Console.WriteLine("Account {0} created", accountName);
                 Console.WriteLine();
 
                 // Get account
                 Console.WriteLine("Getting account {0}...", accountName);
-                AccountResource account = await batchManagementClient.Account.GetAsync(ResourceGroupName, accountName);
+                BatchAccount account = await batchManagementClient.BatchAccount.GetAsync(ResourceGroupName, accountName);
                 Console.WriteLine("Got account {0}:", account.Name);
                 Console.WriteLine("  Account location: {0}", account.Location);
                 Console.WriteLine("  Account resource type: {0}", account.Type);
@@ -303,29 +303,29 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
 
                 // Get account keys
                 Console.WriteLine("Getting account keys of account {0}...", account.Name);
-                BatchAccountListKeyResult accountKeys = await batchManagementClient.Account.ListKeysAsync(ResourceGroupName, account.Name);
+                BatchAccountKeys accountKeys = await batchManagementClient.BatchAccount.GetKeysAsync(ResourceGroupName, account.Name);
                 Console.WriteLine("  Primary key of account {0}:   {1}", account.Name, accountKeys.Primary);
                 Console.WriteLine("  Secondary key of account {0}: {1}", account.Name, accountKeys.Secondary);
                 Console.WriteLine();
 
                 // Regenerate primary account key
                 Console.WriteLine("Regenerating the primary key of account {0}...", account.Name);
-                BatchAccountRegenerateKeyResult newKeys = await batchManagementClient.Account.RegenerateKeyAsync(
+                BatchAccountKeys newKeys = await batchManagementClient.BatchAccount.RegenerateKeyAsync(
                     ResourceGroupName, account.Name, 
-                    new BatchAccountRegenerateKeyParameters() { KeyName = AccountKeyType.Primary });
+                    AccountKeyType.Primary);
                 Console.WriteLine("  New primary key of account {0}: {1}", account.Name, newKeys.Primary);
                 Console.WriteLine("  Secondary key of account {0}:   {1}", account.Name, newKeys.Secondary);
                 Console.WriteLine();
 
                 // List total number of accounts under the subscription id
-                IPage<AccountResource> listResponse = await batchManagementClient.Account.ListAsync();
-                var accounts = new List<AccountResource>();
+                IPage<BatchAccount> listResponse = await batchManagementClient.BatchAccount.ListAsync();
+                var accounts = new List<BatchAccount>();
                 accounts.AddRange(listResponse);
 
                 var nextLink = listResponse.NextPageLink;
                 while (nextLink != null)
                 {
-                    listResponse = await batchManagementClient.Account.ListNextAsync(nextLink);
+                    listResponse = await batchManagementClient.BatchAccount.ListNextAsync(nextLink);
                     accounts.AddRange(listResponse);
                     nextLink = listResponse.NextPageLink;
                 }
@@ -340,7 +340,7 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
 
                 // List accounts in the subscription
                 Console.WriteLine("Listing all Batch accounts under subscription id {0}...", batchManagementClient.SubscriptionId);
-                foreach (AccountResource acct in accounts)
+                foreach (BatchAccount acct in accounts)
                 {
                     Console.WriteLine("  {0} - {1} | Location: {2}", accounts.IndexOf(acct) + 1, acct.Name, acct.Location);
                 }
@@ -353,7 +353,7 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
 
                 try
                 {
-                    await batchManagementClient.Account.DeleteAsync(ResourceGroupName, account.Name);
+                    await batchManagementClient.BatchAccount.DeleteAsync(ResourceGroupName, account.Name);
                 }
                 catch (CloudException ex)
                 {

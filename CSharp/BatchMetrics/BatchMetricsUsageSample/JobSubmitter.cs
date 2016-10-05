@@ -35,7 +35,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
         public JobSubmitter(BatchClient batchClient)
         {
             this.batchClient = batchClient;
-            this.batchClient.CustomBehaviors.Add(RetryPolicyProvider.LinearRetryProvider(TimeSpan.FromSeconds(10), 3));
+            this.batchClient.CustomBehaviors.Add(RetryPolicyProvider.ExponentialRetryProvider(TimeSpan.FromSeconds(5), 3));
         }
 
         // Creates a pool so that the sample jobs have somewhere to run, so that they can
