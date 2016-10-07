@@ -45,7 +45,7 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
             const string poolId = "MultiInstanceSamplePool";
             const string jobId  = "MultiInstanceSampleJob";
             const string taskId = "MultiInstanceSampleTask";
-            
+
             const int numberOfNodes = 3;
 
             // The application package and version to deploy to the compute nodes.
@@ -56,7 +56,7 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
             // Then upload it as an application package:
             // https://azure.microsoft.com/documentation/articles/batch-application-packages/
             const string appPackageId = "MPIHelloWorld";
-            const string appPackageVersion = "1.0";
+            const string appPackageVersion = "1.4";
 
             TimeSpan timeout = TimeSpan.FromMinutes(30);
 
@@ -234,7 +234,7 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
                 // Print out some timing info
                 timer.Stop();
                 Console.WriteLine();
-                Console.WriteLine("Sample end: " +  DateTime.Now);
+                Console.WriteLine("Sample end: " + DateTime.Now);
                 Console.WriteLine("Elapsed time: " + timer.Elapsed);
 
                 // Clean up the resources we've created in the Batch account

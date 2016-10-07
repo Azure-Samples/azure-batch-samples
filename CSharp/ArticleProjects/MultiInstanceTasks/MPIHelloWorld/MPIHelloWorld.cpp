@@ -1,7 +1,5 @@
-// Copyright (c) Microsoft Corporation
+// MPIHelloWorld.cpp : Defines the entry point for the console application.
 //
-// Companion file to the following blog post:
-// https://blogs.technet.microsoft.com/windowshpc/2015/02/02/how-to-compile-and-run-a-simple-ms-mpi-program/
 
 #include "stdafx.h"
 #include "mpi.h"
