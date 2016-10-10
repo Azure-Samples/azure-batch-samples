@@ -67,10 +67,6 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
 
             using (BatchClient batchClient = BatchClient.Open(cred))
             {
-                Console.WriteLine("Sample start: " + DateTime.Now);
-                Console.WriteLine();
-                Stopwatch timer = new Stopwatch();
-                timer.Start();
 
                 // Create the unbound pool. Until we call CloudPool.Commit() or CommitAsync(),
                 // the pool isn't actually created in the Batch service. This CloudPool instance
@@ -82,11 +78,11 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
                                                           targetDedicated: numberOfNodes,
                                                           cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "4"));
 
-                // REQUIRED for multi-instance tasks
+                // REQUIRED for the MS-MPI processes to communicate
                 unboundPool.InterComputeNodeCommunicationEnabled = true;
                 // REQUIRED for multi-instance tasks
                 unboundPool.MaxTasksPerComputeNode = 1;
-
+                
                 // Specify the application and version to deploy to the compute nodes.
                 unboundPool.ApplicationPackageReferences = new List<ApplicationPackageReference>
                 {
@@ -116,14 +112,13 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
                 CloudJob unboundJob = batchClient.JobOperations.CreateJob(jobId, new PoolInformation() { PoolId = poolId });
                 await unboundJob.CommitAsync();
 
-                // Create the multi-instance task. This is the "main" task that Batch will split
-                // into one primary and several subtasks, the total number of which matches the
-                // number of instances you specify in the MultiInstanceSettings. The main task's
-                // command line is the "application command," and is executed *only* by the primary,
-                // and only after the primary and all subtasks have executed the "coordination
-                // command" (the MultiInstanceSettings.CoordinationCommandLine).
+                // Create the multi-instance task. Batch will create one primary and several subtasks,
+                // the total number of which matches the number of instances you specify in the
+                // MultiInstanceSettings. The main task's command line is the "application command,"
+                // and is executed *only* by the primary, and only after the primary and all subtasks
+                // have executed the "coordination command" (the MultiInstanceSettings.CoordinationCommandLine).
                 CloudTask multiInstanceTask = new CloudTask(id: taskId,
-                    commandline: $"cmd /c echo Executing application command && cmd /c mpiexec.exe /cores 1 /wdir %AZ_BATCH_APP_PACKAGE_{appPackageId.ToUpper()}#{appPackageVersion}% MPIHelloWorld.exe");
+                    commandline: $"cmd /c mpiexec.exe -c 1 -wdir %AZ_BATCH_TASK_SHARED_DIR% %AZ_BATCH_APP_PACKAGE_{appPackageId.ToUpper()}#{appPackageVersion}%\\MPIHelloWorld.exe");
 
                 // Configure the task's MultiInstanceSettings. Specify the number of nodes
                 // to allocate to the multi-instance task, and the "coordination command".
@@ -132,12 +127,12 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
                 multiInstanceTask.MultiInstanceSettings =
                     new MultiInstanceSettings(numberOfNodes)
                     {
-                        CoordinationCommandLine = @"cmd /c echo Executing coordination command && cmd /c start cmd /c smpd.exe -d"
+                        CoordinationCommandLine = @"cmd /c start cmd /c smpd.exe -d"
                     };
-                multiInstanceTask.RunElevated = true;
 
-                // Submit the task to the job. Batch will take care of splitting it into one primary
-                // and several subtasks, and schedule them for execution on the nodes.
+                // Submit the task to the job. Batch will take care of creating one primary and
+                // enough subtasks to match the total number of nodes allocated to the task,
+                // and schedule them for execution on the nodes.
                 Console.WriteLine($"Adding task [{taskId}] to job [{jobId}]...");
                 await batchClient.JobOperations.AddTaskAsync(jobId, multiInstanceTask);
 
@@ -148,13 +143,14 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
                 ODATADetailLevel detail = new ODATADetailLevel(selectClause: "id");
                 List<CloudTask> tasks = await batchClient.JobOperations.ListTasks(jobId, detail).ToListAsync();
 
+                CloudTask mpiTask = await batchClient.JobOperations.GetTaskAsync(jobId, taskId);
+
                 // We use a TaskStateMonitor to monitor the state of our tasks. In this case,
-                // we will wait for all tasks (in this sample, it's just the one multi-instance
-                // task) to reach the Completed state.
+                // we will wait for the task to reach the Completed state.
                 Console.WriteLine($"Awaiting task completion, timeout in {timeout}...");
                 TaskStateMonitor taskStateMonitor = batchClient.Utilities.CreateTaskStateMonitor();
-                await taskStateMonitor.WhenAll(tasks, TaskState.Completed, timeout);
-
+                await taskStateMonitor.WhenAll(new List<CloudTask> { mpiTask }, TaskState.Completed, timeout);
+                
                 // Print the multi-instance task's (the "main" task) stdout.txt and stderr.txt.
                 CloudJob boundJob = batchClient.JobOperations.GetJob(jobId);
                 CloudTask mainTask = boundJob.GetTask(taskId);
@@ -187,43 +183,23 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
 
                     if (subtask.State == TaskState.Completed)
                     {
+                        string outPath = subtask.ComputeNodeInformation.TaskRootDirectory + "\\" + Constants.StandardOutFileName;
+                        string errPath = subtask.ComputeNodeInformation.TaskRootDirectory + "\\" + Constants.StandardErrorFileName;
+
+                        // Obtain the file from the node on which the subtask executed.
                         ComputeNode node =
                             await batchClient.PoolOperations.GetComputeNodeAsync(subtask.ComputeNodeInformation.PoolId,
                                                                                  subtask.ComputeNodeInformation.ComputeNodeId);
 
-                        try
-                        {
-                            string outPath = subtask.ComputeNodeInformation.TaskRootDirectory + "\\" + Constants.StandardOutFileName;
-                            string errpath = subtask.ComputeNodeInformation.TaskRootDirectory + "\\" + Constants.StandardErrorFileName;
+                        NodeFile stdOutFile = await node.GetNodeFileAsync(outPath.Trim('\\'));
+                        NodeFile stdErrFile = await node.GetNodeFileAsync(errPath.Trim('\\'));
 
-                            // Obtain the file from the node on which the subtask executed. For normal CloudTasks,
-                            // we could simply call CloudTask.GetNodeFile(Constants.StandardOutFileName), but the
-                            // subtasks are not "normal" tasks in Batch, and thus must be handled differently.
-                            NodeFile stdOutFile = await node.GetNodeFileAsync(outPath.Trim('\\'));
-                            NodeFile stdErrFile = await node.GetNodeFileAsync(errpath.Trim('\\'));
+                        stdOut = await stdOutFile.ReadAsStringAsync();
+                        stdErr = await stdErrFile.ReadAsStringAsync();
 
-                            stdOut = await stdOutFile.ReadAsStringAsync();
-                            stdErr = await stdErrFile.ReadAsStringAsync();
-
-                            Console.WriteLine($"\tnode: {node.Id}:");
-                            Console.WriteLine("\tstdout.txt: " + stdOut);
-                            Console.WriteLine("\tstderr.txt: " + stdErr);
-                        }
-                        catch (BatchException ex)
-                        {
-                            Console.WriteLine($"\tEncountered error retrieving file from node {node.Id}:");
-                            Console.WriteLine("\t" + ex.Message);
-
-                            if (ex.RequestInformation != null)
-                            {
-                                Console.WriteLine("\tHttpStatusMessage: " + ex.RequestInformation.HttpStatusMessage);
-
-                                if (ex.RequestInformation.BatchError != null)
-                                {
-                                    Console.WriteLine("\tBatchError.Message: " + ex.RequestInformation.BatchError.Message);
-                                }
-                            }
-                        }
+                        Console.WriteLine($"\tnode: {node.Id}:");
+                        Console.WriteLine("\tstdout.txt: " + stdOut);
+                        Console.WriteLine("\tstderr.txt: " + stdErr);
                     }
                     else
                     {
@@ -231,19 +207,12 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
                     }
                 });
 
-                // Print out some timing info
-                timer.Stop();
-                Console.WriteLine();
-                Console.WriteLine("Sample end: " + DateTime.Now);
-                Console.WriteLine("Elapsed time: " + timer.Elapsed);
-
                 // Clean up the resources we've created in the Batch account
                 Console.WriteLine();
                 Console.Write("Delete job? [yes] no: ");
                 string response = Console.ReadLine().ToLower();
                 if (response != "n" && response != "no")
                 {
-                    // Note that deleting the job will execute the job release task if the job was not previously terminated
                     await batchClient.JobOperations.DeleteJobAsync(jobId);
                 }
 
