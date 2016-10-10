@@ -68,6 +68,7 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
             int? targetDedicated, 
             string autoScaleFormula, 
             bool communicationEnabled,
+            string subnetId,
             CloudServiceConfigurationOptions cloudServiceConfigurationOptions,
             VirtualMachineConfigurationOptions virtualMachineConfigurationOptions,
             int maxTasksPerComputeNode,

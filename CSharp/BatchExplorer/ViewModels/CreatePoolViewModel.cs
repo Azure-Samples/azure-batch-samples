@@ -251,6 +251,20 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
+        private string virtualSubnetId;
+        public string VirtualSubnetId
+        {
+            get
+            {
+                return this.virtualSubnetId;
+            }
+            set
+            {
+                this.virtualSubnetId = value;
+                this.FirePropertyChangedEvent("VirtualSubnetId");
+            }
+        }
+
         private TimeSpan? timeout;
         public TimeSpan? Timeout
         {
@@ -500,6 +514,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                             this.TargetDedicated,
                             null,
                             this.InterComputeNodeCommunicationEnabled,
+                            this.VirtualSubnetId,
                             this.GetCloudServiceConfigurationOptions(),
                             this.GetVirtualMachineConfigurationOptions(),
                             this.MaxTasksPerComputeNode,
@@ -514,6 +529,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                             null,
                             this.AutoscaleFormula,
                             this.InterComputeNodeCommunicationEnabled,
+                            this.VirtualSubnetId,
                             this.GetCloudServiceConfigurationOptions(),
                             this.GetVirtualMachineConfigurationOptions(),
                             this.MaxTasksPerComputeNode,
