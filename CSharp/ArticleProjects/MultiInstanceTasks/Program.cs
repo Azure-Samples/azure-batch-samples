@@ -39,7 +39,7 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
                 Console.ReadLine();
             }
         }
-
+        
         public static async Task MainAsync()
         {
             const string poolId = "MultiInstanceSamplePool";
@@ -56,7 +56,7 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
             // Then upload it as an application package:
             // https://azure.microsoft.com/documentation/articles/batch-application-packages/
             const string appPackageId = "MPIHelloWorld";
-            const string appPackageVersion = "1.4";
+            const string appPackageVersion = "1.0";
 
             TimeSpan timeout = TimeSpan.FromMinutes(30);
 
@@ -67,56 +67,16 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
 
             using (BatchClient batchClient = BatchClient.Open(cred))
             {
+                // Create the pool of compute nodes and the job to which we add the multi-instance task.
+                await CreatePoolAsync(batchClient, poolId, numberOfNodes, appPackageId, appPackageVersion);
+                await CreateJobAsync(batchClient, jobId, poolId);
 
-                // Create the unbound pool. Until we call CloudPool.Commit() or CommitAsync(),
-                // the pool isn't actually created in the Batch service. This CloudPool instance
-                // is therefore considered "unbound," and we can modify its properties.
-                Console.WriteLine($"Creating pool [{poolId}]...");
-                CloudPool unboundPool =
-                    batchClient.PoolOperations.CreatePool(poolId: poolId,
-                                                          virtualMachineSize: "small",
-                                                          targetDedicated: numberOfNodes,
-                                                          cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "4"));
-
-                // REQUIRED for the MS-MPI processes to communicate
-                unboundPool.InterComputeNodeCommunicationEnabled = true;
-                // REQUIRED for multi-instance tasks
-                unboundPool.MaxTasksPerComputeNode = 1;
-                
-                // Specify the application and version to deploy to the compute nodes.
-                unboundPool.ApplicationPackageReferences = new List<ApplicationPackageReference>
-                {
-                    new ApplicationPackageReference
-                    {
-                        ApplicationId = appPackageId,
-                        Version = appPackageVersion
-                    }
-                };
-
-                // Create a StartTask for the pool that we use to install MS-MPI on the nodes
-                // as they join the pool.
-                StartTask startTask = new StartTask
-                {
-                    CommandLine = $"cmd /c %AZ_BATCH_APP_PACKAGE_{appPackageId.ToUpper()}#{appPackageVersion}%\\MSMpiSetup.exe -unattend -force",
-                    RunElevated = true,
-                    WaitForSuccess = true
-                };
-                unboundPool.StartTask = startTask;
-
-                // Commit the fully configured pool to the Batch service to actually create
-                // the pool and its compute nodes.
-                await unboundPool.CommitAsync();
-
-                // Create the job to which the multi-instance task will be added.
-                Console.WriteLine($"Creating job [{jobId}]...");
-                CloudJob unboundJob = batchClient.JobOperations.CreateJob(jobId, new PoolInformation() { PoolId = poolId });
-                await unboundJob.CommitAsync();
-
-                // Create the multi-instance task. Batch will create one primary and several subtasks,
-                // the total number of which matches the number of instances you specify in the
-                // MultiInstanceSettings. The main task's command line is the "application command,"
-                // and is executed *only* by the primary, and only after the primary and all subtasks
-                // have executed the "coordination command" (the MultiInstanceSettings.CoordinationCommandLine).
+                // Create the multi-instance task. The MultiInstanceSettings property (configured
+                // below) tells Batch to create one primary and several subtasks, the total number
+                // of which matches the number of instances you specify in the MultiInstanceSettings.
+                // This main task's command line is the "application command," and is executed *only*
+                // by the primary, and only after the primary and all subtasks have executed the
+                // "coordination command" (the MultiInstanceSettings.CoordinationCommandLine).
                 CloudTask multiInstanceTask = new CloudTask(id: taskId,
                     commandline: $"cmd /c mpiexec.exe -c 1 -wdir %AZ_BATCH_TASK_SHARED_DIR% %AZ_BATCH_APP_PACKAGE_{appPackageId.ToUpper()}#{appPackageVersion}%\\MPIHelloWorld.exe");
 
@@ -136,24 +96,18 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
                 Console.WriteLine($"Adding task [{taskId}] to job [{jobId}]...");
                 await batchClient.JobOperations.AddTaskAsync(jobId, multiInstanceTask);
 
-                // Obtain the collection of tasks currently managed by the job. Note that we use
-                // a detail level to specify that only the "id" property of each task should be
-                // populated. Using a detail level for all list operations helps to lower response
-                // time from the Batch service.
-                ODATADetailLevel detail = new ODATADetailLevel(selectClause: "id");
-                List<CloudTask> tasks = await batchClient.JobOperations.ListTasks(jobId, detail).ToListAsync();
-
-                CloudTask mpiTask = await batchClient.JobOperations.GetTaskAsync(jobId, taskId);
+                // Get the "bound" version of the multi-instance task.
+                CloudTask mainTask = await batchClient.JobOperations.GetTaskAsync(jobId, taskId);
 
                 // We use a TaskStateMonitor to monitor the state of our tasks. In this case,
                 // we will wait for the task to reach the Completed state.
                 Console.WriteLine($"Awaiting task completion, timeout in {timeout}...");
                 TaskStateMonitor taskStateMonitor = batchClient.Utilities.CreateTaskStateMonitor();
-                await taskStateMonitor.WhenAll(new List<CloudTask> { mpiTask }, TaskState.Completed, timeout);
-                
-                // Print the multi-instance task's (the "main" task) stdout.txt and stderr.txt.
-                CloudJob boundJob = batchClient.JobOperations.GetJob(jobId);
-                CloudTask mainTask = boundJob.GetTask(taskId);
+                await taskStateMonitor.WhenAll(new List<CloudTask> { mainTask }, TaskState.Completed, timeout);
+
+                // Refresh the task to obtain up-to-date property values from Batch, such as
+                // its current state and information about the node on which it executed.
+                await mainTask.RefreshAsync();
 
                 string stdOut = mainTask.GetNodeFile(Constants.StandardOutFileName).ReadAsString();
                 string stdErr = mainTask.GetNodeFile(Constants.StandardErrorFileName).ReadAsString();
@@ -166,7 +120,7 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
                 Console.WriteLine(stdErr);
 
                 // Need to delay a bit to allow the subtasks to complete
-                TimeSpan subtaskTimeout = TimeSpan.FromSeconds(10);
+                TimeSpan subtaskTimeout = TimeSpan.FromSeconds(0);
                 Console.WriteLine($"Main task completed, waiting {subtaskTimeout} for subtasks to complete...");
                 System.Threading.Thread.Sleep(subtaskTimeout);
 
@@ -183,13 +137,15 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
 
                     if (subtask.State == TaskState.Completed)
                     {
-                        string outPath = subtask.ComputeNodeInformation.TaskRootDirectory + "\\" + Constants.StandardOutFileName;
-                        string errPath = subtask.ComputeNodeInformation.TaskRootDirectory + "\\" + Constants.StandardErrorFileName;
-
-                        // Obtain the file from the node on which the subtask executed.
+                        // Obtain the file from the node on which the subtask executed. For normal CloudTasks,
+                        // we could simply call CloudTask.GetNodeFile(Constants.StandardOutFileName), but the
+                        // subtasks are not "normal" tasks in Batch, and thus must be handled differently.
                         ComputeNode node =
                             await batchClient.PoolOperations.GetComputeNodeAsync(subtask.ComputeNodeInformation.PoolId,
                                                                                  subtask.ComputeNodeInformation.ComputeNodeId);
+
+                        string outPath = subtask.ComputeNodeInformation.TaskRootDirectory + "\\" + Constants.StandardOutFileName;
+                        string errPath = subtask.ComputeNodeInformation.TaskRootDirectory + "\\" + Constants.StandardErrorFileName;
 
                         NodeFile stdOutFile = await node.GetNodeFileAsync(outPath.Trim('\\'));
                         NodeFile stdErrFile = await node.GetNodeFileAsync(errPath.Trim('\\'));
@@ -197,7 +153,7 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
                         stdOut = await stdOutFile.ReadAsStringAsync();
                         stdErr = await stdErrFile.ReadAsStringAsync();
 
-                        Console.WriteLine($"\tnode: {node.Id}:");
+                        Console.WriteLine($"\tnode: " + node.Id);
                         Console.WriteLine("\tstdout.txt: " + stdOut);
                         Console.WriteLine("\tstderr.txt: " + stdErr);
                     }
@@ -223,6 +179,72 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
                     await batchClient.PoolOperations.DeletePoolAsync(poolId);
                 }
             }
+        }
+
+        /// <summary>
+        /// Creates a pool of "small" Windows Server 2012 R2 compute nodes in the Batch service with the specified configuration.
+        /// </summary>
+        /// <param name="batchClient">The client to use for creating the pool.</param>
+        /// <param name="poolId">The id of the pool to create.</param>
+        /// <param name="numberOfNodes">The target number of compute nodes for the pool.</param>
+        /// <param name="appPackageId">The id of the application package to install on the compute nodes.</param>
+        /// <param name="appPackageVersion">The application package version to install on the compute nodes.</param>
+        private static async Task CreatePoolAsync(BatchClient batchClient, string poolId, int numberOfNodes, string appPackageId, string appPackageVersion)
+        {
+            // Create the unbound pool. Until we call CloudPool.Commit() or CommitAsync(),
+            // the pool isn't actually created in the Batch service. This CloudPool instance
+            // is therefore considered "unbound," and we can modify its properties.
+            Console.WriteLine($"Creating pool [{poolId}]...");
+            CloudPool unboundPool =
+                batchClient.PoolOperations.CreatePool(poolId: poolId,
+                                                      virtualMachineSize: "small",
+                                                      targetDedicated: numberOfNodes,
+                                                      cloudServiceConfiguration:
+                                                          new CloudServiceConfiguration(osFamily: "4"));
+
+            // REQUIRED for communication between the MS-MPI processes (in this
+            // sample, MPIHelloWorld.exe) running on the different nodes
+            unboundPool.InterComputeNodeCommunicationEnabled = true;
+            // REQUIRED for multi-instance tasks
+            unboundPool.MaxTasksPerComputeNode = 1;
+
+            // Specify the application and version to deploy to the compute nodes.
+            unboundPool.ApplicationPackageReferences = new List<ApplicationPackageReference>
+            {
+                new ApplicationPackageReference
+                {
+                    ApplicationId = appPackageId,
+                    Version = appPackageVersion
+                }
+            };
+
+            // Create a StartTask for the pool that we use to install MS-MPI on the nodes
+            // as they join the pool.
+            StartTask startTask = new StartTask
+            {
+                CommandLine = $"cmd /c %AZ_BATCH_APP_PACKAGE_{appPackageId.ToUpper()}#{appPackageVersion}%\\MSMpiSetup.exe -unattend -force",
+                RunElevated = true,
+                WaitForSuccess = true
+            };
+            unboundPool.StartTask = startTask;
+
+            // Commit the fully configured pool to the Batch service to actually create
+            // the pool and its compute nodes.
+            await unboundPool.CommitAsync();
+        }
+
+        /// <summary>
+        /// Creates a job in Batch service with the specified id and associated with the specified pool.
+        /// </summary>
+        /// <param name="batchClient"></param>
+        /// <param name="jobId"></param>
+        /// <param name="poolId"></param>
+        private static async Task CreateJobAsync(BatchClient batchClient, string jobId, string poolId)
+        {
+            // Create the job to which the multi-instance task will be added.
+            Console.WriteLine($"Creating job [{jobId}]...");
+            CloudJob unboundJob = batchClient.JobOperations.CreateJob(jobId, new PoolInformation() { PoolId = poolId });
+            await unboundJob.CommitAsync();
         }
     }
 }

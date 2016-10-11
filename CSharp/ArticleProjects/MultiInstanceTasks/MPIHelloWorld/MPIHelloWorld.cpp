@@ -1,7 +1,9 @@
 // Copyright (c) Microsoft Corporation
 //
-// Companion project to the following article:
+// MPI sample program for use with the companion project to the following article:
 // https://azure.microsoft.com/documentation/articles/batch-mpi/
+// Based on the sample in the following blog post:
+// https://blogs.technet.microsoft.com/windowshpc/2015/02/02/how-to-compile-and-run-a-simple-ms-mpi-program/
 
 #include "stdafx.h"
 #include "mpi.h"
