@@ -136,6 +136,7 @@ namespace Microsoft.Azure.BatchExplorer.Service
             int? targetDedicated, 
             string autoScaleFormula, 
             bool communicationEnabled,
+            string subnetId,
             CloudServiceConfigurationOptions cloudServiceConfigurationOptions,
             VirtualMachineConfigurationOptions virtualMachineConfigurationOptions,
             int maxTasksPerComputeNode,
@@ -175,6 +176,14 @@ namespace Microsoft.Azure.BatchExplorer.Service
             unboundPool.InterComputeNodeCommunicationEnabled = communicationEnabled;
             unboundPool.ResizeTimeout = timeout;
             unboundPool.MaxTasksPerComputeNode = maxTasksPerComputeNode;
+
+            if (!string.IsNullOrEmpty(subnetId))
+            {
+                unboundPool.NetworkConfiguration = new NetworkConfiguration
+                {
+                    SubnetId = subnetId
+                };
+            }
                 
             if (!string.IsNullOrEmpty(autoScaleFormula))
             {
