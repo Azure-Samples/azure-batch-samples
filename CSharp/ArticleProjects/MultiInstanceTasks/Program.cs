@@ -119,8 +119,8 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
                 Console.WriteLine("---- stderr.txt ----");
                 Console.WriteLine(stdErr);
 
-                // Need to delay a bit to allow the subtasks to complete
-                TimeSpan subtaskTimeout = TimeSpan.FromSeconds(0);
+                // Need to delay a bit to allow the Batch service to mark the subtasks as Complete
+                TimeSpan subtaskTimeout = TimeSpan.FromSeconds(10);
                 Console.WriteLine($"Main task completed, waiting {subtaskTimeout} for subtasks to complete...");
                 System.Threading.Thread.Sleep(subtaskTimeout);
 
