@@ -421,7 +421,9 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 return this.ActiveAccount != null;
             }
         }
-        
+
+        public string JobsSearchFilter { get; set; }
+
         #endregion
 
         private ObservableCollection<PoolModel> pools;
@@ -778,7 +780,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                                 DateTime startTime = DateTime.Now;
                                 while (isRefreshRequired)
                                 {
-                                    var refreshedJobs = await dataProvider.GetJobCollectionAsync();
+                                    var refreshedJobs = await dataProvider.GetJobCollectionAsync(this.JobsSearchFilter);
                                     isRefreshRequired = refreshedJobs.Any(a => deletedIds.Contains(a.Id)) && (DateTime.Now - startTime).TotalMilliseconds < 60000;
                                     if (!isRefreshRequired)
                                     {
@@ -1558,7 +1560,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 //
                 if (jobs)
                 {
-                    System.Threading.Tasks.Task<IList<JobModel>> getJobTask = provider.GetJobCollectionAsync();
+                    System.Threading.Tasks.Task<IList<JobModel>> getJobTask = provider.GetJobCollectionAsync(this.JobsSearchFilter);
                     AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                         getJobTask,
                         new AccountOperation(AccountOperation.ListJobs)));

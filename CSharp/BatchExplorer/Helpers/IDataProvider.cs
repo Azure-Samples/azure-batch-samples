@@ -40,7 +40,7 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         /// Get a collection of Jobs from the default source (if any)
         /// </summary>
         /// <returns>A <see cref="Task"/> whose result is a collection of Jobs</returns>
-        Task<IList<JobModel>> GetJobCollectionAsync();
+        Task<IList<JobModel>> GetJobCollectionAsync(string jobSearchFilter);
 
         /// <summary>
         /// Creates a job

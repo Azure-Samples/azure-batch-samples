@@ -414,7 +414,7 @@
             </StackPanel>
 
         </ControlTemplate>
-        
+
         <ControlTemplate x:Key="CertificateCommands">
             <StackPanel
                 Orientation="Vertical">
@@ -561,87 +561,57 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <TabControl x:Name="LeftHandTab" >
+            <TabControl x:Name="LeftHandTab">
                 <TabItem Header="{Binding JobScheduleTabTitle}" IsSelected="{Binding JobScheduleTabIsSelected}">
                     <Grid>
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
-                        <StackPanel
-                            Grid.Row="0"
-                            Orientation="Horizontal">
-                            <Button
-                                Margin="4"
-                                Width="48"
-                                Command="{Binding CreateJobSchedule}"
-                                IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
+                        <StackPanel Grid.Row="0" Orientation="Horizontal">
+                            <Button Margin="4" Width="48" Command="{Binding CreateJobSchedule}" IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
                                 <Button.Content>
                                     <StackPanel>
-                                        <Image Source="../Images/add.png" Height="36"/>
+                                        <Image Source="../Images/add.png" Height="36" />
                                         <TextBlock HorizontalAlignment="Center" Text="Add" FontSize="12" Foreground="Black" />
                                     </StackPanel>
                                 </Button.Content>
                             </Button>
-                            <Button
-                                Margin="4"
-                                Width="48"
-                                Command="{Binding RefreshJobSchedules}"
-                                IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
+                            <Button Margin="4" Width="48" Command="{Binding RefreshJobSchedules}" IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
                                 <Button.Content>
                                     <StackPanel>
-                                        <Image Source="../Images/refresh.png" Height="36"/>
+                                        <Image Source="../Images/refresh.png" Height="36" />
                                         <TextBlock HorizontalAlignment="Center" Text="Refresh" FontSize="12" Foreground="Black" />
                                     </StackPanel>
                                 </Button.Content>
                             </Button>
                         </StackPanel>
-                        <DataGrid
-                            Grid.Row="1"
-                            ItemsSource="{Binding JobSchedules}"
-                            SelectedItem="{Binding SelectedJobSchedule}">
+                        <DataGrid Grid.Row="1" ItemsSource="{Binding JobSchedules}" SelectedItem="{Binding SelectedJobSchedule}">
                             <DataGrid.ContextMenu>
                                 <ContextMenu>
-                                    <MenuItem 
-                                        Header="Refresh"
-                                        Command="{Binding SelectedJobSchedule.RefreshItem}"
-                                        CommandParameter="{Binding SelectedJobSchedule}" />
-                                    <MenuItem 
-                                        Header="Enable"
-                                        Command="{Binding SelectedJobSchedule.EnableJobSchedule}"
-                                        CommandParameter="{Binding SelectedJobSchedule}"/>
-                                    <MenuItem 
-                                        Header="Terminate"
-                                        Command="{Binding SelectedJobSchedule.TerminateJobSchedule}"
-                                        CommandParameter="{Binding SelectedJobSchedule}"/>
-                                    <MenuItem 
-                                        Header="Disable"
-                                        Command="{Binding SelectedJobSchedule.DisableJobSchedule}"
-                                        CommandParameter="{Binding SelectedJobSchedule}"/>
-                                    <MenuItem 
-                                        Header="Delete"
-                                        Command="{Binding SelectedJobSchedule.Delete}"
-                                        CommandParameter="{Binding SelectedJobSchedule}"/>
+                                    <MenuItem Header="Refresh" Command="{Binding SelectedJobSchedule.RefreshItem}" CommandParameter="{Binding SelectedJobSchedule}" />
+                                    <MenuItem Header="Enable" Command="{Binding SelectedJobSchedule.EnableJobSchedule}" CommandParameter="{Binding SelectedJobSchedule}" />
+                                    <MenuItem Header="Terminate" Command="{Binding SelectedJobSchedule.TerminateJobSchedule}" CommandParameter="{Binding SelectedJobSchedule}" />
+                                    <MenuItem Header="Disable" Command="{Binding SelectedJobSchedule.DisableJobSchedule}" CommandParameter="{Binding SelectedJobSchedule}" />
+                                    <MenuItem Header="Delete" Command="{Binding SelectedJobSchedule.Delete}" CommandParameter="{Binding SelectedJobSchedule}" />
                                 </ContextMenu>
                             </DataGrid.ContextMenu>
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Id" Binding="{Binding Id}"/>
-                                <DataGridTextColumn Header="Display Name" Binding="{Binding DisplayName}"/>
+                                <DataGridTextColumn Header="Id" Binding="{Binding Id}" />
+                                <DataGridTextColumn Header="Display Name" Binding="{Binding DisplayName}" />
                                 <DataGridTextColumn Header="State" Binding="{Binding State}">
                                     <DataGridTextColumn.CellStyle>
                                         <Style TargetType="DataGridCell">
-                                            <Setter Property="Foreground" Value="{Binding State, Converter={StaticResource JobScheduleStateColorConverter}}"/>
-                                            <Setter Property="FontWeight" Value="Bold"/>
-                                            <Setter Property="Background" Value="White"/>
+                                            <Setter Property="Foreground" Value="{Binding State, Converter={StaticResource JobScheduleStateColorConverter}}" />
+                                            <Setter Property="FontWeight" Value="Bold" />
+                                            <Setter Property="Background" Value="White" />
                                         </Style>
                                     </DataGridTextColumn.CellStyle>
                                 </DataGridTextColumn>
-
-                                <DataGridTextColumn Header="" Width="*" CanUserReorder="False" CanUserSort="False"/>
+                                <DataGridTextColumn Header="" Width="*" CanUserReorder="False" CanUserSort="False" />
                             </DataGrid.Columns>
                         </DataGrid>
                     </Grid>
-
                 </TabItem>
                 <TabItem Header="{Binding JobTabTitle}" IsSelected="{Binding JobTabIsSelected}">
                     <Grid>
@@ -649,12 +619,11 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <StackPanel
-                            Grid.Row="0"
-                            Orientation="Horizontal">
+                        <DockPanel LastChildFill="True">
                             <Button
                                 Margin="4"
                                 Width="48"
+                                DockPanel.Dock="Left"                                
                                 Command="{Binding CreateJob}"
                                 IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
                                 <Button.Content>
@@ -667,6 +636,7 @@
                             <Button
                                 Margin="4"
                                 Width="48"
+                                DockPanel.Dock="Left"                                
                                 Command="{Binding RefreshJobs}"
                                 IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
                                 <Button.Content>
@@ -679,6 +649,7 @@
                             <Button
                                 Margin="4"
                                 Width="48"
+                                DockPanel.Dock="Left"                                
                                 Command="{Binding DeleteSelectedJobs}"
                                 IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
                                 <Button.Content>
@@ -687,12 +658,20 @@
                                         <TextBlock HorizontalAlignment="Center" Text="Delete" FontSize="12" Foreground="Black" />
                                     </StackPanel>
                                 </Button.Content>
-                            </Button>                            
-                        </StackPanel>
+                            </Button>
+                            <TextBox x:Name="SearchJobsTxtBox" 
+                                     Height="48" Margin="20,20,0,0" 
+                                     TextWrapping="Wrap" 
+                                     Text="Search Jobs" 
+                                     DockPanel.Dock="Right" 
+                                     VerticalAlignment="Center" 
+                                     Width="400" GotFocus="SearchJobsTxtBox_GotFocus" 
+                                     KeyUp="SearchJobsTxtBox_KeyUp" />
+                        </DockPanel>
                         <DataGrid
                             Grid.Row="1"
                             ItemsSource="{Binding Jobs}"
-                            SelectedItem="{Binding SelectedJob}">
+                            SelectedItem="{Binding SelectedJob}" Margin="20,0">
                             <DataGrid.ContextMenu>
                                 <ContextMenu>
                                     <MenuItem 
@@ -902,7 +881,7 @@
 
                 </TabItem>
             </TabControl>
-            <toolkit:BusyIndicator IsBusy="{Binding LeftSpinnerIsVisible}"/>
+            <toolkit:BusyIndicator IsBusy="{Binding LeftSpinnerIsVisible}" />
             <GridSplitter Width="6" BorderBrush="DimGray" BorderThickness="1,0" VerticalAlignment="Stretch"/>
             <Grid Column="1" Visibility="{Binding JobScheduleTabIsSelected, Converter={StaticResource BVC}}">
                 <Grid.RowDefinitions>
