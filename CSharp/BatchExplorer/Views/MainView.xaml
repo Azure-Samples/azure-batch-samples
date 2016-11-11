@@ -1085,6 +1085,12 @@
                                 <DataGrid ItemsSource="{Binding Path=SelectedTask.OutputFiles}"
                                           SelectedItem="{Binding Path=SelectedTask.SelectedTaskFile}"
                                           Visibility="{Binding Path=SelectedTask.HasOutputFiles, Converter={StaticResource BVC}, FallbackValue=Hidden}">
+                                    <DataGrid.InputBindings>
+                                        <MouseBinding
+                                            MouseAction="LeftDoubleClick"
+                                            Command="{Binding OpenTaskFile}"
+                                            CommandParameter="{Binding SelectedTask.SelectedTaskFile/}"/>
+                                    </DataGrid.InputBindings>
                                     <DataGrid.ContextMenu>
                                         <ContextMenu>
                                             <MenuItem Header="Open File"
