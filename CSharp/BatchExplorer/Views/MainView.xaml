@@ -1026,6 +1026,7 @@
                                             </Style>
                                         </DataGridTextColumn.CellStyle>
                                     </DataGridTextColumn>
+                                    <DataGridTextColumn Header="ExitCode" Binding="{Binding ExitCode}"/>
                                     <DataGridTextColumn Header="" Width="*" 
                                                     CanUserSort="False" CanUserReorder="False"/>
                                 </DataGrid.Columns>
