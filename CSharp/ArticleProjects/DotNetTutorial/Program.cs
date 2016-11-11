@@ -288,15 +288,34 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
         /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
         private static async Task CreatePoolAsync(BatchClient batchClient, string poolId, IList<ResourceFile> resourceFiles)
         {
-            Console.WriteLine("Creating pool [{0}]...", poolId);
+            CloudPool pool = null;
+            try
+            {
+                pool = await batchClient.PoolOperations.GetPoolAsync(poolId);
+            }
+            catch (BatchException be)
+            {
+                if (be.HResult != -2146233088) // Response status code indicates server error: 404 (NotFound).
+                {
+                    throw;
+                }
+            }
+            if (pool == null)
+            {
+                Console.WriteLine("Creating pool [{0}]...", poolId);
 
-            // Create the unbound pool. Until we call CloudPool.Commit() or CommitAsync(), no pool is actually created in the
-            // Batch service. This CloudPool instance is therefore considered "unbound," and we can modify its properties.
-            CloudPool pool = batchClient.PoolOperations.CreatePool(
-                poolId: poolId,
-                targetDedicated: 3,                                                         // 3 compute nodes
-                virtualMachineSize: "small",                                                // single-core, 1.75 GB memory, 225 GB disk
-                cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "4"));   // Windows Server 2012 R2
+                // Create the unbound pool. Until we call CloudPool.Commit() or CommitAsync(), no pool is actually created in the
+                // Batch service. This CloudPool instance is therefore considered "unbound," and we can modify its properties.
+                pool = batchClient.PoolOperations.CreatePool(
+                    poolId: poolId,
+                    targetDedicated: 3,                                                         // 3 compute nodes
+                    virtualMachineSize: "small",                                                // single-core, 1.75 GB memory, 225 GB disk
+                    cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "4"));   // Windows Server 2012 R2
+            }
+            else
+            {
+                Console.WriteLine("Pool [{0}] was already created", poolId);
+            }
 
             // Create and assign the StartTask that will be executed when compute nodes join the pool.
             // In this case, we copy the StartTask's resource files (that will be automatically downloaded
@@ -307,7 +326,7 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
                 // node's shared directory. Every compute node in a Batch pool is configured with a number
                 // of pre-defined environment variables that can be referenced by commands or applications
                 // run by tasks.
-                
+
                 // Since a successful execution of robocopy can return a non-zero exit code (e.g. 1 when one or
                 // more files were successfully copied) we need to manually exit with a 0 for Batch to recognize
                 // StartTask execution success.
