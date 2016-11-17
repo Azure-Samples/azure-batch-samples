@@ -291,7 +291,15 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
             CloudPool pool = null;
             try
             {
-                pool = await batchClient.PoolOperations.GetPoolAsync(poolId);
+                Console.WriteLine("Creating pool [{0}]...", poolId);
+
+                // Create the unbound pool. Until we call CloudPool.Commit() or CommitAsync(), no pool is actually created in the
+                // Batch service. This CloudPool instance is therefore considered "unbound," and we can modify its properties.
+                pool = batchClient.PoolOperations.CreatePool(
+                    poolId: poolId,
+                    targetDedicated: 3,                                                         // 3 compute nodes
+                    virtualMachineSize: "small",                                                // single-core, 1.75 GB memory, 225 GB disk
+                    cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "4"));   // Windows Server 2012 R2
             }
             catch (BatchException be)
             {
@@ -304,18 +312,6 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
                 {
                     throw; // Any other exception is unexpected
                 }
-            }
-            if (pool == null)
-            {
-                Console.WriteLine("Creating pool [{0}]...", poolId);
-
-                // Create the unbound pool. Until we call CloudPool.Commit() or CommitAsync(), no pool is actually created in the
-                // Batch service. This CloudPool instance is therefore considered "unbound," and we can modify its properties.
-                pool = batchClient.PoolOperations.CreatePool(
-                    poolId: poolId,
-                    targetDedicated: 3,                                                         // 3 compute nodes
-                    virtualMachineSize: "small",                                                // single-core, 1.75 GB memory, 225 GB disk
-                    cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "4"));   // Windows Server 2012 R2
             }
 
             // Create and assign the StartTask that will be executed when compute nodes join the pool.
