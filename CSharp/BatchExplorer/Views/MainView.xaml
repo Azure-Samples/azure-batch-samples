@@ -1274,6 +1274,12 @@
                                     Visibility="{Binding SelectedComputeNode.HasFiles, Converter={StaticResource BVC}, FallbackValue=Hidden}"
                                     ItemsSource="{Binding SelectedComputeNode.Files}"
                                     SelectedItem="{Binding SelectedNodeFile}">
+                                <DataGrid.InputBindings>
+                                    <MouseBinding
+                                            MouseAction="LeftDoubleClick"
+                                            Command="{Binding OpenNodeFile}"
+                                            CommandParameter="{Binding SelectedNodeFile/}"/>
+                                </DataGrid.InputBindings>
                                 <DataGrid.ContextMenu>
                                     <ContextMenu>
                                         <MenuItem Header="Open File"
