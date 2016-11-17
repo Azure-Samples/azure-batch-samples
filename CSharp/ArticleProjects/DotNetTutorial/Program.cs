@@ -133,7 +133,7 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
                 // Create the pool that will contain the compute nodes that will execute the tasks.
                 // The ResourceFile collection that we pass in is used for configuring the pool's StartTask
                 // which is executed each time a node first joins the pool (or is rebooted or reimaged).
-                await CreatePoolAsync(batchClient, PoolId, applicationFiles);
+                await CreatePoolIfNotExistAsync(batchClient, PoolId, applicationFiles);
 
                 // Create the job that will run the tasks.
                 await CreateJobAsync(batchClient, JobId, PoolId);
@@ -286,7 +286,7 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
         /// <param name="resourceFiles">A collection of <see cref="ResourceFile"/> objects representing blobs within
         /// a Storage account container. The StartTask will download these files from Storage prior to execution.</param>
         /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
-        private static async Task CreatePoolAsync(BatchClient batchClient, string poolId, IList<ResourceFile> resourceFiles)
+        private static async Task CreatePoolIfNotExistAsync(BatchClient batchClient, string poolId, IList<ResourceFile> resourceFiles)
         {
             CloudPool pool = null;
             try
@@ -295,9 +295,14 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
             }
             catch (BatchException be)
             {
-                if (be.HResult != -2146233088) // Response status code indicates server error: 404 (NotFound).
+                // Swallow the specific error code PoolExists since that is expected if the pool already exists
+                if (be.RequestInformation?.BatchError != null && be.RequestInformation.BatchError.Code == BatchErrorCodeStrings.PoolExists)
                 {
-                    throw;
+                    Console.WriteLine("The pool {0} already existed when we tried to create it", poolId);
+                }
+                else
+                {
+                    throw; // Any other exception is unexpected
                 }
             }
             if (pool == null)
@@ -311,10 +316,6 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
                     targetDedicated: 3,                                                         // 3 compute nodes
                     virtualMachineSize: "small",                                                // single-core, 1.75 GB memory, 225 GB disk
                     cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "4"));   // Windows Server 2012 R2
-            }
-            else
-            {
-                Console.WriteLine("Pool [{0}] was already created", poolId);
             }
 
             // Create and assign the StartTask that will be executed when compute nodes join the pool.
