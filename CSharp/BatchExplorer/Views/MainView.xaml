@@ -623,7 +623,7 @@
                             <Button
                                 Margin="4"
                                 Width="48"
-                                DockPanel.Dock="Left"                                
+                                DockPanel.Dock="Left"
                                 Command="{Binding CreateJob}"
                                 IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
                                 <Button.Content>
@@ -636,7 +636,7 @@
                             <Button
                                 Margin="4"
                                 Width="48"
-                                DockPanel.Dock="Left"                                
+                                DockPanel.Dock="Left"
                                 Command="{Binding RefreshJobs}"
                                 IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
                                 <Button.Content>
@@ -649,7 +649,7 @@
                             <Button
                                 Margin="4"
                                 Width="48"
-                                DockPanel.Dock="Left"                                
+                                DockPanel.Dock="Left"
                                 Command="{Binding DeleteSelectedJobs}"
                                 IsEnabled="{Binding IsAccountConnected, NotifyOnSourceUpdated=True}">
                                 <Button.Content>
@@ -660,18 +660,21 @@
                                 </Button.Content>
                             </Button>
                             <TextBox x:Name="SearchJobsTxtBox" 
-                                     Height="48" Margin="20,20,0,0" 
+                                     Height="48"
+                                     Margin="20,20,0,0" 
                                      TextWrapping="Wrap" 
                                      Text="Search Jobs" 
                                      DockPanel.Dock="Right" 
                                      VerticalAlignment="Center" 
-                                     Width="400" GotFocus="SearchJobsTxtBox_GotFocus" 
+                                     Width="400"
+                                     GotFocus="SearchJobsTxtBox_GotFocus" 
                                      KeyUp="SearchJobsTxtBox_KeyUp" />
                         </DockPanel>
                         <DataGrid
                             Grid.Row="1"
                             ItemsSource="{Binding Jobs}"
-                            SelectedItem="{Binding SelectedJob}" Margin="20,0">
+                            SelectedItem="{Binding SelectedJob}"
+                            Margin="20,0">
                             <DataGrid.ContextMenu>
                                 <ContextMenu>
                                     <MenuItem 
