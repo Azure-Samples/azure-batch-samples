@@ -300,6 +300,26 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
                     targetDedicated: 3,                                                         // 3 compute nodes
                     virtualMachineSize: "small",                                                // single-core, 1.75 GB memory, 225 GB disk
                     cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "4"));   // Windows Server 2012 R2
+
+                // Create and assign the StartTask that will be executed when compute nodes join the pool.
+                // In this case, we copy the StartTask's resource files (that will be automatically downloaded
+                // to the node by the StartTask) into the shared directory that all tasks will have access to.
+                pool.StartTask = new StartTask
+                {
+                    // Specify a command line for the StartTask that copies the task application files to the
+                    // node's shared directory. Every compute node in a Batch pool is configured with a number
+                    // of pre-defined environment variables that can be referenced by commands or applications
+                    // run by tasks.
+
+                    // Since a successful execution of robocopy can return a non-zero exit code (e.g. 1 when one or
+                    // more files were successfully copied) we need to manually exit with a 0 for Batch to recognize
+                    // StartTask execution success.
+                    CommandLine = "cmd /c (robocopy %AZ_BATCH_TASK_WORKING_DIR% %AZ_BATCH_NODE_SHARED_DIR%) ^& IF %ERRORLEVEL% LEQ 1 exit 0",
+                    ResourceFiles = resourceFiles,
+                    WaitForSuccess = true
+                };
+
+                await pool.CommitAsync();
             }
             catch (BatchException be)
             {
@@ -313,26 +333,6 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
                     throw; // Any other exception is unexpected
                 }
             }
-
-            // Create and assign the StartTask that will be executed when compute nodes join the pool.
-            // In this case, we copy the StartTask's resource files (that will be automatically downloaded
-            // to the node by the StartTask) into the shared directory that all tasks will have access to.
-            pool.StartTask = new StartTask
-            {
-                // Specify a command line for the StartTask that copies the task application files to the
-                // node's shared directory. Every compute node in a Batch pool is configured with a number
-                // of pre-defined environment variables that can be referenced by commands or applications
-                // run by tasks.
-
-                // Since a successful execution of robocopy can return a non-zero exit code (e.g. 1 when one or
-                // more files were successfully copied) we need to manually exit with a 0 for Batch to recognize
-                // StartTask execution success.
-                CommandLine = "cmd /c (robocopy %AZ_BATCH_TASK_WORKING_DIR% %AZ_BATCH_NODE_SHARED_DIR%) ^& IF %ERRORLEVEL% LEQ 1 exit 0",
-                ResourceFiles = resourceFiles,
-                WaitForSuccess = true
-            };
-
-            await pool.CommitAsync();
         }
 
         /// <summary>
