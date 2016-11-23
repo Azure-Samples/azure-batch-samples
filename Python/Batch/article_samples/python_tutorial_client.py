@@ -366,6 +366,7 @@ def download_blobs_from_container(block_blob_client,
 
     print('  Download complete!')
 
+
 if __name__ == '__main__':
 
     start_time = datetime.datetime.now().replace(microsecond=0)
