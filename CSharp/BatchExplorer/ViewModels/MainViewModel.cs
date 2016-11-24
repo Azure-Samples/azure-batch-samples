@@ -1013,6 +1013,29 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
+         /// <summary>
+        /// Get SSH settngs for the selected ComputeNode
+        /// </summary>
+        public CommandBase GetSSH
+        {
+            get
+            {
+                return new CommandBase(
+                    (o) =>
+                    {
+                        var task = this.GetSSHSettingsAsync(this.SelectedComputeNode);
+                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(task);
+                        task.ContinueWith(t =>
+                        {
+                            var sshSettings = t.Result;
+                            var sshCommand = $"ssh -p {sshSettings.Port} <username>@{sshSettings.IPAddress}";
+                            Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage(sshCommand));
+                        });
+                    }
+                );
+            }
+        }
+
         /// <summary>
         /// Add a user to the selected compute node
         /// </summary>
@@ -1755,6 +1778,11 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 // given security settings, it is likely to remain that way.
                 Process.Start(fileName);
             }
+        }
+
+        private async System.Threading.Tasks.Task<RemoteLoginSettings> GetSSHSettingsAsync(ComputeNodeModel computeNode)
+        {
+            return await computeNode.GetSSHSettingsAsync();
         }
 
         #endregion
