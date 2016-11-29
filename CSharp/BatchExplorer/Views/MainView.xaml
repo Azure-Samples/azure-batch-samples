@@ -735,6 +735,7 @@
                                         </Style>
                                     </DataGridTextColumn.CellStyle>
                                 </DataGridTextColumn>
+                                <DataGridTextColumn Header="Creation Time" Binding="{Binding CreationTime}" />
                                 <DataGridTextColumn Header="" Width="*" CanUserReorder="False" CanUserSort="False"/>
                             </DataGrid.Columns>
                         </DataGrid>
