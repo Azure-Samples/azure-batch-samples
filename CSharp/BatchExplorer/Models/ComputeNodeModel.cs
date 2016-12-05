@@ -323,6 +323,15 @@ namespace Microsoft.Azure.BatchExplorer.Models
             }
         }
 
+        public async Task<RemoteLoginSettings> GetSSHSettingsAsync()
+        {
+            Task<RemoteLoginSettings> asyncTask = this.ComputeNode.GetRemoteLoginSettingsAsync();
+            AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
+                asyncTask,
+                new ComputeNodeOperation(ComputeNodeOperation.GetSsh, this.ParentPool.Id, this.ComputeNode.Id)));
+            return await asyncTask;
+        }
+
         /// <summary>
         /// Downloads a file on this compute node.
         /// </summary>

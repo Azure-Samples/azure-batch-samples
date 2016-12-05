@@ -130,6 +130,7 @@ def execute_sample(global_config, sample_config):
             print("Deleting job: ", job_id)
             batch_client.job.delete(job_id)
 
+
 if __name__ == '__main__':
     global_config = configparser.ConfigParser()
     global_config.read(common.helpers._SAMPLES_CONFIG_FILE_NAME)

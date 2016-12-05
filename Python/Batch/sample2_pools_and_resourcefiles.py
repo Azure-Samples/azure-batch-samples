@@ -217,6 +217,7 @@ def execute_sample(global_config, sample_config):
             print("Deleting pool: ", pool_id)
             batch_client.pool.delete(pool_id)
 
+
 if __name__ == '__main__':
     global_config = configparser.ConfigParser()
     global_config.read(common.helpers._SAMPLES_CONFIG_FILE_NAME)

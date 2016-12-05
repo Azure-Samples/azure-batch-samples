@@ -1182,6 +1182,9 @@
                                         <MenuItem Header="Open RDP File"
                                             Command="{Binding OpenRDP}"
                                             CommandParameter="{Binding SelectedComputeNode}"/>
+                                        <MenuItem Header="Get SSH Settings"
+                                            Command="{Binding GetSSH}"
+                                            CommandParameter="{Binding SelectedComputeNode}"/>
                                         <MenuItem Header="Reboot"
                                             Command="{Binding RebootComputeNode}"
                                             CommandParameter="{Binding SelectedComputeNode}"/>
