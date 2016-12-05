@@ -421,7 +421,9 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 return this.ActiveAccount != null;
             }
         }
-        
+
+        public string JobsSearchFilter { get; set; }
+
         #endregion
 
         private ObservableCollection<PoolModel> pools;
@@ -778,7 +780,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                                 DateTime startTime = DateTime.Now;
                                 while (isRefreshRequired)
                                 {
-                                    var refreshedJobs = await dataProvider.GetJobCollectionAsync();
+                                    var refreshedJobs = await dataProvider.GetJobCollectionAsync(this.JobsSearchFilter);
                                     isRefreshRequired = refreshedJobs.Any(a => deletedIds.Contains(a.Id)) && (DateTime.Now - startTime).TotalMilliseconds < 60000;
                                     if (!isRefreshRequired)
                                     {
@@ -1006,6 +1008,29 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                     (o) =>
                     {
                         AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.DownloadRDPFileAsync(this.SelectedComputeNode, Path.GetTempPath()));
+                    }
+                );
+            }
+        }
+
+         /// <summary>
+        /// Get SSH settngs for the selected ComputeNode
+        /// </summary>
+        public CommandBase GetSSH
+        {
+            get
+            {
+                return new CommandBase(
+                    (o) =>
+                    {
+                        var task = this.GetSSHSettingsAsync(this.SelectedComputeNode);
+                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(task);
+                        task.ContinueWith(t =>
+                        {
+                            var sshSettings = t.Result;
+                            var sshCommand = $"ssh -p {sshSettings.Port} <username>@{sshSettings.IPAddress}";
+                            Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage(sshCommand));
+                        });
                     }
                 );
             }
@@ -1558,7 +1583,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 //
                 if (jobs)
                 {
-                    System.Threading.Tasks.Task<IList<JobModel>> getJobTask = provider.GetJobCollectionAsync();
+                    System.Threading.Tasks.Task<IList<JobModel>> getJobTask = provider.GetJobCollectionAsync(this.JobsSearchFilter);
                     AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                         getJobTask,
                         new AccountOperation(AccountOperation.ListJobs)));
@@ -1753,6 +1778,11 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 // given security settings, it is likely to remain that way.
                 Process.Start(fileName);
             }
+        }
+
+        private async System.Threading.Tasks.Task<RemoteLoginSettings> GetSSHSettingsAsync(ComputeNodeModel computeNode)
+        {
+            return await computeNode.GetSSHSettingsAsync();
         }
 
         #endregion

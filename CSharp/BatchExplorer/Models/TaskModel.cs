@@ -51,6 +51,12 @@ namespace Microsoft.Azure.BatchExplorer.Models
         public string CommandLine { get { return this.Task.CommandLine; } }
 
         /// <summary>
+        /// The exit code of the task
+        /// </summary>
+        [ChangeTracked(ModelRefreshType.Basic)]
+        public int? ExitCode { get { return this.Task?.ExecutionInformation?.ExitCode; } }
+
+        /// <summary>
         /// The set of Windows Azure blobs downloaded to run the task
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]

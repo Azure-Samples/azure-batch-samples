@@ -452,5 +452,19 @@ namespace Microsoft.Azure.BatchExplorer.Views
 
             e.CanExecute = simplePropertyModel != null;
         }
+
+        private void SearchJobsTxtBox_GotFocus(object sender, RoutedEventArgs e)
+        {
+            this.SearchJobsTxtBox.Text = String.Empty;
+        }
+
+        private void SearchJobsTxtBox_KeyUp(object sender, KeyEventArgs e)
+        {
+            this.viewModel.JobsSearchFilter = this.SearchJobsTxtBox.Text;
+            if (e.Key == Key.Enter && this.viewModel.IsAccountConnected)
+            {
+                Messenger.Default.Send<RefreshMessage>(new RefreshMessage(RefreshTarget.Jobs));
+            }
+        }
     }
 }
