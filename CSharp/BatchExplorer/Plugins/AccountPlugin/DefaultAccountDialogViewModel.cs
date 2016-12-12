@@ -46,13 +46,13 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
         /// <summary>
         /// The Key of the account
         /// </summary>
-        public string Key
+        public string BatchServiceKey
         {
-            get { return this.account.Key; }
+            get { return this.account.BatchServiceKey; }
             set
             {
-                this.account.Key = value;
-                FirePropertyChangedEvent("Key");
+                this.account.BatchServiceKey = value;
+                FirePropertyChangedEvent("BatchServiceKey");
             }
         }
         /// <summary>
@@ -68,8 +68,28 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
             }
         }
 
+        public string LinkedStorageAccountName
+        {
+            get { return this.account.LinkedStorageAccountName; }
+            set
+            {
+                this.account.LinkedStorageAccountName = value;
+                FirePropertyChangedEvent("LinkedStorageAccountName");
+            }
+        }
+
+        public string LinkedStorageAccountKey
+        {
+            get { return this.account.LinkedStorageAccountKey; }
+            set
+            {
+                this.account.LinkedStorageAccountKey = value;
+                FirePropertyChangedEvent("LinkedStorageAccountKey");
+            }
+        }
+
         #region IAccountAdder
-        
+
         /// <summary>
         /// See <see cref="IAccountAdder.CreateAccountForAdd"/>.
         /// </summary>

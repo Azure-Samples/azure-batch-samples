@@ -53,6 +53,10 @@
       <HintPath>packages\Azure.Batch.5.1.2\lib\net45\Microsoft.Azure.Batch.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Microsoft.Azure.Batch.Conventions.Files, Version=0.9.4.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\Microsoft.Azure.Batch.Conventions.Files.0.9.5-preview\lib\net45\Microsoft.Azure.Batch.Conventions.Files.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Microsoft.Azure.KeyVault.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>packages\Microsoft.Azure.KeyVault.Core.1.0.0\lib\net40\Microsoft.Azure.KeyVault.Core.dll</HintPath>
       <Private>True</Private>
@@ -143,6 +147,7 @@
     </ApplicationDefinition>
     <Compile Include="Converters\BoolToVisibilityConverter.cs" />
     <Compile Include="Converters\BooleanAndConverter.cs" />
+    <Compile Include="Converters\PathToFileNameConverter.cs" />
     <Compile Include="Converters\EnumToStringConverter.cs" />
     <Compile Include="Converters\InvertedBooleanConverter.cs" />
     <Compile Include="Converters\InvertedBoolToVisibilityConverter.cs" />
@@ -413,7 +418,9 @@
     <AppDesigner Include="Properties\" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config" />
+    <None Include="App.config">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>

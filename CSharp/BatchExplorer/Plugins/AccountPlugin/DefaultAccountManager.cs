@@ -152,9 +152,11 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
             {
                 AccountName = account.AccountName,
                 Alias = account.Alias,
-                Key = account.Key,
+                BatchServiceKey = account.BatchServiceKey,
                 BatchServiceUrl = account.BatchServiceUrl,
                 UniqueIdentifier = account.UniqueIdentifier,
+                LinkedStorageAccountName = account.LinkedStorageAccountName,
+                LinkedStorageAccountKey = account.LinkedStorageAccountKey,
                 ParentAccountManager = this
             };
             return Task.FromResult<Account>(clone);

@@ -466,5 +466,11 @@ namespace Microsoft.Azure.BatchExplorer.Views
                 Messenger.Default.Send<RefreshMessage>(new RefreshMessage(RefreshTarget.Jobs));
             }
         }
+
+        private void LinkedStorageHelp_RequestNavigate(object sender,
+                                               System.Windows.Navigation.RequestNavigateEventArgs e)
+        {
+            System.Diagnostics.Process.Start("https://docs.microsoft.com/en-us/azure/batch/batch-task-output");
+        }
     }
 }

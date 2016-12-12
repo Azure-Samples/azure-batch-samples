@@ -18,6 +18,7 @@ using Microsoft.Azure.BatchExplorer.Helpers;
 using Microsoft.Azure.BatchExplorer.Messages;
 using Microsoft.Azure.BatchExplorer.Models;
 using Microsoft.Azure.BatchExplorer.PluginInterfaces.AccountPlugin;
+using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Microsoft.Azure.BatchExplorer.ViewModels
 {
@@ -1154,6 +1155,53 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
 
         #endregion
 
+        #region Task Linked Storage File Operations
+
+        public CommandBase OpenTaskLinkedStorageFile
+        {
+            get
+            {
+                return new CommandBase(
+                    (o) =>
+                    {
+                        try
+                        {
+                            AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.DownloadLinkedStorageFileAsync(
+                            this.SelectedTask.SelectedTaskLinkedStorageFile, Path.GetTempPath()));
+                        }
+                        catch (Exception e)
+                        {
+                            Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
+                        }
+                    }
+                );
+            }
+        }
+
+        public CommandBase DownloadTaskLinkedStorageFile
+        {
+            get
+            {
+                return new CommandBase(
+                    (o) =>
+                    {
+                        try
+                        {
+                            AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.DownloadLinkedStorageFileAsync(
+                            this.SelectedTask.SelectedTaskLinkedStorageFile));
+                        }
+                        catch (Exception e)
+                        {
+                            Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
+                        }
+
+                    }
+                );
+            }
+        }
+
+        #endregion
+
         #region item-specific commands
         /// <summary>
         /// Refresh a selected item that implements IRefreshableObject
@@ -1548,6 +1596,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         /// <param name="jobSchedules">True if job schedule data should be retrieved</param>
         /// <param name="jobs">True if job data should be retrieved</param>
         /// <param name="pools">True if pool data should be retrieved</param>
+        /// <param name="certificates"></param>
         /// <returns></returns>
         private async Task GetDataAsync(IDataProvider provider, bool jobSchedules, bool jobs, bool pools, bool certificates)
         {
@@ -1668,35 +1717,21 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
-        private async System.Threading.Tasks.Task DownloadFileAsync(string file, string localDownloadTargetPath = null, bool isNodeFile = true)
+        private async Task DownloadFileAsync(string file, string localDownloadTargetPath = null, bool isNodeFile = true)
         {
             string fileName = null;
             try
             {
-                bool? result;
-                
                 if (string.IsNullOrEmpty(localDownloadTargetPath))
                 {
-                    // Configure save file dialog box
-                    Microsoft.Win32.SaveFileDialog saveFileDlg = new Microsoft.Win32.SaveFileDialog();
-                    saveFileDlg.FileName = Path.GetFileName(file);     // Default file name
-                    saveFileDlg.DefaultExt = ".txt"; // Default file extension.
-                    saveFileDlg.Filter = "Text documents (.txt)|*.txt"; // Filter files by extension
-
-                    // Show save file dialog box
-                    result = saveFileDlg.ShowDialog();
-                    if (result == true)
-                    {
-                        fileName = saveFileDlg.FileName;
-                    }
+                    fileName = ShowSaveFileDialog(Path.GetFileName(file), ".txt", "Text documents (.txt)|*.txt");
                 }
                 else
                 {
                     fileName = Path.Combine(localDownloadTargetPath, Path.GetFileName(file));
-                    result = true;
                 }
 
-                if (result == true)
+                if (!string.IsNullOrWhiteSpace(fileName))
                 {
                     // Save document
                     using (FileStream destStream = new FileStream(fileName, FileMode.Create))
@@ -1732,32 +1767,59 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
-        private async System.Threading.Tasks.Task DownloadRDPFileAsync(ComputeNodeModel computeNode, string localDownloadTargetPath = null)
+        private async Task DownloadLinkedStorageFileAsync(CloudAppendBlob blobFile, string localDownloadTargetPath = null)
         {
             string fileName = null;
-            bool? result;
+            try
+            {
+                if (string.IsNullOrEmpty(localDownloadTargetPath))
+                {
+                    fileName = ShowSaveFileDialog(Path.GetFileName(blobFile.Name), ".txt", "Text documents (.txt)|*.txt");
+                }
+                else
+                {
+                    fileName = Path.Combine(localDownloadTargetPath, Path.GetFileName(blobFile.Name));
+                }
+
+                if (!string.IsNullOrWhiteSpace(fileName))
+                {
+                    // Save document
+                    await blobFile.DownloadToFileAsync(fileName, FileMode.Create);
+
+                    // open text files
+                    if (fileName.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Process.Start(fileName);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                if (!string.IsNullOrEmpty(fileName))
+                {
+                    if (File.Exists(fileName))
+                    {
+                        File.Delete(fileName); //Delete the file if we have hit an exception
+                    }
+                }
+
+                Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
+            }
+        }
+
+        private async Task DownloadRDPFileAsync(ComputeNodeModel computeNode, string localDownloadTargetPath = null)
+        {
+            string fileName = null;
             if (string.IsNullOrEmpty(localDownloadTargetPath))
             {
-                // Configure save file dialog box
-                Microsoft.Win32.SaveFileDialog saveFileDlg = new Microsoft.Win32.SaveFileDialog();
-                saveFileDlg.FileName = computeNode.Id; // Default file name
-                saveFileDlg.DefaultExt = ".rdp"; // Default file extension.
-                saveFileDlg.Filter = "RDP File (.rdp)|*.rdp"; // Filter files by extension
-
-                // Show save file dialog box
-                result = saveFileDlg.ShowDialog();
-                if (result == true)
-                {
-                    fileName = saveFileDlg.FileName;
-                }
+                fileName = ShowSaveFileDialog(computeNode.Id, ".rdp", "RDP File (.rdp)|*.rdp");
             }
             else
             {
                 fileName = Path.Combine(localDownloadTargetPath, Path.GetFileName(computeNode.Id) + ".rdp");
-                result = true;
             }
 
-            if (result == true)
+            if (!string.IsNullOrWhiteSpace(fileName))
             {
                 // Save document
                 using (MemoryStream memoryStream = new MemoryStream())
@@ -1778,6 +1840,31 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 // given security settings, it is likely to remain that way.
                 Process.Start(fileName);
             }
+        }
+
+        /// <summary>
+        /// Shows the Save File Dialog
+        /// </summary>
+        /// <param name="file"></param>
+        /// <param name="defaultExt"></param>
+        /// <param name="filter"></param>
+        /// <returns></returns>
+        private string ShowSaveFileDialog(string file, string defaultExt, string filter)
+        {
+            // Configure save file dialog box
+            Microsoft.Win32.SaveFileDialog saveFileDlg = new Microsoft.Win32.SaveFileDialog();
+            saveFileDlg.FileName = Path.GetFileName(file);     // Default file name
+            saveFileDlg.DefaultExt = defaultExt;               // Default file extension.
+            saveFileDlg.Filter = filter;                       // Filter files by extension
+
+            // Show save file dialog box
+            var result = saveFileDlg.ShowDialog();
+            if (result == true)
+            {
+                return saveFileDlg.FileName;
+            }
+
+            return null;
         }
 
         private async System.Threading.Tasks.Task<RemoteLoginSettings> GetSSHSettingsAsync(ComputeNodeModel computeNode)

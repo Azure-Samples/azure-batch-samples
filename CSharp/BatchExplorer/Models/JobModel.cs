@@ -1,5 +1,7 @@
 //Copyright (c) Microsoft Corporation
 
+using Microsoft.Azure.Batch.Conventions.Files;
+
 namespace Microsoft.Azure.BatchExplorer.Models
 {
     using System;
@@ -74,6 +76,9 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// </summary>
         [ChangeTracked(ModelRefreshType.Children)]
         public ICollectionView TaskCollection { get; private set; }
+
+
+        public string OutputStorageContainerName { get { return this.Job.OutputStorageContainerName(); } }
         #endregion
 
         #region Commands

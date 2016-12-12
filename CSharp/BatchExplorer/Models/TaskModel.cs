@@ -11,6 +11,8 @@ using Microsoft.Azure.BatchExplorer.Helpers;
 using Microsoft.Azure.BatchExplorer.Messages;
 using Microsoft.Azure.BatchExplorer.ViewModels;
 using System.Text;
+using Microsoft.WindowsAzure.Storage.Blob;
+
 
 namespace Microsoft.Azure.BatchExplorer.Models
 {
@@ -112,6 +114,31 @@ namespace Microsoft.Azure.BatchExplorer.Models
         }
 
         /// <summary>
+        /// The set of linked storage output files for this task object
+        /// </summary>
+        [ChangeTracked(ModelRefreshType.Children)]
+        public List<CloudAppendBlob> LinkedStorageOutputFiles { get; private set; }
+
+        /// <summary>
+        /// True if there are linked storage output files to be had
+        /// </summary>
+        [ChangeTracked(ModelRefreshType.Children)]
+        public bool LinkedStoragHasOutputFiles
+        {
+            get
+            {
+                if (this.attemptToLoadLinkedStorageOutputs && (this.LinkedStorageOutputFiles == null || !this.LinkedStorageOutputFiles.Any()))
+                {
+                    AsyncOperationTracker.Instance.AddTrackedInternalOperation(
+                        this.RefreshAsync(ModelRefreshType.Children));
+                }
+
+                this.attemptToLoadLinkedStorageOutputs = false;
+                return (this.LinkedStorageOutputFiles != null && this.LinkedStorageOutputFiles.Any());
+            }
+        }
+
+        /// <summary>
         /// The set of Subtask information
         /// </summary>
         [ChangeTracked(ModelRefreshType.Children)]
@@ -152,9 +179,22 @@ namespace Microsoft.Azure.BatchExplorer.Models
             }
         }
 
+        private CloudAppendBlob selectedTaskLinkedStorageFile;
+
+        public CloudAppendBlob SelectedTaskLinkedStorageFile
+        {
+            get { return this.selectedTaskLinkedStorageFile; }
+            set
+            {
+                this.selectedTaskLinkedStorageFile = value;
+                this.FirePropertyChangedEvent("SelectedTaskLinkedStorageFile");
+            }
+        }
+
         #endregion
 
         private bool attemptToLoadOutputs;
+        private bool attemptToLoadLinkedStorageOutputs;
         private CloudTask Task { get; set; }
         private IList<SubtaskModel> SubtasksInfo { get; set; }
         private static readonly List<string> PropertiesToOmitFromDisplay = new List<string> { "FilesToStage" };
@@ -162,6 +202,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         public TaskModel(JobModel parentJob, CloudTask task)
         {
             this.attemptToLoadOutputs = true;
+            this.attemptToLoadLinkedStorageOutputs = true;
 
             this.ParentJob = parentJob;
             this.Task = task;
@@ -179,6 +220,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         public override async System.Threading.Tasks.Task RefreshAsync(ModelRefreshType refreshType, bool showTrackedOperation = true)
         {
             this.attemptToLoadOutputs = true;
+            this.attemptToLoadLinkedStorageOutputs = true;
 
             if (refreshType.HasFlag(ModelRefreshType.Basic))
             {
@@ -284,6 +326,39 @@ namespace Microsoft.Azure.BatchExplorer.Models
                         new TaskOperation(TaskOperation.ListSubtasks, this.ParentJob.Id, this.Task.Id)));
 
                     await asyncListSubtasksTask;
+
+                    // Linked Storage Account Files
+                    var storageContainer = this.ParentJob.OutputStorageContainerName;
+
+                    if (!String.IsNullOrWhiteSpace(storageContainer))
+                    {
+                        try
+                        {
+                            var blobClient = MainViewModel.dataProvider.CurrentAccount.LinkedStorageBlobClient;
+                            if (blobClient != null)
+                            {
+                                var container = blobClient.GetContainerReference(storageContainer);
+
+                                if (container != null)
+                                {
+                                    var files = container.ListBlobs(Task.Id, true).ToList();
+                                    LinkedStorageOutputFiles = new List<CloudAppendBlob>();
+                                    foreach (var file in files)
+                                    {
+                                        var cloudAppendBlob = file as CloudAppendBlob;
+                                        if (cloudAppendBlob != null)
+                                        {
+                                            LinkedStorageOutputFiles.Add(cloudAppendBlob);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            this.HandleException(e);
+                        }
+                    }
 
                     this.FireChangesOnRefresh(ModelRefreshType.Children);
                 }

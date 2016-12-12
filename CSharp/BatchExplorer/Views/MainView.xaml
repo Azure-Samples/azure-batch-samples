@@ -23,6 +23,7 @@
         <converters:InvertedBoolToVisibilityConverter x:Key="IBVC"/>
         <converters:BooleanAndConverter x:Key="BAC"/>
         <converters:EnumToStringConverter x:Key="EnumToStringConverter"/>
+        <converters:PathToFileNameConverter x:Key="PathToFileNameConverter"/>
         <Style TargetType="DataGrid">
             <Setter Property="IsReadOnly" Value="True"/>
             <Setter Property="AutoGenerateColumns" Value="False"/>
@@ -1091,6 +1092,40 @@
                                 </DataGrid>
                                 <TextBlock Text="{Binding Path=SelectedTask.NoOutputFilesReason}" Margin="0,10,0,0"
                                            Visibility="{Binding Path=SelectedTask.HasOutputFiles, Converter={StaticResource IBVC}, FallbackValue=Hidden}"/>
+                                <toolkit:BusyIndicator IsBusy="{Binding LowerRightSpinnerIsVisible}"/>
+                            </Grid>
+                        </TabItem>
+                        <TabItem Header="Linked Storage Files">
+                            <Grid>
+                                <DataGrid ItemsSource="{Binding Path=SelectedTask.LinkedStorageOutputFiles}"
+                                          SelectedItem="{Binding Path=SelectedTask.SelectedTaskLinkedStorageFile}"
+                                          Visibility="{Binding Path=SelectedTask.LinkedStoragHasOutputFiles, Converter={StaticResource BVC}, FallbackValue=Hidden}">
+                                    <DataGrid.InputBindings>
+                                        <MouseBinding
+                                            MouseAction="LeftDoubleClick"
+                                            Command="{Binding OpenTaskLinkedStorageFile}"
+                                            CommandParameter="{Binding SelectedTask.SelectedTaskLinkedStorageFile/}"/>
+                                    </DataGrid.InputBindings>
+                                    <DataGrid.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Open File"
+                                                Command="{Binding OpenTaskLinkedStorageFile}"/>
+                                            <MenuItem Header="Download File"
+                                                Command="{Binding DownloadTaskLinkedStorageFile}"/>
+                                        </ContextMenu>
+                                    </DataGrid.ContextMenu>
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Name" Binding="{Binding Name, Converter={StaticResource PathToFileNameConverter}, FallbackValue=Name}"/>
+                                        <DataGridTextColumn Header="Content Size" Binding="{Binding Properties.Length}"/>
+                                        <DataGridTextColumn Header="Last Modified" Binding="{Binding Properties.LastModified, StringFormat=\{0:dd/MM/yy hh:mm:ss tt\}}"/>
+                                        <DataGridTextColumn Header="Path" Binding="{Binding Uri}"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                                <TextBlock Visibility="{Binding Path=SelectedTask.LinkedStoragHasOutputFiles, Converter={StaticResource IBVC}, FallbackValue=Hidden}">
+                                     <Hyperlink RequestNavigate="LinkedStorageHelp_RequestNavigate"
+                                                NavigateUri="https://docs.microsoft.com/en-us/azure/batch/batch-task-output">No linked storage outputs available. Try configuring Linked Storage under Account, persist batch job output, or try refreshing the Task
+                                     </Hyperlink>
+                                </TextBlock>
                                 <toolkit:BusyIndicator IsBusy="{Binding LowerRightSpinnerIsVisible}"/>
                             </Grid>
                         </TabItem>

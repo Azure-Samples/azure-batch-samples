@@ -24,7 +24,11 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
         <Label Grid.Row="0" Grid.Column="0" Content="Account Alias" Background="WhiteSmoke"/>
         <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Alias}"/>
@@ -52,7 +56,23 @@
                 Grid.Column="0" 
                 Content="Key" 
                 Background="WhiteSmoke"/>
-            <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding Key}"/>
+        <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding BatchServiceKey}"/>
             <Separator Grid.Row="7" Grid.ColumnSpan="2"/>
+
+            <Label 
+                    Grid.Row="8" 
+                    Grid.Column="0" 
+                    Content="Linked Storage Account Name" 
+                    Background="WhiteSmoke"/>
+            <TextBox Grid.Row="8" Grid.Column="1" Text="{Binding LinkedStorageAccountName}"/>
+            <Separator Grid.Row="9" Grid.ColumnSpan="2"/>
+
+            <Label 
+                    Grid.Row="10" 
+                    Grid.Column="0" 
+                    Content="Linked Storage Account Key" 
+                    Background="WhiteSmoke"/>
+            <TextBox Grid.Row="10" Grid.Column="1" Text="{Binding LinkedStorageAccountKey}"/>
+            <Separator Grid.Row="11" Grid.ColumnSpan="2"/>
     </Grid>
 </UserControl>

@@ -30,42 +30,25 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
         public override string BatchServiceUrl { get; set; }
 
         /// <summary>
-        /// See <see cref="Account.Key"/>.
+        /// See <see cref="Account.BatchServiceKey"/>.
         /// </summary>
         [XmlIgnore]
-        public override string Key
+        public override string BatchServiceKey
         {
             get
             {
-                string result;
-                if (this.SecureKey == null)
-                {
-                    result = null;
-                }
-                else
-                {
-                    result = Encoding.ASCII.GetString(ProtectedData.Unprotect(this.SecureKey, null, DataProtectionScope.CurrentUser));
-                }
-
-                return result;
+                return GetSecureKey(this.BatchSecureKey);
             }
             set
             {
-                if (value != null)
-                {
-                    this.SecureKey = ProtectedData.Protect(Encoding.ASCII.GetBytes(value), null, DataProtectionScope.CurrentUser);
-                }
-                else
-                {
-                    this.SecureKey = null;
-                }
+                this.BatchSecureKey = DecryptSecureKey(value);
             }
         }
 
         /// <summary>
-        /// The secure (encrypted) key which will be written to disk.
+        /// The secure (encrypted) batch key which will be written to disk.
         /// </summary>
-        public byte[] SecureKey { get; set; }
+        public byte[] BatchSecureKey { get; set; }
 
         /// <summary>
         /// See <see cref="Account.UniqueIdentifier"/>.
@@ -75,6 +58,52 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
         public DefaultAccount(IAccountManager parentAccountManager) : base(parentAccountManager)
         {
             this.UniqueIdentifier = Guid.NewGuid();
+        }
+
+        /// <summary>
+        /// See <see cref="Account.LinkedStorageAccountName"/>.
+        /// </summary>
+        public override string LinkedStorageAccountName { get; set; }
+
+        /// <summary>
+        /// See <see cref="Account.LinkedStorageAccountKey"/>.
+        /// </summary>
+        [XmlIgnore]
+        public override string LinkedStorageAccountKey
+        {
+            get
+            {
+                return GetSecureKey(this.LinkedStorageSecureKey);
+            }
+            set
+            {
+                this.LinkedStorageSecureKey = DecryptSecureKey(value);
+            }
+        }
+
+        /// <summary>
+        /// The secure (encrypted) linked storage key which will be written to disk.
+        /// </summary>
+        public byte[] LinkedStorageSecureKey { get; set; }
+
+        /// <summary>
+        /// Decrypts the secure key
+        /// </summary>
+        /// <param name="secureKey"></param>
+        /// <returns>The plain key</returns>
+        private static string GetSecureKey(byte[] secureKey)
+        {
+            return secureKey == null ? null : Encoding.ASCII.GetString(ProtectedData.Unprotect(secureKey, null, DataProtectionScope.CurrentUser));
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="plainKey"></param>
+        /// <returns>The secureKey (encrypted) key</returns>
+        private static byte[] DecryptSecureKey(string plainKey)
+        {
+            return plainKey != null ? ProtectedData.Protect(Encoding.ASCII.GetBytes(plainKey), null, DataProtectionScope.CurrentUser) : null;
         }
     }
 }

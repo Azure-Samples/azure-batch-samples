@@ -17,6 +17,8 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.LegacyAccountSupport
         public string BatchServiceUrl { get; set; }
         public byte[] SecureKey { get; set; }
         public Guid UniqueIdentifier { get; set; }
+        public string LinkedStorageAccountName { get; set; }
+        public byte[] LinkedStorageSecureKey { get; set; }
 
         public Account ToAccount(IAccountManager manager)
         {
@@ -25,9 +27,11 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.LegacyAccountSupport
                            AccountName = this.AccountName,
                            Alias = this.Alias,
                            BatchServiceUrl = this.BatchServiceUrl,
-                           SecureKey = this.SecureKey,
-                           UniqueIdentifier = this.UniqueIdentifier
-                       };
+                           BatchSecureKey = this.SecureKey,
+                           UniqueIdentifier = this.UniqueIdentifier,
+                           LinkedStorageAccountName = this.LinkedStorageAccountName,
+                           LinkedStorageSecureKey = this.LinkedStorageSecureKey,
+            };
         }
     }
 }

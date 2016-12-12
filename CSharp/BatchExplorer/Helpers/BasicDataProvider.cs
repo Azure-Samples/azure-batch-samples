@@ -25,7 +25,7 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         public BasicDataProvider(Account currentAccount)
         {
             this.CurrentAccount = currentAccount;
-            this.Service = new BatchService(new BatchSharedKeyCredentials(this.CurrentAccount.BatchServiceUrl, this.CurrentAccount.AccountName, this.CurrentAccount.Key));
+            this.Service = new BatchService(new BatchSharedKeyCredentials(this.CurrentAccount.BatchServiceUrl, this.CurrentAccount.AccountName, this.CurrentAccount.BatchServiceKey));
         }
 
         public async Task<IList<JobScheduleModel>> GetJobScheduleCollectionAsync()
