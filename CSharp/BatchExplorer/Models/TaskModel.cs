@@ -4,13 +4,14 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using GalaSoft.MvvmLight.Messaging;
 using Microsoft.Azure.Batch;
 using Microsoft.Azure.Batch.Common;
 using Microsoft.Azure.BatchExplorer.Helpers;
 using Microsoft.Azure.BatchExplorer.Messages;
 using Microsoft.Azure.BatchExplorer.ViewModels;
-using System.Text;
 using Microsoft.WindowsAzure.Storage.Blob;
 
 
@@ -117,7 +118,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// The set of linked storage output files for this task object
         /// </summary>
         [ChangeTracked(ModelRefreshType.Children)]
-        public List<CloudAppendBlob> LinkedStorageOutputFiles { get; private set; }
+        public List<ICloudBlob> LinkedStorageOutputFiles { get; private set; }
 
         /// <summary>
         /// True if there are linked storage output files to be had
@@ -179,9 +180,9 @@ namespace Microsoft.Azure.BatchExplorer.Models
             }
         }
 
-        private CloudAppendBlob selectedTaskLinkedStorageFile;
+        private ICloudBlob selectedTaskLinkedStorageFile;
 
-        public CloudAppendBlob SelectedTaskLinkedStorageFile
+        public ICloudBlob SelectedTaskLinkedStorageFile
         {
             get { return this.selectedTaskLinkedStorageFile; }
             set
@@ -342,10 +343,10 @@ namespace Microsoft.Azure.BatchExplorer.Models
                                 if (container != null)
                                 {
                                     var files = container.ListBlobs(Task.Id, true).ToList();
-                                    LinkedStorageOutputFiles = new List<CloudAppendBlob>();
+                                    LinkedStorageOutputFiles = new List<ICloudBlob>();
                                     foreach (var file in files)
                                     {
-                                        var cloudAppendBlob = file as CloudAppendBlob;
+                                        var cloudAppendBlob = file as ICloudBlob;
                                         if (cloudAppendBlob != null)
                                         {
                                             LinkedStorageOutputFiles.Add(cloudAppendBlob);
@@ -380,11 +381,11 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// <summary>
         /// Delete this task
         /// </summary>
-        public async System.Threading.Tasks.Task DeleteAsync()
+        public async Task DeleteAsync()
         {
             try
             {
-                System.Threading.Tasks.Task asyncTask = this.Task.DeleteAsync();
+                var asyncTask = this.Task.DeleteAsync();
                 AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                     asyncTask,
                     new TaskOperation(TaskOperation.Delete, this.ParentJob.Id, this.Task.Id)));
@@ -399,11 +400,11 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// <summary>
         /// Terminate the task
         /// </summary>
-        public async System.Threading.Tasks.Task TerminateAsync()
+        public async Task TerminateAsync()
         {
             try
             {
-                System.Threading.Tasks.Task asyncTask = this.Task.TerminateAsync();
+                var asyncTask = this.Task.TerminateAsync();
                 AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                     asyncTask,
                     new TaskOperation(TaskOperation.Terminate, this.ParentJob.Id, this.Task.Id)));
@@ -422,9 +423,9 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// <param name="filePath">The file path to download</param>
         /// <param name="outputStream">The stream to download the file into</param>
         /// <returns></returns>
-        public async System.Threading.Tasks.Task GetTaskFileAsync(string filePath, Stream outputStream)
+        public async Task GetTaskFileAsync(string filePath, Stream outputStream)
         {
-            System.Threading.Tasks.Task asyncTask = this.DownloadTaskFile(filePath, outputStream);
+            var asyncTask = this.DownloadTaskFile(filePath, outputStream);
             AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                 asyncTask,
                 new TaskOperation(TaskOperation.GetFile, this.ParentJob.Id, this.Task.Id)));
@@ -439,7 +440,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// Lists the task files associated with this task
         /// </summary>
         /// <returns></returns>
-        private async System.Threading.Tasks.Task<List<NodeFile>> ListTaskFilesAsync()
+        private async Task<List<NodeFile>> ListTaskFilesAsync()
         {
             IPagedEnumerable<NodeFile> vmFiles = this.Task.ListNodeFiles(recursive: true);
 
@@ -454,7 +455,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// <param name="filePath">The path to the file.</param>
         /// <param name="destinationStream">The destination stream.</param>
         /// <returns></returns>
-        private async System.Threading.Tasks.Task DownloadTaskFile(string filePath, Stream destinationStream)
+        private async Task DownloadTaskFile(string filePath, Stream destinationStream)
         {
             NodeFile file = await this.Task.GetNodeFileAsync(filePath);
             await file.CopyToStreamAsync(destinationStream);

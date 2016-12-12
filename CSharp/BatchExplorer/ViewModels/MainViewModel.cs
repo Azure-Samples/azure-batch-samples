@@ -1767,7 +1767,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
-        private async Task DownloadLinkedStorageFileAsync(CloudAppendBlob blobFile, string localDownloadTargetPath = null)
+        private async Task DownloadLinkedStorageFileAsync(ICloudBlob blobFile, string localDownloadTargetPath = null)
         {
             string fileName = null;
             try
