@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using GalaSoft.MvvmLight.Messaging;
 using Microsoft.Azure.Batch;
 using Microsoft.Azure.Batch.Common;
+using Microsoft.Azure.Batch.Conventions.Files;
 using Microsoft.Azure.BatchExplorer.Helpers;
 using Microsoft.Azure.BatchExplorer.Messages;
 using Microsoft.Azure.BatchExplorer.ViewModels;
