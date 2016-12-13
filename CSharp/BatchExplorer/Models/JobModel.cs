@@ -77,7 +77,10 @@ namespace Microsoft.Azure.BatchExplorer.Models
         [ChangeTracked(ModelRefreshType.Children)]
         public ICollectionView TaskCollection { get; private set; }
 
-
+        /// <summary>
+        /// Gets the name of the Azure blob storage container for the outputs of a CloudJob.
+        /// </summary>
+        [ChangeTracked(ModelRefreshType.Children)]
         public string OutputStorageContainerName { get { return this.Job.OutputStorageContainerName(); } }
         #endregion
 

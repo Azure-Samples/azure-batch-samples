@@ -1596,7 +1596,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         /// <param name="jobSchedules">True if job schedule data should be retrieved</param>
         /// <param name="jobs">True if job data should be retrieved</param>
         /// <param name="pools">True if pool data should be retrieved</param>
-        /// <param name="certificates"></param>
+        /// <param name="certificates">True if certificates should be retrieved</param>
         /// <returns></returns>
         private async Task GetDataAsync(IDataProvider provider, bool jobSchedules, bool jobs, bool pools, bool certificates)
         {

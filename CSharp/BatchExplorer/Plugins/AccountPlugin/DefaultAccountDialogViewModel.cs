@@ -28,7 +28,7 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
             set
             {
                 this.account.Alias = value;
-                FirePropertyChangedEvent("Alias");
+                FirePropertyChangedEvent(nameof(Alias));
             }
         }
         /// <summary>
@@ -40,7 +40,7 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
             set
             {
                 this.account.AccountName = value;
-                FirePropertyChangedEvent("AccountName");
+                FirePropertyChangedEvent(nameof(AccountName));
             }
         }
         /// <summary>
@@ -52,7 +52,7 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
             set
             {
                 this.account.BatchServiceKey = value;
-                FirePropertyChangedEvent("BatchServiceKey");
+                FirePropertyChangedEvent(nameof(BatchServiceKey));
             }
         }
         /// <summary>
@@ -64,7 +64,7 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
             set
             {
                 this.account.BatchServiceUrl = value;
-                FirePropertyChangedEvent("BatchServiceUrl");
+                FirePropertyChangedEvent(nameof(BatchServiceUrl));
             }
         }
 
@@ -74,7 +74,7 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
             set
             {
                 this.account.LinkedStorageAccountName = value;
-                FirePropertyChangedEvent("LinkedStorageAccountName");
+                FirePropertyChangedEvent(nameof(LinkedStorageAccountName));
             }
         }
 
@@ -84,7 +84,7 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
             set
             {
                 this.account.LinkedStorageAccountKey = value;
-                FirePropertyChangedEvent("LinkedStorageAccountKey");
+                FirePropertyChangedEvent(nameof(LinkedStorageAccountKey));
             }
         }
 
