@@ -1852,10 +1852,12 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         private string ShowSaveFileDialog(string file, string defaultExt, string filter)
         {
             // Configure save file dialog box
-            Microsoft.Win32.SaveFileDialog saveFileDlg = new Microsoft.Win32.SaveFileDialog();
-            saveFileDlg.FileName = Path.GetFileName(file);     // Default file name
-            saveFileDlg.DefaultExt = defaultExt;               // Default file extension.
-            saveFileDlg.Filter = filter;                       // Filter files by extension
+            var saveFileDlg = new Microsoft.Win32.SaveFileDialog
+            {
+                FileName = Path.GetFileName(file),  // Default file name
+                DefaultExt = defaultExt,            // Default file extension.
+                Filter = filter                     // Filter files by extension
+            };
 
             // Show save file dialog box
             var result = saveFileDlg.ShowDialog();

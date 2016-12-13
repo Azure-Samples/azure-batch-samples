@@ -125,7 +125,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// True if there are linked storage output files to be had
         /// </summary>
         [ChangeTracked(ModelRefreshType.Children)]
-        public bool LinkedStoragHasOutputFiles
+        public bool LinkedStorageHasOutputFiles
         {
             get
             {

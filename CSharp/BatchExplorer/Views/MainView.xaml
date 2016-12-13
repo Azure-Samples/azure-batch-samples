@@ -1099,7 +1099,7 @@
                             <Grid>
                                 <DataGrid ItemsSource="{Binding Path=SelectedTask.LinkedStorageOutputFiles}"
                                           SelectedItem="{Binding Path=SelectedTask.SelectedTaskLinkedStorageFile}"
-                                          Visibility="{Binding Path=SelectedTask.LinkedStoragHasOutputFiles, Converter={StaticResource BVC}, FallbackValue=Hidden}">
+                                          Visibility="{Binding Path=SelectedTask.LinkedStorageHasOutputFiles, Converter={StaticResource BVC}, FallbackValue=Hidden}">
                                     <DataGrid.InputBindings>
                                         <MouseBinding
                                             MouseAction="LeftDoubleClick"
@@ -1121,7 +1121,7 @@
                                         <DataGridTextColumn Header="Path" Binding="{Binding Uri}"/>
                                     </DataGrid.Columns>
                                 </DataGrid>
-                                <TextBlock Visibility="{Binding Path=SelectedTask.LinkedStoragHasOutputFiles, Converter={StaticResource IBVC}, FallbackValue=Hidden}">
+                                <TextBlock Visibility="{Binding Path=SelectedTask.LinkedStorageHasOutputFiles, Converter={StaticResource IBVC}, FallbackValue=Hidden}">
                                      <Hyperlink RequestNavigate="LinkedStorageHelp_RequestNavigate"
                                                 NavigateUri="https://docs.microsoft.com/en-us/azure/batch/batch-task-output">No linked storage outputs available. Try configuring Linked Storage under Account, persist batch job output, or try refreshing the Task
                                      </Hyperlink>
