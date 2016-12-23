@@ -21,9 +21,10 @@ To manage entities in your Batch account with the Batch Explorer, you must first
 1. Click **Accounts** > **Add** > **Default Account Manager**
 2. In the *Add Account* dialog that is displayed, add an **Account Alias**, a unique identifier for this account within Batch Explorer
 3. Enter the **Batch Service URL**, **Account** name, and account **Key** in the other three textboxes. These values can be found within the Batch Account blade within the [Azure Portal][portal].
-4. Click **OK**
+4. Click **OK**.
+5. Click **Accounts** > **Connect** > **Default Account Manager**, followed by your account name, to connect the Batch Explorer to your account.
 
-After clicking **OK** in the last step, the Batch Explorer automatically connects to your account. You may now start exploring the entities within your Batch account. You can start by refreshing an entity type via the **Refresh** menu,  selecting one in the top-left pane, then viewing its details in the top- and middle-right panes.
+You may now start exploring the entities within your Batch account. You can start by refreshing an entity type via the **Refresh** menu,  selecting one in the top-left pane, then viewing its details in the top- and middle-right panes.
 
 [portal]: http://portal.azure.com
 [1]: BatchExplorer.jpg "Batch solution workflow (full diagram)"
