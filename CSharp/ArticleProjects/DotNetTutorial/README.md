@@ -4,7 +4,7 @@ This sample backs the code snippets found in [Get started with the Azure Batch l
 
 The solution includes two projects - *DotNetTutorial* and *TaskApplication* - that together demonstrate a common Batch application workflow. While the code in the solution does not demonstrate every feature of the Batch service, it is intended to act as a primer for basic Batch concepts and features such as pools, nodes, jobs, and tasks, as well as demonstrate interaction between Batch and the Azure Storage service.
 
-The *DotNetTutorial* code sample is a Visual Studio 2013 solution consisting of two projects: **DotNetTutorial** and **TaskApplication**.
+The *DotNetTutorial* code sample is a Visual Studio 2015 solution consisting of two projects: **DotNetTutorial** and **TaskApplication**.
 
 - **DotNetTutorial** is the client application that interacts with the Batch and Storage services to execute a parallel workload on compute nodes (virtual machines). DotNetTutorial runs on your local workstation.
 

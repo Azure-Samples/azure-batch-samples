@@ -128,6 +128,8 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         public const string Refresh = "Refresh";
         public const string ListComputeNodes = "ListComputeNodes";
         public const string GetPool = "GetPool";
+        public const string EvaluateAutoScaleFormula = "EvaluateAutoScaleFormula";
+        public const string EnableAutoScale = "EnableAutoScale";
 
         private readonly string poolId;
         private const string OperationTargetFormatString = @"Pool: {0}";
@@ -151,6 +153,7 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         public const string Refresh = "Refresh";
         public const string ListFiles = "ListFiles";
         public const string GetRdp = "GetRdp";
+        public const string GetSsh = "GetSsh";
         public const string GetFile = "GetFile";
         public const string CreateUser = "CreateUser";
         public const string DisableScheduling = "DisableScheduling";

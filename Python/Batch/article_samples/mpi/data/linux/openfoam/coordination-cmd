@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+#Command script to setup NFS share on multiple nodes (with one node being server and remaining nodes as client) as Azure Batch multiinstance task
+master_addr_port=(${AZ_BATCH_MASTER_NODE//:/ })
+master_addr=${master_addr_port[0]}
+mnt=$AZ_BATCH_TASK_SHARED_DIR
+if $AZ_BATCH_IS_CURRENT_NODE_MASTER; then
+    # is head node, will be nfs server, will download and prepare all the input data in nfs share dir
+    mkdir $mnt/share
+    chmod 777 -R $mnt/share
+    echo "$mnt/share      10.0.0.0/24(rw,sync,no_root_squash,no_all_squash)" > /etc/exports
+    systemctl restart nfs-server
+    cd $mnt/share
+    mkdir -p OpenFOAM
+    cd OpenFOAM
+    # Follow http://www.openfoam.com/code/build-guide.php to build input files for OpenFoam
+    # wget http://<storage-account>.blob.core.windows.net/<container>/OpenFOAM_CentOS7_HPC.tgz
+    # wget http://<storage-account>.blob.core.windows.net/<container>/OpenFOAM_CentOS7_HPC_libs.tgz
+    # wget http://<storage-account>.blob.core.windows.net/<container>/motorBike_3M.tgz
+    # wget http://<storage-account>.blob.core.windows.net/<container>/ParaView-3.14.1-Linux-64bit.tar.gz
+    tar zxf OpenFOAM_CentOS7_HPC.tgz
+    tar zxf OpenFOAM_CentOS7_HPC_libs.tgz
+    tar zxf motorBike_3M.tgz
+    tar zxf ParaView-3.14.1-Linux-64bit.tar.gz
+    mv motorBike_3m motorBike
+else
+    # all other nodes are nfs clients, will connect with nfs server on nfs share dir
+    mkdir -p $mnt/share
+    echo "$master_addr:$mnt/share    $mnt/share   nfs defaults 0 0::" >> /etc/fstab
+    while :
+    do
+        echo "Looping"
+        mount -a
+        mountpoint -q $mnt/share
+        if [ $? -eq 0 ]; then
+            break
+        else
+            sleep 10
+        fi
+    done
+fi
+exit

@@ -40,7 +40,7 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         /// Get a collection of Jobs from the default source (if any)
         /// </summary>
         /// <returns>A <see cref="Task"/> whose result is a collection of Jobs</returns>
-        Task<IList<JobModel>> GetJobCollectionAsync();
+        Task<IList<JobModel>> GetJobCollectionAsync(string jobSearchFilter);
 
         /// <summary>
         /// Creates a job
@@ -68,6 +68,7 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
             int? targetDedicated, 
             string autoScaleFormula, 
             bool communicationEnabled,
+            string subnetId,
             CloudServiceConfigurationOptions cloudServiceConfigurationOptions,
             VirtualMachineConfigurationOptions virtualMachineConfigurationOptions,
             int maxTasksPerComputeNode,
@@ -106,5 +107,21 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         /// </summary>
         /// <returns>A <see cref="Task"/> whose result is a collection of <see cref="NodeAgentSku"/>'s.</returns>
         Task<IList<NodeAgentSku>> ListNodeAgentSkusAsync();
+
+        /// <summary>
+        /// Evaluates the automatic scale formula supplied on the specified pool asynchronously.
+        /// </summary>
+        /// <param name="poolId">The pool identifier.</param>
+        /// <param name="autoScaleFormula">The autoscale formula.</param>
+        /// <returns>Returns the result of evaluation</returns>
+        Task<string> EvaluateAutoScaleFormulaAsync(string poolId, string autoScaleFormula);
+
+        /// <summary>
+        /// Enables an autoscale formula on the specified pool asynchronously.
+        /// </summary>
+        /// <param name="poolId">The pool identifier.</param>
+        /// <param name="autoScaleformula">The autoscale formula.</param>
+        /// <returns></returns>
+        Task EnableAutoScaleAsync(string poolId, string autoScaleformula);
     }
 }

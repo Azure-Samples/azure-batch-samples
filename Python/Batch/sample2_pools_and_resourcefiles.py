@@ -55,10 +55,10 @@ def create_pool(batch_client, block_blob_client, pool_id, vm_size, vm_count):
     :param str vm_size: vm size (sku)
     :param int vm_count: number of vms to allocate
     """
-    # pick the latest supported 14.04 sku for UbuntuServer
+    # pick the latest supported 16.04 sku for UbuntuServer
     sku_to_use, image_ref_to_use = \
         common.helpers.select_latest_verified_vm_image_with_node_agent_sku(
-            batch_client, 'Canonical', 'UbuntuServer', '14.04')
+            batch_client, 'Canonical', 'UbuntuServer', '16.04')
 
     block_blob_client.create_container(
         _CONTAINER_NAME,
@@ -71,7 +71,7 @@ def create_pool(batch_client, block_blob_client, pool_id, vm_size, vm_count):
         _SIMPLE_TASK_PATH,
         datetime.datetime.utcnow() + datetime.timedelta(hours=1))
 
-    pool = batchmodels.CloudPool(
+    pool = batchmodels.PoolAddParameter(
         id=pool_id,
         virtual_machine_configuration=batchmodels.VirtualMachineConfiguration(
             image_reference=image_ref_to_use,
@@ -98,7 +98,7 @@ def submit_job_and_add_task(batch_client, block_blob_client, job_id, pool_id):
     :param str job_id: The id of the job to create.
     :param str pool_id: The id of the pool to use.
     """
-    job = batchmodels.CloudJob(
+    job = batchmodels.JobAddParameter(
         id=job_id,
         pool_info=batchmodels.PoolInformation(pool_id=pool_id))
 
@@ -115,7 +115,7 @@ def submit_job_and_add_task(batch_client, block_blob_client, job_id, pool_id):
         _SIMPLE_TASK_PATH,
         datetime.datetime.utcnow() + datetime.timedelta(hours=1))
 
-    task = batchmodels.CloudTask(
+    task = batchmodels.TaskAddParameter(
         id="MyPythonTask",
         command_line="python " + _SIMPLE_TASK_NAME,
         resource_files=[batchmodels.ResourceFile(
@@ -167,13 +167,12 @@ def execute_sample(global_config, sample_config):
     credentials = batchauth.SharedKeyCredentials(
         batch_account_name,
         batch_account_key)
-    client_configuration = batch.BatchServiceClientConfiguration(
+    batch_client = batch.BatchServiceClient(
         credentials,
         base_url=batch_service_url)
 
     # Retry 5 times -- default is 3
-    client_configuration.retry_policy.retries = 5
-    batch_client = batch.BatchServiceClient(client_configuration)
+    batch_client.config.retry_policy.retries = 5
 
     block_blob_client = azureblob.BlockBlobService(
         account_name=storage_account_name,
@@ -217,6 +216,7 @@ def execute_sample(global_config, sample_config):
         if should_delete_pool:
             print("Deleting pool: ", pool_id)
             batch_client.pool.delete(pool_id)
+
 
 if __name__ == '__main__':
     global_config = configparser.ConfigParser()

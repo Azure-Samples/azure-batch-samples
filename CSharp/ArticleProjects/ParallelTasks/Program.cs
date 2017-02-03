@@ -51,7 +51,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
             const int taskCount       = 32;
 
             // Ensure there are enough tasks to help avoid hitting some timeout conditions below
-            const int minimumTaskCount = nodeCount * maxTasksPerNode * 2;
+            int minimumTaskCount = nodeCount * maxTasksPerNode * 2;
             if (taskCount < minimumTaskCount)
             {
                 Console.WriteLine("You must specify at least two tasks per node core for this sample ({0} tasks in this configuration).", minimumTaskCount);
@@ -129,11 +129,16 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
                 Console.WriteLine("Waiting for task completion...");
                 Console.WriteLine();
 
-                if (await batchClient.Utilities.CreateTaskStateMonitor().WhenAllAsync(job.ListTasks(),
-                                                                   TaskState.Completed,
-                                                                   longTaskDurationLimit))
+                try
                 {
-                    Console.WriteLine("Operation timed out while waiting for submitted tasks to reach state {0}", TaskState.Completed); 
+                    await batchClient.Utilities.CreateTaskStateMonitor().WhenAll(
+                        job.ListTasks(),
+                        TaskState.Completed,
+                        longTaskDurationLimit);
+                }
+                catch (TimeoutException e)
+                {
+                    Console.WriteLine(e.ToString());
                 }
 
                 stopwatch.Stop();

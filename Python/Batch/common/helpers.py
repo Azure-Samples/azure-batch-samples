@@ -25,6 +25,7 @@
 from __future__ import print_function
 import datetime
 import io
+import os
 import time
 
 import azure.storage.blob as azureblob
@@ -84,7 +85,8 @@ def select_latest_verified_vm_image_with_node_agent_sku(
         image_ref.offer.lower() == offer.lower() and
         image_ref.sku.startswith(sku_starts_with)
     ]
-    sku_to_use, image_ref_to_use = skus_to_use[-1]
+    # skus are listed in reverse order, pick first for latest
+    sku_to_use, image_ref_to_use = skus_to_use[0]
     return (sku_to_use.id, image_ref_to_use)
 
 
@@ -220,7 +222,7 @@ def create_pool_if_not_exist(batch_client, pool):
     :param batch_client: The batch client to use.
     :type batch_client: `batchserviceclient.BatchServiceClient`
     :param pool: The pool to create.
-    :type pool: `batchserviceclient.models.CloudPool`
+    :type pool: `batchserviceclient.models.PoolAddParameter`
     """
     try:
         print("Attempting to create pool:", pool.id)
@@ -231,6 +233,31 @@ def create_pool_if_not_exist(batch_client, pool):
             raise
         else:
             print("Pool {!r} already exists".format(pool.id))
+
+
+def create_job(batch_service_client, job_id, pool_id):
+    """
+    Creates a job with the specified ID, associated with the specified pool.
+
+    :param batch_service_client: A Batch service client.
+    :type batch_service_client: `azure.batch.BatchServiceClient`
+    :param str job_id: The ID for the job.
+    :param str pool_id: The ID for the pool.
+    """
+    print('Creating job [{}]...'.format(job_id))
+
+    job = batchmodels.JobAddParameter(
+        job_id,
+        batchmodels.PoolInformation(pool_id=pool_id))
+
+    try:
+        batch_service_client.job.add(job)
+    except batchmodels.batch_error.BatchErrorException as err:
+        print_batch_exception(err)
+        if err.error.code != "JobExists":
+            raise
+        else:
+            print("Job {!r} already exists".format(job_id))
 
 
 def wait_for_all_nodes_state(batch_client, pool, node_state):
@@ -265,8 +292,38 @@ def wait_for_all_nodes_state(batch_client, pool, node_state):
         time.sleep(10)
 
 
+def create_container_and_create_sas(
+        block_blob_client, container_name, permission, expiry=None,
+        timeout=None):
+    """Create a blob sas token
+
+    :param block_blob_client: The storage block blob client to use.
+    :type block_blob_client: `azure.storage.blob.BlockBlobService`
+    :param str container_name: The name of the container to upload the blob to.
+    :param expiry: The SAS expiry time.
+    :type expiry: `datetime.datetime`
+    :param int timeout: timeout in minutes from now for expiry,
+        will only be used if expiry is not specified
+    :return: A SAS token
+    :rtype: str
+    """
+    if expiry is None:
+        if timeout is None:
+            timeout = 30
+        expiry = datetime.datetime.utcnow() + datetime.timedelta(
+            minutes=timeout)
+
+    block_blob_client.create_container(
+        container_name,
+        fail_on_exist=False)
+
+    return block_blob_client.generate_container_shared_access_signature(
+        container_name=container_name, permission=permission, expiry=expiry)
+
+
 def create_sas_token(
-        block_blob_client, container_name, blob_name, permission, expiry=None):
+        block_blob_client, container_name, blob_name, permission, expiry=None,
+        timeout=None):
     """Create a blob sas token
 
     :param block_blob_client: The storage block blob client to use.
@@ -275,17 +332,23 @@ def create_sas_token(
     :param str blob_name: The name of the blob to upload the local file to.
     :param expiry: The SAS expiry time.
     :type expiry: `datetime.datetime`
+    :param int timeout: timeout in minutes from now for expiry,
+        will only be used if expiry is not specified
     :return: A SAS token
     :rtype: str
     """
     if expiry is None:
-        expiry = datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
+        if timeout is None:
+            timeout = 30
+        expiry = datetime.datetime.utcnow() + datetime.timedelta(
+            minutes=timeout)
     return block_blob_client.generate_blob_shared_access_signature(
         container_name, blob_name, permission=permission, expiry=expiry)
 
 
 def upload_blob_and_create_sas(
-        block_blob_client, container_name, blob_name, file_name, expiry):
+        block_blob_client, container_name, blob_name, file_name, expiry,
+        timeout=None):
     """Uploads a file from local disk to Azure Storage and creates
     a SAS for it.
 
@@ -296,6 +359,8 @@ def upload_blob_and_create_sas(
     :param str file_name: The name of the local file to upload.
     :param expiry: The SAS expiry time.
     :type expiry: `datetime.datetime`
+    :param int timeout: timeout in minutes from now for expiry,
+        will only be used if expiry is not specified
     :return: A SAS URL to the blob with the specified expiry time.
     :rtype: str
     """
@@ -313,7 +378,8 @@ def upload_blob_and_create_sas(
         container_name,
         blob_name,
         permission=azureblob.BlobPermissions.READ,
-        expiry=expiry)
+        expiry=expiry,
+        timeout=timeout)
 
     sas_url = block_blob_client.make_blob_url(
         container_name,
@@ -321,6 +387,57 @@ def upload_blob_and_create_sas(
         sas_token=sas_token)
 
     return sas_url
+
+
+def upload_file_to_container(
+        block_blob_client, container_name, file_path, timeout):
+    """
+    Uploads a local file to an Azure Blob storage container.
+
+    :param block_blob_client: A blob service client.
+    :type block_blob_client: `azure.storage.blob.BlockBlobService`
+    :param str container_name: The name of the Azure Blob storage container.
+    :param str file_path: The local path to the file.
+    :param int timeout: timeout in minutes from now for expiry,
+        will only be used if expiry is not specified
+    :rtype: `azure.batch.models.ResourceFile`
+    :return: A ResourceFile initialized with a SAS URL appropriate for Batch
+    tasks.
+    """
+    blob_name = os.path.basename(file_path)
+    print('Uploading file {} to container [{}]...'.format(
+        file_path, container_name))
+    sas_url = upload_blob_and_create_sas(
+        block_blob_client, container_name, blob_name, file_path, expiry=None,
+        timeout=timeout)
+    return batchmodels.ResourceFile(
+        file_path=blob_name, blob_source=sas_url)
+
+
+def download_blob_from_container(
+        block_blob_client, container_name, blob_name, directory_path):
+    """
+    Downloads specified blob from the specified Azure Blob storage container.
+
+    :param block_blob_client: A blob service client.
+    :type block_blob_client: `azure.storage.blob.BlockBlobService`
+    :param container_name: The Azure Blob storage container from which to
+        download file.
+    :param blob_name: The name of blob to be downloaded
+    :param directory_path: The local directory to which to download the file.
+    """
+    print('Downloading result file from container [{}]...'.format(
+        container_name))
+
+    destination_file_path = os.path.join(directory_path, blob_name)
+
+    block_blob_client.get_blob_to_path(
+        container_name, blob_name, destination_file_path)
+
+    print('  Downloaded blob [{}] from container [{}] to {}'.format(
+        blob_name, container_name, destination_file_path))
+
+    print('  Download complete!')
 
 
 def generate_unique_resource_name(resource_prefix):
@@ -333,6 +450,54 @@ def generate_unique_resource_name(resource_prefix):
     """
     return resource_prefix + "-" + \
         datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+
+
+def query_yes_no(question, default="yes"):
+    """
+    Prompts the user for yes/no input, displaying the specified question text.
+
+    :param str question: The text of the prompt for input.
+    :param str default: The default if the user hits <ENTER>. Acceptable values
+    are 'yes', 'no', and None.
+    :rtype: str
+    :return: 'yes' or 'no'
+    """
+    valid = {'y': 'yes', 'n': 'no'}
+    if default is None:
+        prompt = ' [y/n] '
+    elif default == 'yes':
+        prompt = ' [Y/n] '
+    elif default == 'no':
+        prompt = ' [y/N] '
+    else:
+        raise ValueError("Invalid default answer: '{}'".format(default))
+
+    while 1:
+        choice = input(question + prompt).lower()
+        if default and not choice:
+            return default
+        try:
+            return valid[choice[0]]
+        except (KeyError, IndexError):
+            print("Please respond with 'yes' or 'no' (or 'y' or 'n').\n")
+
+
+def print_batch_exception(batch_exception):
+    """
+    Prints the contents of the specified Batch exception.
+
+    :param batch_exception:
+    """
+    print('-------------------------------------------')
+    print('Exception encountered:')
+    if (batch_exception.error and batch_exception.error.message and
+            batch_exception.error.message.value):
+        print(batch_exception.error.message.value)
+        if batch_exception.error.values:
+            print()
+            for mesg in batch_exception.error.values:
+                print('{}:\t{}'.format(mesg.key, mesg.value))
+    print('-------------------------------------------')
 
 
 def wrap_commands_in_shell(ostype, commands):

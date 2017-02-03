@@ -51,6 +51,12 @@ namespace Microsoft.Azure.BatchExplorer.Models
         public string CommandLine { get { return this.Task.CommandLine; } }
 
         /// <summary>
+        /// The exit code of the task
+        /// </summary>
+        [ChangeTracked(ModelRefreshType.Basic)]
+        public int? ExitCode { get { return this.Task?.ExecutionInformation?.ExitCode; } }
+
+        /// <summary>
         /// The set of Windows Azure blobs downloaded to run the task
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
@@ -230,41 +236,29 @@ namespace Microsoft.Azure.BatchExplorer.Models
                             new TaskOperation(TaskOperation.ListFiles, this.ParentJob.Id, this.Task.Id)));
 
                         this.OutputFiles = await asyncTask;
-
-                        IPagedEnumerable<SubtaskInformation> subtasks = this.Task.ListSubtasks(OptionsModel.Instance.ListDetailLevel);
-
-                        this.SubtasksInfo = new List<SubtaskModel>();
-
-                        System.Threading.Tasks.Task asyncListSubtasksTask = subtasks.ForEachAsync(item => this.SubtasksInfo.Add(new SubtaskModel(item)));
-
-                        AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
-                            asyncListSubtasksTask,
-                            new TaskOperation(TaskOperation.ListSubtasks, this.ParentJob.Id, this.Task.Id)));
-
-                        await asyncListSubtasksTask;
                     }
                     catch (BatchException be)
                     {
                         StringBuilder noOutputReasonBuilder = new StringBuilder();
 
-                        if (be.RequestInformation != null && be.RequestInformation.AzureError != null)
+                        if (be.RequestInformation != null && be.RequestInformation.BatchError != null)
                         {
 
-                            if (!string.IsNullOrEmpty(be.RequestInformation.AzureError.Code))
+                            if (!string.IsNullOrEmpty(be.RequestInformation.BatchError.Code))
                             {
-                                noOutputReasonBuilder.AppendLine(be.RequestInformation.AzureError.Code);
+                                noOutputReasonBuilder.AppendLine(be.RequestInformation.BatchError.Code);
                             }
 
-                            if (be.RequestInformation.AzureError.Message != null && !string.IsNullOrEmpty(be.RequestInformation.AzureError.Message.Value))
+                            if (be.RequestInformation.BatchError.Message != null && !string.IsNullOrEmpty(be.RequestInformation.BatchError.Message.Value))
                             {
-                                noOutputReasonBuilder.AppendLine(be.RequestInformation.AzureError.Message.Value);
+                                noOutputReasonBuilder.AppendLine(be.RequestInformation.BatchError.Message.Value);
                             }
 
-                            if (be.RequestInformation.AzureError.Values != null)
+                            if (be.RequestInformation.BatchError.Values != null)
                             {
                                 noOutputReasonBuilder.AppendLine();
 
-                                foreach (var errorDetail in be.RequestInformation.AzureError.Values)
+                                foreach (var errorDetail in be.RequestInformation.BatchError.Values)
                                 {
                                     noOutputReasonBuilder.AppendLine(string.Format("{0}: {1}", errorDetail.Key, errorDetail.Value));
                                 }
@@ -278,6 +272,18 @@ namespace Microsoft.Azure.BatchExplorer.Models
                         this.HasLoadedChildren = false; //On exception, we failed to load children so try again next time
                         //Swallow the exception to stop popups from occuring for every bad VM
                     }
+
+                    IPagedEnumerable<SubtaskInformation> subtasks = this.Task.ListSubtasks(OptionsModel.Instance.ListDetailLevel);
+
+                    this.SubtasksInfo = new List<SubtaskModel>();
+
+                    System.Threading.Tasks.Task asyncListSubtasksTask = subtasks.ForEachAsync(item => this.SubtasksInfo.Add(new SubtaskModel(item)));
+
+                    AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
+                        asyncListSubtasksTask,
+                        new TaskOperation(TaskOperation.ListSubtasks, this.ParentJob.Id, this.Task.Id)));
+
+                    await asyncListSubtasksTask;
 
                     this.FireChangesOnRefresh(ModelRefreshType.Children);
                 }

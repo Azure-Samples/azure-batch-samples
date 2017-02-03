@@ -1,7 +1,7 @@
 ## General Info
 
 ### Visual Studio Requirements
-You will need VS 2013 or later to compile the projects. If you use VS 2012 or 2010, make sure you have the latest NuGet Package Manager plugin (2.8 or later) installed. The plugin can be found in the [Visual Studio Gallery](https://visualstudiogallery.msdn.microsoft.com/27077b70-9dad-4c64-adcf-c7cf6bc9970c).
+You will need VS 2015 or later to compile the projects. If you don't have it, you can download the community edition [here](https://www.visualstudio.com/products/visual-studio-community-vs.aspx) for free.
 
 ### Building the Samples
 Download the samples and open the solution file for each one using Visual Studio. Right click on the solution and select "Rebuild". Visual Studio will analyze the dependencies and download the dependent binaries from [nuget.org](http://www.nuget.org/packages/Azure.Batch/).
@@ -22,6 +22,9 @@ These projects contain the sample code backing various articles in [Batch docume
 
 ### [BatchExplorer](./BatchExplorer)
 The [Azure Batch Explorer](./BatchExplorer) is a GUI application that can be useful in viewing, managing, and debugging entities within an Azure Batch account. View this [blog post](http://blogs.technet.com/b/windowshpc/archive/2015/01/20/azure-batch-explorer-sample-walkthrough.aspx) for more details.
+
+### [BatchMetrics](./BatchMetrics)
+This sample demonstrates efficient list queries and provides a utility library for job progress monitoring.
 
 ### [GettingStarted](./GettingStarted)
 This set of samples is intended to be the starting point for learning the concepts behind Azure Batch and its API. It covers basic features of the service, including jobs, pools, tasks, and more.

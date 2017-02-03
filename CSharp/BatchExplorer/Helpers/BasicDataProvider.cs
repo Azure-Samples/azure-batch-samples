@@ -43,12 +43,26 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
             await this.Service.CreateJobScheduleAsync(options);
         }
 
-        public async Task<IList<JobModel>> GetJobCollectionAsync()
+        public async Task<IList<JobModel>> GetJobCollectionAsync(string jobSearchFilter)
         {
             IPagedEnumerable<CloudJob> jobs = this.Service.ListJobs(OptionsModel.Instance.ListDetailLevel);
             List<JobModel> jobModels = new List<JobModel>();
 
-            await jobs.ForEachAsync(item => jobModels.Add(new JobModel(item)));
+            // The properties we want to filter on are not available in a ODATADetailLevel query. Filter them client side
+            if (!String.IsNullOrWhiteSpace(jobSearchFilter))
+            {
+                var jobSearchFilterL = jobSearchFilter.ToLowerInvariant();
+                var filteredJobs = jobs.Where(f => f.DisplayName.ToLowerInvariant().Contains(jobSearchFilterL) ||
+                                                                   f.Id.ToLowerInvariant().Contains(jobSearchFilterL) ||
+                                                                   f.Metadata.Any(g => g.Name.ToLowerInvariant().Contains(jobSearchFilterL)) ||
+                                                                   f.Metadata.Any(g => g.Value.ToLowerInvariant().Contains(jobSearchFilterL)));
+
+                jobModels.AddRange(filteredJobs.Select(item => new JobModel(item)));
+            }
+            else
+            {
+                await jobs.ForEachAsync(item => jobModels.Add(new JobModel(item)));
+            }
 
             return jobModels;
         }
@@ -94,6 +108,7 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
             int? targetDedicated, 
             string autoScaleFormula, 
             bool communicationEnabled,
+            string subnetId,
             CloudServiceConfigurationOptions cloudServiceConfigurationOptions,
             VirtualMachineConfigurationOptions virtualMachineConfigurationOptions,
             int maxTasksPerComputeNode,
@@ -106,6 +121,7 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
                 targetDedicated, 
                 autoScaleFormula, 
                 communicationEnabled, 
+                subnetId,
                 cloudServiceConfigurationOptions, 
                 virtualMachineConfigurationOptions, 
                 maxTasksPerComputeNode, 
@@ -130,6 +146,16 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
             IList<NodeAgentSku> results = await nodeAgentSkus.ToListAsync();
 
             return results;
+        }
+
+        public async Task<string> EvaluateAutoScaleFormulaAsync(string poolId, string autoScaleFormula)
+        {
+            return await this.Service.EvaluateAutoScaleFormula(poolId, autoScaleFormula);
+        }
+
+        public async Task EnableAutoScaleAsync(string poolId, string autoScaleFormula)
+        {
+            await this.Service.EnableAutoScale(poolId, autoScaleFormula);
         }
     }
 }

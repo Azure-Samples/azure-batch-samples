@@ -151,30 +151,30 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
             // exits it will kill all of the tasks that are still running under the job.
             TaskStateMonitor taskStateMonitor = batchClient.Utilities.CreateTaskStateMonitor();
 
-            bool timedOut = await taskStateMonitor.WhenAllAsync(tasksToMonitor, TaskState.Completed, TimeSpan.FromMinutes(5));
-
-            //Get the list of mapper tasks in order to analyze their state and ensure they completed successfully.
-            IPagedEnumerable<CloudTask> asyncEnumerable = batchClient.JobOperations.ListTasks(
-                this.jobId,
-                detailLevel: mapperTaskIdFilter);
-
-            await asyncEnumerable.ForEachAsync(async cloudTask =>
+            try
             {
-                Console.WriteLine("Task {0} is in state: {1}", cloudTask.Id, cloudTask.State);
-
-                await Helpers.CheckForTaskSuccessAsync(cloudTask, dumpStandardOutOnTaskSuccess: false);
-
-                Console.WriteLine();
-            });
-
-            //If not all the tasks reached the desired state within the timeout then the job manager
-            //cannot continue.
-            if (timedOut)
+                await taskStateMonitor.WhenAll(tasksToMonitor, TaskState.Completed, TimeSpan.FromMinutes(5));
+            }
+            catch (TimeoutException)
             {
-                const string errorMessage = "Mapper tasks did not complete within expected timeout.";
-                Console.WriteLine(errorMessage);
+                Console.WriteLine("Mapper tasks did not complete within expected timeout.");
+                throw;
+            }
+            finally
+            {
+                //Get the list of mapper tasks in order to analyze their state and ensure they completed successfully.
+                IPagedEnumerable<CloudTask> asyncEnumerable = batchClient.JobOperations.ListTasks(
+                    this.jobId,
+                    detailLevel: mapperTaskIdFilter);
 
-                throw new TimeoutException(errorMessage);
+                await asyncEnumerable.ForEachAsync(async cloudTask =>
+                {
+                    Console.WriteLine("Task {0} is in state: {1}", cloudTask.Id, cloudTask.State);
+
+                    await Helpers.CheckForTaskSuccessAsync(cloudTask, dumpStandardOutOnTaskSuccess: false);
+
+                    Console.WriteLine();
+                });
             }
         }
 
@@ -198,23 +198,23 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
             CloudTask boundReducerTask = await batchClient.JobOperations.GetTaskAsync(this.jobId, Constants.ReducerTaskId);
             TaskStateMonitor taskStateMonitor = batchClient.Utilities.CreateTaskStateMonitor();
 
-            bool timedOut = await taskStateMonitor.WhenAllAsync(new List<CloudTask> { boundReducerTask }, TaskState.Completed, TimeSpan.FromMinutes(2));
-
-            //Refresh the reducer task to get the most recent information about it from the Batch Service.
-            await boundReducerTask.RefreshAsync();
-
-            //Dump the reducer tasks exit code and scheduling error for debugging purposes.
-            string stdOut = await Helpers.CheckForTaskSuccessAsync(boundReducerTask, dumpStandardOutOnTaskSuccess: true);
-
-            //Handle the possibilty that the reducer task did not complete in the expected timeout.
-            if (timedOut)
+            string stdOut;
+            try
             {
-                const string errorMessage = "Reducer task did not complete within expected timeout.";
+                await taskStateMonitor.WhenAll(new List<CloudTask> { boundReducerTask }, TaskState.Completed, TimeSpan.FromMinutes(2));
+            }
+            catch(TimeoutException)
+            {
+                Console.WriteLine("Reducer task did not complete within expected timeout.");
+                throw;
+            }
+            finally
+            {
+                //Refresh the reducer task to get the most recent information about it from the Batch Service.
+                await boundReducerTask.RefreshAsync();
 
-                Console.WriteLine("Task {0} is in state: {1}", boundReducerTask.Id, boundReducerTask.State);
-
-                Console.WriteLine(errorMessage);
-                throw new TimeoutException(errorMessage);
+                //Dump the reducer tasks exit code and scheduling error for debugging purposes.
+                stdOut = await Helpers.CheckForTaskSuccessAsync(boundReducerTask, dumpStandardOutOnTaskSuccess: true);
             }
 
             return stdOut;

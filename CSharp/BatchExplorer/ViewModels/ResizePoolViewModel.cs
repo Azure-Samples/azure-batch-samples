@@ -46,6 +46,20 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
+        private string autoScaleFormula;
+        public string AutoScaleFormula
+        {
+            get
+            {
+                return this.autoScaleFormula;
+            }
+            set
+            {
+                this.autoScaleFormula = value;
+                this.FirePropertyChangedEvent("AutoScaleFormula");
+            }
+        }
+
         private TimeSpan? timeout;
         public TimeSpan? Timeout
         {
@@ -72,6 +86,20 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 this.deallocationOptionString = value;
                 this.FirePropertyChangedEvent("DeallocationOptionString");
             }
+        }       
+
+        private bool isAutoScale;
+        public bool IsAutoScale
+        {
+            get
+            {
+                return this.isAutoScale;
+            }
+            set
+            {
+                this.isAutoScale = value;
+                this.FirePropertyChangedEvent("IsAutoScale");
+            }
         }
 
         private static readonly List<string> deallocationOptionValues;
@@ -90,14 +118,19 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             deallocationOptionValues.AddRange(Enum.GetNames(typeof (ComputeNodeDeallocationOption)));
         }
 
-        public ResizePoolViewModel(IDataProvider batchService, string poolId, int? currentDedicated)
+        public ResizePoolViewModel(IDataProvider batchService, string poolId, int? currentDedicated, string currentAutoScaleFormula)
         {
             this.batchService = batchService;
 
             this.PoolId = poolId;
             this.TargetDedicated = currentDedicated ?? 0;
             this.DeallocationOptionString = null;
+            if (!string.IsNullOrEmpty(currentAutoScaleFormula))
+            {
+                this.IsAutoScale = true;
+            }
 
+            this.AutoScaleFormula = currentAutoScaleFormula ?? string.Format("$TargetDedicated={0};",currentDedicated ?? 1);
             this.IsBusy = false;
         }
 
@@ -122,6 +155,48 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
+        public CommandBase EnableAutoScale
+        {
+            get
+            {
+                return new CommandBase(
+                    async (o) =>
+                    {
+                        this.IsBusy = true;
+                        try
+                        {
+                            await this.EnableAutoScaleAsync();
+                        }
+                        finally
+                        {
+                            this.IsBusy = false;
+                        }
+                    }
+                );
+            }
+        }
+
+        public CommandBase Evaluate
+        {
+            get
+            {
+                return new CommandBase(
+                    async (o) =>
+                    {
+                        this.IsBusy = true;
+                        try
+                        {
+                            await this.EvaluateAsync();
+                        }
+                        finally
+                        {
+                            this.IsBusy = false;
+                        }
+                    }
+                );
+            }
+        }
+
         private async Task ResizePoolAsync()
         {
             try
@@ -129,13 +204,36 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 ComputeNodeDeallocationOption? deallocationOption;
                 if (this.IsInputValid(out deallocationOption))
                 {
-                    Task asyncTask = this.batchService.ResizePoolAsync(this.PoolId, this.TargetDedicated, this.Timeout, deallocationOption);
+                    Task asyncTask = this.batchService.ResizePoolAsync(this.PoolId, this.TargetDedicated, this.Timeout, deallocationOption);                   
 
                     AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                         asyncTask,
                         new PoolOperation(PoolOperation.Resize, this.poolId)));
-                    await asyncTask;
+                     
+                    Messenger.Default.Send(new CloseGenericPopup());
 
+                    await asyncTask;                                    
+                }
+            }
+            catch (Exception e)
+            {
+                Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
+            }
+        }
+
+        private async Task EnableAutoScaleAsync()
+        {
+            try
+            {
+                if (this.IsAutoScale && IsInputValidForAutoScaling())
+                {
+                    Task asyncTask = this.batchService.EnableAutoScaleAsync(this.PoolId, this.AutoScaleFormula);
+
+                    AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
+                        asyncTask,
+                        new PoolOperation(PoolOperation.EnableAutoScale, this.poolId)));
+
+                    await asyncTask;
                     Messenger.Default.Send(new CloseGenericPopup());
                 }
             }
@@ -143,6 +241,40 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             {
                 Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
             }
+        }
+
+        private async Task EvaluateAsync()
+        {
+            try
+            {
+                if (this.IsAutoScale && IsInputValidForAutoScaling())
+                {
+                    Task<string> asyncTask = this.batchService.EvaluateAutoScaleFormulaAsync(this.PoolId, this.AutoScaleFormula);
+
+                    AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
+                        asyncTask,
+                        new PoolOperation(PoolOperation.EvaluateAutoScaleFormula, this.poolId)));
+                    
+                    string result = await asyncTask;
+
+                    Messenger.Default.Send(new GenericDialogMessage(result));
+                }
+            }
+            catch (Exception e)
+            {
+                Messenger.Default.Send(new GenericDialogMessage(e.ToString()));
+            }
+        }
+
+        private bool IsInputValidForAutoScaling()
+        {         
+            if (string.IsNullOrWhiteSpace(this.AutoScaleFormula))
+            {
+                Messenger.Default.Send(new GenericDialogMessage("Auto scale formula cannot be empty"));
+                return false;
+            }
+
+            return true;
         }
 
         private bool IsInputValid(out ComputeNodeDeallocationOption? deallocationOption)

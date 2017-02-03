@@ -58,7 +58,7 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
             using (BatchClient batchClient = await BatchClient.OpenAsync(credentials))
             {
                 // add a retry policy. The built-in policies are No Retry (default), Linear Retry, and Exponential Retry
-                batchClient.CustomBehaviors.Add(RetryPolicyProvider.LinearRetryProvider(TimeSpan.FromSeconds(10), 3));
+                batchClient.CustomBehaviors.Add(RetryPolicyProvider.ExponentialRetryProvider(TimeSpan.FromSeconds(5), 3));
 
                 string jobId = GettingStartedCommon.CreateJobId("HelloWorldJob");
 
@@ -76,7 +76,7 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
                     if (!string.IsNullOrEmpty(jobId) && helloWorldConfigurationSettings.ShouldDeleteJob)
                     {
                         Console.WriteLine("Deleting job: {0}", jobId);
-                        batchClient.JobOperations.DeleteJob(jobId);
+                        await batchClient.JobOperations.DeleteJobAsync(jobId);
                     }
                 }
             }
@@ -137,12 +137,7 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
             // Wait for all tasks to reach the completed state.
             // If the pool is being resized then enough time is needed for the nodes to reach the idle state in order
             // for tasks to run on them.
-            bool timedOut = await taskStateMonitor.WhenAllAsync(ourTasks, TaskState.Completed, TimeSpan.FromMinutes(10));
-
-            if (timedOut)
-            {
-                throw new TimeoutException("Timed out waiting for tasks");
-            }
+            await taskStateMonitor.WhenAll(ourTasks, TaskState.Completed, TimeSpan.FromMinutes(10));
 
             // dump task output
             foreach (CloudTask t in ourTasks)

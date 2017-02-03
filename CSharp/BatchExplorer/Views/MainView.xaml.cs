@@ -379,7 +379,7 @@ namespace Microsoft.Azure.BatchExplorer.Views
 
                     this.genericEmptyWindow = new GenericEmptyWindow();
                     this.genericEmptyWindow.Title = "Resize Pool";
-                    this.genericEmptyWindow.Content = new CreateControls.ResizePoolControl(new ResizePoolViewModel(MainViewModel.dataProvider, message.PoolId, message.CurrentDedicated));
+                    this.genericEmptyWindow.Content = new CreateControls.ResizePoolControl(new ResizePoolViewModel(MainViewModel.dataProvider, message.PoolId, message.CurrentDedicated, message.CurrentAutoScaleFormula));
                     this.genericEmptyWindow.Owner = this;
                     this.genericEmptyWindow.SizeToContent = System.Windows.SizeToContent.WidthAndHeight;
                     this.IsEnabled = false;
@@ -451,6 +451,20 @@ namespace Microsoft.Azure.BatchExplorer.Views
             SimplePropertyModel simplePropertyModel = treeView.SelectedItem as SimplePropertyModel;
 
             e.CanExecute = simplePropertyModel != null;
+        }
+
+        private void SearchJobsTxtBox_GotFocus(object sender, RoutedEventArgs e)
+        {
+            this.SearchJobsTxtBox.Text = String.Empty;
+        }
+
+        private void SearchJobsTxtBox_KeyUp(object sender, KeyEventArgs e)
+        {
+            this.viewModel.JobsSearchFilter = this.SearchJobsTxtBox.Text;
+            if (e.Key == Key.Enter && this.viewModel.IsAccountConnected)
+            {
+                Messenger.Default.Send<RefreshMessage>(new RefreshMessage(RefreshTarget.Jobs));
+            }
         }
     }
 }

@@ -126,18 +126,20 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
                 Console.WriteLine("Waiting for task completion...");
                 Console.WriteLine();
                 CloudJob job = await batchClient.JobOperations.GetJobAsync(jobId);
-                if (await batchClient.Utilities.CreateTaskStateMonitor().WhenAllAsync(
+
+                try
+                {
+                    await batchClient.Utilities.CreateTaskStateMonitor().WhenAll(
                         job.ListTasks(),
                         TaskState.Completed,
-                        timeLimit))
-                {
-                    Console.WriteLine("Operation timed out while waiting for submitted tasks to reach state {0}",
-                        TaskState.Completed);
-                }
-                else
-                {
+                        timeLimit);
+
                     Console.WriteLine("All tasks completed successfully.");
                     Console.WriteLine();
+                }
+                catch (TimeoutException e)
+                {
+                    Console.WriteLine(e);
                 }
 
                 // Clean up the resources we've created in the Batch account

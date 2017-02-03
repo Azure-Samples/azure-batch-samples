@@ -53,16 +53,15 @@ def submit_job_and_add_task(batch_client, job_id, vm_size, vm_count):
             pool=batchmodels.PoolSpecification(
                 vm_size=vm_size,
                 target_dedicated=vm_count,
-                cloud_service_configuration=batchmodels.
-                CloudServiceConfiguration(os_family="4")),
+                cloud_service_configuration={'os_family': "4"}),
             keep_alive=False,
             pool_lifetime_option=batchmodels.PoolLifetimeOption.job))
 
-    job = batchmodels.CloudJob(id=job_id, pool_info=pool_info)
+    job = batchmodels.JobAddParameter(id=job_id, pool_info=pool_info)
 
     batch_client.job.add(job)
 
-    task = batchmodels.CloudTask(
+    task = batchmodels.TaskAddParameter(
         id="HelloWorld",
         command_line=common.helpers.wrap_commands_in_shell(
             'windows', ['echo Hello world from the Batch Hello world sample!'])
@@ -101,14 +100,13 @@ def execute_sample(global_config, sample_config):
     credentials = batchauth.SharedKeyCredentials(
         batch_account_name,
         batch_account_key)
-    client_configuration = batch.BatchServiceClientConfiguration(
+
+    batch_client = batch.BatchServiceClient(
         credentials,
         base_url=batch_service_url)
 
     # Retry 5 times -- default is 3
-    client_configuration.retry_policy.retries = 5
-    batch_client = batch.BatchServiceClient(client_configuration)
-
+    batch_client.config.retry_policy.retries = 5
     job_id = common.helpers.generate_unique_resource_name("HelloWorld")
 
     try:
@@ -131,6 +129,7 @@ def execute_sample(global_config, sample_config):
         if should_delete_job:
             print("Deleting job: ", job_id)
             batch_client.job.delete(job_id)
+
 
 if __name__ == '__main__':
     global_config = configparser.ConfigParser()
