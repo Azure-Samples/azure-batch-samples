@@ -59,7 +59,7 @@ _POOL_NODE_COUNT = 1
 _POOL_VM_SIZE = 'STANDARD_A1'
 _NODE_OS_PUBLISHER = 'Canonical'
 _NODE_OS_OFFER = 'UbuntuServer'
-_NODE_OS_SKU = '14'
+_NODE_OS_SKU = '16'
 
 _JOB_ID = 'PythonTutorialJob'
 
@@ -202,9 +202,9 @@ def create_pool(batch_service_client, pool_id,
         # that all tasks that run on the node have access to.
         'cp -r $AZ_BATCH_TASK_WORKING_DIR/* $AZ_BATCH_NODE_SHARED_DIR',
         # Install pip and the dependencies for cryptography
-        'apt-get update',
-        'apt-get -y install python-pip',
-        'apt-get -y install build-essential libssl-dev libffi-dev python-dev',
+        'sudo apt-get update',
+        'sudo apt-get -y install python-pip',
+        'sudo apt-get -y install build-essential libssl-dev libffi-dev python-dev',
         # Install the azure-storage module so that the task script can access
         # Azure Blob storage
         'pip install azure-storage']
