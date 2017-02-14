@@ -204,7 +204,8 @@ def create_pool(batch_service_client, pool_id,
         # Install pip and the dependencies for cryptography
         'sudo apt-get update',
         'sudo apt-get -y install python-pip',
-        'sudo apt-get -y install build-essential libssl-dev libffi-dev python-dev',
+        'sudo apt-get -y install build-essential \
+            libssl-dev libffi-dev python-dev',
         # Install the azure-storage module so that the task script can access
         # Azure Blob storage
         'pip install azure-storage']
