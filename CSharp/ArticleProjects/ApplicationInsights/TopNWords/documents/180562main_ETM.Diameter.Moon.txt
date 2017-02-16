@@ -1,0 +1,149 @@
+Teacher Page
+
+Diameter of the Moon
+Purpose
+To calculate the diameter of the Moon using
+proportions.
+
+Background
+The diameter of the Moon is proportional to the diameter of a cardboard disk, given that
+you know the distance to the Moon and the distance to the cardboard disk.
+The relationship is:
+d
+l
+
+D
+L
+
+so that:
+D = L(d/l)
+where
+
+D
+d
+L
+l
+
+= diameter of Moon
+= diameter of cardboard disk
+= distance to Moon
+= distance to cardboard disk
+
+In this activity, students will measure d and l. They will be given L.
+They will calculate D.
+The diameter of the Moon (D) is 3,476 km.
+
+Preparation
+Review and prepare materials listed on the student sheet.
+Choose a day and location for this activity which is best for viewing a full Moon.
+A cardboard disk of 2 cm diameter works well. Better accuracy may be achieved by
+using a larger disk, thus a greater distance l. However, if obtaining or cutting cardboard
+is difficult, then this activity can also be done with dimes. A dime held out at arm's
+length will cover the Moon.
+The distance from Earth to the Moon for a given date can be obtained by asking a local
+planetarium staff, Or for this activity, students may use an average value of
+382,500 km.
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+29
+
+Teacher Page
+
+Diameter of the Moon
+In Class
+If students work in pairs, then one student can use the string to measure distance from
+their partner's eye to the disk.
+The same units do not have to be used on both sides of the equation, but d and l have to
+be the same units. The D will be the same unit as L.
+
+Wrap-Up
+To compute the density of the Moon use the diameter to compute volume and use the
+mass value of 7.35 x 1022 kg.
+Density of the Moon is 3.34 grams/cubic cm.
+
+30
+
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+Diameter of the Moon
+Purpose
+To calculate the diameter of the Moon using
+proportions.
+
+Key Words
+
+Procedure
+
+proportional
+
+1. On a day when you can see the Moon: place a
+cardboard disk on top of a stake or on a
+window sill so that it exactly covers the Moon
+from your point of view behind the cardboard
+disk.
+
+Materials
+2-cm wide cardboard disk
+wooden stake (optional)
+meter stick
+calculator
+string
+
+2. Have a friend measure the distance from
+your eye to the cardboard disk.
+Call this distance l and write the value here:
+l=
+3. The distance from Earth to the Moon varies
+between 360,000 km and 405,000 km. Find the
+distance for today’s date or use an average value
+for your calculations of 382,500 km.
+Write the value that you are going to use here:
+L=
+4. What is the diameter of the cardboard disk?
+d=
+
+5. The diameter of the Moon is proportional to the
+diameter of your cardboard disk by this equation:
+d D
+l L
+
+where: D
+d
+L
+l
+
+so that, D = L(d/l)
+
+= diameter of Moon
+= diameter of cardboard disk
+= distance to Moon
+= distance to cardboard disk
+
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+31
+
+Diameter of the Moon
+Results
+1. By your calculations, the diameter of the Moon is:
+D=
+2. Compare your result with the accepted diameter of the Moon.
+How close did you get?
+
+3. How many times smaller is the diameter of the Moon than the
+diameter of Earth?
+
+4. When you calculated the diameter of the Moon, did you have to
+use the same units on both sides of the equation?
+
+5. How and where could you find the value for the distance to the
+Moon for today's date?
+
+6. What else would you need to know to compute the density of the
+Moon? Try it.
+
+32
+
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+

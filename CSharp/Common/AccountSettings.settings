@@ -1,24 +1,24 @@
 ﻿<?xml version='1.0' encoding='utf-8'?>
-<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="Microsoft.Azure.Batch.Samples.Common" GeneratedClassName="Settings">
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="Microsoft.Azure.Batch.Samples.Common" GeneratedClassName="AccountSettings">
   <Profiles />
   <Settings>
     <Setting Name="BatchServiceUrl" Type="System.String" Scope="User">
-      <Value Profile="(Default)">https://(YourAccount).(region).batch.azure.com</Value>
+      <Value Profile="(Default)">https://prodtest1.brazilsouth.batch.azure.com</Value>
     </Setting>
     <Setting Name="BatchAccountName" Type="System.String" Scope="User">
-      <Value Profile="(Default)" />
+      <Value Profile="(Default)">prodtest1</Value>
     </Setting>
     <Setting Name="BatchAccountKey" Type="System.String" Scope="User">
-      <Value Profile="(Default)" />
+      <Value Profile="(Default)">xvPlXwaTA/YdNU/0mVg/r/HDTB7BM9M+FhWPLmWRitvFPIMl4d54k73nMxjducHANGBoZVeqpZPm4kbSUS8nHw==</Value>
     </Setting>
     <Setting Name="StorageServiceUrl" Type="System.String" Scope="User">
       <Value Profile="(Default)">core.windows.net</Value>
     </Setting>
     <Setting Name="StorageAccountName" Type="System.String" Scope="User">
-      <Value Profile="(Default)" />
+      <Value Profile="(Default)">batchapppackage</Value>
     </Setting>
     <Setting Name="StorageAccountKey" Type="System.String" Scope="User">
-      <Value Profile="(Default)" />
+      <Value Profile="(Default)">gdleR94fJIaO5CTsPT2/NvlwIa1XDfDrDHo8U/kTuuXzPeIArTSDuSQeGq5ZnEAFfxX2wp1rNwLWNayjkSohWA==</Value>
     </Setting>
   </Settings>
 </SettingsFile>
