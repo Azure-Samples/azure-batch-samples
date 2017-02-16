@@ -3,22 +3,22 @@
   <Profiles />
   <Settings>
     <Setting Name="BatchServiceUrl" Type="System.String" Scope="User">
-      <Value Profile="(Default)">https://prodtest1.brazilsouth.batch.azure.com</Value>
+      <Value Profile="(Default)" />
     </Setting>
     <Setting Name="BatchAccountName" Type="System.String" Scope="User">
-      <Value Profile="(Default)">prodtest1</Value>
+      <Value Profile="(Default)" />
     </Setting>
     <Setting Name="BatchAccountKey" Type="System.String" Scope="User">
-      <Value Profile="(Default)">xvPlXwaTA/YdNU/0mVg/r/HDTB7BM9M+FhWPLmWRitvFPIMl4d54k73nMxjducHANGBoZVeqpZPm4kbSUS8nHw==</Value>
+      <Value Profile="(Default)" />
     </Setting>
     <Setting Name="StorageServiceUrl" Type="System.String" Scope="User">
       <Value Profile="(Default)">core.windows.net</Value>
     </Setting>
     <Setting Name="StorageAccountName" Type="System.String" Scope="User">
-      <Value Profile="(Default)">batchapppackage</Value>
+      <Value Profile="(Default)" />
     </Setting>
     <Setting Name="StorageAccountKey" Type="System.String" Scope="User">
-      <Value Profile="(Default)">gdleR94fJIaO5CTsPT2/NvlwIa1XDfDrDHo8U/kTuuXzPeIArTSDuSQeGq5ZnEAFfxX2wp1rNwLWNayjkSohWA==</Value>
+      <Value Profile="(Default)" />
     </Setting>
   </Settings>
 </SettingsFile>

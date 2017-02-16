@@ -25,7 +25,7 @@ namespace Microsoft.Azure.Batch.Samples.Common {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("https://prodtest1.brazilsouth.batch.azure.com")]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string BatchServiceUrl {
             get {
                 return ((string)(this["BatchServiceUrl"]));
@@ -37,7 +37,7 @@ namespace Microsoft.Azure.Batch.Samples.Common {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("prodtest1")]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string BatchAccountName {
             get {
                 return ((string)(this["BatchAccountName"]));
@@ -49,8 +49,7 @@ namespace Microsoft.Azure.Batch.Samples.Common {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("xvPlXwaTA/YdNU/0mVg/r/HDTB7BM9M+FhWPLmWRitvFPIMl4d54k73nMxjducHANGBoZVeqpZPm4kbSU" +
-            "S8nHw==")]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string BatchAccountKey {
             get {
                 return ((string)(this["BatchAccountKey"]));
@@ -74,7 +73,7 @@ namespace Microsoft.Azure.Batch.Samples.Common {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("batchapppackage")]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string StorageAccountName {
             get {
                 return ((string)(this["StorageAccountName"]));
@@ -86,8 +85,7 @@ namespace Microsoft.Azure.Batch.Samples.Common {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("gdleR94fJIaO5CTsPT2/NvlwIa1XDfDrDHo8U/kTuuXzPeIArTSDuSQeGq5ZnEAFfxX2wp1rNwLWNayjk" +
-            "SohWA==")]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string StorageAccountKey {
             get {
                 return ((string)(this["StorageAccountKey"]));
