@@ -130,7 +130,7 @@ namespace JobPrepRelease
                     if (node.State == ComputeNodeState.Idle)
                     {
                         NodeFile sharedTextFile = await node.GetNodeFileAsync("shared\\job_prep_and_release.txt");
-                        Console.WriteLine("Contents of {0} on {1}:", sharedTextFile.Name, node.Id);
+                        Console.WriteLine("Contents of {0} on {1}:", sharedTextFile.Path, node.Id);
                         Console.WriteLine("-------------------------------------------");
                         Console.WriteLine(await sharedTextFile.ReadAsStringAsync());
                     }

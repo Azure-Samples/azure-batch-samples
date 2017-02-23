@@ -260,7 +260,7 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
 
             CloudBlobContainer container = blobClient.GetContainerReference(containerName);
             CloudBlockBlob blobData = container.GetBlockBlobReference(blobName);
-            await blobData.UploadFromFileAsync(filePath, FileMode.Open);
+            await blobData.UploadFromFileAsync(filePath);
             
             // Set the expiry time and permissions for the blob shared access signature. In this case, no start time is specified,
             // so the shared access signature becomes valid immediately

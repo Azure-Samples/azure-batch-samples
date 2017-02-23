@@ -262,7 +262,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
 
             //Upload the blob.
             CloudBlockBlob blob = container.GetBlockBlobReference(fileName);
-            blob.UploadFromFile(fileName, FileMode.Open);
+            blob.UploadFromFile(fileName);
             return blob.Uri.ToString();
         }
     }

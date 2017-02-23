@@ -11,7 +11,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
     public class SubtaskModel
     {
         private readonly int? id;
-        private readonly TaskState? state;
+        private readonly SubtaskState? state;
         private readonly string nodeId;
         private readonly int? exitCode;
         private readonly string taskRoot;
