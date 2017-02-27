@@ -196,7 +196,7 @@ namespace Microsoft.Azure.BatchExplorer.Service
                 unboundPool.StartTask = new StartTask
                 {
                     CommandLine = startTask.CommandLine,
-                    RunElevated = startTask.RunElevated,
+                    UserIdentity = new UserIdentity(new AutoUserSpecification(elevationLevel: startTask.RunElevated ? ElevationLevel.Admin : ElevationLevel.NonAdmin)),
                     ResourceFiles = startTask.ResourceFiles.ConvertAll(f => new ResourceFile(f.BlobSource, f.FilePath)),
                     WaitForSuccess = true,
                 };
@@ -368,7 +368,7 @@ namespace Microsoft.Azure.BatchExplorer.Service
                 unboundTask.MultiInstanceSettings.CoordinationCommandLine = options.BackgroundCommand;
                 unboundTask.MultiInstanceSettings.CommonResourceFiles = options.CommonResourceFiles.ConvertAll(f => new ResourceFile(f.BlobSource, f.FilePath));
             }
-            unboundTask.RunElevated = options.RunElevated;
+            unboundTask.UserIdentity = new UserIdentity(new AutoUserSpecification(elevationLevel: options.RunElevated ? ElevationLevel.Admin : ElevationLevel.NonAdmin));
             unboundTask.Constraints = new TaskConstraints(null, null, options.MaxTaskRetryCount);
             unboundTask.ResourceFiles = options.ResourceFiles.ConvertAll(f => new ResourceFile(f.BlobSource, f.FilePath));
             await this.Client.JobOperations.AddTaskAsync(options.JobId, unboundTask);

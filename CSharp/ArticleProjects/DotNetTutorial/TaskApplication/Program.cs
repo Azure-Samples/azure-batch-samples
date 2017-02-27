@@ -93,7 +93,7 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial.TaskApplication
             try
             {
                 CloudBlockBlob blob = container.GetBlockBlobReference(blobName);
-                blob.UploadFromFile(filePath, FileMode.Open);
+                blob.UploadFromFile(filePath);
 
                 Console.WriteLine("Write operation succeeded for SAS URL " + containerSas);
                 Console.WriteLine();

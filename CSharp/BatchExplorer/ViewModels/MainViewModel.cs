@@ -1093,7 +1093,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         try
                         {
                             AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.DownloadFileAsync(
-                            this.SelectedTask.SelectedTaskFile.Name, Path.GetTempPath(), false));
+                            this.SelectedTask.SelectedTaskFile.Path, Path.GetTempPath(), false));
                         }
                         catch (Exception e)
                         {
@@ -1114,7 +1114,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         try
                         {
                             AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.DownloadFileAsync(
-                            this.SelectedTask.SelectedTaskFile.Name, isNodeFile: false));
+                            this.SelectedTask.SelectedTaskFile.Path, isNodeFile: false));
                         }
                         catch (Exception e)
                         {
@@ -1133,7 +1133,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 return new CommandBase(
                     (o) =>
                     {
-                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.DownloadFileAsync(this.SelectedNodeFile.Name, Path.GetTempPath()));
+                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.DownloadFileAsync(this.SelectedNodeFile.Path, Path.GetTempPath()));
                     }
                 );
             }
@@ -1146,7 +1146,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 return new CommandBase(
                     (o) =>
                     {
-                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.DownloadFileAsync(this.SelectedNodeFile.Name));
+                        AsyncOperationTracker.Instance.AddTrackedInternalOperation(this.DownloadFileAsync(this.SelectedNodeFile.Path));
                     }
                 );
             }
@@ -1548,6 +1548,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
         /// <param name="jobSchedules">True if job schedule data should be retrieved</param>
         /// <param name="jobs">True if job data should be retrieved</param>
         /// <param name="pools">True if pool data should be retrieved</param>
+        /// <param name="certificates">True if certificates should be retrieved</param>
         /// <returns></returns>
         private async Task GetDataAsync(IDataProvider provider, bool jobSchedules, bool jobs, bool pools, bool certificates)
         {

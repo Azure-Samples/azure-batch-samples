@@ -135,7 +135,7 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
                     Console.WriteLine("subtask: " + subtask.Id);
                     Console.WriteLine("\texit code: " + subtask.ExitCode);
 
-                    if (subtask.State == TaskState.Completed)
+                    if (subtask.State == SubtaskState.Completed)
                     {
                         // Obtain the file from the node on which the subtask executed. For normal CloudTasks,
                         // we could simply call CloudTask.GetNodeFile(Constants.StandardOutFileName), but the
@@ -223,7 +223,7 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
             StartTask startTask = new StartTask
             {
                 CommandLine = $"cmd /c %AZ_BATCH_APP_PACKAGE_{appPackageId.ToUpper()}#{appPackageVersion}%\\MSMpiSetup.exe -unattend -force",
-                RunElevated = true,
+                UserIdentity = new UserIdentity(new AutoUserSpecification(elevationLevel: ElevationLevel.Admin)),
                 WaitForSuccess = true
             };
             unboundPool.StartTask = startTask;

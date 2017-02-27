@@ -30,6 +30,7 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
                 "Microsoft.Azure.Batch.Samples.Common.dll",
                 "Microsoft.WindowsAzure.Storage.dll",
                 "Microsoft.Azure.Batch.dll",
+                "Microsoft.Azure.Batch.FileStaging.dll",
                 "Microsoft.Rest.ClientRuntime.dll",
                 "Microsoft.Rest.ClientRuntime.Azure.dll",
                 "Microsoft.Data.Services.Client.dll",
