@@ -3,7 +3,7 @@
   <Profiles />
   <Settings>
     <Setting Name="BatchServiceUrl" Type="System.String" Scope="User">
-      <Value />
+      <Value Profile="(Default)">https://(YourAccount).(region).batch.azure.com</Value>
     </Setting>
     <Setting Name="BatchAccountName" Type="System.String" Scope="User">
       <Value />
