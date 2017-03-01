@@ -27,13 +27,13 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
         // These are used when constructing connection strings for the Batch and Storage client objects.
 
         // Batch account credentials
-        private const string BatchAccountName = "";
-        private const string BatchAccountKey  = "";
-        private const string BatchAccountUrl  = "";
+        private const string BatchAccountName = "tamrambatch";
+        private const string BatchAccountKey  = "a3HjJUjKtsuXwN7pshA7XdL3C6OAQQsof4+EML7n8IlyGdqJloGfk1qkbmfzWzdWafP+mu9jbjDwHB65UBEzZw==";
+        private const string BatchAccountUrl  = "https://tamrambatch.westcentralus.batch.azure.com";
 
         // Storage account credentials
-        private const string StorageAccountName = "";
-        private const string StorageAccountKey  = "";
+        private const string StorageAccountName = "tamrambatchstorage";
+        private const string StorageAccountKey  = "PPBIRREmpThVmZ69urBX10vgN3QlYptajzL3kE+Ig4s0qfQNyLZy8RsKn9V+BDN6GynA6cteUWPNtVDMPz1IOA==";
         
         private const string PoolId = "DotNetTutorialPool";
         private const string JobId  = "DotNetTutorialJob";
