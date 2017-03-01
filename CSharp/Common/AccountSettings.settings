@@ -3,22 +3,22 @@
   <Profiles />
   <Settings>
     <Setting Name="BatchServiceUrl" Type="System.String" Scope="User">
-      <Value Profile="(Default)">https://tamrambatch.westcentralus.batch.azure.com</Value>
+      <Value />
     </Setting>
     <Setting Name="BatchAccountName" Type="System.String" Scope="User">
-      <Value Profile="(Default)">tamrambatch</Value>
+      <Value />
     </Setting>
     <Setting Name="BatchAccountKey" Type="System.String" Scope="User">
-      <Value Profile="(Default)">a3HjJUjKtsuXwN7pshA7XdL3C6OAQQsof4+EML7n8IlyGdqJloGfk1qkbmfzWzdWafP+mu9jbjDwHB65UBEzZw==</Value>
+      <Value />
     </Setting>
     <Setting Name="StorageServiceUrl" Type="System.String" Scope="User">
-      <Value Profile="(Default)">tamrambatchstorage.core.windows.net</Value>
+      <Value />
     </Setting>
     <Setting Name="StorageAccountName" Type="System.String" Scope="User">
-      <Value Profile="(Default)">tamrambatchstorage</Value>
+      <Value />
     </Setting>
     <Setting Name="StorageAccountKey" Type="System.String" Scope="User">
-      <Value Profile="(Default)">PPBIRREmpThVmZ69urBX10vgN3QlYptajzL3kE+Ig4s0qfQNyLZy8RsKn9V+BDN6GynA6cteUWPNtVDMPz1IOA==</Value>
+      <Value />
     </Setting>
   </Settings>
 </SettingsFile>
