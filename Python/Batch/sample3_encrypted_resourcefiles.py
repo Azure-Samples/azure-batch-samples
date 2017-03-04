@@ -173,6 +173,9 @@ def create_pool_and_wait_for_node(
         'pip install --upgrade blobxfer'
     ]
 
+    user = batchmodels.AutoUserSpecification(
+        scope=batchmodels.AutoUserScope.pool,
+        elevation_level=batchmodels.ElevationLevel.admin)
     # create pool with start task and cert ref with visibility of task
     pool = batchmodels.PoolAddParameter(
         id=pool_id,
@@ -184,7 +187,7 @@ def create_pool_and_wait_for_node(
         start_task=batchmodels.StartTask(
             command_line=common.helpers.wrap_commands_in_shell(
                 'linux', start_task_commands),
-            run_elevated=True,
+            user_identity={'auto_user': user},
             wait_for_success=True),
         certificate_references=[
             batchmodels.CertificateReference(
