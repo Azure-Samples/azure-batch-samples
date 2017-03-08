@@ -36,20 +36,20 @@ public class PoolAndResourceFile {
         Duration VM_READY_TIMEOUT = Duration.ofMinutes(20);
 
         // Check if pool exists
-        if (!client.getPoolOperations().existsPool(poolId)) {
+        if (!client.poolOperations().existsPool(poolId)) {
 
             // See detail of creating IaaS pool at https://blogs.technet.microsoft.com/windowshpc/2016/03/29/introducing-linux-support-on-azure-batch/
             // Get the sku image reference
-            List<NodeAgentSku> skus = client.getAccountOperations().listNodeAgentSkus();
+            List<NodeAgentSku> skus = client.accountOperations().listNodeAgentSkus();
             String skuId = null;
             ImageReference imageRef = null;
 
             for (NodeAgentSku sku : skus) {
-                if (sku.getOsType() == OSType.LINUX) {
-                    for (ImageReference imgRef : sku.getVerifiedImageReferences()) {
-                        if (imgRef.getPublisher().equalsIgnoreCase(osPublisher) && imgRef.getOffer().equalsIgnoreCase(osOffer)) {
+                if (sku.osType() == OSType.LINUX) {
+                    for (ImageReference imgRef : sku.verifiedImageReferences()) {
+                        if (imgRef.publisher().equalsIgnoreCase(osPublisher) && imgRef.offer().equalsIgnoreCase(osOffer)) {
                             imageRef = imgRef;
-                            skuId = sku.getId();
+                            skuId = sku.id();
                             break;
                         }
                     }
@@ -58,10 +58,9 @@ public class PoolAndResourceFile {
 
             // Use IaaS VM with Linux
             VirtualMachineConfiguration configuration = new VirtualMachineConfiguration();
-            configuration.setNodeAgentSKUId(skuId);
-            configuration.setImageReference(imageRef);
+            configuration.withNodeAgentSKUId(skuId).withImageReference(imageRef);
 
-            client.getPoolOperations().createPool(poolId, poolVMSize, configuration, poolVMCount);
+            client.poolOperations().createPool(poolId, poolVMSize, configuration, poolVMCount);
         }
 
         long startTime = System.currentTimeMillis();
@@ -70,8 +69,8 @@ public class PoolAndResourceFile {
 
         // Wait for the VM to be allocated
         while (elapsedTime < POOL_STEADY_TIMEOUT.toMillis()) {
-            CloudPool pool = client.getPoolOperations().getPool(poolId);
-            if (pool.getAllocationState() == AllocationState.STEADY) {
+            CloudPool pool = client.poolOperations().getPool(poolId);
+            if (pool.allocationState() == AllocationState.STEADY) {
                 steady = true;
                 break;
             }
@@ -92,7 +91,7 @@ public class PoolAndResourceFile {
 
         // Wait for at least 1 VM to reach the IDLE state
         while (elapsedTime < VM_READY_TIMEOUT.toMillis()) {
-            List<ComputeNode> nodeCollection = client.getComputeNodeOperations().listComputeNodes(poolId, new DetailLevel.Builder().selectClause("id, state").filterClause("state eq 'idle'").build());
+            List<ComputeNode> nodeCollection = client.computeNodeOperations().listComputeNodes(poolId, new DetailLevel.Builder().withSelectClause("id, state").withFilterClause("state eq 'idle'").build());
             if (!nodeCollection.isEmpty()) {
                 hasIdleVM = true;
                 break;
@@ -107,7 +106,7 @@ public class PoolAndResourceFile {
             throw new TimeoutException("The node did not reach an IDLE state in the allotted time");
         }
 
-        return client.getPoolOperations().getPool(poolId);
+        return client.poolOperations().getPool(poolId);
     }
 
     /**
@@ -189,26 +188,24 @@ public class PoolAndResourceFile {
 
         // Create job run at the specified pool
         PoolInformation poolInfo = new PoolInformation();
-        poolInfo.setPoolId(poolId);
-        client.getJobOperations().createJob(jobId, poolInfo);
+        poolInfo.withPoolId(poolId);
+        client.jobOperations().createJob(jobId, poolInfo);
 
         // Create task
         TaskAddParameter taskToAdd = new TaskAddParameter();
-        taskToAdd.setId("mytask");
-        taskToAdd.setCommandLine(String.format("cat %s", BLOB_FILE_NAME));
+        taskToAdd.withId("mytask").withCommandLine(String.format("cat %s", BLOB_FILE_NAME));
 
         String sas = uploadFileToCloud(container, BLOB_FILE_NAME, LOCAL_FILE_PATH);
 
         // Associate resource file with task
         ResourceFile file = new ResourceFile();
-        file.setFilePath(BLOB_FILE_NAME);
-        file.setBlobSource(sas);
+        file.withFilePath(BLOB_FILE_NAME).withBlobSource(sas);
         List<ResourceFile> files = new ArrayList<ResourceFile>();
         files.add(file);
-        taskToAdd.setResourceFiles(files);
+        taskToAdd.withResourceFiles(files);
 
         // Add task to job
-        client.getTaskOperations().createTask(jobId, taskToAdd);
+        client.taskOperations().createTask(jobId, taskToAdd);
     }
 
     /**
@@ -226,11 +223,11 @@ public class PoolAndResourceFile {
         long elapsedTime = 0L;
 
         while (elapsedTime < expiryTime.toMillis()) {
-            List<CloudTask> taskCollection = client.getTaskOperations().listTasks(jobId, new DetailLevel.Builder().selectClause("id, state").build());
+            List<CloudTask> taskCollection = client.taskOperations().listTasks(jobId, new DetailLevel.Builder().withSelectClause("id, state").build());
 
             boolean allComplete = true;
             for (CloudTask task : taskCollection) {
-                if (task.getState() != TaskState.COMPLETED) {
+                if (task.state() != TaskState.COMPLETED) {
                     allComplete = false;
                     break;
                 }
@@ -258,11 +255,11 @@ public class PoolAndResourceFile {
      */
     private static void printBatchException(BatchErrorException err) {
         System.out.println(String.format("BatchError %s", err.toString()));
-        if (err.getBody() != null) {
-            System.out.println(String.format("BatchError code = %s, message = %s", err.getBody().getCode(), err.getBody().getMessage().getValue()));
-            if (err.getBody().getValues() != null) {
-                for (BatchErrorDetail detail : err.getBody().getValues()) {
-                    System.out.println(String.format("Detail %s=%s", detail.getKey(), detail.getValue()));
+        if (err.body() != null) {
+            System.out.println(String.format("BatchError code = %s, message = %s", err.body().code(), err.body().message().value()));
+            if (err.body().values() != null) {
+                for (BatchErrorDetail detail : err.body().values()) {
+                    System.out.println(String.format("Detail %s=%s", detail.key(), detail.value()));
                 }
             }
         }
@@ -286,7 +283,7 @@ public class PoolAndResourceFile {
 
         // Create batch client
         BatchSharedKeyCredentials cred = new BatchSharedKeyCredentials(batchUri, batchAccount, batchKey);
-        BatchClient client = BatchClient.Open(cred);
+        BatchClient client = BatchClient.open(cred);
 
         // Create storage container
         CloudBlobContainer container = createBlobContainer(storageAccountName, storageAccountKey);
@@ -298,12 +295,12 @@ public class PoolAndResourceFile {
         try
         {
             CloudPool sharedPool = createPoolIfNotExists(client, poolId);
-            submitJobAndAddTask(client, container, sharedPool.getId(), jobId);
+            submitJobAndAddTask(client, container, sharedPool.id(), jobId);
             if (waitForTasksToComplete(client, jobId, TASK_COMPLETE_TIMEOUT)) {
                 // Get the task command output file
-                CloudTask task = client.getTaskOperations().getTask(jobId, "mytask");
+                CloudTask task = client.taskOperations().getTask(jobId, "mytask");
 
-                InputStream stream = client.getFileOperations().getFileFromTask(jobId, task.getId(), STANDARD_CONSOLE_OUTPUT_FILENAME);
+                InputStream stream = client.fileOperations().getFileFromTask(jobId, task.id(), STANDARD_CONSOLE_OUTPUT_FILENAME);
                 String fileContent = IOUtils.toString(stream, "UTF-8");
                 System.out.println(fileContent);
             }
@@ -321,7 +318,7 @@ public class PoolAndResourceFile {
             // Clean up the resource if necessary
             if (shouldDeleteJob) {
                 try {
-                    client.getJobOperations().deleteJob(jobId);
+                    client.jobOperations().deleteJob(jobId);
                 } catch (BatchErrorException err) {
                     printBatchException(err);
                 }
@@ -329,7 +326,7 @@ public class PoolAndResourceFile {
 
             if (shouldDeletePool) {
                 try {
-                    client.getJobOperations().deleteJob(poolId);
+                    client.jobOperations().deleteJob(poolId);
                 } catch (BatchErrorException err) {
                     printBatchException(err);
                 }
