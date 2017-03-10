@@ -1,10 +1,9 @@
 ---
 services: Batch
 platforms: java
-author: xingwu
 ---
 
-#Getting Started with Batch - Create Pool - in Java #
+#Getting Started with Batch - Create Pool - in Java
 
 
   Azure Batch sample for managing pool -
@@ -18,7 +17,7 @@ author: xingwu
    - Delete the job and the pool
  
 
-## Running this Sample ##
+## Running this Sample
 
 To run this sample:
 
@@ -37,12 +36,8 @@ Clone repo and compile the code:
 
     mvn clean compile exec:java
 
-## More information ##
+## More information
 
 [http://azure.com/java](http://azure.com/java)
 
 If you don't have a Microsoft Azure subscription you can get a FREE trial account [here](http://go.microsoft.com/fwlink/?LinkId=330212)
-
----
-
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
