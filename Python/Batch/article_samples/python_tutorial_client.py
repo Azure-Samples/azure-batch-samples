@@ -232,7 +232,7 @@ def create_pool(batch_service_client, pool_id,
         start_task=batch.models.StartTask(
             command_line=common.helpers.wrap_commands_in_shell('linux',
                                                                task_commands),
-            user_identity={'auto_user': user},
+            user_identity=batchmodels.UserIdentity(auto_user=user),
             wait_for_success=True,
             resource_files=resource_files),
     )

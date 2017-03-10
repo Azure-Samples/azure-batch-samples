@@ -187,7 +187,7 @@ def create_pool_and_wait_for_node(
         start_task=batchmodels.StartTask(
             command_line=common.helpers.wrap_commands_in_shell(
                 'linux', start_task_commands),
-            user_identity={'auto_user': user},
+            user_identity=batchmodels.UserIdentity(auto_user=user),
             wait_for_success=True),
         certificate_references=[
             batchmodels.CertificateReference(

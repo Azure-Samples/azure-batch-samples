@@ -93,7 +93,7 @@ def create_pool_and_wait_for_vms(
         max_tasks_per_node=1,
         start_task=batch.models.StartTask(
             command_line=command_line,
-            user_identity={'auto_user': user},
+            user_identity=batchmodels.UserIdentity(auto_user=user),
             wait_for_success=True,
             resource_files=resource_files),
     )
@@ -128,8 +128,9 @@ def add_task(batch_service_client, job_id, task_id, application_cmdline,
     :param str task_id: The ID of the task to be added.
     :param str application_cmdline: The application commandline for the task.
     :param list input_files: A collection of input files.
-    :param str elevation_level: Elevation level used to run the task; either
+    :param elevation_level: Elevation level used to run the task; either
      'admin' or 'nonadmin'.
+    :type elevation_level: `azure.batch.models.ElevationLevel`
     :param int num_instances: Number of instances for the task
     :param str coordination_cmdline: The application commandline for the task.
     :param list common_files: A collection of common input files.
@@ -149,7 +150,7 @@ def add_task(batch_service_client, job_id, task_id, application_cmdline,
     task = batchmodels.TaskAddParameter(
         id=task_id,
         command_line=application_cmdline,
-        user_identity={'auto_user': user},
+        user_identity=batchmodels.UserIdentity(auto_user=user),
         resource_files=input_files,
         multi_instance_settings=multi_instance_settings
     )
