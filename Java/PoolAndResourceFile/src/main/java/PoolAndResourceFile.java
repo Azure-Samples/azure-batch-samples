@@ -184,7 +184,6 @@ public class PoolAndResourceFile {
     private static void submitJobAndAddTask(BatchClient client, CloudBlobContainer container, String poolId, String jobId) throws BatchErrorException, IOException, StorageException, InvalidKeyException, URISyntaxException {
         String BLOB_FILE_NAME = "test.txt";
         String LOCAL_FILE_PATH = "./" + BLOB_FILE_NAME;
-        String RESOURCE_FILE_NAME = "mytest.txt";
 
         // Create job run at the specified pool
         PoolInformation poolInfo = new PoolInformation();
@@ -312,7 +311,7 @@ public class PoolAndResourceFile {
             printBatchException(err);
         }
         catch (Exception ex) {
-            System.out.println(ex);
+            ex.printStackTrace();
         }
         finally {
             // Clean up the resource if necessary
