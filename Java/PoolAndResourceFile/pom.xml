@@ -11,37 +11,13 @@
 
   <groupId>com.microsoft.azure</groupId>
   <artifactId>PoolAndResourceFile</artifactId>
-  <version>1.0-SNAPSHOT</version>
-
-  <repositories>
-    <repository>
-      <id>adx-snapshots</id>
-      <name>Azure ADX Snapshots</name>
-      <url>http://adxsnapshots.azurewebsites.net/</url>
-      <layout>default</layout>
-      <snapshots>
-        <enabled>true</enabled>
-        <updatePolicy>always</updatePolicy>
-      </snapshots>
-    </repository>
-    <repository>
-      <id>oss-snapshots</id>
-      <name>Open Source Snapshots</name>
-      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
-      <releases>
-        <enabled>false</enabled>
-      </releases>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-    </repository>
-  </repositories> 
+  <version>1.0.0</version>
 
   <dependencies>
     <dependency>
       <groupId>com.microsoft.azure</groupId>
       <artifactId>azure-batch</artifactId>
-      <version>1.0.0-rc</version>
+      <version>1.0.0-rc2</version>
     </dependency>
     <dependency>
       <groupId>com.microsoft.rest</groupId>
