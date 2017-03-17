@@ -8,7 +8,8 @@
     <StartupFile>sample1_helloworld.py</StartupFile>
     <SearchPath>
     </SearchPath>
-    <WorkingDirectory>.</WorkingDirectory>
+    <WorkingDirectory>
+    </WorkingDirectory>
     <OutputPath>.</OutputPath>
     <Name>BatchSamples</Name>
     <RootNamespace>BatchSamples</RootNamespace>
@@ -16,6 +17,7 @@
     </InterpreterId>
     <InterpreterVersion>
     </InterpreterVersion>
+    <IsWindowsApplication>False</IsWindowsApplication>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -32,15 +34,12 @@
     <Compile Include="article_samples\mpi\multi_task_helpers.py" />
     <Compile Include="article_samples\mpi\azure_storage_helper.py" />
     <Compile Include="article_samples\mpi\__init__.py" />
-    <Compile Include="sample5_docker_batch_task.py" />
     <Content Include="article_samples\data\taskdata1.txt" />
     <Content Include="article_samples\data\taskdata2.txt" />
     <Content Include="article_samples\data\taskdata3.txt" />
     <Content Include="article_samples\mpi\data\linux\openfoam\nodeprep-cmd" />
     <Content Include="article_samples\mpi\data\linux\openfoam\coordination-cmd" />
     <Content Include="article_samples\mpi\data\linux\openfoam\application-cmd" />
-    <Content Include="resources\docker_batch_task.sh" />
-    <Content Include="sample5_docker_batch_task.cfg" />
     <Folder Include="article_samples\" />
     <Folder Include="article_samples\data\" />
     <Folder Include="article_samples\mpi" />

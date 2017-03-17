@@ -203,8 +203,8 @@ def create_pool(batch_service_client, pool_id,
         # Copy the python_tutorial_task.py script to the "shared" directory
         # that all tasks that run on the node have access to. Note that
         # we are using the -p flag with cp to preserve the file uid/gid,
-        # otherwise since this start task is run_elevated, it would not
-        # be accessible by non run_elevated tasks.
+        # otherwise since this start task is run as an admin, it would not
+        # be accessible by tasks run as a non-admin user.
         'cp -p {} $AZ_BATCH_NODE_SHARED_DIR'.format(_TUTORIAL_TASK_FILE),
         # Install pip
         'curl -fSsL https://bootstrap.pypa.io/get-pip.py | python',
@@ -219,7 +219,9 @@ def create_pool(batch_service_client, pool_id,
     sku_to_use, image_ref_to_use = \
         common.helpers.select_latest_verified_vm_image_with_node_agent_sku(
             batch_service_client, publisher, offer, sku)
-
+    user = batchmodels.AutoUserSpecification(
+        scope=batchmodels.AutoUserScope.pool,
+        elevation_level=batchmodels.ElevationLevel.admin)
     new_pool = batch.models.PoolAddParameter(
         id=pool_id,
         virtual_machine_configuration=batchmodels.VirtualMachineConfiguration(
@@ -230,7 +232,7 @@ def create_pool(batch_service_client, pool_id,
         start_task=batch.models.StartTask(
             command_line=common.helpers.wrap_commands_in_shell('linux',
                                                                task_commands),
-            run_elevated=True,
+            user_identity=batchmodels.UserIdentity(auto_user=user),
             wait_for_success=True,
             resource_files=resource_files),
     )

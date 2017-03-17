@@ -44,7 +44,7 @@ import common.helpers  # noqa
 
 def create_pool_and_wait_for_vms(
         batch_service_client, pool_id, publisher, offer, sku, vm_size,
-        target_dedicated, command_line, resource_files, run_elevated):
+        target_dedicated, command_line, resource_files, elevation_level):
     """
     Creates a pool of compute nodes with the specified OS settings.
 
@@ -62,8 +62,8 @@ def create_pool_and_wait_for_vms(
     :param str command_line: command line for the pool's start task.
     :param list resource_files: A collection of resource files for the pool's
     start task.
-    :param bool run_elevated: flag determining if start task should run as
-     elevated
+    :param str elevation_level: Elevation level the task will be run as;
+        either 'admin' or 'nonadmin'.
     """
     print('Creating pool [{}]...'.format(pool_id))
 
@@ -78,6 +78,9 @@ def create_pool_and_wait_for_vms(
     sku_to_use, image_ref_to_use = \
         common.helpers.select_latest_verified_vm_image_with_node_agent_sku(
             batch_service_client, publisher, offer, sku)
+    user = batchmodels.AutoUserSpecification(
+        scope=batchmodels.AutoUserScope.pool,
+        elevation_level=elevation_level)
     new_pool = batch.models.PoolAddParameter(
         id=pool_id,
         virtual_machine_configuration=batchmodels.VirtualMachineConfiguration(
@@ -90,7 +93,7 @@ def create_pool_and_wait_for_vms(
         max_tasks_per_node=1,
         start_task=batch.models.StartTask(
             command_line=command_line,
-            run_elevated=run_elevated,
+            user_identity=batchmodels.UserIdentity(auto_user=user),
             wait_for_success=True,
             resource_files=resource_files),
     )
@@ -102,7 +105,7 @@ def create_pool_and_wait_for_vms(
     nodes = common.helpers.wait_for_all_nodes_state(
         batch_service_client, new_pool,
         frozenset(
-            (batchmodels.ComputeNodeState.starttaskfailed,
+            (batchmodels.ComputeNodeState.start_task_failed,
              batchmodels.ComputeNodeState.unusable,
              batchmodels.ComputeNodeState.idle)
         )
@@ -114,7 +117,7 @@ def create_pool_and_wait_for_vms(
 
 
 def add_task(batch_service_client, job_id, task_id, application_cmdline,
-             input_files, run_elevated, num_instances,
+             input_files, elevation_level, num_instances,
              coordination_cmdline, common_files):
     """
     Adds a task for each input file in the collection to the specified job.
@@ -125,7 +128,9 @@ def add_task(batch_service_client, job_id, task_id, application_cmdline,
     :param str task_id: The ID of the task to be added.
     :param str application_cmdline: The application commandline for the task.
     :param list input_files: A collection of input files.
-    :param bool run_elevated: flag determining if task should run as elevated
+    :param elevation_level: Elevation level used to run the task; either
+     'admin' or 'nonadmin'.
+    :type elevation_level: `azure.batch.models.ElevationLevel`
     :param int num_instances: Number of instances for the task
     :param str coordination_cmdline: The application commandline for the task.
     :param list common_files: A collection of common input files.
@@ -139,10 +144,13 @@ def add_task(batch_service_client, job_id, task_id, application_cmdline,
             number_of_instances=num_instances,
             coordination_command_line=coordination_cmdline,
             common_resource_files=common_files)
+    user = batchmodels.AutoUserSpecification(
+        scope=batchmodels.AutoUserScope.pool,
+        elevation_level=elevation_level)
     task = batchmodels.TaskAddParameter(
         id=task_id,
         command_line=application_cmdline,
-        run_elevated=run_elevated,
+        user_identity=batchmodels.UserIdentity(auto_user=user),
         resource_files=input_files,
         multi_instance_settings=multi_instance_settings
     )
