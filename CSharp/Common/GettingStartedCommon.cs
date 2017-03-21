@@ -8,11 +8,10 @@ namespace Microsoft.Azure.Batch.Samples.Common
     using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
-    using WindowsAzure.Storage;
-    using WindowsAzure.Storage.Auth;
-    using WindowsAzure.Storage.Blob;
     using Batch.Common;
-    using FileStaging;
+    // As of version 6.x, the FileStaging namespace is now shipped as a separate assembly.
+    // See https://www.nuget.org/packages/Azure.Batch.FileStaging/.
+    using FileStaging;  
     using Constants = Batch.Constants;
 
     public static class GettingStartedCommon
