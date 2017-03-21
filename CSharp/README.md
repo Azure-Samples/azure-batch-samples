@@ -21,6 +21,8 @@ This sample demonstrates the use of the [Microsoft.Azure.Management.Batch](https
 These projects contain the sample code backing various articles in [Batch documentation](http://azure.microsoft.com/documentation/services/batch/). Most of the samples in [ArticleProjects](./ArticleProjects) are intended not as end-to-end API usage samples, but rather to demonstrate a specific feature of the Batch service.
 
 ### [BatchExplorer](./BatchExplorer)
+**Note:** [Batch Labs](https://github.com/Azure/BatchLabs) is a cross-platform client tool for browsing Azure Batch resources. Batch Labs is supported by Microsoft and is the preferred client tool to use with Azure Batch. Batch Explorer will continue to exist in this repository only as a sample and will not be updated to expose the latest features of Azure Batch. We will not be accepting new feature contributions.
+
 The [Azure Batch Explorer](./BatchExplorer) is a GUI application that can be useful in viewing, managing, and debugging entities within an Azure Batch account. View this [blog post](http://blogs.technet.com/b/windowshpc/archive/2015/01/20/azure-batch-explorer-sample-walkthrough.aspx) for more details.
 
 ### [BatchMetrics](./BatchMetrics)
