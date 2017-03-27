@@ -18,12 +18,12 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
             {
                 // Call the asynchronous version of the Main() method. This is done so that we can await various
                 // calls to async methods within the "Main" method of this console application.
-                MainAsync(args).GetAwaiter().GetResult();
+                MainAsync(args).Wait();
             }
             catch (Exception e)
             {
                 Console.WriteLine();
-                Console.WriteLine("One or more exceptions occurred.");
+                Console.WriteLine("An exception occurred.");
                 Console.WriteLine(e.Message);
                 Console.WriteLine(e.StackTrace);
             }
@@ -102,22 +102,22 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
                         new CloudTask("A", "cmd.exe /c echo A")
                         {
                             // Specify exit conditions for task A and their dependency actions.
-                            ExitConditions = new ExitConditions()
+                            ExitConditions = new ExitConditions
                             {
                                 // If task A exits with a scheduling error, block any downstream tasks (in this example, task B).
-                                SchedulingError = new ExitOptions()
+                                SchedulingError = new ExitOptions
                                 {
                                     DependencyAction = DependencyAction.Block
                                 },
                                 // If task A exits with the specified error codes, block any downstream tasks (in this example, task B).
-                                ExitCodes = new List<ExitCodeMapping>()
+                                ExitCodes = new List<ExitCodeMapping>
                                 {
                                     new ExitCodeMapping(10, new ExitOptions() { DependencyAction = DependencyAction.Block }),
                                     new ExitCodeMapping(20, new ExitOptions() { DependencyAction = DependencyAction.Block })
                                 },
                                 // If task A succeeds or fails with any other error, any downstream tasks become eligible to run 
                                 // (in this example, task B).
-                                Default = new ExitOptions()
+                                Default = new ExitOptions
                                 {
                                     DependencyAction = DependencyAction.Satisfy
                                 }
@@ -151,7 +151,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
             catch (Exception e)
             {
                 Console.WriteLine();
-                Console.WriteLine("One or more exceptions occurred.");
+                Console.WriteLine("An exception occurred.");
                 Console.WriteLine(e.Message);
                 Console.WriteLine(e.StackTrace);
             }
