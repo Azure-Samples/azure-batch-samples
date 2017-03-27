@@ -33,7 +33,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.Azure.Batch, Version=6.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\AccountManagement\packages\Azure.Batch.6.1.0\lib\net45\Microsoft.Azure.Batch.dll</HintPath>
+      <HintPath>$(SolutionDir)\packages\Azure.Batch.6.1.0\lib\net45\Microsoft.Azure.Batch.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Azure.Batch.FileStaging, Version=6.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>$(SolutionDir)\packages\Azure.Batch.FileStaging.6.0.0\lib\net45\Microsoft.Azure.Batch.FileStaging.dll</HintPath>
@@ -106,7 +106,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <None Include="app.config">
-      <SubType>Designer</SubType>
     </None>
     <None Include="AccountSettings.settings">
       <Generator>PublicSettingsSingleFileGenerator</Generator>

@@ -18,15 +18,14 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
             {
                 // Call the asynchronous version of the Main() method. This is done so that we can await various
                 // calls to async methods within the "Main" method of this console application.
-                MainAsync(args).Wait();
+                MainAsync(args).GetAwaiter().GetResult();
             }
-            catch (AggregateException ae)
+            catch (Exception e)
             {
                 Console.WriteLine();
                 Console.WriteLine("One or more exceptions occurred.");
-                Console.WriteLine();
-
-                SampleHelpers.PrintAggregateException(ae.Flatten());
+                Console.WriteLine(e.Message);
+                Console.WriteLine(e.StackTrace);
             }
             finally
             {
@@ -149,9 +148,12 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
                     Console.WriteLine();
                 }
             }
-            catch (TimeoutException e)
+            catch (Exception e)
             {
-                Console.WriteLine(e);
+                Console.WriteLine();
+                Console.WriteLine("One or more exceptions occurred.");
+                Console.WriteLine(e.Message);
+                Console.WriteLine(e.StackTrace);
             }
             finally
             {
