@@ -105,8 +105,7 @@
       <Link>$(TargetName).dll.config</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <None Include="app.config">
-    </None>
+    <None Include="app.config" />
     <None Include="AccountSettings.settings">
       <Generator>PublicSettingsSingleFileGenerator</Generator>
       <LastGenOutput>AccountSettings.Designer.cs</LastGenOutput>
