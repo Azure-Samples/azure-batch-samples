@@ -1,6 +1,6 @@
-##Azure Batch Python Samples
+## Azure Batch Python Samples
 
-###Configuring the samples
+### Configuring the samples
 In order to run these Python samples, they must be configured with Azure Batch
 and Azure Storage credentials. The credentials for each sample are gathered
 from the common configuration located [here](./configuration.cfg). Once you
@@ -11,7 +11,7 @@ file.
 Each sample also has a configuration file specific to the individual sample
 (for example [sample1\_helloworld.cfg](./sample1_helloworld.cfg))
 
-###Setting up the Python environment
+### Setting up the Python environment
 In order to run the samples, you will need a Python interpreter compatible
 with version 2.7 or 3.3+. You will also need to install the
 [Azure Batch](https://pypi.python.org/pypi/azure-batch) and
@@ -23,23 +23,23 @@ You can also optionally use the
 [Visual Studio project](./BatchSamples.pyproj) and the
 [Python Tools for Visual Studio plugin](https://github.com/Microsoft/PTVS/wiki/PTVS-Installation).
 
-###List of Samples
+### List of Samples
 
-####[sample1\_helloworld.py](./sample1_helloworld.py)
+#### [sample1\_helloworld.py](./sample1_helloworld.py)
 The HelloWorld sample is an introduction to the framework required to
 communicate with the Batch service. It submits a job using an auto-pool and
 then submits a task which performs a simple echo command.  The task has no
 required files.  The focus of this sample is on the API calls required to add
 a job to the Batch service and monitor the status of that job from a client.
 
-####[sample2\_pools\_and\_resourcefiles.py](./sample2_pools_and_resourcefiles.py)
+#### [sample2\_pools\_and\_resourcefiles.py](./sample2_pools_and_resourcefiles.py)
 This sample expands on the HelloWorld sample. It creates a fixed pool and then
 submits a simple python script as the only task of the job. This sample also
 showcases the use of a StartTask as a method to get files onto every node in
 the pool. This sample is geared towards Linux with calls to list node agent
 sku ids, selecting a publisher, offer and sku for the Linux VM gallery image.
 
-####[sample3\_encrypted\_resourcefiles.py](./sample3_encrypted_resourcefiles.py)
+#### [sample3\_encrypted\_resourcefiles.py](./sample3_encrypted_resourcefiles.py)
 This sample shows how to generate on-demand encryption keys in conjunction with
 [blobxfer](https://github.com/Azure/blobxfer) to encrypt local files into Azure
 Storage which will then be decrypted for the task when it executes which
@@ -53,7 +53,7 @@ path invocation. This sample can be run on Windows with an appropriate openssl
 binary and modified openssl invocations (i.e., `openssl.exe` instead of
 `openssl`).
 
-####[sample4\_docker\_swarm.py](./sample4\_docker\_swarm.py)
+#### [sample4\_docker\_swarm.py](./sample4\_docker\_swarm.py)
 **Note:** Please take a look at the
 [Batch Shipyard](https://github.com/Azure/batch-shipyard) toolkit for
 managing batch-style Docker workloads on Azure Batch. This toolkit provides
@@ -76,13 +76,13 @@ tunnel script to interact with the batch pool after the sample is run. When
 using this option, you will also need to disable the delete pool option as
 well.
 
-##Azure Batch on Linux Best Practices
+## Azure Batch on Linux Best Practices
 
 Although some of the Python samples are not specific to Linux, the Azure Batch
 team would like to provide guidance on best practices for hosting your Linux
 workloads on Azure Batch.
 
-####Wrap your command(s) in a shell or provide a shell script
+#### Wrap your command(s) in a shell or provide a shell script
 
 Unless you have a single program you wish to execute that is resolvable in the
 default `PATH` specified by the distribution (i.e., `/bin`, `/usr/bin`) or
@@ -97,7 +97,7 @@ inside a bash shell.
 Alternatively, upload a shell script as part of your resource files for
 your task that encompasses your program execution workflow.
 
-####Check for exit codes for each command in a shell script
+#### Check for exit codes for each command in a shell script
 
 You should check for exit codes within your shell script for each command
 invocation in a series if you depend on successful program execution for
@@ -123,7 +123,7 @@ modified to:
 If `command2` fails, then the entire script will exit with the proper
 return code of the failing command.
 
-####Wait for your background commands
+#### Wait for your background commands
 
 If you require executing multiple programs at the same time and cannot split
 the invocation across multiple tasks, ensure you wrap your execution flow in
@@ -142,7 +142,7 @@ Without the `wait` command, the Azure Batch service will not be able to
 properly track when the compute node has completed execution of the
 backgrounded tasks.
 
-####Set preferred locale and encoding
+#### Set preferred locale and encoding
 
 Linux shell scripts or program invocations via Azure Batch tasks will execute
 under the `POSIX` locale. If your programs require a specific locale and
@@ -182,14 +182,14 @@ A final note: not all locales may be present and installed on the compute node
 and may require a start task or job preparation task for installation of the
 desired locale.
 
-####stdout.txt and stderr.txt encoding
+#### stdout.txt and stderr.txt encoding
 
 On Linux compute nodes, task `stdout.txt` and `stderr.txt` files are encoded
 with UTF-8. If your program generates Unicode characters, ensure that the file
 is interpreted with UTF-8 encoding. Please see above related note regarding
 locale and encoding.
 
-####Do not perform release upgrades on compute nodes
+#### Do not perform release upgrades on compute nodes
 
 Many distributions offer the ability to perform a release upgrade. By
 "release upgrade," we refer to major version upgrades such as from Ubuntu
@@ -205,7 +205,7 @@ new pool.
 Note that we are evaluating automating os and security updates as a possible
 future enhancement.
 
-####Consider asyncio for blocking Azure Batch calls
+#### Consider asyncio for blocking Azure Batch calls
 
 With Python [3.4](https://docs.python.org/3.4/library/asyncio.html),
 [3.5+ (async/await)](https://docs.python.org/3.5/library/asyncio.html), or
