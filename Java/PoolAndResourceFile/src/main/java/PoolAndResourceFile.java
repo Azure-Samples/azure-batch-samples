@@ -7,7 +7,6 @@ import java.util.concurrent.TimeoutException;
 
 import com.microsoft.azure.storage.*;
 import com.microsoft.azure.storage.blob.*;
-import org.apache.commons.io.IOUtils;
 
 import com.microsoft.azure.batch.*;
 import com.microsoft.azure.batch.auth.BatchSharedKeyCredentials;
@@ -299,8 +298,9 @@ public class PoolAndResourceFile {
                 // Get the task command output file
                 CloudTask task = client.taskOperations().getTask(jobId, "mytask");
 
-                InputStream stream = client.fileOperations().getFileFromTask(jobId, task.id(), STANDARD_CONSOLE_OUTPUT_FILENAME);
-                String fileContent = IOUtils.toString(stream, "UTF-8");
+                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                client.fileOperations().getFileFromTask(jobId, task.id(), STANDARD_CONSOLE_OUTPUT_FILENAME, stream);
+                String fileContent = stream.toString("UTF-8");
                 System.out.println(fileContent);
             }
             else {
