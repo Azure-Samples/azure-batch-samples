@@ -7,8 +7,8 @@ import argparse
 
 #### Recommendation: Store these as environment variables or download it from Key Vault
 
-storage_acc_name = 'batchdevsgsa'
-storage_acc_key = 'wbGO9mskBhUShOq8G9RJHQeWiPtRRDVQn0CFrxuqPxD4PYoWOfwiIZntMzSTVZgJvnQjmJqqEu6EV5yRw2h3VQ=='
+storage_acc_name = '<storage-account-name>'
+storage_acc_key = '<storage-account-key>'
 block_blob_service = BlockBlobService(account_name=storage_acc_name,account_key=storage_acc_key)
 ####
 
