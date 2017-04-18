@@ -3,9 +3,9 @@ var batch = require('azure-batch');
 var uuid = require('node-uuid');
 
 // Replace values below with Batch Account details 
-var accountName = 'batchdevsg';
-var accountKey = 'lJiQHyntVBnt73cRv9WJrmYVakdO5JOvFz/ovW70DpFm/DL3AJQkPRWkx9neANG6ars2z6RbOwYU3O6NaS2V5Q==';
-var accountUrl = 'https://batchdevsg.centralus.batch.azure.com';
+var accountName = '<batch-account-name>';
+var accountKey = '<batch-account-key>';
+var accountUrl = '<batch-account-url>';
 
 // Replace values with SAS URIs of the shell script file
 var sh_url = "https://batchdevsgsa.blob.core.windows.net/downloads/startup_prereq.sh?st=2017-04-10T18%3A11%3A00Z&se=2018-03-11T18%3A11%3A00Z&sp=rl&sv=2015-12-11&sr=b&sig=TEGlekTbAlGAqInp3m4ZEAAyHdE5NwGQQaJVmxcg5AE%3D";
