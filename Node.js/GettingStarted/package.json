@@ -1,0 +1,24 @@
+{
+  "name": "nodejsgettingstarted",
+  "version": "1.0.0",
+  "description": "Getting started sample in Node.js for deploying Azure batch jobs",
+  "dependencies": {
+    "azure-batch": "1.0.0-prev",    
+    "node-uuid": "1.4.8"    
+  },
+  "main": "nodejs_batch_client_sample.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Shweta Gupta",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Azure/azure-batch-samples.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Azure/azure-batch-samples/issues"
+  },
+  "homepage": "https://github.com/Azure/azure-batch-samples#readme"
+}
