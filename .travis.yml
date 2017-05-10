@@ -1,3 +1,4 @@
+fooz
 language: python
 cache: pip
 python:
