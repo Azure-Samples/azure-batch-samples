@@ -214,5 +214,5 @@ one can wrap blocking I/O calls such as calls to the Azure Batch service to
 the asyncio event loop to provide asynchronous, non-blocking behavior in your
 Python scripts and programs.
 
-Note that we are evaluating bringing native async/await capability (3.5+) to
+Note: that we are evaluating bringing native async/await capability (3.5+) to
 the Azure Batch Python SDK.
