@@ -103,7 +103,7 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
                     AutoPoolIdPrefix = "HelloWorld",
                     PoolSpecification = new PoolSpecification()
                     {
-                        TargetDedicated = configurationSettings.PoolTargetNodeCount,
+                        TargetDedicatedComputeNodes = configurationSettings.PoolTargetNodeCount,
                         CloudServiceConfiguration = new CloudServiceConfiguration(configurationSettings.PoolOSFamily),
                         VirtualMachineSize = configurationSettings.PoolNodeVirtualMachineSize,                        
                     },

@@ -1310,8 +1310,25 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                     (o) =>
                     {
                         PoolModel pool = (PoolModel)o;
-                        Messenger.Default.Send<ShowResizePoolWindow>(new ShowResizePoolWindow(pool.Id, pool.CurrentDedicated, pool.CurrentAutoScaleFormula));
+                        Messenger.Default.Send<ShowResizePoolWindow>(new ShowResizePoolWindow(
+                            pool.Id,
+                            pool.CurrentDedicated,
+                            pool.CurrentLowPriority,
+                            pool.CurrentAutoScaleFormula));
                     });
+            }
+        }
+
+        public CommandBase StopResizePool
+        {
+            get
+            {
+                return new CommandBase(
+                    (o) =>
+                        {
+                            PoolModel pool = (PoolModel)o;
+                            AsyncOperationTracker.Instance.AddTrackedInternalOperation(pool.StopResizeAsync());
+                        });
             }
         }
 

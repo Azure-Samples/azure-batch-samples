@@ -25,10 +25,13 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
         public readonly static IReadOnlyList<string> RequiredExecutableFiles = new List<string>
             {
                 JobManagerExecutable,
+                JobManagerExecutable + ".config",
                 "JobManagerTask.pdb",
                 MapperTaskExecutable,
+                MapperTaskExecutable + ".config",
                 "MapperTask.pdb",
                 ReducerTaskExecutable,
+                ReducerTaskExecutable + ".config",
                 "ReducerTask.pdb",
                 "Microsoft.Azure.Batch.Samples.Common.dll",
                 "Microsoft.Azure.Batch.Samples.Common.dll.config",

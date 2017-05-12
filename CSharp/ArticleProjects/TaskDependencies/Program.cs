@@ -64,7 +64,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
                         batchClient.PoolOperations.CreatePool(poolId: poolId,
                                                               cloudServiceConfiguration: new CloudServiceConfiguration(osFamily),
                                                               virtualMachineSize: nodeSize,
-                                                              targetDedicated: nodeCount);
+                                                              targetDedicatedComputeNodes: nodeCount);
                     await unboundPool.CommitAsync();
 
                     // Create the job and specify that it uses tasks dependencies.
@@ -104,8 +104,8 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
                             // Specify exit conditions for task A and their dependency actions.
                             ExitConditions = new ExitConditions
                             {
-                                // If task A exits with a scheduling error, block any downstream tasks (in this example, task B).
-                                SchedulingError = new ExitOptions
+                                // If task A exits with a pre-processing error, block any downstream tasks (in this example, task B).
+                                PreProcessingError = new ExitOptions
                                 {
                                     DependencyAction = DependencyAction.Block
                                 },

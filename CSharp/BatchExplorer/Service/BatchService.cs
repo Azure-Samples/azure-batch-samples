@@ -49,7 +49,7 @@ namespace Microsoft.Azure.BatchExplorer.Service
         {
             CloudJobSchedule unboundJobSchedule = this.Client.JobScheduleOperations.CreateJobSchedule();
             unboundJobSchedule.Id = options.JobScheduleId;
-                
+
             PoolInformation poolInformation = new PoolInformation();
             if (options.AutoPoolOptions.UseAutoPool.HasValue && options.AutoPoolOptions.UseAutoPool.Value)
             {
@@ -62,7 +62,8 @@ namespace Microsoft.Azure.BatchExplorer.Service
                         {
                             CloudServiceConfiguration = new CloudServiceConfiguration(options.AutoPoolOptions.OSFamily),
                             VirtualMachineSize = options.AutoPoolOptions.VirutalMachineSize,
-                            TargetDedicated = options.AutoPoolOptions.TargetDedicated
+                            TargetDedicatedComputeNodes = options.AutoPoolOptions.TargetDedicated,
+                            TargetLowPriorityComputeNodes = options.AutoPoolOptions.TargetLowPriority
                         }
                     };
 
@@ -72,7 +73,7 @@ namespace Microsoft.Azure.BatchExplorer.Service
             {
                 poolInformation.PoolId = options.PoolId;
             }
-                
+
             unboundJobSchedule.JobSpecification = new JobSpecification()
             {
                 Priority = options.Priority,
@@ -132,8 +133,9 @@ namespace Microsoft.Azure.BatchExplorer.Service
         /// <returns></returns>
         public async Task CreatePoolAsync(
             string poolId, 
-            string virtualMachineSize, 
-            int? targetDedicated, 
+            string virtualMachineSize,
+            int? targetDedicated,
+            int? targetLowPriority,
             string autoScaleFormula, 
             bool communicationEnabled,
             string subnetId,
@@ -151,7 +153,8 @@ namespace Microsoft.Azure.BatchExplorer.Service
                     poolId,
                     virtualMachineSize: virtualMachineSize,
                     cloudServiceConfiguration: new CloudServiceConfiguration(cloudServiceConfigurationOptions.OSFamily, cloudServiceConfigurationOptions.OSVersion),
-                    targetDedicated: targetDedicated);
+                    targetDedicatedComputeNodes: targetDedicated,
+                    targetLowPriorityComputeNodes: targetLowPriority);
             }
             else if (virtualMachineConfigurationOptions != null)
             {
@@ -159,14 +162,17 @@ namespace Microsoft.Azure.BatchExplorer.Service
                     poolId,
                     virtualMachineSize: virtualMachineSize,
                     virtualMachineConfiguration: new VirtualMachineConfiguration(
-                        new ImageReference(
+                        virtualMachineConfigurationOptions.NodeAgentSkuId,
+                        imageReference: new ImageReference(
                             publisher: virtualMachineConfigurationOptions.Publisher,
                             offer: virtualMachineConfigurationOptions.Offer,
                             sku: virtualMachineConfigurationOptions.SkuId,
                             version: virtualMachineConfigurationOptions.Version),
-                        virtualMachineConfigurationOptions.NodeAgentSkuId,
-                        virtualMachineConfigurationOptions.EnableWindowsAutomaticUpdates.HasValue ? new WindowsConfiguration(virtualMachineConfigurationOptions.EnableWindowsAutomaticUpdates) : null),
-                    targetDedicated: targetDedicated);
+                        windowsConfiguration: virtualMachineConfigurationOptions.EnableWindowsAutomaticUpdates.HasValue ?
+                            new WindowsConfiguration(virtualMachineConfigurationOptions.EnableWindowsAutomaticUpdates) :
+                            null),
+                    targetDedicatedComputeNodes: targetDedicated,
+                    targetLowPriorityComputeNodes: targetLowPriority);
             }
             else
             {
@@ -184,7 +190,7 @@ namespace Microsoft.Azure.BatchExplorer.Service
                     SubnetId = subnetId
                 };
             }
-                
+
             if (!string.IsNullOrEmpty(autoScaleFormula))
             {
                 unboundPool.AutoScaleEnabled = true;
@@ -196,7 +202,8 @@ namespace Microsoft.Azure.BatchExplorer.Service
                 unboundPool.StartTask = new StartTask
                 {
                     CommandLine = startTask.CommandLine,
-                    UserIdentity = new UserIdentity(new AutoUserSpecification(elevationLevel: startTask.RunElevated ? ElevationLevel.Admin : ElevationLevel.NonAdmin)),
+                    UserIdentity = new UserIdentity(new AutoUserSpecification(
+                        elevationLevel: startTask.RunElevated ? ElevationLevel.Admin : ElevationLevel.NonAdmin)),
                     ResourceFiles = startTask.ResourceFiles.ConvertAll(f => new ResourceFile(f.BlobSource, f.FilePath)),
                     WaitForSuccess = true,
                 };
@@ -208,9 +215,10 @@ namespace Microsoft.Azure.BatchExplorer.Service
         public async Task ResizePool(
             string poolId,
             int targetDedicated,
+            int targetLowPriority,
             TimeSpan? timeout,
             ComputeNodeDeallocationOption? deallocationOption)
-        {           
+        {
             var pool = await this.GetPoolAsync(poolId);
             if (pool.AutoScaleEnabled.HasValue && pool.AutoScaleEnabled.Value)
             {
@@ -221,7 +229,7 @@ namespace Microsoft.Azure.BatchExplorer.Service
                 }
             }
 
-            await this.Client.PoolOperations.ResizePoolAsync(poolId, targetDedicated, timeout, deallocationOption);
+            await this.Client.PoolOperations.ResizePoolAsync(poolId, targetDedicated, targetLowPriority, timeout, deallocationOption);
         }
 
         public async Task EnableAutoScale(string poolId, string autoScaleformula)
@@ -278,7 +286,8 @@ namespace Microsoft.Azure.BatchExplorer.Service
                     {
                         CloudServiceConfiguration = new CloudServiceConfiguration(createJobOptions.AutoPoolOptions.OSFamily),
                         VirtualMachineSize = createJobOptions.AutoPoolOptions.VirutalMachineSize,
-                        TargetDedicated = createJobOptions.AutoPoolOptions.TargetDedicated
+                        TargetDedicatedComputeNodes = createJobOptions.AutoPoolOptions.TargetDedicated,
+                        TargetLowPriorityComputeNodes = createJobOptions.AutoPoolOptions.TargetLowPriority
                     }
                 };
 
@@ -368,7 +377,8 @@ namespace Microsoft.Azure.BatchExplorer.Service
                 unboundTask.MultiInstanceSettings.CoordinationCommandLine = options.BackgroundCommand;
                 unboundTask.MultiInstanceSettings.CommonResourceFiles = options.CommonResourceFiles.ConvertAll(f => new ResourceFile(f.BlobSource, f.FilePath));
             }
-            unboundTask.UserIdentity = new UserIdentity(new AutoUserSpecification(elevationLevel: options.RunElevated ? ElevationLevel.Admin : ElevationLevel.NonAdmin));
+            unboundTask.UserIdentity = new UserIdentity(new AutoUserSpecification(
+                elevationLevel: options.RunElevated ? ElevationLevel.Admin : ElevationLevel.NonAdmin));
             unboundTask.Constraints = new TaskConstraints(null, null, options.MaxTaskRetryCount);
             unboundTask.ResourceFiles = options.ResourceFiles.ConvertAll(f => new ResourceFile(f.BlobSource, f.FilePath));
             await this.Client.JobOperations.AddTaskAsync(options.JobId, unboundTask);

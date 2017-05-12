@@ -44,7 +44,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
         {
             var pool = this.batchClient.PoolOperations.CreatePool(
                 poolId: PoolId,
-                targetDedicated: PoolNodeCount,
+                targetDedicatedComputeNodes: PoolNodeCount,
                 virtualMachineSize: PoolNodeSize,
                 cloudServiceConfiguration: new CloudServiceConfiguration(PoolOSFamily));
 

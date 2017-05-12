@@ -130,6 +130,7 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         public const string GetPool = "GetPool";
         public const string EvaluateAutoScaleFormula = "EvaluateAutoScaleFormula";
         public const string EnableAutoScale = "EnableAutoScale";
+        public const string StopResize = "StopResize";
 
         private readonly string poolId;
         private const string OperationTargetFormatString = @"Pool: {0}";

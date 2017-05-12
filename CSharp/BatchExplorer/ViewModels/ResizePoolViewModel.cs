@@ -31,7 +31,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 this.FirePropertyChangedEvent("PoolId");
             }
         }
-        
+
         private int targetDedicated;
         public int TargetDedicated
         {
@@ -43,6 +43,20 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             {
                 this.targetDedicated = value;
                 this.FirePropertyChangedEvent("TargetDedicated");
+            }
+        }
+
+        private int targetLowPriority;
+        public int TargetLowPriority
+        {
+            get
+            {
+                return this.targetLowPriority;
+            }
+            set
+            {
+                this.targetLowPriority = value;
+                this.FirePropertyChangedEvent("TargetLowPriority");
             }
         }
 
@@ -118,12 +132,13 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             deallocationOptionValues.AddRange(Enum.GetNames(typeof (ComputeNodeDeallocationOption)));
         }
 
-        public ResizePoolViewModel(IDataProvider batchService, string poolId, int? currentDedicated, string currentAutoScaleFormula)
+        public ResizePoolViewModel(IDataProvider batchService, string poolId, int? currentDedicated, int? currentLowPriority, string currentAutoScaleFormula)
         {
             this.batchService = batchService;
 
             this.PoolId = poolId;
             this.TargetDedicated = currentDedicated ?? 0;
+            this.TargetLowPriority = currentLowPriority ?? 0;
             this.DeallocationOptionString = null;
             if (!string.IsNullOrEmpty(currentAutoScaleFormula))
             {
@@ -204,15 +219,20 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 ComputeNodeDeallocationOption? deallocationOption;
                 if (this.IsInputValid(out deallocationOption))
                 {
-                    Task asyncTask = this.batchService.ResizePoolAsync(this.PoolId, this.TargetDedicated, this.Timeout, deallocationOption);                   
+                    Task asyncTask = this.batchService.ResizePoolAsync(
+                        this.PoolId,
+                        this.TargetDedicated,
+                        this.TargetLowPriority,
+                        this.Timeout,
+                        deallocationOption);
 
                     AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                         asyncTask,
                         new PoolOperation(PoolOperation.Resize, this.poolId)));
-                     
+
                     Messenger.Default.Send(new CloseGenericPopup());
 
-                    await asyncTask;                                    
+                    await asyncTask;
                 }
             }
             catch (Exception e)

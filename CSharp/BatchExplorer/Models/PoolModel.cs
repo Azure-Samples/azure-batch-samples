@@ -53,7 +53,13 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// The current dedicated size of this pool
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
-        public int? CurrentDedicated { get { return this.Pool.CurrentDedicated; } }
+        public int? CurrentDedicated { get { return this.Pool.CurrentDedicatedComputeNodes; } }
+
+        /// <summary>
+        /// The current dedicated size of this pool
+        /// </summary>
+        [ChangeTracked(ModelRefreshType.Basic)]
+        public int? CurrentLowPriority { get { return this.Pool.CurrentLowPriorityComputeNodes; } }
 
         /// <summary>
         /// The pool allocation state
@@ -69,7 +75,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
 
         /// <summary>
         /// Gets the current autoscale formula.
-        /// </summary>      
+        /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
         public string CurrentAutoScaleFormula { get { return this.Pool.AutoScaleFormula; } }
 
@@ -197,14 +203,34 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// <summary>
         /// Resize this pool
         /// </summary>
-        public async Task ResizeAsync(int target, TimeSpan timeout, ComputeNodeDeallocationOption deallocationOption)
+        public async Task ResizeAsync(int targetDedicated, int targetLowPriority, TimeSpan timeout, ComputeNodeDeallocationOption deallocationOption)
         {
             try
             {
-                Task asyncTask = this.Pool.ResizeAsync(target, timeout, deallocationOption);
+                Task asyncTask = this.Pool.ResizeAsync(targetDedicated, targetLowPriority, timeout, deallocationOption);
                 AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
                     asyncTask,
                     new PoolOperation(PoolOperation.Resize, this.Pool.Id)));
+                await asyncTask;
+                await this.RefreshAsync(ModelRefreshType.Basic, showTrackedOperation: false);
+            }
+            catch (Exception e)
+            {
+                Messenger.Default.Send<GenericDialogMessage>(new GenericDialogMessage(e.ToString()));
+            }
+        }
+
+        /// <summary>
+        /// Stop an ongoing resize on this pool
+        /// </summary>
+        public async Task StopResizeAsync()
+        {
+            try
+            {
+                Task asyncTask = this.Pool.StopResizeAsync();
+                AsyncOperationTracker.Instance.AddTrackedOperation(new AsyncOperationModel(
+                    asyncTask,
+                    new PoolOperation(PoolOperation.StopResize, this.Pool.Id)));
                 await asyncTask;
                 await this.RefreshAsync(ModelRefreshType.Basic, showTrackedOperation: false);
             }

@@ -24,12 +24,12 @@ namespace Microsoft.Azure.BatchExplorer.Models
 
         public int? CurrentDedicated
         {
-            get { return this.Pool.CurrentDedicated; }
+            get { return this.Pool.CurrentDedicatedComputeNodes; }
         }
 
         public int? TargetDedicated
         {
-            get { return this.Pool.TargetDedicated; }
+            get { return this.Pool.TargetDedicatedComputeNodes; }
         }
 
         public string AllocationState

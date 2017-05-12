@@ -3,12 +3,8 @@
 namespace Microsoft.Azure.Batch.Samples.TextSearch
 {
     using System;
-    using System.Collections.Generic;
     using System.Threading.Tasks;
     using Microsoft.Azure.Batch.Common;
-    using Microsoft.WindowsAzure.Storage;
-    using Microsoft.WindowsAzure.Storage.Auth;
-    using Microsoft.WindowsAzure.Storage.Blob;
 
     /// <summary>
     /// Class containing helpers for the TextSearch sample.
@@ -22,7 +18,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
         /// <returns>The mapper task id corresponding to the specified task number.</returns>
         public static string GetMapperTaskId(int taskNumber)
         {
-            return String.Format("{0}_{1}", Constants.MapperTaskPrefix, taskNumber);
+            return $"{Constants.MapperTaskPrefix}_{taskNumber}";
         }
 
         /// <summary>
@@ -32,7 +28,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
         /// <returns>The file name corresponding to the specified file number.</returns>
         public static string GetSplitFileName(int fileNumber)
         {
-            return String.Format("TextFile_{0}.txt", fileNumber);
+            return $"TextFile_{fileNumber}.txt";
         }
 
         /// <summary>
@@ -46,67 +42,59 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
         {
             if (boundTask.State == TaskState.Completed)
             {
-                string result = null;
-
-                //Check to see if the task has execution information metadata.
-                if (boundTask.ExecutionInformation != null)
+                //Dump the task failure info if there was one.
+                if (boundTask.ExecutionInformation.FailureInformation != null)
                 {
-                    //Dump the task scheduling error if there was one.
-                    if (boundTask.ExecutionInformation.SchedulingError != null)
+                    TaskFailureInformation failureInformation = boundTask.ExecutionInformation.FailureInformation;
+                    Console.WriteLine($"Task {boundTask.Id} had a failure.");
+                    Console.WriteLine($"Failure Code: {failureInformation.Code}");
+                    Console.WriteLine($"Failure Message: {failureInformation.Message}");
+                    Console.WriteLine($"Failure Category: {failureInformation.Category}");
+                    Console.WriteLine("Failure Details:");
+
+                    foreach (NameValuePair detail in failureInformation.Details)
                     {
-                        TaskSchedulingError schedulingError = boundTask.ExecutionInformation.SchedulingError;
-                        Console.WriteLine("Task {0} hit scheduling error.", boundTask.Id);
-                        Console.WriteLine("SchedulingError Code: {0}", schedulingError.Code);
-                        Console.WriteLine("SchedulingError Message: {0}", schedulingError.Message);
-                        Console.WriteLine("SchedulingError Category: {0}", schedulingError.Category);
-                        Console.WriteLine("SchedulingError Details:");
-
-                        foreach (NameValuePair detail in schedulingError.Details)
-                        {
-                            Console.WriteLine("{0} : {1}", detail.Name, detail.Value);
-                        }
-
-                        throw new TextSearchException(String.Format("Task {0} failed with a scheduling error", boundTask.Id));
+                        Console.WriteLine("{0} : {1}", detail.Name, detail.Value);
                     }
-                    
-                    //Read the content of the output files if the task exited.
+
                     if (boundTask.ExecutionInformation.ExitCode.HasValue)
                     {
-                        Console.WriteLine("Task {0} exit code: {1}", boundTask.Id, boundTask.ExecutionInformation.ExitCode);
+                        Console.WriteLine($"Task {boundTask.Id} exit code: {boundTask.ExecutionInformation.ExitCode}");
 
-                        if (dumpStandardOutOnTaskSuccess && boundTask.ExecutionInformation.ExitCode.Value == 0 || boundTask.ExecutionInformation.ExitCode.Value != 0)
-                        {
-                            //Dump the standard out file of the task.
-                            NodeFile taskStandardOut = await boundTask.GetNodeFileAsync(Batch.Constants.StandardOutFileName);
-
-                            Console.WriteLine("Task {0} StdOut:", boundTask.Id);
-                            Console.WriteLine("----------------------------------------");
-                            string stdOutString = await taskStandardOut.ReadAsStringAsync();
-                            result = stdOutString;
-                            Console.WriteLine(stdOutString);
-                        }
-
-                        //Check for nonzero exit code and dump standard error if there was a nonzero exit code.
                         if (boundTask.ExecutionInformation.ExitCode.Value != 0)
                         {
-                            NodeFile taskErrorFile = await boundTask.GetNodeFileAsync(Batch.Constants.StandardErrorFileName);
-
-                            Console.WriteLine("Task {0} StdErr:", boundTask.Id);
-                            Console.WriteLine("----------------------------------------");
-                            string stdErrString = await taskErrorFile.ReadAsStringAsync();
-                            Console.WriteLine(stdErrString);
-
-                            throw new TextSearchException(String.Format("Task {0} failed with a nonzero exit code", boundTask.Id));
+                            await GetFileAsync(boundTask, Batch.Constants.StandardOutFileName);
+                            await GetFileAsync(boundTask, Batch.Constants.StandardErrorFileName);
                         }
                     }
-                }
 
-                return result;
+                    throw new TextSearchException($"Task {boundTask.Id} failed");
+                }
+                else
+                {
+                    string result = await GetFileAsync(boundTask, Batch.Constants.StandardOutFileName, dumpStandardOutOnTaskSuccess);
+                    return result;
+                }
             }
             else
             {
-                throw new TextSearchException(String.Format("Task {0} is not completed yet.  Current state: {1}", boundTask.Id, boundTask.State));
+                throw new TextSearchException($"Task {boundTask.Id} is not completed yet.  Current state: {boundTask.State}");
             }
+        }
+
+        private static async Task<string> GetFileAsync(CloudTask boundTask, string fileName, bool dumpFile = true)
+        {
+            //Dump the standard out file of the task.
+            NodeFile file = await boundTask.GetNodeFileAsync(Batch.Constants.StandardOutFileName);
+
+            string fileContent = await file.ReadAsStringAsync();
+            if (dumpFile)
+            {
+                Console.WriteLine($"Task {boundTask.Id} {fileName}:");
+                Console.WriteLine("----------------------------------------");
+                Console.WriteLine(fileContent);
+            }
+            return fileContent;
         }
     }
 
