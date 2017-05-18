@@ -5,7 +5,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
     public class CreateAutoPoolOptions
     {
         public bool? UseAutoPool { get; set; }
-        
+
         public string AutoPoolPrefix { get; set; }
 
         public string LifeTimeOption { get; set; }
@@ -19,5 +19,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         public string OSFamily { get; set; }
 
         public int TargetDedicated { get; set; }
+
+        public int TargetLowPriority { get; set; }
     }
 }

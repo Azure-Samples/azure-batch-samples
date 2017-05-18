@@ -94,7 +94,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                 //Define the pool specification for the pool which the job will run on.
                 PoolSpecification poolSpecification = new PoolSpecification()
                     {
-                        TargetDedicated = numberOfPoolComputeNodes,
+                        TargetDedicatedComputeNodes = numberOfPoolComputeNodes,
                         VirtualMachineSize = "small",
                         //You can learn more about os families and versions at: 
                         //http://azure.microsoft.com/documentation/articles/cloud-services-guestos-update-matrix

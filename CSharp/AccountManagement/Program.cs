@@ -228,7 +228,7 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
         /// <summary>
         /// Creates a resource group. The user's Batch account will be created under this resource group.
         /// </summary>
-        /// <param name="resourceManagementClient">The <see cref="Microsoft.Azure.Management.ResourceManager.IResouceManagementClient"/>
+        /// <param name="resourceManagementClient">The <see cref="Microsoft.Azure.Management.ResourceManager.IResourceManagementClient"/>
         /// to use when creating the resource group.</param>
         /// <param name="location">The location where the resource group will be created.</param>
         /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
@@ -247,7 +247,7 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
         /// <summary>
         /// Deletes the resource group.
         /// </summary>
-        /// <param name="resourceManagementClient">The <see cref="Microsoft.Azure.Management.ResourceManager.IResouceManagementClient"/> 
+        /// <param name="resourceManagementClient">The <see cref="Microsoft.Azure.Management.ResourceManager.IResourceManagementClient"/> 
         /// to use when deleting the resource group.</param>
         /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
         private static async Task DeleteResourceGroupAsync(IResourceManagementClient resourceManagementClient)
@@ -296,7 +296,8 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
 
                 // Print account quotas
                 Console.WriteLine("Quotas for account {0}:", account.Name);
-                Console.WriteLine("  Core quota: {0}", account.CoreQuota);
+                Console.WriteLine("  Dedicated core quota: {0}", account.DedicatedCoreQuota);
+                Console.WriteLine("  Low priority core quota: {0}", account.LowPriorityCoreQuota);
                 Console.WriteLine("  Pool quota: {0}", account.PoolQuota);
                 Console.WriteLine("  Active job and job schedule quota: {0}", account.ActiveJobAndJobScheduleQuota);
                 Console.WriteLine();

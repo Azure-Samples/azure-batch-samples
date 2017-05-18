@@ -152,6 +152,20 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
+        private int targetLowPriority;
+        public int TargetLowPriority
+        {
+            get
+            {
+                return this.targetLowPriority;
+            }
+            set
+            {
+                this.targetLowPriority = value;
+                this.FirePropertyChangedEvent("TargetLowPriority");
+            }
+        }
+
         private bool useAutoscale;
         public bool UseAutoscale
         {
@@ -505,13 +519,14 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                 if (this.IsInputValid())
                 {
                     System.Threading.Tasks.Task asyncTask;
-                    
+
                     if (!this.UseAutoscale)
                     {
                         asyncTask = this.batchService.CreatePoolAsync(
                             this.PoolId,
                             this.SelectedVirtualMachineSize,
                             this.TargetDedicated,
+                            this.TargetLowPriority,
                             null,
                             this.InterComputeNodeCommunicationEnabled,
                             this.VirtualSubnetId,
@@ -526,6 +541,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                         asyncTask = this.batchService.CreatePoolAsync(
                             this.PoolId,
                             this.SelectedVirtualMachineSize,
+                            null,
                             null,
                             this.AutoscaleFormula,
                             this.InterComputeNodeCommunicationEnabled,

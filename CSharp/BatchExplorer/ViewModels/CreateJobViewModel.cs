@@ -318,6 +318,20 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
             }
         }
 
+        private int targetLowPriority;
+        public int TargetLowPriority
+        {
+            get
+            {
+                return this.targetLowPriority;
+            }
+            set
+            {
+                this.targetLowPriority = value;
+                this.FirePropertyChangedEvent("TargetLowPriority");
+            }
+        }
+
         private string selectedVirtualMachineSize;
         public string SelectedVirtualMachineSize
         {
@@ -459,6 +473,7 @@ namespace Microsoft.Azure.BatchExplorer.ViewModels
                             OSFamily = osFamilyString,
                             SelectedLifetimeOption = this.SelectedLifetimeOption,
                             TargetDedicated = this.TargetDedicated,
+                            TargetLowPriority = this.TargetLowPriority,
                             UseAutoPool = this.UseAutoPool,
                             VirutalMachineSize = this.SelectedVirtualMachineSize
                         },

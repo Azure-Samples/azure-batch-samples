@@ -379,7 +379,12 @@ namespace Microsoft.Azure.BatchExplorer.Views
 
                     this.genericEmptyWindow = new GenericEmptyWindow();
                     this.genericEmptyWindow.Title = "Resize Pool";
-                    this.genericEmptyWindow.Content = new CreateControls.ResizePoolControl(new ResizePoolViewModel(MainViewModel.dataProvider, message.PoolId, message.CurrentDedicated, message.CurrentAutoScaleFormula));
+                    this.genericEmptyWindow.Content = new CreateControls.ResizePoolControl(new ResizePoolViewModel(
+                        MainViewModel.dataProvider,
+                        message.PoolId,
+                        message.CurrentDedicated,
+                        message.CurrentLowPriority,
+                        message.CurrentAutoScaleFormula));
                     this.genericEmptyWindow.Owner = this;
                     this.genericEmptyWindow.SizeToContent = System.Windows.SizeToContent.WidthAndHeight;
                     this.IsEnabled = false;

@@ -198,7 +198,7 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
             CloudPool unboundPool =
                 batchClient.PoolOperations.CreatePool(poolId: poolId,
                                                       virtualMachineSize: "small",
-                                                      targetDedicated: numberOfNodes,
+                                                      targetDedicatedComputeNodes: numberOfNodes,
                                                       cloudServiceConfiguration:
                                                           new CloudServiceConfiguration(osFamily: "4"));
 

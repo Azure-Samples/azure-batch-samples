@@ -66,6 +66,7 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
             string poolId, 
             string virtualMachineSize, 
             int? targetDedicated, 
+            int? targetLowPriority,
             string autoScaleFormula, 
             bool communicationEnabled,
             string subnetId,
@@ -84,12 +85,7 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         /// <summary>
         /// Resizes a pool
         /// </summary>
-        /// <param name="poolId"></param>
-        /// <param name="targetDedicated"></param>
-        /// <param name="timeout"></param>
-        /// <param name="computeNodeDeallocationOption"></param>
-        /// <returns></returns>
-        Task ResizePoolAsync(string poolId, int targetDedicated, TimeSpan? timeout, ComputeNodeDeallocationOption? computeNodeDeallocationOption);
+        Task ResizePoolAsync(string poolId, int targetDedicated, int targetLowPriority, TimeSpan? timeout, ComputeNodeDeallocationOption? computeNodeDeallocationOption);
 
         /// <summary>
         /// Get a collection of certificates from the default source (if any)

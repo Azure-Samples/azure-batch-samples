@@ -9,17 +9,12 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.IO;
-    using System.Linq;
-    using System.Text;
     using System.Threading.Tasks;
     using Microsoft.Azure.Batch;
     using Microsoft.Azure.Batch.Auth;
     using Microsoft.Azure.Batch.Common;
-    using Microsoft.WindowsAzure;
     using Microsoft.WindowsAzure.Storage;
-    using Microsoft.WindowsAzure.Storage.Auth;
     using Microsoft.WindowsAzure.Storage.Blob;
-    using Microsoft.Azure.Batch.Samples.DotNetTutorial.TaskApplication;
 
     public class Program
     {
@@ -230,7 +225,7 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
         /// <see cref="CloudTask.ResourceFiles"/> property.
         /// </summary>
         /// <param name="blobClient">A <see cref="Microsoft.WindowsAzure.Storage.Blob.CloudBlobClient"/>.</param>
-        /// <param name="containerName">The name of the blob storage container to which the files should be uploaded.</param>
+        /// <param name="inputContainerName">The name of the blob storage container to which the files should be uploaded.</param>
         /// <param name="filePaths">A collection of paths of the files to be uploaded to the container.</param>
         /// <returns>A collection of <see cref="ResourceFile"/> objects.</returns>
         private static async Task<List<ResourceFile>> UploadFilesToContainerAsync(CloudBlobClient blobClient, string inputContainerName, List<string> filePaths)
@@ -248,7 +243,7 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
         /// <summary>
         /// Uploads the specified file to the specified Blob container.
         /// </summary>
-        /// <param name="inputFilePath">The full path to the file to upload to Storage.</param>
+        /// <param name="filePath">The full path to the file to upload to Storage.</param>
         /// <param name="blobClient">A <see cref="Microsoft.WindowsAzure.Storage.Blob.CloudBlobClient"/>.</param>
         /// <param name="containerName">The name of the blob storage container to which the file should be uploaded.</param>
         /// <returns>A <see cref="Microsoft.Azure.Batch.ResourceFile"/> instance representing the file within blob storage.</returns>
@@ -297,7 +292,7 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
                 // Batch service. This CloudPool instance is therefore considered "unbound," and we can modify its properties.
                 pool = batchClient.PoolOperations.CreatePool(
                     poolId: poolId,
-                    targetDedicated: 3,                                                         // 3 compute nodes
+                    targetDedicatedComputeNodes: 3,                                             // 3 compute nodes
                     virtualMachineSize: "small",                                                // single-core, 1.75 GB memory, 225 GB disk
                     cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "4"));   // Windows Server 2012 R2
 
@@ -442,24 +437,22 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
                 // Populate the task's properties with the latest info from the Batch service
                 await task.RefreshAsync(detail);
 
-                if (task.ExecutionInformation.SchedulingError != null)
+                if (task.ExecutionInformation.Result == TaskExecutionResult.Failure)
                 {
-                    // A scheduling error indicates a problem starting the task on the node. It is important to note that
-                    // the task's state can be "Completed," yet still have encountered a scheduling error.
+                    // A task with failure information set indicates there was a problem with the task. It is important to note that
+                    // the task's state can be "Completed," yet still have encountered a failure.
 
                     allTasksSuccessful = false;
 
-                    Console.WriteLine("WARNING: Task [{0}] encountered a scheduling error: {1}", task.Id, task.ExecutionInformation.SchedulingError.Message);
-                }
-                else if (task.ExecutionInformation.ExitCode != 0)
-                {
-                    // A non-zero exit code may indicate that the application executed by the task encountered an error
-                    // during execution. As not every application returns non-zero on failure by default (e.g. robocopy),
-                    // your implementation of error checking may differ from this example.
+                    Console.WriteLine("WARNING: Task [{0}] encountered a failure: {1}", task.Id, task.ExecutionInformation.FailureInformation.Message);
+                    if (task.ExecutionInformation.ExitCode != 0)
+                    {
+                        // A non-zero exit code may indicate that the application executed by the task encountered an error
+                        // during execution. As not every application returns non-zero on failure by default (e.g. robocopy),
+                        // your implementation of error checking may differ from this example.
 
-                    allTasksSuccessful = false;
-
-                    Console.WriteLine("WARNING: Task [{0}] returned a non-zero exit code - this may indicate task execution or completion failure.", task.Id);
+                        Console.WriteLine("WARNING: Task [{0}] returned a non-zero exit code - this may indicate task execution or completion failure.", task.Id);
+                    }
                 }
             }
 

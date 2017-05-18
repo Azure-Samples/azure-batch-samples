@@ -6,12 +6,14 @@ namespace Microsoft.Azure.BatchExplorer.Messages
     {
         public string PoolId { get; private set; }
         public int? CurrentDedicated { get; private set; }
+        public int? CurrentLowPriority { get; private set; }
         public string CurrentAutoScaleFormula { get; private set; }
 
-        public ShowResizePoolWindow(string poolId, int? currentDedicated, string currentAutoScaleFormula)
+        public ShowResizePoolWindow(string poolId, int? currentDedicated, int? currentLowPriority, string currentAutoScaleFormula)
         {
             this.PoolId = poolId;
             this.CurrentDedicated = currentDedicated;
+            this.CurrentLowPriority = currentLowPriority;
             this.CurrentAutoScaleFormula = currentAutoScaleFormula;
         }
     }

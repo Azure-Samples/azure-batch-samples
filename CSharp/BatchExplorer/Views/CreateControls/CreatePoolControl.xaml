@@ -372,26 +372,51 @@
         <Separator Grid.Row="13" Grid.ColumnSpan="2"/>
 
         <RadioButton
-            x:Name="numberTargetDedicatedRadioButton"
+            x:Name="poolWithManualTargetsRadioButton"
             VerticalAlignment="Center"
             Grid.Row="14"
             Grid.Column="0"
             IsChecked="True"
             GroupName="TDAuto"
             FontSize="12"
-            Content="Number of Target Dedicated" />
+            Content="Specify targets manually" />
+
+        <TextBlock
+            Grid.Row="15"
+            Grid.Column="0"
+            Margin="8,4"
+            VerticalAlignment="Center"
+            FontSize="12"
+            Text="Target dedicated"/>
+
         <TextBox
-            Grid.Row="14"
+            Grid.Row="15"
             Grid.Column="1"
             MinHeight="24"
-            IsEnabled="{Binding IsChecked,ElementName=numberTargetDedicatedRadioButton}"
+            IsEnabled="{Binding IsChecked,ElementName=poolWithManualTargetsRadioButton}"
             Text="{Binding TargetDedicated}">
+        </TextBox>
+
+        <TextBlock
+            Grid.Row="16"
+            Grid.Column="0"
+            Margin="8,4"
+            VerticalAlignment="Center"
+            FontSize="12"
+            Text="Target low priority"/>
+
+        <TextBox
+            Grid.Row="16"
+            Grid.Column="1"
+            MinHeight="24"
+            IsEnabled="{Binding IsChecked,ElementName=poolWithManualTargetsRadioButton}"
+            Text="{Binding TargetLowPriority}">
         </TextBox>
 
         <RadioButton 
             x:Name="autoScaleFormulaRadioButton"
             VerticalAlignment="Center"
-            Grid.Row="16"
+            Grid.Row="17"
             Grid.Column="0"
             GroupName="TDAuto"
             FontSize="12"
@@ -399,16 +424,16 @@
             Content="AutoScale Formula" />
 
         <TextBox 
-            Grid.Row="16" 
+            Grid.Row="17" 
             Grid.Column="1" 
             MinHeight="24"
             IsEnabled="{Binding IsChecked,ElementName=autoScaleFormulaRadioButton}"
             Text="{Binding AutoscaleFormula}"/>
 
-        <Separator Grid.Row="17" Grid.ColumnSpan="2"/>
+        <Separator Grid.Row="18" Grid.ColumnSpan="2"/>
 
         <TextBlock
-            Grid.Row="18"
+            Grid.Row="19"
             Grid.Column="0"
             Margin="8,4"
             VerticalAlignment="Center"
@@ -416,13 +441,13 @@
             Text="Communication Enabled"/>
 
         <CheckBox
-            Grid.Row="18"
+            Grid.Row="19"
             Grid.Column="1"
             Margin="4"
             IsChecked="{Binding InterComputeNodeCommunicationEnabled}"/>
         
         <TextBlock
-            Grid.Row="19"
+            Grid.Row="20"
             Grid.Column="0"
             Margin="8,4"
             VerticalAlignment="Center"
@@ -430,14 +455,13 @@
             Text="Virtual Subnet ID"/>
         
         <TextBox
-            Grid.Row="19"
+            Grid.Row="20"
             Grid.Column="1"
             MinHeight="24"
             Text="{Binding VirtualSubnetId}">
         </TextBox>
-        <Separator Grid.Row="20" Grid.ColumnSpan="2"/>
-
-        <Grid Grid.Row="21" Grid.ColumnSpan="2">
+        <Separator Grid.Row="21" Grid.ColumnSpan="2"/>
+        <Grid Grid.Row="22" Grid.ColumnSpan="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -462,10 +486,10 @@
             </Grid>
         </Grid>
 
-        <Separator Grid.Row="22" Grid.ColumnSpan="2"/>
+        <Separator Grid.Row="23" Grid.ColumnSpan="2"/>
         
         <Button 
-            Grid.Row="23"
+            Grid.Row="24"
             Grid.Column="1"
             Margin="0,12,0,0"
             VerticalAlignment="Bottom" 
