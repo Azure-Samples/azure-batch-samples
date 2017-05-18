@@ -79,11 +79,6 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                     virtualMachineSize: "small",
                     cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "4"));
 
-                // create file staging objects that represent the executable and its dependent assembly to run as the task.
-                // These files are copied to every node before the corresponding task is scheduled to run on that node.
-                //FileToStage applicationMonitoringExe = new FileToStage("StartTask/BatchApplicationInsightsAssembly.exe", stagingStorageAccount);
-                //FileToStage applicationMonitoringConfig = new FileToStage("StartTask/ApplicationInsights.config", stagingStorageAccount);
-                
                 List<string> files = new List<string>
                 {
                     Path.Combine(BatchStartTaskFolderName, BatchStartTaskTelemetryRunnerName),
