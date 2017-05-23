@@ -75,7 +75,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                 //http://msdn.microsoft.com/en-us/library/azure/ee924680.aspx
                 CloudPool pool = client.PoolOperations.CreatePool(
                     topNWordsConfiguration.PoolId,
-                    targetDedicated: topNWordsConfiguration.PoolNodeCount,
+                    targetDedicatedComputeNodes: topNWordsConfiguration.PoolNodeCount,
                     virtualMachineSize: "small",
                     cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "4"));
 
@@ -203,8 +203,6 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                                                 applicationInsightsWindowsServerDll,
                                                 batchApplicationInsightsTelemetryInitializerDll
                                             };
-
-                        task.RunElevated = false;
                         tasksToRun.Add(task);
                     }
 
@@ -332,7 +330,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
 
             //Upload the blob.
             CloudBlockBlob blob = container.GetBlockBlobReference(fileName);
-            blob.UploadFromFile(fileName, FileMode.Open);
+            blob.UploadFromFile(fileName);
             return blob.Uri.ToString();
         }
     }
