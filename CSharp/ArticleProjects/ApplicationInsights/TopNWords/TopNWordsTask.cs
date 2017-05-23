@@ -21,7 +21,11 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
     {
         public static void TaskMain(string[] args)
         {
-            TelemetryClient insightsClient = new TelemetryClient();
+            TelemetryClient insightsClient = new TelemetryClient()
+            {
+                InstrumentationKey = "YOUR-IKEY-GOES-HERE",
+            };
+
             if (args == null || args.Length != 5)
             {
                 Exception e = new Exception("Usage: TopNWordsSample.exe --Task <blobpath> <numtopwords> <storageAccountName> <storageAccountKey>");
