@@ -38,6 +38,7 @@ except NameError:
 import azure.storage.blob as azureblob
 import azure.batch.batch_service_client as batch
 import azure.batch.batch_auth as batchauth
+import azure.batch.models as batchmodels
 import multi_task_helpers
 
 sys.path.append('.')
@@ -191,7 +192,8 @@ if __name__ == '__main__':
     multi_task_helpers.create_pool_and_wait_for_vms(
         batch_client, _POOL_ID, _NODE_OS_PUBLISHER, _NODE_OS_OFFER,
         _NODE_OS_SKU, _POOL_VM_SIZE, _POOL_NODE_COUNT, start_task_cmdline,
-        pool_starttask_files, run_elevated=True)
+        pool_starttask_files,
+        elevation_level=batchmodels.ElevationLevel.admin)
 
     # Create the job that will run the tasks.
     common.helpers.create_job(batch_client, _JOB_ID, _POOL_ID)
@@ -203,7 +205,8 @@ if __name__ == '__main__':
         add_task(batch_client, _JOB_ID, _TASK_ID,
                  common.helpers.wrap_commands_in_shell(_OS_NAME,
                                                        application_cmdline),
-                 input_files, True, _NUM_INSTANCES,
+                 input_files, batchmodels.ElevationLevel.admin,
+                 _NUM_INSTANCES,
                  common.helpers.wrap_commands_in_shell(_OS_NAME,
                                                        coordination_cmdline),
                  common_files)

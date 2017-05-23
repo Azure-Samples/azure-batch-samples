@@ -130,7 +130,7 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
             // https://azure.microsoft.com/en-us/documentation/articles/cloud-services-guestos-update-matrix/
             CloudPool pool = batchClient.PoolOperations.CreatePool(
                 poolId: this.poolsAndResourceFileSettings.PoolId,
-                targetDedicated: this.poolsAndResourceFileSettings.PoolTargetNodeCount,
+                targetDedicatedComputeNodes: this.poolsAndResourceFileSettings.PoolTargetNodeCount,
                 virtualMachineSize: this.poolsAndResourceFileSettings.PoolNodeVirtualMachineSize,
                 cloudServiceConfiguration: new CloudServiceConfiguration(this.poolsAndResourceFileSettings.PoolOSFamily));
 

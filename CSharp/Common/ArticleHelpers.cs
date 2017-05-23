@@ -28,7 +28,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
             // Create and configure an unbound pool with the specified ID
             CloudPool pool = batchClient.PoolOperations.CreatePool(poolId: poolId,
                 virtualMachineSize: nodeSize,
-                targetDedicated: nodeCount,
+                targetDedicatedComputeNodes: nodeCount,
                 cloudServiceConfiguration: new CloudServiceConfiguration("4"));
             
             pool.MaxTasksPerComputeNode = maxTasksPerNode;

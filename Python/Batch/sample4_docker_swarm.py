@@ -48,6 +48,10 @@ _STARTTASK_SHELL_SCRIPT_PATH = os.path.join(
     'resources', _STARTTASK_RESOURCE_FILE)
 _NODE_USERNAME = 'docker'
 _SSH_TUNNEL_SCRIPT = 'ssh_tunnel_batch_docker_swarm.sh'
+_POOL_ADMIN_USER = batchmodels.UserIdentity(
+    auto_user=batchmodels.AutoUserSpecification(
+        scope=batchmodels.AutoUserScope.pool,
+        elevation_level=batchmodels.ElevationLevel.admin))
 
 
 def connect_to_remote_docker_swarm_master(
@@ -175,7 +179,7 @@ def designate_master_docker_swarm_node(batch_client, pool_id, nodes, job_id):
             affinity_id=master_node_affinity_id),
         command_line=common.helpers.wrap_commands_in_shell(
             'linux', task_commands),
-        run_elevated=True,
+        user_identity=_POOL_ADMIN_USER,
     )
     batch_client.task.add(job_id=job.id, task=task)
 
@@ -225,7 +229,7 @@ def add_nodes_to_swarm(
                 affinity_id=node.affinity_id),
             command_line=common.helpers.wrap_commands_in_shell(
                 'linux', task_commands),
-            run_elevated=True,
+            user_identity=_POOL_ADMIN_USER,
         )
         batch_client.task.add(job_id=job_id, task=task)
         i += 1
@@ -327,7 +331,7 @@ def create_pool_and_wait_for_nodes(
         target_dedicated=vm_count,
         start_task=batchmodels.StartTask(
             command_line=_STARTTASK_RESOURCE_FILE,
-            run_elevated=True,
+            user_identity=_POOL_ADMIN_USER,
             wait_for_success=True,
             resource_files=[
                 batchmodels.ResourceFile(
@@ -341,7 +345,7 @@ def create_pool_and_wait_for_nodes(
     nodes = common.helpers.wait_for_all_nodes_state(
         batch_client, pool,
         frozenset(
-            (batchmodels.ComputeNodeState.starttaskfailed,
+            (batchmodels.ComputeNodeState.start_task_failed,
              batchmodels.ComputeNodeState.unusable,
              batchmodels.ComputeNodeState.idle)
         )
@@ -376,7 +380,7 @@ def add_docker_batch_task(batch_client, block_blob_client, job_id, pool_id):
         id=_TASK_ID,
         command_line=common.helpers.wrap_commands_in_shell(
             'linux', task_commands),
-        run_elevated=True,
+        user_identity=_POOL_ADMIN_USER,
     )
 
     batch_client.task.add(job_id=job_id, task=task)

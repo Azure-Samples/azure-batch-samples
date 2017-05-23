@@ -56,12 +56,14 @@ _STORAGE_ACCOUNT_KEY = ''
 
 _POOL_ID = 'PythonTutorialPool'
 _POOL_NODE_COUNT = 1
-_POOL_VM_SIZE = 'STANDARD_A1'
+_POOL_VM_SIZE = 'BASIC_A1'
 _NODE_OS_PUBLISHER = 'Canonical'
 _NODE_OS_OFFER = 'UbuntuServer'
-_NODE_OS_SKU = '14'
+_NODE_OS_SKU = '16'
 
 _JOB_ID = 'PythonTutorialJob'
+
+_TUTORIAL_TASK_FILE = 'python_tutorial_task.py'
 
 
 def query_yes_no(question, default="yes"):
@@ -199,15 +201,16 @@ def create_pool(batch_service_client, pool_id,
     # We use the start task to prep the node for running our task script.
     task_commands = [
         # Copy the python_tutorial_task.py script to the "shared" directory
-        # that all tasks that run on the node have access to.
-        'cp -r $AZ_BATCH_TASK_WORKING_DIR/* $AZ_BATCH_NODE_SHARED_DIR',
-        # Install pip and the dependencies for cryptography
-        'apt-get update',
-        'apt-get -y install python-pip',
-        'apt-get -y install build-essential libssl-dev libffi-dev python-dev',
+        # that all tasks that run on the node have access to. Note that
+        # we are using the -p flag with cp to preserve the file uid/gid,
+        # otherwise since this start task is run as an admin, it would not
+        # be accessible by tasks run as a non-admin user.
+        'cp -p {} $AZ_BATCH_NODE_SHARED_DIR'.format(_TUTORIAL_TASK_FILE),
+        # Install pip
+        'curl -fSsL https://bootstrap.pypa.io/get-pip.py | python',
         # Install the azure-storage module so that the task script can access
-        # Azure Blob storage
-        'pip install azure-storage']
+        # Azure Blob storage, pre-cryptography version
+        'pip install azure-storage==0.32.0']
 
     # Get the node agent SKU and image reference for the virtual machine
     # configuration.
@@ -216,7 +219,9 @@ def create_pool(batch_service_client, pool_id,
     sku_to_use, image_ref_to_use = \
         common.helpers.select_latest_verified_vm_image_with_node_agent_sku(
             batch_service_client, publisher, offer, sku)
-
+    user = batchmodels.AutoUserSpecification(
+        scope=batchmodels.AutoUserScope.pool,
+        elevation_level=batchmodels.ElevationLevel.admin)
     new_pool = batch.models.PoolAddParameter(
         id=pool_id,
         virtual_machine_configuration=batchmodels.VirtualMachineConfiguration(
@@ -227,7 +232,7 @@ def create_pool(batch_service_client, pool_id,
         start_task=batch.models.StartTask(
             command_line=common.helpers.wrap_commands_in_shell('linux',
                                                                task_commands),
-            run_elevated=True,
+            user_identity=batchmodels.UserIdentity(auto_user=user),
             wait_for_success=True,
             resource_files=resource_files),
     )
@@ -283,9 +288,10 @@ def add_tasks(batch_service_client, job_id, input_files,
 
     for idx, input_file in enumerate(input_files):
 
-        command = ['python $AZ_BATCH_NODE_SHARED_DIR/python_tutorial_task.py '
+        command = ['python $AZ_BATCH_NODE_SHARED_DIR/{} '
                    '--filepath {} --numwords {} --storageaccount {} '
                    '--storagecontainer {} --sastoken "{}"'.format(
+                       _TUTORIAL_TASK_FILE,
                        input_file.file_path,
                        '3',
                        _STORAGE_ACCOUNT_NAME,
@@ -390,7 +396,7 @@ if __name__ == '__main__':
 
     # Paths to the task script. This script will be executed by the tasks that
     # run on the compute nodes.
-    application_file_paths = [os.path.realpath('python_tutorial_task.py')]
+    application_file_paths = [os.path.realpath(_TUTORIAL_TASK_FILE)]
 
     # The collection of data files that are to be processed by the tasks.
     input_file_paths = [os.path.realpath('./data/taskdata1.txt'),
@@ -458,7 +464,8 @@ if __name__ == '__main__':
           "specified timeout period.")
 
     # Download the task output files from the output Storage container to a
-    # local directory
+    # local directory. Note that we could have also downloaded the output
+    # files directly from the compute nodes themselves.
     download_blobs_from_container(blob_client,
                                   output_container_name,
                                   os.path.expanduser('~'))

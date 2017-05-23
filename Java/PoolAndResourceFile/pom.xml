@@ -11,52 +11,28 @@
 
   <groupId>com.microsoft.azure</groupId>
   <artifactId>PoolAndResourceFile</artifactId>
-  <version>1.0-SNAPSHOT</version>
-
-  <repositories>
-    <repository>
-      <id>adx-snapshots</id>
-      <name>Azure ADX Snapshots</name>
-      <url>http://adxsnapshots.azurewebsites.net/</url>
-      <layout>default</layout>
-      <snapshots>
-        <enabled>true</enabled>
-        <updatePolicy>always</updatePolicy>
-      </snapshots>
-    </repository>
-    <repository>
-      <id>oss-snapshots</id>
-      <name>Open Source Snapshots</name>
-      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
-      <releases>
-        <enabled>false</enabled>
-      </releases>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-    </repository>
-  </repositories> 
+  <version>1.0.0</version>
 
   <dependencies>
     <dependency>
       <groupId>com.microsoft.azure</groupId>
       <artifactId>azure-batch</artifactId>
-      <version>1.0.0-20160503.003742-2</version>
+      <version>1.0.0</version>
     </dependency>
     <dependency>
       <groupId>com.microsoft.rest</groupId>
       <artifactId>client-runtime</artifactId>
-      <version>1.0.0-20160513.000825-29</version>
+      <version>1.0.1</version>
     </dependency>
     <dependency>
       <groupId>com.microsoft.azure</groupId>
       <artifactId>azure-client-runtime</artifactId>
-      <version>1.0.0-20160513.000812-28</version>
+      <version>1.0.1</version>
     </dependency>
     <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
-      <version>2.4</version>
+      <groupId>commons-codec</groupId>
+      <artifactId>commons-codec</artifactId>
+      <version>1.10</version>
     </dependency>
     <dependency>
       <groupId>com.microsoft.azure</groupId>

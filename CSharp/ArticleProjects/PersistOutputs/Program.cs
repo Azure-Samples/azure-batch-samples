@@ -47,7 +47,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs
                 // Create and configure an unbound pool.
                 CloudPool pool = batchClient.PoolOperations.CreatePool(poolId: poolId,
                     virtualMachineSize: "small",
-                    targetDedicated: nodeCount,
+                    targetDedicatedComputeNodes: nodeCount,
                     cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "4"));
 
                 // Specify the application and version to deploy to the compute nodes. You must

@@ -118,6 +118,7 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <StackPanel 
@@ -275,6 +276,22 @@
                         Grid.Column="1" 
                         MinHeight="24"
                         Text="{Binding TargetDedicated}"/>
+
+                    <TextBlock
+                        Visibility="{Binding UseAutoPool, Converter={StaticResource BooleanToVisibilityConverter}}"
+                        VerticalAlignment="Center"
+                        Grid.Row="9"
+                        Grid.Column="0"
+                        Margin="8,4"
+                        FontSize="12"
+                        Text="Target Low Priority" />
+
+                    <TextBox 
+                        Visibility="{Binding UseAutoPool, Converter={StaticResource BooleanToVisibilityConverter}}"
+                        Grid.Row="9" 
+                        Grid.Column="1" 
+                        MinHeight="24"
+                        Text="{Binding TargetLowPriority}"/>
                 </Grid>
                 
                 <!-- Create Job Manager Section -->

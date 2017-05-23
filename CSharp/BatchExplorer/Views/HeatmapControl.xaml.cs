@@ -177,6 +177,7 @@ namespace Microsoft.Azure.BatchExplorer.Views
                 case ComputeNodeState.Reimaging:
                 case ComputeNodeState.Starting:
                 case ComputeNodeState.WaitingForStartTask:
+                case ComputeNodeState.Preempted:
                     uiState = ComputeNodeUIStates.Transitioning;
                     break;
                 case ComputeNodeState.Idle:

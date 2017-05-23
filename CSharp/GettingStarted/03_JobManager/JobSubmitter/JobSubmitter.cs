@@ -25,11 +25,13 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
         private static readonly IReadOnlyList<string> JobManagerRequiredFiles = new List<string>()
             {
                 JobManagerTaskExe,
+                JobManagerTaskExe + ".config",
                 "SampleJobManagerTask.pdb",
                 "SimpleTask.exe",
                 "Microsoft.Azure.Batch.Samples.Common.dll",
                 "Microsoft.WindowsAzure.Storage.dll",
                 "Microsoft.Azure.Batch.dll",
+                "Microsoft.Azure.Batch.FileStaging.dll",
                 "Microsoft.Rest.ClientRuntime.dll",
                 "Microsoft.Rest.ClientRuntime.Azure.dll",
                 "Microsoft.Data.Services.Client.dll",
@@ -133,7 +135,7 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
             // https://azure.microsoft.com/en-us/documentation/articles/cloud-services-guestos-update-matrix/
             CloudPool pool = batchClient.PoolOperations.CreatePool(
                 poolId: this.jobManagerSettings.PoolId,
-                targetDedicated: this.jobManagerSettings.PoolTargetNodeCount,
+                targetDedicatedComputeNodes: this.jobManagerSettings.PoolTargetNodeCount,
                 virtualMachineSize: this.jobManagerSettings.PoolNodeVirtualMachineSize,
                 cloudServiceConfiguration: new CloudServiceConfiguration(this.jobManagerSettings.PoolOSFamily));
 

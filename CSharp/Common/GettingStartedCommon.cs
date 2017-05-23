@@ -28,11 +28,16 @@ namespace Microsoft.Azure.Batch.Samples.Common
             Console.WriteLine("=============");
 
             // Using optional select clause to return only the properties of interest. Makes query faster and reduces HTTP packet size impact
-            IPagedEnumerable<CloudPool> pools = batchClient.PoolOperations.ListPools(new ODATADetailLevel(selectClause: "id,state,currentDedicated,vmSize"));
+            IPagedEnumerable<CloudPool> pools = batchClient.PoolOperations.ListPools(new ODATADetailLevel(selectClause: "id,state,currentDedicatedNodes,currentLowPriorityNodes,vmSize"));
 
             await pools.ForEachAsync(pool =>
             {
-                Console.WriteLine("State of pool {0} is {1} and it has {2} nodes of size {3}", pool.Id, pool.State, pool.CurrentDedicated, pool.VirtualMachineSize);
+                Console.WriteLine("State of pool {0} is {1} and it has {2} dedicated nodes and {3} low-priority nodes of size {4}", 
+                    pool.Id,
+                    pool.State,
+                    pool.CurrentDedicatedComputeNodes,
+                    pool.CurrentLowPriorityComputeNodes,
+                    pool.VirtualMachineSize);
             }).ConfigureAwait(continueOnCapturedContext: false);
             Console.WriteLine("=============");
         }
@@ -59,6 +64,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// <summary>
         /// Prints task information to the console for each of the nodes in the specified pool.
         /// </summary>
+        /// <param name="batchClient">The Batch client.</param>
         /// <param name="poolId">The ID of the <see cref="CloudPool"/> containing the nodes whose task information should be printed to the console.</param>
         /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
         public static async Task PrintNodeTasksAsync(BatchClient batchClient, string poolId)
@@ -170,7 +176,8 @@ namespace Microsoft.Azure.Batch.Samples.Common
         {
             bool successfullyCreatedPool = false;
 
-            int poolTargetNodeCount = pool.TargetDedicated ?? 0;
+            int targetDedicatedNodeCount = pool.TargetDedicatedComputeNodes ?? 0;
+            int targetLowPriorityNodeCount = pool.TargetLowPriorityComputeNodes ?? 0;
             string poolNodeVirtualMachineSize = pool.VirtualMachineSize;
             string poolId = pool.Id;
 
@@ -185,17 +192,16 @@ namespace Microsoft.Azure.Batch.Samples.Common
                 await pool.CommitAsync().ConfigureAwait(continueOnCapturedContext: false);
 
                 successfullyCreatedPool = true;
-                Console.WriteLine("Created pool {0} with {1} {2} nodes",
+                Console.WriteLine("Created pool {0} with {1} dedicated and {2} low priority {3} nodes",
                     poolId,
-                    poolTargetNodeCount,
+                    targetDedicatedNodeCount,
+                    targetLowPriorityNodeCount,
                     poolNodeVirtualMachineSize);
             }
             catch (BatchException e)
             {
                 // Swallow the specific error code PoolExists since that is expected if the pool already exists
-                if (e.RequestInformation != null &&
-                    e.RequestInformation.BatchError != null &&
-                    e.RequestInformation.BatchError.Code == BatchErrorCodeStrings.PoolExists)
+                if (e.RequestInformation?.BatchError?.Code == BatchErrorCodeStrings.PoolExists)
                 {
                     // The pool already existed when we tried to create it
                     successfullyCreatedPool = false;
@@ -214,12 +220,12 @@ namespace Microsoft.Azure.Batch.Samples.Common
 
                 // If the pool doesn't have the right number of nodes, isn't resizing, and doesn't have
                 // automatic scaling enabled, then we need to ask it to resize
-                if (existingPool.CurrentDedicated != poolTargetNodeCount &&
+                if ((existingPool.CurrentDedicatedComputeNodes != targetDedicatedNodeCount || existingPool.CurrentLowPriorityComputeNodes != targetLowPriorityNodeCount) &&
                     existingPool.AllocationState != AllocationState.Resizing &&
                     existingPool.AutoScaleEnabled == false)
                 {
                     // Resize the pool to the desired target. Note that provisioning the nodes in the pool may take some time
-                    await existingPool.ResizeAsync(poolTargetNodeCount).ConfigureAwait(continueOnCapturedContext: false);
+                    await existingPool.ResizeAsync(targetDedicatedNodeCount, targetLowPriorityNodeCount).ConfigureAwait(continueOnCapturedContext: false);
                     return CreatePoolResult.ResizedExisting;
                 }
                 else

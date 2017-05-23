@@ -213,7 +213,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                 //Refresh the reducer task to get the most recent information about it from the Batch Service.
                 await boundReducerTask.RefreshAsync();
 
-                //Dump the reducer tasks exit code and scheduling error for debugging purposes.
+                //Dump the reducer tasks exit code and any errors for debugging purposes.
                 stdOut = await Helpers.CheckForTaskSuccessAsync(boundReducerTask, dumpStandardOutOnTaskSuccess: true);
             }
 

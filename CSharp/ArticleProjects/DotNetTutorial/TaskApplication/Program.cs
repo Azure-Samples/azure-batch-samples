@@ -3,11 +3,8 @@
 namespace Microsoft.Azure.Batch.Samples.DotNetTutorial.TaskApplication
 {
     using System;
-    using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-    using System.Text;
-    using System.Threading.Tasks;
     using Microsoft.WindowsAzure.Storage;
     using Microsoft.WindowsAzure.Storage.Blob;
 
@@ -93,7 +90,7 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial.TaskApplication
             try
             {
                 CloudBlockBlob blob = container.GetBlockBlobReference(blobName);
-                blob.UploadFromFile(filePath, FileMode.Open);
+                blob.UploadFromFile(filePath);
 
                 Console.WriteLine("Write operation succeeded for SAS URL " + containerSas);
                 Console.WriteLine();

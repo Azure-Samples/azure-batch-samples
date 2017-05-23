@@ -105,7 +105,8 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
         public async Task CreatePoolAsync(
             string poolId, 
             string virtualMachineSize, 
-            int? targetDedicated, 
+            int? targetDedicated,
+            int? targetLowPriority,
             string autoScaleFormula, 
             bool communicationEnabled,
             string subnetId,
@@ -118,7 +119,8 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
             await this.Service.CreatePoolAsync(
                 poolId, 
                 virtualMachineSize, 
-                targetDedicated, 
+                targetDedicated,
+                targetLowPriority, 
                 autoScaleFormula, 
                 communicationEnabled, 
                 subnetId,
@@ -134,9 +136,9 @@ namespace Microsoft.Azure.BatchExplorer.Helpers
             await this.Service.CreateNodeUserAsync(poolId, nodeId, userName, password, expiryTime, admin);
         }
 
-        public async Task ResizePoolAsync(string poolId, int targetDedicated, TimeSpan? timeout, ComputeNodeDeallocationOption? computeNodeDeallocationOption)
+        public async Task ResizePoolAsync(string poolId, int targetDedicated, int targetLowPriority, TimeSpan? timeout, ComputeNodeDeallocationOption? computeNodeDeallocationOption)
         {
-            await this.Service.ResizePool(poolId, targetDedicated, timeout, computeNodeDeallocationOption);
+            await this.Service.ResizePool(poolId, targetDedicated, targetLowPriority, timeout, computeNodeDeallocationOption);
         }
 
         public async Task<IList<NodeAgentSku>> ListNodeAgentSkusAsync()

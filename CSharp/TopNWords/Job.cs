@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.IO;
 using Microsoft.Azure.Batch.Auth;
 using Microsoft.Azure.Batch.Common;
 using Microsoft.Azure.Batch.FileStaging;
@@ -55,7 +54,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                 //http://msdn.microsoft.com/en-us/library/azure/ee924680.aspx
                 CloudPool pool = client.PoolOperations.CreatePool(
                     topNWordsConfiguration.PoolId, 
-                    targetDedicated: topNWordsConfiguration.PoolNodeCount,
+                    targetDedicatedComputeNodes: topNWordsConfiguration.PoolNodeCount,
                     virtualMachineSize: "small",
                     cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "4"));
                 Console.WriteLine("Adding pool {0}", topNWordsConfiguration.PoolId);
@@ -262,7 +261,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
 
             //Upload the blob.
             CloudBlockBlob blob = container.GetBlockBlobReference(fileName);
-            blob.UploadFromFile(fileName, FileMode.Open);
+            blob.UploadFromFile(fileName);
             return blob.Uri.ToString();
         }
     }

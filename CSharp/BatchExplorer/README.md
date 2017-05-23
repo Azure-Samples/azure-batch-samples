@@ -1,5 +1,7 @@
 ## Azure Batch Explorer
 
+**Note:** [Batch Labs](https://github.com/Azure/BatchLabs) is a cross-platform client tool for browsing Azure Batch resources. Batch Labs is supported by Microsoft and is the preferred client tool to use with Azure Batch. Batch Explorer will continue to exist in this repository only as a sample and will not be updated to expose the latest features of Azure Batch. We will not be accepting new feature contributions.
+
 ![Azure Batch Explorer][1]<br/>
 
 The **Azure Batch Explorer** is a Windows Presentation Foundation (WPF) application used for viewing, managing, monitoring, and debugging entities within an Azure Batch account. While this application is not officially supported, it is updated periodically, and is an invaluable tool not only for those new to Batch, but anyone developing or managing Batch applications.
