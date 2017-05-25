@@ -77,7 +77,7 @@ def create_pool(batch_client, block_blob_client, pool_id, vm_size, vm_count):
             image_reference=image_ref_to_use,
             node_agent_sku_id=sku_to_use),
         vm_size=vm_size,
-        target_dedicated=vm_count,
+        target_dedicated_nodes=vm_count,
         start_task=batchmodels.StartTask(
             command_line="python " + _SIMPLE_TASK_NAME,
             resource_files=[batchmodels.ResourceFile(

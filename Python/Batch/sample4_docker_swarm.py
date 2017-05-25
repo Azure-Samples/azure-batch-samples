@@ -328,7 +328,7 @@ def create_pool_and_wait_for_nodes(
             image_reference=image_ref_to_use,
             node_agent_sku_id=sku_to_use),
         vm_size=vm_size,
-        target_dedicated=vm_count,
+        target_dedicated_nodes=vm_count,
         start_task=batchmodels.StartTask(
             command_line=_STARTTASK_RESOURCE_FILE,
             user_identity=_POOL_ADMIN_USER,
