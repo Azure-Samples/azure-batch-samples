@@ -7,8 +7,8 @@
     <ProjectGuid>{256022B6-5241-4FF7-8B4F-183E2200D11B}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Microsfot.Azure.Batch.Samples.TelemetryStartTask</RootNamespace>
-    <AssemblyName>Microsfot.Azure.Batch.Samples.TelemetryStartTask</AssemblyName>
+    <RootNamespace>Microsoft.Azure.Batch.Samples.TelemetryStartTask</RootNamespace>
+    <AssemblyName>Microsoft.Azure.Batch.Samples.TelemetryStartTask</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -68,7 +68,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -82,6 +81,9 @@
       <Project>{b7e52328-b511-489a-95b6-d070889ab630}</Project>
       <Name>Microsoft.Azure.Batch.Samples.TelemetryInitializer</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Properties\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

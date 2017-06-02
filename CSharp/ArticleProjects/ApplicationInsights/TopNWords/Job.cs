@@ -1,19 +1,20 @@
 ﻿//Copyright (c) Microsoft Corporation
 
-using System;
-using System.Collections.Generic;
-using System.Collections.Concurrent;
-using System.IO;
-using Microsoft.Azure.Batch.Auth;
-using Microsoft.Azure.Batch.Common;
-using Microsoft.Azure.Batch.FileStaging;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Auth;
-using Microsoft.WindowsAzure.Storage.Blob;
-
 namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Collections.Concurrent;
+    using System.IO;
+    using Microsoft.Azure.Batch.Auth;
+    using Microsoft.Azure.Batch.Common;
+    using Microsoft.Azure.Batch.FileStaging;
+    using Microsoft.WindowsAzure.Storage;
+    using Microsoft.WindowsAzure.Storage.Auth;
+    using Microsoft.WindowsAzure.Storage.Blob;
+
     using Common;
+    using System.Threading.Tasks;
 
     /// <summary>
     /// In this sample, the Batch Service is used to process a set of input blobs in parallel on multiple 
@@ -28,18 +29,22 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
         // files that are required on the compute nodes that run the tasks
         private const string TopNWordsExeName = "TopNWordsSample.exe";
         private const string StorageClientDllName = "Microsoft.WindowsAzure.Storage.dll";
+        private const string BooksContainerName = "books";
 
-        // Application Insights assemblies
-        private const string AIConfig = "ApplicationInsights.config";
-        private const string AIDllName = "Microsoft.ApplicationInsights.dll";
-        private const string AIInterceptDllAgentName = "Microsoft.AI.Agent.Intercept.dll";
-        private const string AIDependencyCollectorName = "Microsoft.AI.DependencyCollector.dll";
-        private const string AIPerfCounterCollectorName = "Microsoft.AI.PerfCounterCollector.dll";
-        private const string AIServerTelemetryName = "Microsoft.AI.ServerTelemetryChannel.dll";
-        private const string AIWindowsServerName = "Microsoft.AI.WindowsServer.dll";
+        private static readonly List<string> AIFilesToUpload = new List<string>()
+        {
+            // Application Insights config and assemblies
+            "ApplicationInsights.config",
+            "Microsoft.ApplicationInsights.dll",
+            "Microsoft.AI.Agent.Intercept.dll",
+            "Microsoft.AI.DependencyCollector.dll",
+            "Microsoft.AI.PerfCounterCollector.dll",
+            "Microsoft.AI.ServerTelemetryChannel.dll",
+            "Microsoft.AI.WindowsServer.dll",
 
-        // custom telemetry initializer assemblies
-        private const string BatchAITelemetryInitializerName = "Microsoft.Azure.Batch.Samples.TelemetryInitializer.dll";
+            // custom telemetry initializer assemblies
+            "Microsoft.Azure.Batch.Samples.TelemetryInitializer.dll",
+    };
 
         // Batch start task telemetry runner
         private const string BatchStartTaskFolderName = "StartTask";
@@ -49,7 +54,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
         // Container where monitoring assemblies are placed
         private const string AIBlobConatinerName = "batchmonitoringassemblies";
 
-        public static void JobMain(string[] args)
+        public async static Task JobMain(string[] args)
         {
             //Load the configuration
             Settings topNWordsConfiguration = Settings.Default;
@@ -83,14 +88,9 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                 {
                     Path.Combine(BatchStartTaskFolderName, BatchStartTaskTelemetryRunnerName),
                     Path.Combine(BatchStartTaskFolderName, BatchStartTaskTelemetryRunnerAIConfig),
-                    AIDllName,
-                    AIDependencyCollectorName,
-                    AIInterceptDllAgentName,
-                    AIPerfCounterCollectorName,
-                    AIServerTelemetryName,
-                    AIWindowsServerName,
-                    BatchAITelemetryInitializerName
                 };
+
+                files.AddRange(AIFilesToUpload);
 
                 var resourceHelperTask = SampleHelpers.UploadResourcesAndCreateResourceFileReferencesAsync(
                     cloudStorageAccount,
@@ -108,7 +108,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                 Console.WriteLine("Adding pool {0}", topNWordsConfiguration.PoolId);
                 try
                 {
-                    GettingStartedCommon.CreatePoolIfNotExistAsync(client, pool).Wait();
+                    await GettingStartedCommon.CreatePoolIfNotExistAsync(client, pool);
                 }
                 catch (AggregateException ae)
                 {
@@ -142,7 +142,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                     unboundJob.PoolInformation = new PoolInformation() { PoolId = topNWordsConfiguration.PoolId };
 
                     // Commit Job to create it in the service
-                    unboundJob.Commit();
+                    await unboundJob.CommitAsync();
 
                     // create file staging objects that represent the executable and its dependent assembly to run as the task.
                     // These files are copied to every node before the corresponding task is scheduled to run on that node.
@@ -150,14 +150,11 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                     FileToStage storageDll = new FileToStage(StorageClientDllName, stagingStorageAccount);
 
                     // Upload application insights assemblies
-                    FileToStage applicationInsightsConfig = new FileToStage(AIConfig, stagingStorageAccount);
-                    FileToStage applicationInsightsDll = new FileToStage(AIDllName, stagingStorageAccount);
-                    FileToStage applicationInsightsCollectorDll = new FileToStage(AIDependencyCollectorName, stagingStorageAccount);
-                    FileToStage applicationInsightsInterceptorDll = new FileToStage(AIInterceptDllAgentName, stagingStorageAccount);
-                    FileToStage applicationInsightsPerfCounterCollectorDll = new FileToStage(AIPerfCounterCollectorName, stagingStorageAccount);
-                    FileToStage applicationInsightsServerTelemetryDll = new FileToStage(AIServerTelemetryName, stagingStorageAccount);
-                    FileToStage applicationInsightsWindowsServerDll = new FileToStage(AIWindowsServerName, stagingStorageAccount);
-                    FileToStage batchApplicationInsightsTelemetryInitializerDll = new FileToStage(BatchAITelemetryInitializerName, stagingStorageAccount);
+                    List<FileToStage> aiStagedFiles = new List<FileToStage>();
+                    foreach (string aiFile in AIFilesToUpload)
+                    {
+                        aiStagedFiles.Add(new FileToStage(aiFile, stagingStorageAccount));
+                    }
 
                     // In this sample, the input data is copied separately to Storage and its URI is passed to the task as an argument.
                     // This approach is appropriate when the amount of input data is large such that copying it to every node via FileStaging
@@ -169,11 +166,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
 
                     string[] documents = Directory.GetFiles(topNWordsConfiguration.DocumentsRootPath);
                     List<string> documentUris = new List<string>();
-                    foreach (string document in documents)
-                    {
-                        documentUris.Add(UploadFileToCloudBlob(accountSettings, document));
-                        Console.WriteLine("{0} uploaded to cloud", document);
-                    }
+                    await SampleHelpers.UploadResourcesAsync(cloudStorageAccount, BooksContainerName, documentUris);
 
                     // initialize a collection to hold the tasks that will be submitted in their entirety
                     List<CloudTask> tasksToRun = new List<CloudTask>(documentUris.Count);
@@ -194,15 +187,13 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                                             {
                                                 topNWordExe,
                                                 storageDll,
-                                                applicationInsightsConfig,
-                                                applicationInsightsDll,
-                                                applicationInsightsCollectorDll,
-                                                applicationInsightsInterceptorDll,
-                                                applicationInsightsPerfCounterCollectorDll,
-                                                applicationInsightsServerTelemetryDll,
-                                                applicationInsightsWindowsServerDll,
-                                                batchApplicationInsightsTelemetryInitializerDll
                                             };
+
+                        foreach (FileToStage stagedFile in aiStagedFiles)
+                        {
+                            task.FilesToStage.Add(stagedFile);
+                        }
+
                         tasksToRun.Add(task);
                     }
 
@@ -243,9 +234,10 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                     foreach (CloudTask t in ourTasks)
                     {
                         Console.WriteLine("Task " + t.Id);
-                        Console.WriteLine("stdout:" + Environment.NewLine + t.GetNodeFile(Constants.StandardOutFileName).ReadAsString());
+                        
+                        Console.WriteLine("stdout:" + Environment.NewLine + t.GetNodeFile(Batch.Constants.StandardOutFileName).ReadAsString());
                         Console.WriteLine();
-                        Console.WriteLine("stderr:" + Environment.NewLine + t.GetNodeFile(Constants.StandardErrorFileName).ReadAsString());
+                        Console.WriteLine("stderr:" + Environment.NewLine + t.GetNodeFile(Batch.Constants.StandardErrorFileName).ReadAsString());
                     }
                 }
                 finally
@@ -284,9 +276,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
 
             return client;
         }
-
-        private static string booksContainerName = "books";
-
+        
         /// <summary>
         /// Delete the containers in Azure Storage which are created by this sample.
         /// </summary>
@@ -298,8 +288,8 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                 accountSettings.StorageServiceUrl);
 
             //Delete the books container
-            CloudBlobContainer container = client.GetContainerReference(booksContainerName);
-            Console.WriteLine("Deleting container: " + booksContainerName);
+            CloudBlobContainer container = client.GetContainerReference(BooksContainerName);
+            Console.WriteLine("Deleting container: " + BooksContainerName);
             container.DeleteIfExists();
 
             //Delete the file staging container
@@ -325,7 +315,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                 accountSettings.StorageServiceUrl);
 
             //Create the "books" container if it doesn't exist.
-            CloudBlobContainer container = client.GetContainerReference(booksContainerName);
+            CloudBlobContainer container = client.GetContainerReference(BooksContainerName);
             container.CreateIfNotExists();
 
             //Upload the blob.

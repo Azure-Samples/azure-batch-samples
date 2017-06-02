@@ -1,10 +1,12 @@
-﻿using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.Azure.Batch.Samples.TelemetryInitializer;
-using System;
+﻿//Copyright (c) Microsoft Corporation
 
-namespace Microsfot.Azure.Batch.Samples.TelemetryStartTask
+namespace Microsoft.Azure.Batch.Samples.TelemetryStartTask
 {
-    class Program
+    using ApplicationInsights.Extensibility;
+    using System;
+    using TelemetryInitializer;
+
+    public static class Program
     {
         static void Main(string[] args)
         {

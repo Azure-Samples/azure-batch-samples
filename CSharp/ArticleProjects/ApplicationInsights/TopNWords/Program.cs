@@ -2,6 +2,8 @@
 
 namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
 {
+    using System.Threading.Tasks;
+
     public class Program
     {
         public static void Main(string[] args)
@@ -14,7 +16,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
             }
             else
             {
-                Job.JobMain(args);
+                Task.Run(() => Job.JobMain(args)).GetAwaiter().GetResult();
             }
         }
     }

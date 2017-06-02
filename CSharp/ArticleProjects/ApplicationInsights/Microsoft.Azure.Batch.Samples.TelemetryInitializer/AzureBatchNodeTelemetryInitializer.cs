@@ -1,10 +1,12 @@
-﻿using Microsoft.ApplicationInsights.Channel;
-using Microsoft.ApplicationInsights.Extensibility;
-using System;
-using System.Threading;
+﻿//Copyright (c) Microsoft Corporation
 
 namespace Microsoft.Azure.Batch.Samples.TelemetryInitializer
 {
+    using ApplicationInsights.Channel;
+    using ApplicationInsights.Extensibility;
+    using System;
+    using System.Threading;
+
     public class AzureBatchNodeTelemetryInitializer : ITelemetryInitializer
     {
         private const string PoolIdEnvironmentVariable = "AZ_BATCH_POOL_ID";

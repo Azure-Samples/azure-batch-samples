@@ -1,17 +1,17 @@
 ﻿//Copyright (c) Microsoft Corporation
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using Microsoft.ApplicationInsights;
-using Microsoft.WindowsAzure.Storage.Auth;
-using Microsoft.WindowsAzure.Storage.Blob;
-using Microsoft.ApplicationInsights.DataContracts;
-using Microsoft.ApplicationInsights.Extensibility;
-
 namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
 {
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Linq;
+    using Microsoft.ApplicationInsights;
+    using Microsoft.WindowsAzure.Storage.Auth;
+    using Microsoft.WindowsAzure.Storage.Blob;
+    using Microsoft.ApplicationInsights.DataContracts;
+    using Microsoft.ApplicationInsights.Extensibility;
+
     /// <summary>
     /// This class has the code for each task. The task reads the
     /// blob assigned to it and determine TopNWords and writes
