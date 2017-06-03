@@ -97,7 +97,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("TopNWordsJob")]
+        [global::System.Configuration.DefaultSettingValueAttribute("TopNWordsJob2")]
         public string JobId {
             get {
                 return ((string)(this["JobId"]));
@@ -121,7 +121,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
         public bool ShouldDeleteJob {
             get {
                 return ((bool)(this["ShouldDeleteJob"]));

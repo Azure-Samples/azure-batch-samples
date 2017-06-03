@@ -21,13 +21,13 @@
       <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="JobId" Type="System.String" Scope="User">
-      <Value Profile="(Default)">TopNWordsJob</Value>
+      <Value Profile="(Default)">TopNWordsJob2</Value>
     </Setting>
     <Setting Name="ShouldDeletePool" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="ShouldDeleteJob" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">False</Value>
+      <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="ShouldDeleteContainer" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>

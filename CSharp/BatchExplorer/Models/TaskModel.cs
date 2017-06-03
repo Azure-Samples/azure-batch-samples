@@ -61,7 +61,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// </summary>
         [ChangeTracked(ModelRefreshType.Basic)]
         public IEnumerable<ResourceFile> ResourceFiles { get { return this.Task.ResourceFiles; } }
-
+        
         /// <summary>
         /// The number of times to retry this task
         /// </summary>

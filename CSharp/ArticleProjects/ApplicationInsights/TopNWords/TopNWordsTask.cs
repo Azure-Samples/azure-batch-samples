@@ -37,13 +37,14 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
             string storageAccountName = args[3];
             string storageAccountKey = args[4];
 
-            WordCount wordCounter = new WordCount(insightsClient);
-            wordCounter.CountWords(blobName, numTopN, storageAccountName, storageAccountKey);
-            wordCounter.Dispose();
+            using (WordCount wordCounter = new WordCount(insightsClient))
+            {
+                wordCounter.CountWords(blobName, numTopN, storageAccountName, storageAccountKey);
+            }
         }
     }
 
-    public class WordCount
+    public class WordCount : IDisposable
     {
         public Dictionary<string, string> CommonProperties
         {
@@ -75,7 +76,9 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
 
         public void CountWords(string blobName, int numTopN, string storageAccountName, string storageAccountKey)
         {
-            // simulate exception
+            // Randomly modify a blob name to force an exception
+            // This is useful to see how Application Insights will track the exception
+            // Note that there is not try..catch block in the code
             Random rand = new Random();
             if (rand.Next(0, 10) % 10 == 0)
             {
@@ -84,6 +87,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
 
             // open the cloud blob that contains the book
             var storageCred = new StorageCredentials(storageAccountName, storageAccountKey);
+            insightsClient.TrackTrace(string.Format("Download blob {0}", blobName), SeverityLevel.Verbose, this.CommonProperties);
             CloudBlockBlob blob = new CloudBlockBlob(new Uri(blobName), storageCred);
             using (Stream memoryStream = new MemoryStream())
             {
@@ -94,20 +98,22 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                 insightsClient.TrackMetric("Blob download in seconds", downloadTime.TotalSeconds, this.CommonProperties);
 
                 memoryStream.Position = 0; //Reset the stream
-                var sr = new StreamReader(memoryStream);
-                var myStr = sr.ReadToEnd();
-                string[] words = myStr.Split(' ');
-                insightsClient.TrackTrace(string.Format("Task {0}: Found {1} words", this.taskId, words.Length), SeverityLevel.Verbose, this.CommonProperties);
-                var topNWords =
-                    words.
-                     Where(word => word.Length > 0).
-                     GroupBy(word => word, (key, group) => new KeyValuePair<String, long>(key, group.LongCount())).
-                     OrderByDescending(x => x.Value).
-                     Take(numTopN).
-                     ToList();
-                foreach (var pair in topNWords)
+                using (StreamReader sr = new StreamReader(memoryStream))
                 {
-                    Console.WriteLine("{0} {1}", pair.Key, pair.Value);
+                    var myStr = sr.ReadToEnd();
+                    string[] words = myStr.Split(' ');
+                    this.insightsClient.TrackTrace(string.Format("Task {0}: Found {1} words", this.taskId, words.Length), SeverityLevel.Verbose, this.CommonProperties);
+                    var topNWords =
+                        words.
+                         Where(word => word.Length > 0).
+                         GroupBy(word => word, (key, group) => new KeyValuePair<String, long>(key, group.LongCount())).
+                         OrderByDescending(x => x.Value).
+                         Take(numTopN).
+                         ToList();
+                    foreach (var pair in topNWords)
+                    {
+                        Console.WriteLine("{0} {1}", pair.Key, pair.Value);
+                    }
                 }
                 insightsClient.TrackEvent("Done counting words", this.CommonProperties);
             }

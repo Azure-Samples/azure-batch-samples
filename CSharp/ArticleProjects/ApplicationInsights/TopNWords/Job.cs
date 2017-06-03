@@ -29,7 +29,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
         // files that are required on the compute nodes that run the tasks
         private const string TopNWordsExeName = "TopNWordsSample.exe";
         private const string StorageClientDllName = "Microsoft.WindowsAzure.Storage.dll";
-        private const string BooksContainerName = "books";
+        private const string BooksContainerName = "documents";
 
         private static readonly List<string> AIFilesToUpload = new List<string>()
         {
@@ -87,7 +87,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                 List<string> files = new List<string>
                 {
                     Path.Combine(BatchStartTaskFolderName, BatchStartTaskTelemetryRunnerName),
-                    Path.Combine(BatchStartTaskFolderName, BatchStartTaskTelemetryRunnerAIConfig),
+                    //Path.Combine(BatchStartTaskFolderName, BatchStartTaskTelemetryRunnerAIConfig),
                 };
 
                 files.AddRange(AIFilesToUpload);
@@ -132,6 +132,12 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                         return false;
                     });
                 }
+                catch (BatchException be)
+                {
+                    Console.Error.WriteLine("Creating pool ID {0} failed", topNWordsConfiguration.PoolId);
+                    Console.WriteLine(be.ToString());
+                    Console.WriteLine();
+                }
 
                 try
                 {
@@ -165,17 +171,16 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                     // complexity.
 
                     string[] documents = Directory.GetFiles(topNWordsConfiguration.DocumentsRootPath);
-                    List<string> documentUris = new List<string>();
-                    await SampleHelpers.UploadResourcesAsync(cloudStorageAccount, BooksContainerName, documentUris);
+                    await SampleHelpers.UploadResourcesAsync(cloudStorageAccount, BooksContainerName, documents);
 
                     // initialize a collection to hold the tasks that will be submitted in their entirety
-                    List<CloudTask> tasksToRun = new List<CloudTask>(documentUris.Count);
+                    List<CloudTask> tasksToRun = new List<CloudTask>(documents.Length);
 
-                    for (int i = 0; i < documentUris.Count; i++)
+                    for (int i = 0; i < documents.Length; i++)
                     {
                         CloudTask task = new CloudTask("task_no_" + i, String.Format("{0} --Task {1} {2} {3} {4}",
                             TopNWordsExeName,
-                            documentUris[i],
+                            "https://onbehalfoutput.blob.core.windows.net/" + documents[i],
                             topNWordsConfiguration.TopWordCount,
                             accountSettings.StorageAccountName,
                             accountSettings.StorageAccountKey));
