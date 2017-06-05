@@ -277,18 +277,19 @@ def wait_for_all_nodes_state(batch_client, pool, node_state):
     while True:
         # refresh pool to ensure that there is no resize error
         pool = batch_client.pool.get(pool.id)
-        if pool.resize_error is not None:
+        if pool.resize_errors is not None:
+            resize_errors = "\n".join([repr(e) for e in pool.resize_errors])
             raise RuntimeError(
-                'resize error encountered for pool {}: {!r}'.format(
-                    pool.id, pool.resize_error))
+                'resize error encountered for pool {}:\n{}'.format(
+                    pool.id, resize_errors))
         nodes = list(batch_client.compute_node.list(pool.id))
-        if (len(nodes) >= pool.target_dedicated and
+        if (len(nodes) >= pool.target_dedicated_nodes and
                 all(node.state in node_state for node in nodes)):
             return nodes
         i += 1
         if i % 3 == 0:
             print('waiting for {} nodes to reach desired state...'.format(
-                pool.target_dedicated))
+                pool.target_dedicated_nodes))
         time.sleep(10)
 
 

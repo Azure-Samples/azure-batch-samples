@@ -44,7 +44,7 @@ import common.helpers  # noqa
 
 def create_pool_and_wait_for_vms(
         batch_service_client, pool_id, publisher, offer, sku, vm_size,
-        target_dedicated, command_line, resource_files, elevation_level):
+        target_dedicated_nodes, command_line, resource_files, elevation_level):
     """
     Creates a pool of compute nodes with the specified OS settings.
 
@@ -58,7 +58,7 @@ def create_pool_and_wait_for_vms(
      as per
     https://azure.microsoft.com/en-us/documentation/articles/
     virtual-machines-windows-sizes/
-    :param int target_dedicated: Number of target VMs for the pool
+    :param int target_dedicated_nodes: Number of target VMs for the pool
     :param str command_line: command line for the pool's start task.
     :param list resource_files: A collection of resource files for the pool's
     start task.
@@ -87,7 +87,7 @@ def create_pool_and_wait_for_vms(
             image_reference=image_ref_to_use,
             node_agent_sku_id=sku_to_use),
         vm_size=vm_size,
-        target_dedicated=target_dedicated,
+        target_dedicated_nodes=target_dedicated_nodes,
         resize_timeout=datetime.timedelta(minutes=15),
         enable_inter_node_communication=True,
         max_tasks_per_node=1,
