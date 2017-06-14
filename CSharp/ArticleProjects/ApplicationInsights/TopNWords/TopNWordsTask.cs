@@ -10,7 +10,6 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
     using Microsoft.WindowsAzure.Storage.Auth;
     using Microsoft.WindowsAzure.Storage.Blob;
     using Microsoft.ApplicationInsights.DataContracts;
-    using Microsoft.ApplicationInsights.Extensibility;
 
     /// <summary>
     /// This class has the code for each task. The task reads the

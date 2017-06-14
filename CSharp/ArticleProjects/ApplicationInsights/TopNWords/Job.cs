@@ -87,7 +87,6 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                 List<string> files = new List<string>
                 {
                     Path.Combine(BatchStartTaskFolderName, BatchStartTaskTelemetryRunnerName),
-                    //Path.Combine(BatchStartTaskFolderName, BatchStartTaskTelemetryRunnerAIConfig),
                 };
 
                 files.AddRange(AIFilesToUpload);
