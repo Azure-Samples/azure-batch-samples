@@ -313,5 +313,41 @@ namespace Microsoft.Azure.Batch.Samples.Common
             
             return jobs.FirstOrDefault();
         }
+
+        public struct SkuAndImage
+        {
+            public SkuAndImage(NodeAgentSku sku, ImageReference image)
+            {
+                this.Sku = sku;
+                this.Image = image;
+            }
+
+            public NodeAgentSku Sku { get; }
+            public ImageReference Image { get; }
+        }
+
+        public static async Task<SkuAndImage> GetNodeAgentSkuReferenceAsync(BatchClient client, Func<ImageReference, bool> scanFunc)
+        {
+            List<NodeAgentSku> nodeAgentSkus = await client.PoolOperations.ListNodeAgentSkus().ToListAsync();
+            NodeAgentSku nodeAgentSku = nodeAgentSkus.First(sku => sku.VerifiedImageReferences.FirstOrDefault(scanFunc) != null);
+            ImageReference imageReference = nodeAgentSku.VerifiedImageReferences.First(scanFunc);
+
+            return new SkuAndImage(nodeAgentSku, imageReference);
+        }
+
+        public static string GetFailureInfoDetails(TaskFailureInformation failureInfo)
+        {
+            StringBuilder builder = new StringBuilder();
+            builder.AppendLine($"Category: {failureInfo.Category}");
+            builder.AppendLine($"Code: {failureInfo.Code}");
+            builder.AppendLine($"Message: {failureInfo.Message}");
+            builder.AppendLine("Details:");
+            foreach (var detail in failureInfo.Details)
+            {
+                builder.AppendLine($"    {detail.Name}: {detail.Value}");
+            }
+
+            return builder.ToString();
+        }
     }
 }
