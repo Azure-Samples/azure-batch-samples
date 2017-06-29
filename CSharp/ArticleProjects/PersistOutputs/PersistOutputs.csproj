@@ -90,6 +90,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FileConventionsExample.cs" />
+    <Compile Include="BatchExtensions.cs" />
+    <Compile Include="OutputFilesExample.cs" />
     <Compile Include="Program.cs" />
   </ItemGroup>
   <ItemGroup>
