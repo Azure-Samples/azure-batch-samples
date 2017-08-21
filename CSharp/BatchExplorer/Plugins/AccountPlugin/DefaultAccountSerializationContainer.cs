@@ -29,7 +29,7 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
         {
             List<Account> results = new List<Account>();
 
-            foreach (SerializableAccount serializableAccount in Accounts)
+            foreach (var serializableAccount in Accounts)
             {
                 results.Add(serializableAccount.CreateAccountFromSerialization(parentAccountManager));
             }

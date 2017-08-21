@@ -25,9 +25,9 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.LegacyAccountSupport
                            AccountName = this.AccountName,
                            Alias = this.Alias,
                            BatchServiceUrl = this.BatchServiceUrl,
-                           SecureKey = this.SecureKey,
-                           UniqueIdentifier = this.UniqueIdentifier
-                       };
+                           BatchSecureKey = this.SecureKey,
+                           UniqueIdentifier = this.UniqueIdentifier,
+            };
         }
     }
 }

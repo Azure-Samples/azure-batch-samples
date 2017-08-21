@@ -2,6 +2,9 @@
 
 using System;
 using Microsoft.Azure.BatchExplorer.PluginInterfaces.AccountPlugin;
+using Microsoft.Azure.BatchExplorer.ViewModels;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace Microsoft.Azure.BatchExplorer.Models
 {
@@ -28,7 +31,35 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// <summary>
         /// The key for the account.
         /// </summary>
-        public abstract string Key { get; set; }
+        public abstract string BatchServiceKey { get; set; }
+
+        /// <summary>
+        /// The service URL of the Linked Storage Account
+        /// </summary>
+        public abstract string LinkedStorageAccountName { get; set; }
+
+        /// <summary>
+        /// They access key of the Linked Storage Account
+        /// </summary>
+        public abstract string LinkedStorageAccountKey { get; set; }
+
+        private CloudBlobClient linkedStorageBlobClient;
+
+        public CloudBlobClient LinkedStorageBlobClient
+        {
+            get
+            {
+                if (linkedStorageBlobClient == null)
+                {
+                    if (!string.IsNullOrWhiteSpace(LinkedStorageAccountName) && !string.IsNullOrWhiteSpace(LinkedStorageAccountKey))
+                    {
+                        var storageAccount = CloudStorageAccount.Parse($"DefaultEndpointsProtocol=https;AccountName={LinkedStorageAccountName};AccountKey={LinkedStorageAccountKey}");
+                        linkedStorageBlobClient = storageAccount.CreateCloudBlobClient();
+                    }
+                }
+                return linkedStorageBlobClient;
+            }
+        }
 
         /// <summary>
         /// The unique identifier for this account.

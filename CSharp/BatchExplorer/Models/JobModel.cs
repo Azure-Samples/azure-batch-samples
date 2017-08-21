@@ -1,5 +1,7 @@
 //Copyright (c) Microsoft Corporation
 
+using Microsoft.Azure.Batch.Conventions.Files;
+
 namespace Microsoft.Azure.BatchExplorer.Models
 {
     using System;
@@ -74,6 +76,12 @@ namespace Microsoft.Azure.BatchExplorer.Models
         /// </summary>
         [ChangeTracked(ModelRefreshType.Children)]
         public ICollectionView TaskCollection { get; private set; }
+
+        /// <summary>
+        /// Gets the name of the Azure blob storage container for the outputs of a CloudJob.
+        /// </summary>
+        [ChangeTracked(ModelRefreshType.Children)]
+        public string OutputStorageContainerName { get { return this.Job.OutputStorageContainerName(); } }
         #endregion
 
         #region Commands

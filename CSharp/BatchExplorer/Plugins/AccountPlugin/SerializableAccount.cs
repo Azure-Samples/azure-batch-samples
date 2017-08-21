@@ -15,9 +15,16 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
         public string BatchServiceUrl { get; set; }
 
         [XmlIgnore]
-        public string Key { get; set; }
+        public string BatchServiceKey { get; set; }
 
-        public byte[] SecureKey { get; set; }
+        public byte[] BatchSecureKey { get; set; }
+
+        public string LinkedStorageAccountName { get; set; }
+
+        [XmlIgnore]
+        public string LinkedStorageAccountKey { get; set; }
+
+        public byte[] LinkedStorageSecureKey { get; set; }
 
         public Guid UniqueIdentifier { get; set; }
 
@@ -30,9 +37,12 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
             this.Alias = account.Alias;
             this.AccountName = account.AccountName;
             this.BatchServiceUrl = account.BatchServiceUrl;
-            this.Key = account.Key;
-            this.SecureKey = account.SecureKey;
+            this.BatchServiceKey = account.BatchServiceKey;
+            this.BatchSecureKey = account.BatchSecureKey;
             this.UniqueIdentifier = account.UniqueIdentifier;
+            this.LinkedStorageAccountName = account.LinkedStorageAccountName;
+            this.LinkedStorageAccountKey = account.LinkedStorageAccountKey;
+            this.LinkedStorageSecureKey = account.LinkedStorageSecureKey;
         }
 
         public DefaultAccount CreateAccountFromSerialization(IAccountManager parentAccountManager)
@@ -42,9 +52,12 @@ namespace Microsoft.Azure.BatchExplorer.Plugins.AccountPlugin
                 AccountName = this.AccountName,
                 Alias = this.Alias,
                 BatchServiceUrl = this.BatchServiceUrl,
-                Key = this.Key,
-                SecureKey = this.SecureKey,
-                UniqueIdentifier = this.UniqueIdentifier
+                BatchServiceKey = this.BatchServiceKey,
+                BatchSecureKey = this.BatchSecureKey,
+                UniqueIdentifier = this.UniqueIdentifier,
+                LinkedStorageAccountName = this.LinkedStorageAccountName,
+                LinkedStorageAccountKey = this.LinkedStorageAccountKey,
+                LinkedStorageSecureKey = this.LinkedStorageSecureKey,
             };
 
             return account;
