@@ -1,9 +1,9 @@
 ﻿<?xml version='1.0' encoding='utf-8'?>
-<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="Microsoft.Azure.Batch.Samples.Common" GeneratedClassName="Settings">
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="Microsoft.Azure.Batch.Samples.Common" GeneratedClassName="AccountSettings">
   <Profiles />
   <Settings>
     <Setting Name="BatchServiceUrl" Type="System.String" Scope="User">
-      <Value Profile="(Default)">https://(YourAccount).(region).batch.azure.com</Value>
+      <Value Profile="(Default)">https://(YourAccount).(region).batch.azure.com</Value> 
     </Setting>
     <Setting Name="BatchAccountName" Type="System.String" Scope="User">
       <Value Profile="(Default)" />

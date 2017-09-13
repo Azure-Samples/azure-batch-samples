@@ -1,0 +1,322 @@
+Teacher Page
+
+Lunar Roving Vehicle
+Purpose
+To construct a model of a lunar roving vehicle.
+
+Background
+The Apollo lunar roving vehicle was a battery-powered space buggy. The astronauts on Apollo 15, 16, and 17 used it to explore their landing sites and to travel greater
+distances than astronauts on earlier missions. The lunar rover neatly folded up inside the
+lunar lander during trips to the Moon. Once on the Moon's surface, it unfolded with the
+help of springs. The lunar rover carried two astronauts and was manually driven. It was
+designed to climb steep slopes, to go over rocks, and to move easily over the Moon's
+regolith. It was able to carry more than twice its own weight in passengers, scientific
+instruments, rocks, and regolith samples. The wheels on the rover were made of wire
+mesh (piano wire) with titanium cleats for treads. Engineers did not use solid or air-filled
+rubber tires because they would have been much heavier than were the wire mesh wheels.
+The Apollo spacecraft had a fixed amount of mass (payload) it could deliver to the
+surface, including the rover, rover batteries, scientific instruments, sample collection devices, etc. Hence, the wire-mesh wheels were important to the overall payload mass. This
+rover was not designed for prolonged use, and it is uncertain if future lunar explorers
+would use similar designs and materials for their vehicles, use new, more durable components, or turn to robotic rovers.
+If students are interested in constructing models that actually move, then refer to Page 38
+for more information on rocket and model building.
+
+Preparation
+Review and prepare materials listed on the student sheet. While commercial building sets
+are very popular, models can be built with more simple and recyclable materials such as
+cardboard boxes, tubes, cans, straws, construction paper, string, tape, pins, styrofoam
+trays, thread spools, balloons, rubber bands, and mouse traps (for propulsion).
+
+In Class / Wrap Up
+After construction, students should name their vehicles and write a description of the
+capabilities and special features.
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+87
+
+Teacher Page
+
+Lunar Roving Vehicle
+Extensions
+Hold competitions between student vehicles with these criteria for judging:
+1. Can the vehicle actually move -- by gravity; by some kind of propulsion system?
+2. Can the vehicle go over different surfaces -- smooth, flat, bumpy, or inclined?
+3. Is the vehicle sturdy?
+4. Can the vehicle carry a heavy load? Have the students decide the weight of the load.
+5. Could the vehicle withstand meteoritic bombardment?
+6. Would the vehicle work on the Moon?
+Discuss the pros and cons of manually driven vehicles versus remote-controlled robotic
+rovers on the Moon.
+
+Diagram of the vehicle used by Apollo astronauts.
+
+88
+
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+Lunar Roving Vehicle
+Purpose
+To construct a model of a lunar roving vehicle.
+
+Key Words
+
+Procedure
+
+antenna
+
+1. Describe the similarities and differences between
+the Apollo lunar roving vehicle and a typical
+family vehicle.
+
+console
+tool carrier and storage
+robot
+
+Materials
+diagram of Apollo lunar
+roving vehicle
+
+2. What was special about the rover's wheels? Why
+weren't they made of rubber and filled with air?
+
+“Moon ABCs Fact Sheet”
+construction materials
+such as cardboard
+boxes, tubes, cans,
+straws, construction
+paper, string, tape, pins,
+styrofoam trays, thread
+spools, balloons, rubber
+bands, mouse traps, etc.
+tape measures
+stop watches
+
+3. Review the “Moon ABCs Fact Sheet.” Design
+a new lunar roving vehicle. Important design
+issues include size, weight, power supply, number
+of passengers, controls, scientific instruments,
+tools, and storage compartments. Use the space
+provided on the next page to draw a picture of
+your design. Label the parts.
+4. Construct a model of the lunar rover based on
+your design.
+5. Give a name to the vehicle.
+6. Write a descriptive essay about the special features
+and capabilitites of the vehicle and how you
+solved the design issues raised in Question 3.
+
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+89
+
+Lunar Roving Vehicle
+Sketch of
+my model
+
+90
+
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+Moon ABCs Fact Sheet
+Property
+
+Earth
+
+Moon
+
+Brain Busters
+
+Equatorial
+diameter
+
+12,756 km
+
+3,476 km
+
+How long would it take to drive
+around the Moon's equator at
+80 km per hour?
+
+Surface area
+
+510 million
+square km
+
+37.8 million
+square km
+
+The Moon's surface area is
+similar to that of one of Earth's
+continents. Which one?
+
+Mass
+
+5.98 x 1024 kg
+
+7.35 x 1022 kg
+
+What percentage of Earth's mass
+is the Moon's mass?
+
+Volume
+
+---
+
+---
+
+Can you calculate the volumes of
+Earth and the Moon?
+
+Density
+
+5.52 grams per
+cubic cm
+
+3.34 grams per
+cubic cm
+
+Check this by calculating the
+density from the mass and
+volume.
+
+Surface
+gravity
+
+9.8 m/sec/sec
+
+1.63 m/sec/sec
+
+What fraction of Earth's gravity is
+the Moon's gravity?
+
+Crust
+
+Silicate rocks.
+Continents
+dominated by
+granites. Ocean
+crust dominated
+by basalt.
+
+Silicate rocks.
+Highlands
+dominated by
+feldspar-rich
+rocks and maria
+by basalt.
+
+What portion of each body is
+crust?
+
+Mantle
+
+Silicate rocks
+dominated by
+minerals
+containing iron
+and magnesium.
+
+Similar to Earth.
+
+Collect some silicate rocks and
+determine the density. Is the
+density greater or lesser than the
+Earth/Moon's density? Why?
+
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+17
+
+Moon ABCs Fact Sheet
+Property
+
+Earth
+
+Moon
+
+Brain Busters
+
+Core
+
+Iron, nickel metal Same, but core is
+What portion of each body is
+much smaller
+core?
+Sediment or
+Silicon and
+Silicon and oxygen
+Do you think life ever existed
+Regolith
+oxygen bound in bound in minerals,
+on the Moon?
+minerals that
+glass produced by
+Why or why not?
+contain water,
+meteorite impacts,
+plus organic
+small amounts of
+materials.
+gases (e.g., hydrogen)
+implanted by the solar
+wind. No water or
+organic materials.
+Atmosphere
+78 % nitrogen,
+Basically none. Some Could you breathe the lunar
+(main
+21 % oxygen
+carbon gases (CO2 , atmosphere?
+constituents)
+CO, and methane),
+but very little of them.
+Pressure is about onetrillionth of Earth's
+atmospheric pressure.
+Length of day 23.93 hours
+How long does daylight last
+27.3 Earth days
+(sidereal
+on the Moon?
+rotation
+period)
+Air temperature
+Surface
+Surface temperature Why are the temperatures of
+ranges from
+temperature
+ranges from -193oC Earth and the Moon so
+-88oC (winter in
+different?
+(night in polar
+o
+polar regions) to
+regions) to 111 C
+o
+58 C (summer in (day in equatorial
+tropical regions). regions).
+Surface
+features
+
+18
+
+25 % land
+(seven continents)
+with varied terrain
+of mountains,
+plains, river valleys. Ocean floor
+characterized by
+mountains, plains.
+
+84 % heavily-cratered Compare maps of Earth and
+highlands.
+the Moon. Is there any
+16 % basalt-covered evidence that plate tectonics
+maria.
+operated on the Moon?
+Impact craters-some with bright rays,
+crater chains, and
+rilles.
+
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+

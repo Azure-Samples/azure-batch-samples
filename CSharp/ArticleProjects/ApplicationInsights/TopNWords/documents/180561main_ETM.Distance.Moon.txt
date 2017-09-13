@@ -1,0 +1,367 @@
+Teacher Page
+
+Distance to the Moon
+Purpose
+To calculate the distance between scale models of
+Earth and the Moon.
+
+Background
+As long as people have looked at the Moon, they have wondered how far away it is
+from Earth. The average distance to the Moon is 382,500 km. The distance varies
+because the Moon travels around Earth in an elliptical orbit. At perigee, the point at
+which the Moon is closest to Earth, the distance is approximately 360,000 km. At
+apogee, the point at which the Moon is farthest from Earth, the distance is approximately 405,000 km.
+Distance from Earth to the Moon for a given date can be obtained by asking a local
+planetarium staff. Students interested in astronomy may enjoy looking at The
+Astronomical Almanac printed yearly by the U.S. Government printing office.
+When the Apollo 11 crew landed on the Moon on July 20, 1969, they were
+393,309 km away from home.
+In this activity students will use simple sports balls as scale models of Earth and the
+Moon. Given the astronomical distance between Earth and the Moon, students will
+determine the scale of the model system and the distance that must separate the two
+models.
+The “Moon ABCs Fact Sheet” lists the Earth's diameter as 12,756 km and the Moon's
+diameter as 3,476 km. Therefore, the Moon's diameter is 27.25% of Earth's diameter.
+An official basketball has a diameter of 24 cm. This can serve as a model for Earth. A
+tennis ball has a diameter of 6.9 cm which is close to 27.25% of the basketball. (The
+tennis ball is actually 28.8% the size of the basketball.) These values are very close to
+the size relationship between Earth and the Moon. The tennis ball, therefore, can be
+used as a model of the Moon.
+The scale of the model system is determined by setting the diameter of the basketball
+equal to the diameter of Earth. This is written as a simple relationship shown below:
+24 cm = 12,756 km
+Expressed more simply, 1 cm in the model system equals 531.5 km in space:
+1 cm = 531.5 km
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+25
+
+Teacher Page
+
+Distance to the Moon
+Using this scale, the basketball-tennis ball separation in centimeters (x) is derived:
+x = 382,500 km = 719.7 cm
+531.5 km
+The value x may be rounded to 720 cm and converted to meters so that the students
+need to place the basketball and tennis ball 7.2 m apart.
+
+Preparation
+Review and prepare materials listed on the student sheet.
+If it is not possible to obtain an official-size basketball and tennis ball, then you can use
+other spherical objects or circles drawn on paper. Clay balls may be used as models.
+For example, for two clay balls, 10 cm diameter and 2.7 cm diameter, the scale is
+1 cm = 1,275.6 km. At this scale, students need to separate the clay balls by 3 m.
+
+In Class
+Divide the students into cooperative groups. Students must keep track of units of
+measure.
+
+Wrap Up
+Did the students have an accurate idea of the size relationship between Earth and the
+Moon before doing this activity?
+Did the effect of separating the scale models help them visualize the distance to the
+Moon?
+
+Extensions
+1. How long did it take Apollo astronauts to travel to the Moon?
+2. Have students measure the circumferences of various spheres so that each group uses
+a different pair of models.
+3. Instead of using the average distance to the Moon, use the distance from
+July 20, 1969, to recall the Apollo 11 landing or use the distance for today.
+
+26
+
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+Distance to the Moon
+Purpose
+To calculate the distance between scale models of
+Earth and the Moon.
+
+Key Word
+
+Procedure
+
+scale
+
+1. If Earth were the size of an official basketball, then
+the Moon would be the size of: another basketball? soccer ball? baseball? tennis ball? golf
+ball? marble?
+
+Materials
+“Moon ABCs Fact Sheet”
+sports balls
+calculator
+meter tape
+
+2. The diameter of Earth in kilometers is:
+3. The diameter of the Moon in kilometers is:
+4. What percentage of Earth's diameter is the Moon's
+diameter?
+5. Use the list below to change or confirm your
+answer to Question 1.
+
+official basketball
+size 5 soccer ball
+official baseball
+tennis ball
+golf ball
+marble
+
+diameter in cm
+24
+22
+7.3
+6.9
+4.3
+0.6
+
+If Earth is a basketball, then the Moon is a:
+
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+27
+
+Distance to the Moon
+6. Use an official basketball as a model of Earth. Use a second
+ball, the one you determined from Question 5, as a model of the
+Moon.
+7. Determine the scale of your model system by setting the
+diameter of the basketball equal to the diameter of Earth.
+cm =
+
+km
+
+1 cm =
+
+therefore,
+
+km
+
+8. If the distance to the Moon from Earth is 382,500 km, then how
+far apart must you separate the two scale models to accurately
+depict the Earth/Moon system?
+Using the scale value in the box from Step 7, the model separation in centimeters (x) is derived:
+x = actual distance to the Moon in kilometers
+scale value in kilometers
+
+x =
+
+x =
+
+centimeters
+
+The two scale models must be separated by
+
+meters.
+
+9. Set up your scale model of the Earth/Moon system. Does it fit
+in your classroom?
+
+28
+
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+Moon ABCs Fact Sheet
+Property
+
+Earth
+
+Moon
+
+Brain Busters
+
+Equatorial
+diameter
+
+12,756 km
+
+3,476 km
+
+How long would it take to drive
+around the Moon's equator at
+80 km per hour?
+
+Surface area
+
+510 million
+square km
+
+37.8 million
+square km
+
+The Moon's surface area is
+similar to that of one of Earth's
+continents. Which one?
+
+Mass
+
+5.98 x 1024 kg
+
+7.35 x 1022 kg
+
+What percentage of Earth's mass
+is the Moon's mass?
+
+Volume
+
+---
+
+---
+
+Can you calculate the volumes of
+Earth and the Moon?
+
+Density
+
+5.52 grams per
+cubic cm
+
+3.34 grams per
+cubic cm
+
+Check this by calculating the
+density from the mass and
+volume.
+
+Surface
+gravity
+
+9.8 m/sec/sec
+
+1.63 m/sec/sec
+
+What fraction of Earth's gravity is
+the Moon's gravity?
+
+Crust
+
+Silicate rocks.
+Continents
+dominated by
+granites. Ocean
+crust dominated
+by basalt.
+
+Silicate rocks.
+Highlands
+dominated by
+feldspar-rich
+rocks and maria
+by basalt.
+
+What portion of each body is
+crust?
+
+Mantle
+
+Silicate rocks
+dominated by
+minerals
+containing iron
+and magnesium.
+
+Similar to Earth.
+
+Collect some silicate rocks and
+determine the density. Is the
+density greater or lesser than the
+Earth/Moon's density? Why?
+
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+17
+
+Moon ABCs Fact Sheet
+Property
+
+Earth
+
+Moon
+
+Brain Busters
+
+Core
+
+Iron, nickel metal Same, but core is
+What portion of each body is
+much smaller
+core?
+Sediment or
+Silicon and
+Silicon and oxygen
+Do you think life ever existed
+Regolith
+oxygen bound in bound in minerals,
+on the Moon?
+minerals that
+glass produced by
+Why or why not?
+contain water,
+meteorite impacts,
+plus organic
+small amounts of
+materials.
+gases (e.g., hydrogen)
+implanted by the solar
+wind. No water or
+organic materials.
+Atmosphere
+78 % nitrogen,
+Basically none. Some Could you breathe the lunar
+(main
+21 % oxygen
+carbon gases (CO2 , atmosphere?
+constituents)
+CO, and methane),
+but very little of them.
+Pressure is about onetrillionth of Earth's
+atmospheric pressure.
+Length of day 23.93 hours
+How long does daylight last
+27.3 Earth days
+(sidereal
+on the Moon?
+rotation
+period)
+Air temperature
+Surface
+Surface temperature Why are the temperatures of
+ranges from
+temperature
+ranges from -193oC Earth and the Moon so
+-88oC (winter in
+different?
+(night in polar
+o
+polar regions) to
+regions) to 111 C
+o
+58 C (summer in (day in equatorial
+tropical regions). regions).
+Surface
+features
+
+18
+
+25 % land
+(seven continents)
+with varied terrain
+of mountains,
+plains, river valleys. Ocean floor
+characterized by
+mountains, plains.
+
+84 % heavily-cratered Compare maps of Earth and
+highlands.
+the Moon. Is there any
+16 % basalt-covered evidence that plate tectonics
+maria.
+operated on the Moon?
+Impact craters-some with bright rays,
+crater chains, and
+rilles.
+
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+

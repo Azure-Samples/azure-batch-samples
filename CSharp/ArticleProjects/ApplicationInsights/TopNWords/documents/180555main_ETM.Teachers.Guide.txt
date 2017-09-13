@@ -1,0 +1,1020 @@
+Teacher’s Guide
+THE MOON
+GATEWAY TO THE SOLAR SYSTEM
+G. Jeffrey Taylor, PhD
+
+WHEN ASTRONAUTS dug into the
+Moon’s surface during the Apollo program,
+they were doing more than digging up dry, dark
+sediment. They were time travelers. The rocks
+and sediment returned by Apollo contain vital
+clues to how Earth and the Moon formed, the
+nature and timing of early melting, the intensity
+of impact bombardment and its variation with
+time, and even the history of the Sun. Most of
+this information, crucial parts of the story of
+planet Earth, cannot be learned by studying
+rocks on Earth because our planet is so geologically active that it has erased much of the
+record. The clues have been lost in billions of
+years of mountain building, volcanism, weathering, and erosion. Colliding tectonic plates
+The Moon, front and back
+The top right photograph is a telescopic image of the Earth-facing half
+of the Moon obtained at Lick Observatory in California. The one below
+right was taken during the Apollo 16 mission and shows mostly the farside,
+except for the dark areas on the left, which can be seen, though barely,
+from Earth. The two major types of terrain are clearly visible. Thehighlands,
+which are especially well displayed in the photograph of the farside, are
+light-colored and heavily cratered. The maria are darker and smoother;
+they formed when lava flows filled depressions. One of the mysteries about
+the Moon is why fewer maria occur on the farside than nearside. Note
+how many craters stand shoulder to shoulder on the farside. These
+immense holes chronicle the Moon’s early bombardment, an intense
+barrage that probably affected the early Earth as well.
+
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+1
+
+and falling rain have erased much of Earth history,
+especially the early years before four billion years ago.
+The Moon was geologically active in its heyday,
+producing a fascinating array of products, but its
+geologic engine was not vigorous and all records of
+early events were not lost. Its secrets are recorded in
+its craters, plains, and rocks. This guide reveals the
+secrets that lunar scientists have uncovered since the
+Apollo missions returned 382 kilograms (843 pounds)
+of rock and sediment from the lovely body that
+graces the night sky.
+The emphasis here is on geology. The samples
+returned by Apollo are the stars of the show. [See the
+“Lunar Disk” activity on Pages 39–42 and the
+“Apollo Landing Sites” activity on Pages 43–46.]
+Understanding the Moon, however, requires other
+geological approaches, such as geological mapping
+from high-quality photographs, the study of analogous features on Earth (for instance, impact craters),
+and experiments in laboratories.
+THE LUNAR LANDSCAPE
+The Moon is not like Earth. It does not have oceans,
+lakes, rivers, or streams. It does not have wind-blown
+ice fields at its poles. Roses and morning glories do not
+sprout from its charcoal gray, dusty surface. Redwoods do not tower above its cratered ground. Dinosaur foot prints cannot be found. Paramecium never
+conjugated, amoeba never split, and dogs never
+barked. The wind never blew. People never lived
+there—but they have wondered about it for centuries, and a few lucky ones have even visited it.
+Highlands and lowlands
+The major features of the Moon’s surface can be
+seen by just looking up at it. It has lighter and darker
+areas. These distinctive terrains are the bright lunar
+highlands (also known as the lunar terrae, which is
+Latin for “land”) and the darker plains called the
+lunar maria, Latin for “seas,” which they resembled
+to Thomas Hariot and Galileo Galilei, the first scientists to examine the Moon with telescopes. The
+names terrae and maria were given to lunar terrains
+by Hariot and Galileo’s contemporary, Johannes
+Kepler. In fact, the idea that the highlands and maria
+correspond to lands and seas appears to have been
+popular among ancient Greeks long before tele-
+
+2
+
+scopes were invented. Although we now know they
+are not seas (the Moon never had any water), we still
+use the term maria, and its singular form, mare.
+The highlands and craters
+Closer inspection shows that the highlands comprise countless overlapping craters, ranging in size
+from the smallest visible in photographs (1 meter on
+the best Apollo photographs) to more than 1000 km.
+Essentially all of these craters formed when meteorites crashed into the Moon. Before either robotic or
+piloted spacecraft went to the Moon, many scientists
+thought that most lunar craters were volcanic in
+origin. But as we found out more about the nature of
+lunar craters and studied impact craters on Earth, it
+became clear that the Moon has been bombarded by
+cosmic projectiles. The samples returned by the
+Apollo missions confirmed the pervasive role impact
+processes play in shaping the lunar landscape.
+The term “meteorite impact” is used to describe
+the process of surface bombardment by cosmic object. The objects themselves are variously referred to
+as “impactors” or “projectiles.”
+The impact process is explosive. A large impactor does not simply bore its way into a planet’s
+surface. When it hits, it is moving extremely fast,
+more than 20 km/sec (70,000 km/hour). This meeting is not tender. High-pressure waves are sent back
+into the impactor and into the target planet. The
+impactor is so overwhelmed by the passage of the
+shock wave that almost all of it vaporizes, never to be
+seen again. The target material is compressed strongly,
+then decompressed. A little is vaporized, some melted,
+but most (a mass of about 10,000 times the mass of
+the impactor) is tossed out of the target area, piling up
+around the hole so produced. The bottom of the crater
+is lower than the original ground surface, the piled up
+material on the rim is higher. This is the characteristic
+shape of an impact crater and is different from
+volcanic calderas (no piled up materials) or cinder
+cones (the central pit is above the original ground
+surface). A small amount of the target is also tossed
+great distances along arcuate paths called rays.
+Real impacts cannot be readily simulated in a
+classroom. In fact, there are very few facilities where
+we can simulate high-velocity impacts. Nevertheless,
+classroom experiments using marbles, ball bearings,
+or other objects can still illustrate many important
+
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+points about the impact process. For example, objects impacting at a variety of
+velocities (hence kinetic energies) produce
+craters with a variety of sizes; the more
+energy, the larger the crater. [See the “Impact Craters” activity on Pages 61–70.]
+The maria
+The maria cover 16% of the lunar surface and are composed of lava flows that
+filled relatively low places, mostly inside
+immense impact basins. So, although the
+Moon does not have many volcanic craters, it did experience volcanic activity.
+Close examination of the relationships between the highlands and the maria shows
+that this activity took place after the highlands formed and after most of the cratering
+took place. Thus, the maria are younger than
+the highlands. [See the “Clay Lava Flows”
+activity on Pages 71–76 and the “Lava Layering” activity on Pages 77–82.]
+How do we know that the dark plains
+are covered with lava flows? Why not some
+other kind of rock? Even before the Apollo
+missions brought back samples from the
+maria, there were strong suspicions that the
+plains were volcanic. They contain some
+features that look very much like lava flows.
+Other features resemble lava channels, Rivers or lava channels?
+which form in some types of lava flows on The origin of river-like valleys, called rilles, was debated before the Apollo 15 mission visited one of
+Earth. Still other features resemble col- them, Hadley Rille, shown here from orbit (white arrow shows the landing site) and from the lunar
+lapses along underground volcanic fea- surface. Some scientists argued that rilles were river valleys, implying that the Moon had flowing
+tures called lava tubes. These and other water at one time. Others thought that rilles resembled the channels that form in lava flows.
+features convinced most lunar scientists Observations by the Apollo 15 crew and samples returned settled the argument: rilles are volcanic
+before the Apollo missions that the maria features.
+were lava plains. This insight was confirmed by samples collected from the maria: they logic mapping using high-quality telescopic images,
+are a type of volcanic rock called basalt.
+showed that the mare must be considerably younger
+The maria fill many of the gigantic impact basins than the basins in which they reside. For example, the
+that decorate the Moon’s nearside. (The Moon keeps impact that formed the large Imbrium basin (the
+the same hemisphere towards Earth because Earth’s Man-in-the-Moon’s right eye) hurled material outgravity has locked in the Moon’s rotation.) Some wards and sculpted the mountains surrounding the
+scientists contended during the 1960s that this dem- Serenitatis basin (the left eye); thus, Serenitatis must
+onstrated a cause and effect: impact caused not only be older. The Serenitatis basin is also home to Mare
+the formation of a large crater but led to melting of the Serenitatis. If the lavas in Mare Serentatis formed
+lunar interior as well. Thus, it was argued, the im- when the basin did, they ought to show the effects of
+pacts triggered the volcanism. However, careful geo- the giant impact that formed Imbrium. They show no
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+3
+
+Maria mysteries
+Some mysteries persist about the maria. For one,
+why are volcanoes missing except for the cinder
+cones associated with dark mantle deposits? Second, if no obvious volcanoes exist, where did the
+lavas erupt from? In some cases, we can see that lava
+emerged from the margins of enormous impact basins, perhaps along cracks concentric to the basin.
+But in most cases, we cannot see the places where the
+lava erupted. Another curious feature is that almost
+all the maria occur on the Earth-facing side of the
+Moon. Most scientists guess that this asymmetry is
+caused by the highlands crust being thicker on the
+lunar farside, making it difficult for basalts to make
+it all the way through to the surface. [See the “Moon
+Anomalies” activity on Pages 91–98.]
+
+Lava flows dribbling across Mare Imbrium
+Long lava flows (lower left to upper right through center of photo) in Mare Imbrium.
+The flows are up to 400 kilometers long (the entire extent is not shown in this Apollo
+
+THE DUSTY LUNAR SURFACE
+
+photograph) and have 30-meter high cliffs at their margins. The ridges running roughly
+perpendicular to the flows are called wrinkle ridges. The ridges formed after the
+flows because they did not impede the advance of the lava flow. The smooth plains
+surrounding the prominent lava flows are also lava, but older, so the margins are
+harder to see. The craters on the right along the ridge are about 5 kilometers in
+diameter.
+
+signs of it. Furthermore, the maria contain far fewer
+craters than do basin deposits, hence have been
+around a shorter time (the older the surface, the
+greater the number of craters). The Apollo samples,
+of course, confirmed these astute geological observations and showed that the maria filling some basins
+formed a billion years after the basin formed.
+One other type of deposit associated with the
+maria, though it blankets highlands areas as well, is
+known as dark mantle deposits. They cannot be seen
+except with telescopes or from spacecraft near the
+Moon, but are important nonetheless. Before Apollo,
+most scientists believed that the dark mantle deposits
+were formed by explosive volcanic eruptions known
+as pyroclastic eruptions (literally, “pieces of fire”).
+Some deposits seemed to be associated with low,
+broad, dark cinder cones, consistent with the idea that
+they were formed by pyroclastic eruptions—this is
+how cinder cones form on Earth. This bit of geologic
+deduction was proven by the Apollo 17 mission and
+its sampling of the “orange soil,” a collection of tiny
+glass droplets like those found in terrestrial pyroclastic eruptions.
+
+4
+
+Some visitors to Kilauea Volcano, Hawai‘i, have
+been overheard to say, upon seeing a vast landscape
+covered with fresh lava, “It looks just like the Moon.”
+Well, it doesn’t. The fresh lava flows of Kilauea and
+other active volcanoes are usually dark grayish and
+barren like the Moon, but the resemblance ends
+there. The lunar surface is charcoal gray and sandy,
+with a sizable supply of fine sediment. Meteorite
+impacts over billions of years have ground up the
+formerly fresh surfaces into powder. Because the
+Moon has virtually no atmosphere, even the tiniest
+meteorite strikes a defenseless surface at its full
+cosmic velocity, at least 20 km/sec. Some rocks lie
+strewn about the surface, resembling boulders sticking up through fresh snow on the slopes of Aspen or
+Vail. Even these boulders won’t last long, maybe a
+few hundred million years, before they are ground up
+into powder by the relentless rain of high-speed
+projectiles. Of course, an occasional larger impactor
+arrives, say the size of a car, and excavates fresh rock
+from beneath the blanket of powdery sediment. The
+meteoritic rain then begins to grind the fresh boulders
+down, slowly but inevitably.
+The powdery blanket that covers the Moon is
+called the lunar regolith, a term for mechanically
+produced debris layers on planetary surfaces. Many
+scientists also call it the “lunar soil,” but it contains
+none of the organic matter that occurs in soils on
+Earth. Some people use the term “sediment” for
+
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+regolith. Be forewarned that the regolith
+samples in the Lunar Sample Disk are
+labeled “soil.” Although it is everywhere,
+the regolith is thin, ranging from about
+two meters on the youngest maria to
+perhaps 20 meters in the oldest surfaces
+in the highlands. [See the “Regolith Formation” activity on Pages 47–52.]
+Lunar regolith is a mixed blessing.
+On the one hand, it has mixed local
+material so that a shovelful contains most
+of the rock types that occur in an area. It
+even contains some rock fragments tossed
+in by impacts in remote regions. Thus,
+the regolith is a great rock collection. It
+also contains the record of impacts during the past several hundred million to
+a billion years, crucial information for
+understanding the rate of impact on
+Earth during that time. On the other
+hand, this impact record is not written
+very clearly and we have not come close
+to figuring it out as yet. The blanket of
+regolith also greatly obscures the details
+of the bedrock geology. This made field
+work during Apollo difficult and hinders
+our understanding of lunar history.
+The regolith consists of what you’d
+expect from an impact-generated pile
+of debris. It contains rock and mineral
+fragments derived from the original bedrock. It also contains glassy particles
+formed by the impacts. In many lunar
+regoliths, half of the particles are composed of mineral fragments that are bound
+together by impact glass; scientists call
+these objects agglutinates. The chemical composition of the regolith reflects
+the composition of the bedrock underneath. Regolith in the highlands is rich
+in aluminum, as are highland rocks.
+Regolith in the maria is rich in iron and
+magnesium, major constituents of basalt. A little bit of mixing from beneath
+basalt layers or from distant highland
+locales occurs, but not enough to obscure the basic difference between the
+highlands and the maria.
+
+Raking moon dirt
+One of the most useful ways of obtaining samples of Moon rocks was to drag a rake through the
+regolith. This allowed rock fragments larger than about one centimeter to remain on tines of the rake,
+while smaller fragments fell through. Note the large range in the sizes of rock fragments. One large
+boulder lies near the rake, a medium-sized one is visible between the astronaut’s feet, along with
+countless other pebbles. Most of the regolith is smaller than fine sand. The astronaut’s footprints are
+distinct because the regolith is composed of a large percentage of tiny particles (about 20% is smaller
+than 0.02 millimeters).
+
+A geologist-astronaut does field work on the Moon
+Geologist Harrison H. Schmitt examines a large rock at the Apollo 17 landing site. This large boulder
+contains numerous rock fragments that were smashed together by the huge impact event that made
+the 750-kilometer Serentatis basin on the Moon.
+
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+5
+
+One of the great potential bits of information
+stored in the complex pile atop the lunar surface is the
+history of the Sun. The nearest star puts out prodigious amounts of particles called the solar wind.
+Composed mostly of hydrogen, helium, neon, carbon, and nitrogen, the solar wind particles strike the
+lunar surface and are implanted into mineral grains.
+The amounts build up with time. In principle, we can
+determine if conditions inside the Sun have changed
+over time by analyzing these solar wind products,
+especially the isotopic composition of them.
+The same solar wind gases may prove useful
+when people establish permanent settlements on the
+Moon. Life support systems require the life-giving
+elements: hydrogen and oxygen (for water), carbon,
+and nitrogen. Plenty of oxygen is bound in the
+silicate, minerals of lunar rocks (about 50% by volume) and the solar wind provided the rest. So, when
+the astronauts were digging up lunar regolith for
+return to Earth, they were not merely sampling—
+they were prospecting!
+
+MOON ROCKS
+Geologists learn an amazing amount about a
+planet by examining photographs and using other
+types of remotely sensed data, but eventually they
+need to collect some samples. For example, although
+geologists determined unambigously from photographs that the maria are younger than the highlands,
+they did not know their absolute age, the age in years.
+Rocks also provide key tests to hypotheses. For
+instance, the maria were thought to be covered with
+lava flows, but we did not know for sure until we
+collected samples from them. Also, no method can
+accurately determine the chemical and mineralogical composition of a rock except laboratory analysis.
+Most important, samples provide surprises, telling
+us things we never expected. The highlands provide
+the best example of a geological surprise, and one
+with great consequences for our understanding of
+what Earth was like 4.5 billion years ago.
+
+A fist-sized piece of the original lunar crust
+This rock sample was collected during the Apollo 15 mission. It is an anorthosite, a
+
+Smash and mix, mix and melt
+
+rock composed of little else but the mineral feldspar. Anorthosites formed from the
+
+This rock returned by the Apollo 16 mission attests to the effects of impacts on a
+
+enormous magma system, the lunar magma ocean, that surrounded the newly
+
+planet’s crust. It is a hodgepodge of rock and mineral fragments, some of which
+
+formed Moon. Because of its importance in understanding the origin of the Moon’s
+
+themselves are complicated mishmashes of rock debris. Geologists call these
+
+crust, the rock was nicknamed the “genesis rock.”
+
+complicated rocks breccias.
+
+6
+
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+Highland rocks, the lunar magma
+ocean, and maybe a cataclysm
+
+Hawai'i developed a method to determine the iron
+content of the lunar surface from ratioes of the
+intensity of light reflected in different wavelengths.
+Strange as it may seem, the first highland rocks The magma ocean hypothesis predicts that the lunar
+were collected during the first lunar landing, the highlands should have low iron contents, less than
+Apollo 11 mission, which landed on a mare, Mare about 5 wt. % (when recorded as iron oxide, FeO).
+Tranquillitatis. Although most of the rocks collected According to Clementine measurements, the highwere, indeed, basalts, some millimeter-sized rock lands average slightly under 5 wt. % FeO, consistent
+fragments were quite different. They were composed with the magma ocean idea. Further refinement of
+chiefly of the mineral plagioclase feldspar; some this test is underway using data from Clementine and
+fragments were composed of nothing but plagio- the forthcoming U. S. Lunar Prospector Mission,
+clase. [See the “Rock ABCs Fact Sheet” on Page 19.] scheduled for launch in early 1998.
+Such rocks are called anorthosites. Some scientists
+The highlands also contain other types of igneous
+suggested that these fragments were blasted to the rocks. The most abundant are called norites and
+Apollo 11 landing site by distant impacts on highland troctolites, rocks composed of equal amounts of
+terrain. Thus, they argued, the highlands are loaded plagioclase and either olivine or pyroxene (both
+with plagioclase. This was a bold extrapolation con- silicate minerals containing iron and magnesium).
+firmed by subsequent Apollo missions to highland Age dating suggests that these rocks are slightly
+sites.
+younger than the anorthosites and formed after the
+But this was not enough for some scientists. If magma ocean had crystallized.
+the highlands are enriched in plagioclase, how did
+Highland rocks are difficult to work with because
+they get that way? One way is to accumulate it by all that cratering, so evident in photographs of the
+flotation in a magma (molten rock). This happens highlands, has taken its toll on the rocks. Most
+in thick subterranean magma bodies on Earth. highland rocks are complex mixtures of other rocks.
+So, plagioclase floated in a magma. But if ALL the The original igneous rocks have been melted, mixed,
+lunar highlands are enriched in
+plagioclase, then the magma must
+have been all over the Moon. The
+early Moon must have been covered by a global ocean of magma,
+now commonly referred to as the
+lunar magma ocean. Although
+some scientists still remain
+unconvinced about the veracity
+of the magma ocean hypothesis,
+nothing we have learned since has contradicted the smashed, and generally abused by impacts during the
+idea that 4.5 billion years ago the Moon was covered Moon’s first half billion years. We call these compliby a layer of magma hundreds of kilometers thick. cated rocks breccias. Some are so mixed up that they
+The idea has been extended to the young Earth as contain breccias within breccias within breccias.
+well, and even to Mars and some asteroids. And all Most of the anorthosites, norites, and troctolites are
+this sprung forth because creative and bold scientists actually rock fragments inside breccias. Separating
+saw special importance in a few dozen white frag- them out is painstaking work.
+ments of anorthosite strewn about in a pile of charAn interesting thing about highland breccias,
+coal gray lunar regolith.
+especially those we call impact melt breccias (rocks
+The magma ocean concept was tested by the partly melted by an impact event), is that most of
+1994 U. S. Clementine Mission to the Moon. them fall into a relatively narrow span of ages, from
+Clementine was in a pole-to-pole orbit for two months, about 3.85 to 4.0 billion years. This has led some
+during which it took thousands of photographs in scientists to propose (boldly again–lunar scientists
+several wavelengths. Scientists at the University of don’t seem to be timid!) that the Moon was
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+7
+
+bombarded with exceptional intensity during that
+narrow time interval. If it happened, it probably
+affected Earth as well, perhaps leading to production
+of the first sedimentary basins, and possibly inhibiting the formation of the first life on this planet or
+harming whatever life had developed by four billion
+years ago. This idea of a cataclysmic bombardment
+of the Moon is not yet proven. It could be that the
+apparent clustering in rock ages reflects poor sampling—we may only have obtained samples from
+one or two large impact basins. The idea can be tested
+by obtaining samples from many more localities on
+the Moon.
+
+potassium (chemical symbol K), rare-earth elements
+(abbreviated REE), and phosphorus (P). Most Moon
+specialists believe that KREEP represents the last
+dregs from the crystallization of the magma ocean.
+Huge impacts dug down to the lower crust of the
+Moon and excavated it, mixing it with other debris
+to form KREEPy breccias.
+The maria:
+lava flows and fountains of fire
+The missions to mare areas brought back lots of
+samples of basalt. Basalts differ from the highlands
+rocks in having more olivine and pyroxene, and less
+
+A piece of a lava flow
+This typical sample of a mare basalt is composed mostly of brown pyroxene (grayish
+in the photo) and white feldspar. The holes in the sample are frozen gas bubbles.
+Some basalt samples have many such bubbles (called vesicles by geologists),
+whereas others have none.
+
+Multi-ringed masterpieces
+The Moon has about 35 multi-ringed, circular impact features larger than 300 km in
+diameter. The one shown here, the Orientale basin, has three very prominent rings.
+The diameter of the outer one is 930 km. These immense craters might all have
+formed in a narrow time interval between 3.85 and 4.0 billion years ago. Scientists
+do not know for sure how the rings form during the impact.
+
+Many highland breccias and a few igneous rocks
+are enriched compared to other lunar samples in a
+set of elements not familiar to most of us. The
+elements are those that tend not to enter the abundant
+minerals in rocks. The result is that as a magma
+crystallizes the part that is still liquid becomes
+progressively richer in these special elements. The
+rocks that contain them are called KREEP, for
+
+8
+
+plagioclase. Many of them also have surprisingly
+large amounts of an iron-titanium oxide mineral
+called ilmenite. The first batch had so much ilmenite
+(and some other related minerals) that they were
+called “high-titanium” mare basalts, in honor of the
+exceptional titanium contents compared to terrestrial
+basalts. The second mission, Apollo 12, returned
+basalts with lower titanium concentrations, so they
+were called “low-titanium” mare basalts. Subsequent missions, including an automated samplereturn mission sent by the Soviet Union, returned
+some mare basalts with even lower titanium, so
+they were dubbed “very-low-titanium” basalts. Most
+scientists figure that mare basalts have a complete
+range in titanium abundance. Data from the U. S.
+Clementine Mission confirm this, and show that the
+
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+Experiments conducted on
+mare basalts and pyroclastic
+glasses show that they formed
+when the interior of the Moon
+partially melted. (Rocks do not
+have a single melting temperature like pure substances. Instead
+they melt over a range of temperatures: 1000–1200°C for
+some basalts, for example.) The experiments also
+high-titanium basalts are not really very common on show that the melting took place at depths ranging
+the Moon.
+from 100 to 500 km, and that the rocks that partially
+The shapes of the mineral grains and how they melted contained mostly olivine and pyroxene, with
+are intergrown in mare basalts indicate that these some ilmenite in the regions that formed the highrocks formed in lava flows, some thin (perhaps a titanium basalts. An involved but sensible chain of
+meter thick), others thicker (up to perhaps 30 meters). reasoning indicates that these deep rocks rich in
+This is not unusual for basalt flows on Earth. Many olivine and pyroxene formed from the lunar magma
+lunar mare basalts also contain holes, called vesicles, ocean: while plagioclase floated to form anorthosites
+which were formed by gas bubbles trapped when the in the highlands crust, the denser minerals olivine
+lava solidified. Earth basalts also have them. On and pyroxene sank. So, although the anorthosites and
+Earth, the abundant gases escaping from the lava are mare basalts differ drastically in age and composicarbon dioxide and water vapor, accompanied by tion, the origins are intimately connected.
+some sulfur and chlorine gases. We are not as sure
+what gases escaped from lunar lavas, although we
+What’s next?
+know that water vapor was not one of them because
+there are no hints for the presence of water or waterScientists are still working on the bounty returned
+bearing minerals in any Moon rock. The best bet is a by the Apollo missions. New analytical techniques
+mixture of carbon dioxide and carbon monoxide, and improved understanding of how geological prowith some sulfur gases added for good measure.
+cesses work keep the field exciting and vibrant.
+On Earth, when the amount of gas dissolved in Eventually we will need additional samples and
+magma (the name for lava still underground) be- some extensive field work to fully understand the
+comes large, it escapes violently and causes an Moon and how it came to be and continues to evolve.
+explosive eruption. In places such as Hawai‘i, for These sampling and field expeditions will probably
+example, the lava erupts in large fountains up to be done by a combination of robotic and piloted
+several hundred meters high. The lava falls to the spacecraft.
+ground in small pieces, producing a pyroclastic deIn the meantime, Nature has provided a bonus:
+posit. This also happened on the Moon, producing samples from the Moon come to us free of charge in
+the dark mantle deposits. One of these was sampled the form of lunar meteorites. (See companion voldirectly during the Apollo 17 mission. The sample, ume Exploring Meteorite Mysteries.) Thirteen sepacalled the “orange soil,” consists of numerous small rate meteorites have been identified so far, one found
+orange glass beads. They are glass because they in Australia and the rest in Antarctica. We are sure
+cooled rapidly, so there was not enough time to form that they come from the Moon on the basis of
+and grow crystals in them.
+appearance and chemical and isotopic composition,
+Small samples of pyroclastic glasses were also but of course we do not know from where on the
+found at other sites. Some are green, others yellow, Moon they come. These samples have helped supstill others red. The differences in color reflect the port the magma ocean idea. Most important, knowamount of titanium they contain. The green have the ing that meteorites can be delivered to Earth by
+least (about 1 weight percent) and the red contain the impacts on the Moon lends credence to the idea that
+most (14 weight percent), more than even the highest we have some meteorites from Mars. The Martian
+titanium basalt.
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+9
+
+meteorites are collectively called SNC meteorites. If
+we did not know so much about the Moon we would
+never have been able to identify meteorites from the
+Moon, and, therefore, would not have been able to
+argue as convincingly that some meteorites come
+from Mars.
+
+From the Moon, free of charge
+The first lunar meteorite discovered in Antarctica hails from the lunar highlands and,
+like most highlands rocks, it is an impact breccia. The lunar meteorites prove that
+objects can be blasted off sizable objects without melting them, adding credence to
+the idea that a group of twelve meteorites comes from Mars.
+
+MOONQUAKES, THE MOON’S
+INTERIOR, AND THE MYSTERIOUS
+MAGNETIC FIELD
+The Moon does not shake, rattle, and roll as Earth
+does. Almost all moonquakes are smaller than Earth’s
+constant grumblings. The largest quakes reach only
+about magnitude 5 (strong enough to cause dishes to
+fall out of cabinets), and these occur about once a
+year. This is clear evidence that the Moon is not at
+present geologically active. No internal motions
+drive crustal plates as on Earth, or initiate hot spots
+to give rise to volcanic provinces like Hawai‘i. This
+seismic inactivity is a wonderful virtue in the eyes
+of astronomers. Combined with the lack of an
+atmosphere to cause stars to twinkle, the low moonquake activity makes the Moon an ideal place to
+install telescopes.
+We know about moonquakes from four seis-
+
+10
+
+mometers set up by the Apollo missions. Besides
+telling us how many and how strong moonquakes
+are, the data acquired by the Apollo seismic network
+help us figure out something about the nature of the
+Moon’s interior. On Earth, seismology has allowed
+us to know that the planet has a thin crust (20-60 km
+over continents, 8-10 km over ocean basins), a thick
+silicate mantle (down to 2900 km), and a large
+metallic iron core (2900 km to the center at 6370 km).
+The Moon is quite different. The crust is thicker than
+Earth’s continental crust, ranging from 70 km on the
+Earth-facing side to perhaps 150 km on the farside.
+The mare basalts represent a thin veneer on this
+mostly plagioclase-rich crust, averaging only about 1
+km in thickness (inferred mostly from photogeological
+studies). Evidence from samples collected on the
+rims of the large basins Imbrium and Serentatis and
+from remote sensing instruments carried onboard
+two Apollo missions, the Clementine Mission, and
+the forthcoming Lunar Prospector Mission suggest
+that the lower crust may not contain as much plagioclase as does the upper half of the crust. Beneath the
+crust is the lunar mantle, which is the largest part of
+the Moon. There might be a difference in rock types
+above and below a depth of 500 km, perhaps representing the depth of the lunar magma ocean. Beneath
+the mantle lies a small lunar core made of metallic
+iron. The size of the core is highly uncertain, with
+estimates ranging from about 100 km to 400 km.
+That little core is important, though. The Moon
+does not have much of a magnetic field, so the lunar
+core is not generating magnetism the way Earth’s
+core is. Nevertheless, it did in the past. Lunar rocks
+are magnetized, and the strength of the magnetic field
+has been measured by special techniques. Also, older
+rocks have stronger magnetism, suggesting that the
+Moon’s magnetic field was stronger in the distant
+past, and then decreased to its weak present state.
+Why this happened is unknown. What is known is
+this: you cannot navigate around the Moon using a
+compass!
+There are other mysteries about the Moon’s
+magnetism. Although the field was always weak and
+is extremely weak now, there are small areas on the
+Moon that have magnetic fields much stronger than
+the surrounding regions. These magnetic anomalies
+have not been figured out. Some scientists have
+associated them with the effects of large, basinforming impacts. Others have suggested that the
+
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+Moon forming together, a two-body
+system from the start. This idea has
+trouble explaining Earth’s rotation
+rate and how the moon-forming
+material got into orbit around Earth
+and stayed there, rather than falling
+to Earth. (These problems with total amount of spinning involve both
+Earth’s rotation and the Moon’s
+motion around Earth. The amount
+of rotation and revolving is
+quantified by a physical property
+called angular momentum.) The
+problem was so frustrating that
+some scientists suggested that
+maybe science had proved that the
+Moon does not exist!
+The annoying problems with
+the
+classical hypotheses of lunar
+Inside the Moon and Earth
+origin led scientists to consider alScientists have learned what Earth and the Moon are like inside by several techniques, the most important
+ternatives. This search led to the
+of which is seismology, the study of earthquake (and, of course) moonquake waves. Earth has a much
+seemingly outlandish idea that the
+larger metallic core than does the Moon.
+Moon formed when a projectile the
+ionized gases produced when comets impact the size of the planet Mars (half Earth’s radius and oneMoon might give rise to strong magnetic anomalies tenth its mass) smashed into Earth when it had grown
+in the crater ejecta. The jury is still out. The Lunar to about 90% of its present size. The resulting exploProspector Mission will thoroughly map the distri- sion sent vast quantities of heated material into orbit
+bution of magnetic anomalies, perhaps helping to around Earth, and the Moon formed from this debris.
+This new hypothesis, which blossomed in 1984 from
+solve this mystery.
+seeds planted in the mid-1970s, is called the giant
+THE MOON’S ORIGIN: A BIG WHACK impact theory. It explains the way Earth spins and
+why Earth has a larger metallic core than does the
+ON THE GROWING EARTH
+Moon. Furthermore, modern theories for how the
+For a long time, the most elusive mystery about planets are assembled from smaller bodies, which
+the Moon was how it formed. The problem baffled were assembled from still smaller ones, predict that
+philosophers and scientists for hundreds of years. All when Earth was almost done forming, there would
+of the hypotheses advanced for lunar origin had fatal have been a body nearby with a mass about one-tenth
+flaws, even though partisans tried tenaciously to that of Earth. Thus, the giant impact hypothesized to
+explain away the defects. The capture hypothesis, have formed the Moon is not an implausible event.
+which depicts capture of a fully formed Moon by The chances are so high, in fact, that it might have
+Earth, suffered from improbability. Close encounter been unavoidable.
+One would think that an impact between an
+with Earth would either result in a collision or fling
+the Moon into a different orbit around the Sun, almost Earth-sized planet and a Mars-sized planet
+probably never to meet up with Earth again. The would be catastrophic. The energy involved is infission hypothesis, in which the primitive Earth spins comprehensible. Much more than a trillion trillion
+so fast that a blob flies off, could not explain how tons of material vaporized and melted. In some
+Earth got to be spinning so fast (once every 2.5 hours) places in the cloud around the Earth, temperatures
+and why Earth and the Moon no longer spin that fast. exceeded 10,000°C. A fledgling planet the size of
+The double-planet hypothesis pictures Earth and the Mars was incorporated into Earth, its metallic core
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+11
+
+and all, never to be seen again. Yes, this sounds
+catastrophic. But out of it all, the Moon was created
+and Earth grew to almost its final size. Without this
+violent event early in the Solar System’s history,
+there would be no Moon in Earth’s sky, and Earth
+would not be rotating as fast as it is because the big
+impact spun it up. Days might even last a year. But
+then, maybe we would not be here to notice.
+
+was at least 500 km deep. The first minerals to form
+in this mind-boggling magmatic system were the
+iron and magnesium silicates olivine and pyroxene.
+They were denser than the magma, so they sank, like
+rocks in a pond, though not as fast. Eventually,
+plagioclase feldspar formed, and because it was less
+dense than the magma, began to float to the top, like
+bubbles in cola. It accumulated and produced mountains of anorthosite, producing the first lunar crust.
+The magma ocean phase ended by about 4.4 billion
+years ago. [See the “Differentiation” activity on
+Pages 57–60.]
+
+WHACK!
+The Moon may have formed when an object the size of the planet Mars smashed
+into Earth when our future home was about 90% constructed. This fierce event
+made Earth larger and blasted off vaporized and melted material into orbit. The
+Moon formed from this debris. This painting was created by William K. Hartmann,
+one of the scientists who invented the giant impact hypothesis for lunar origin.
+
+A BRIEF HISTORY OF THE MOON
+Sinking and floating in an ocean of magma
+
+We know the general outlines of what happened
+to the Moon after it was formed by a giant impact.
+The first notable event, which may have been a
+consequence of the giant impact, was the formation
+and crystallization of the magma ocean. Nobody
+knows how deep it was, but the best guess is that it
+
+12
+
+Soon after it formed, the Moon was surrounded by a huge shell of molten rock
+called the lunar magma ocean. As crystals formed in it, the denser ones such as
+olivine and pyroxene sank and the less dense ones, such as feldspar, floated
+upwards, forming the original anorthosite crust on the Moon. Dropping toothpicks
+and pennies into a glass of water shows the process: the toothpicks (representing
+feldspar) float and the pennies (olivine and pyroxene) sink.
+
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+Almost as soon as the crust had formed, perhaps
+while it was still forming, other types of magmas that
+would form the norites and troctolites in the highlands crust began to form deep in the Moon. A great
+mystery is where inside the Moon and how deep.
+Many lunar specialists believe the magmas derived
+from unmelted Moon stuff beneath the magma ocean.
+In any case, these magmas rose and infiltrated the
+anorthosite crust, forming large and small rock bodies, and perhaps even erupting onto the surface.
+Some of the magmas reacted chemically with the
+dregs of the magma ocean (KREEP) and others may
+have dissolved some of the anorthosite. This period
+of lunar history ended about 4.0 billion years ago.
+All during these first epochs, left-over projectiles
+continued to bombard the Moon, modifying the
+rocks soon after they formed. The crust was mixed to
+a depth of at least a few kilometers, perhaps as much
+as 20 km, as if a gigantic tractor had plowed the lunar
+crust. Though not yet proven, the rate of impact may
+have declined between 4.5 and 4.0 billion years ago,
+but then grew dramatically, producing most of the large
+basins visible on the Moon. This cataclysmic bombardment is postulated to have lasted from 4.0 to 3.85
+billion years ago. [See the “Impact Craters” activity
+on Pages 61–70, and the “Regolith Formation”
+activity on Pages 47–52.]
+Once the bombardment rate had settled down,
+the maria could form. Basalts like those making up
+the dark mare surfaces formed before 3.85 billion
+years ago, but not as voluminously as later, and the
+enormous bombardment rate demolished whatever
+lava plains formed. However, between 3.7 and about
+2.5 billion years ago (the lower limit is highly uncertain), lavas flowed across the lunar surface, forming
+the maria and decorating the Moon’s face. Along with
+the basalts came pyroclastic eruptions, high fountains of fire that launched glowing droplets of molten
+basalt on flights up to a few hundred kilometers.
+Since mare volcanism ceased, impact has been
+the only geological force at work on the Moon. Some
+impressive craters have been made, such as
+Copernicus (90 km across) and Tycho (85 km).
+These flung bright rays of material across the dark
+lunar landscape, adding more decoration. In fact,
+some of the material blasted from Tycho caused a
+debris slide at what would become the Apollo 17
+landing site. Samples from this site indicate that the
+landslide and some associated craters formed about
+
+110 million years ago. This, therefore, is the age of
+the crater Tycho. It is a triumph of geological savvy
+that we were able to date an impact crater that lies
+over 2000 km from the place we landed!
+The impacts during the past billions of years also
+have mixed the upper several meters of crust to make
+the powdery lunar regolith. The Sun has continued to
+implant a tiny amount of itself into the regolith,
+giving us its cryptic record and providing resources
+for future explorers. And recently, only seconds ago
+in geologic time, a few interplanetary travelers left
+their footprints here and there on the dusty ground.
+
+Anatomy of an impact crater
+The crater Tycho in the southern highlands on the lunar nearside is 85 kilometers
+across. Its terraced walls rise 3 to 4 kilometers above its floor. Its rim rises above the
+surrounding terrain, and its floor sits below it. Smooth material on the floor of the
+crater consists of impact-melted rock that flowed like lava across the growing floor
+in the later stages of excavation. In response to the huge increase then decrease in
+pressure, mountains two kilometers high rose from its floor, bringing up material
+from as much as ten kilometers in the crust. The blanket of material surrounding the
+crater is called the ejecta blanket; this pile of debris becomes progressively thinner
+away from the crater (especially evident on the left of the photo).
+
+Although not visible on this photograph, large craters like Tycho also have rays
+emanating from them. Rays form when materials thrown out of the crater land and
+excavate more of the lunar landscape along arcuate paths. The Tycho event caused
+a landslide and several secondary impacts at the Apollo 17 landing site, over 2000
+kilometers away. Analysis of samples collected during the Apollo 17 mission indicates
+that these events took place 110 million years ago. Thus, Tycho formed 110 million
+years ago.
+
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+13
+
+THE MOON AND EARTH:
+INEXORABLY INTERTWINED
+The Moon ought to be especially alluring to
+people curious about Earth. The two bodies formed
+near each other, formed mantles and crusts early,
+shared the same post-formational bombardment, and
+have been bathed in the same flux of sunlight and
+solar particles for the past 4.5 billion years. Here are
+a few examples of the surprising ways in which lunar
+science can contribute to understanding how Earth
+works and to unraveling its geological history.
+Origin of the Earth-Moon System. No matter how
+the Moon formed, its creation must have had dramatic effects on Earth. Although most scientists have
+concluded that the Moon formed as a result of an
+enormous impact onto the growing Earth, we do not
+know much about the details of that stupendous
+event. We do not know if the Moon was made mostly
+from Earth materials or mostly projectile, the kinds
+of chemical reactions that would have taken place in
+the melt-vapor cloud, and precisely how the Moon
+was assembled from this cloud.
+Magma oceans. The concept that the Moon had a
+magma ocean has been a central tenet of lunar science since it sprung from fertile minds after the
+return of the first lunar samples in 1969. It is now
+being applied to Earth, Mars, and asteroids. This
+view of the early stages of planet development is
+vastly different from the view in the 1950s and
+1960s. Back then, most (not all) scientists believed
+the planets assembled cold, and then heated up. The
+realization that the Moon had a magma ocean changed
+all that and has led to a whole new way of looking at
+Earth’s earliest history.
+
+extinctions are not understood. One possibility is that
+some mass-extinction events were caused by periodic increases in the rate of impact on Earth. For
+example, the mass extinctions, which included the
+demise of the dinosaurs, at the end of the Cretaceous
+period (65 million years ago), may have been caused
+by a large impact event. Attempts to test the idea by
+dating impact craters on Earth are doomed because
+there are too few of them. But the Moon has plenty
+of craters formed during the past 600 million years
+(the period for which we have a rich fossil record).
+These could be dated and the reality of spikes in the
+impact record could be tested.
+How geologic processes operate. The Moon is a
+natural laboratory for the study of some of the geologic processes that have shaped Earth. It is a great
+place to study the details of how impact craters form
+because there are so many well-preserved craters in
+an enormous range of sizes. It is also one of the places
+where volcanism has operated, but at lower gravity
+than on either Earth or Mars.
+LIFE AND WORK AT
+A MOON BASE
+
+People will someday return to the Moon. When
+they do, it will be to stay. They will build a base on
+the Moon, the first settlement in the beginning of an
+interplanetary migration that will eventually take
+them throughout the Solar System.
+There will be lots to do at a lunar base. Geologists
+will study the Moon with the intensity and vigor
+they do on Earth, with emphasis on field studies.
+Astronomers will make magnificent observations of
+the universe. Solar scientists will study the solar
+Early bombardment history of Earth and Moon. wind directly and investigate past activity trapped in
+The thousands of craters on the Moon’s surface layers of regolith. Writers and artists will be inspired
+chronicle the impact record of Earth. Most of the by a landscape so different from Earth’s. Life sciencraters formed before 3.9 billion years ago. Some tists will study how people adapt to a gravity field
+scientists argue that the Moon suffered a cataclysmic one-sixth as strong as Earth’s, and figure out how to
+bombardment (a drastic increase in the number of grow plants in lunar greenhouses. Engineers will
+impacting projectiles) between 3.85 and 4.0 billion investigate how to keep a complex facility operating
+years ago. If this happened and Earth was subjected continuously in a hostile environment. Mining and
+to the blitzkrieg as well, then development of Earth’s chemical engineers will determine how to extract
+earliest crust would have been affected. The intense resources from Moon rocks and regolith. The seembombardment could also have influenced the devel- ingly dry lunar surface contains plenty of the ingreopment of life, perhaps delaying its appearance.
+dients to support life at a Moon base (oxygen and
+Impacts, extinctions, and the evolution of life on hydrogen for water, nitrogen and carbon for the
+Earth. The mechanisms of evolution and mass growth of plants), including the construction
+
+14
+
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+The Curatorial Facility is one of the cleanest
+places you’ll ever see. To
+go inside, you must wear
+white suits, boots, hats, and
+gloves, outfits affectionately known as “bunny
+suits.” Wipe a gloved hand
+on a stainless steel cabinet
+and you will not find a
+trace of dust because the
+air is filtered to remove
+potential contaminating
+particles.
+The samples are stored
+in a large vault, and only
+one at a time is moved to a
+glove box. You can pick
+up the rocks by jamming
+Geology at a Moon Base
+your hands into a pair of
+The best geology is done in the field. To understand rocks we must examine them up close, map their distributions, see the
+the black rubber gloves,
+structures in them, and chip off samples when necessary. The field geology done during the Apollo missions was hampered
+allowing you to turn a rock
+by the lack of time the astronauts could devote to it. But that will change when people live permanently on the Moon.
+over, to sense its mass and
+Geologists will be able to spend as much time as they need to decipher the story recorded by lunar rock formations. This
+density, to connect with it.
+painting shows three astronauts (one in the distance) examining the outside of a lava tube, an underground conduit that
+A stereomicroscope alcarried red-hot lava to an eruption site perhaps hundreds of kilometers away.
+lows you to look at it
+closely. If you decide you
+need a sample, and of course you have been approved
+materials to build and maintain the base (regolith to obtain one, then expert lunar sample processors
+can be molded into bricks; iron, titanium, and alumi- take over. The sample is photographed before and
+num can be smelted and forged into tools and build- after the new sample is chipped off. This is time
+ing materials). It will be an exciting, high-tech, consuming, but valuable to be sure we know the
+faraway place inhabited by adventurous souls. [See relationships of all samples to each other. In many
+the Unit 3 activities beginning on Page 99.]
+cases, we can determine the orientation a specific
+part of a rock was in on the surface of the Moon
+WHERE MOON ROCKS
+before collection.
+HANG OUT
+A select small number of pieces of the Moon are
+on display in public museums, and only three pieces
+Since arrival on Earth, lunar samples have been can actually be touched. These so-called lunar
+treated with the respect they deserve. Most of the "touchstones" were all cut from the same Apollo 17
+treasure of Apollo is stored at the Lunar Curatorial basaltic rock. One touchstone is housed at the
+Facility at the Johnson Space Center, Houston, Texas. Smithsonian Air and Space Museum in Washington,
+A small percentage is stored in an auxiliary facility at D.C. Another touchstone is at the Space Center
+Brooks Air Force Base near San Antonio, Texas, Houston facility adjacent to the Johnson Space Cenplaced there in case a disaster, such as a hurricane, ter. A third touchstone is on long-term loan to the
+befalls Houston and the samples are destroyed. Many Museo de Las Ciencias at the Universidad Nacional
+small samples are also in the laboratories of investi- Autonoma de Mexico. Visitors to these exhibits
+gators around the world, where enthusiastic scien- marvel at the unique experience of touching a piece
+tists keep trying to wring out the Moon’s secrets.
+of the Moon with their bare hands.
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+15
+
+The Original Moon
+Four and a half æons ago
+a dark, dusty cloud deformed.
+Sun became star; Earth became large,
+and Moon, a new world, was born.
+This Earth/Moon pair, once linked so close,
+would later be forced apart.
+Images of young intimate ties
+we only perceive in part.
+Both Earth and Moon were strongly stripped
+of their mantle siderophiles.
+But Moon alone was doomed to thirst
+from depletion of volatiles.
+Safe haven for precious rocks
+NASA stores the lunar sample collection in a specially constructed facility called the Lunar Curatorial
+Facility at the Johnson Space Center in Houston, Texas. The priceless materials remain in a nitrogen
+atmosphere, which is far less reactive chemically than normal oxygen-rich air. Scientists working in the
+facility wear lint-free outfits affectionately known as “bunny suits,” and handle the samples in glove
+boxes. In this photograph, Roberta Score is examining a piece of an Apollo 16 rock, while Andrea Mosie
+(left) looks on.
+
+Moon holds secrets of ages past
+when planets dueled for space.
+As primordial crust evolved
+raw violence reworked Moon’s face.
+After the first half billion years
+huge permanent scars appeared;
+ancient feldspathic crust survived
+with a mafic mantle mirror.
+But then there grew from half-lived depths
+a new warmth set free inside.
+Rivers and floods of partial melt
+resurfaced the low ‘frontside’.
+
+SCIENTISTS AS POETS
+Scientists do not view the world in purely objective ways.
+Each has biases and a unique way of looking at the world. Science
+is not done solely with piles of data, hundreds of graphs, or pages
+of equations. It is done with the heart and soul, too. Sometimes
+a scientist is moved to write about it in elegant prose like that
+written by Loren Eisley or in poetry, like the poem written by
+Professor Carlé Pieters of Brown University. Dr. Pieters holds
+her doctorate from MIT and is an expert in remote sensing of
+planetary surfaces. She is especially well known for her telescopic observations of the Moon. The poem first appeared in the
+frontispiece of Origin of the Moon, published by the Lunar and
+Planetary Institute.
+
+Thus evolved the Original Moon
+in those turbulent times.
+Now we paint from fragments of clues
+the reasons and the rhymes:
+Sister planet;
+Modified clone;
+Captured migrant;
+Big splash disowned?
+The Truth in some or all of these
+will tickle, delight,
+temper, and tease.
+
+— Carlé Pieters
+
+16
+
+Exploring the Moon -- A Teacher's Guide with Activities, NASA EG-1997-10-116-HQ
+
+

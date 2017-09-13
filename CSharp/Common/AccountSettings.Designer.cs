@@ -12,7 +12,7 @@ namespace Microsoft.Azure.Batch.Samples.Common {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "12.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "14.0.0.0")]
     public sealed partial class AccountSettings : global::System.Configuration.ApplicationSettingsBase {
         
         private static AccountSettings defaultInstance = ((AccountSettings)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new AccountSettings())));
@@ -25,7 +25,7 @@ namespace Microsoft.Azure.Batch.Samples.Common {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("https://(YourAccount).(region).batch.azure.com")]
+        [global::System.Configuration.DefaultSettingValueAttribute("https://(YourAccount).(region).batch.azure.com")] 
         public string BatchServiceUrl {
             get {
                 return ((string)(this["BatchServiceUrl"]));

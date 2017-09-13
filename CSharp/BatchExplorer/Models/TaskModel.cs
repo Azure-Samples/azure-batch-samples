@@ -103,7 +103,7 @@ namespace Microsoft.Azure.BatchExplorer.Models
                 if (this.attemptToLoadOutputs && (this.OutputFiles == null || !this.OutputFiles.Any()))
                 {
                     AsyncOperationTracker.Instance.AddTrackedInternalOperation(
-                        this.RefreshAsync(ModelRefreshType.Children));
+                        this.RefreshAsync(ModelRefreshType.Basic | ModelRefreshType.Children));
                 }
 
                 this.attemptToLoadOutputs = false;
@@ -359,7 +359,6 @@ namespace Microsoft.Azure.BatchExplorer.Models
         #endregion
 
         #region Private methods
-
         /// <summary>
         /// Lists the task files associated with this task
         /// </summary>
