@@ -97,7 +97,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("TopNWordsJob2")]
+        [global::System.Configuration.DefaultSettingValueAttribute("TopNWordsJob")]
         public string JobId {
             get {
                 return ((string)(this["JobId"]));
