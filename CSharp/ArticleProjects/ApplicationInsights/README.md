@@ -1,22 +1,3 @@
----
-title: Monitoring and debugging Azure Batch applications with Application Insights - Azure | Microsoft Docs
-description: Add instrumentation to your applications to diagnose and debug application running in Azure Batch in near-real time.
-services: batch
-documentationcenter: ''
-author: tamram
-manager: timlt
-editor: ''
-
-ms.assetid: e14e611d-12cd-4671-91dc-bc506dc853e5
-ms.service: batch
-ms.devlang: na
-ms.topic: article
-ms.tgt_pltfrm: multiple
-ms.workload: big-compute
-ms.date: 02/01/2017
-ms.author: tamram
-
----
 # Monitoring and debugging Azure Batch applications with Application Insights
 
 Application Insights provides an elegant and powerful way to monitor and debug 
@@ -46,7 +27,6 @@ For Application Insights support in other languages look at the
   > [!WARNING]
   > You may be **charged** for the data stored in your Application Insights account. 
   > This includes the diagnostic and monitoring data discussed in this article.
-  > 
   > 
 
 ## Adding Application Insights to your project
@@ -84,7 +64,7 @@ following sample illustrates how to use these methods.
 ```csharp
 public void CountWords(string blobName, int numTopN, string storageAccountName, string storageAccountKey)
 {
-    // simulate exception for some randome set of tasks
+    // simulate exception for some  set of tasks
     Random rand = new Random();
     if (rand.Next(0, 10) % 10 == 0)
     {
@@ -234,7 +214,7 @@ FileToStage applicationInsightsServerTelemetryDll = new FileToStage(AIServerTele
 FileToStage applicationInsightsWindowsServerDll = new FileToStage(AIWindowsServerName, stagingStorageAccount);
 ```
 
-> Th FileToStage method is a helper function in the code 
+> The FileToStage method is a helper function in the code 
 > sample that allows you to easily upload a file from local disk to an 
 > Azure Storage blob. This is later referenced downloaded to a Compute Node 
 > and referenced by a task.
