@@ -12,12 +12,6 @@ into your solution and instrument your application code. Futhermore it provides
 examples on how to monitor your application via the Azure portal and build 
 custom dashboards.
 
-*Should this be added in the learn more section?*
-> This document focuses on adding Application Insights to your .NET assemblies running in Batch. 
-For Application Insights support in other languages look at the 
-[languages, platforms and integrations documentation](https://docs.microsoft.com/en-us/azure/application-insights/app-insights-platforms).
-
-
 ## Prerequisites
 * [Azure Batch account](https://docs.microsoft.com/azure/batch/batch-account-create-portal)
 * [Azure Application Insights account](https://docs.microsoft.com/azure/application-insights/app-insights-create-new-resource)
@@ -370,3 +364,6 @@ This [article](https://docs.microsoft.com/en-us/azure/application-insights/app-i
 
 ## More reading ...
 Learn more about [Application Insights](https://docs.microsoft.com/en-us/azure/application-insights/).
+
+For Application Insights support in other languages look at the 
+[languages, platforms and integrations documentation](https://docs.microsoft.com/en-us/azure/application-insights/app-insights-platforms).
