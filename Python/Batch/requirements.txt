@@ -1,2 +1,2 @@
-azure-batch==3.0.0
-azure-storage==0.34.0
+azure-batch==4.0.0
+azure-storage==0.36.0
