@@ -158,19 +158,23 @@ namespace Microsoft.Azure.BatchExplorer.Service
             }
             else if (virtualMachineConfigurationOptions != null)
             {
+                var virtualMachineConfiguration = new VirtualMachineConfiguration(
+                    new ImageReference(
+                        publisher: virtualMachineConfigurationOptions.Publisher,
+                        offer: virtualMachineConfigurationOptions.Offer,
+                        sku: virtualMachineConfigurationOptions.SkuId,
+                        version: virtualMachineConfigurationOptions.Version),
+                    virtualMachineConfigurationOptions.NodeAgentSkuId)
+                {
+                    WindowsConfiguration = virtualMachineConfigurationOptions.EnableWindowsAutomaticUpdates.HasValue
+                        ? new WindowsConfiguration(virtualMachineConfigurationOptions.EnableWindowsAutomaticUpdates)
+                        : null
+                };
+
                 unboundPool = this.Client.PoolOperations.CreatePool(
                     poolId,
                     virtualMachineSize: virtualMachineSize,
-                    virtualMachineConfiguration: new VirtualMachineConfiguration(
-                        virtualMachineConfigurationOptions.NodeAgentSkuId,
-                        imageReference: new ImageReference(
-                            publisher: virtualMachineConfigurationOptions.Publisher,
-                            offer: virtualMachineConfigurationOptions.Offer,
-                            sku: virtualMachineConfigurationOptions.SkuId,
-                            version: virtualMachineConfigurationOptions.Version),
-                        windowsConfiguration: virtualMachineConfigurationOptions.EnableWindowsAutomaticUpdates.HasValue ?
-                            new WindowsConfiguration(virtualMachineConfigurationOptions.EnableWindowsAutomaticUpdates) :
-                            null),
+                    virtualMachineConfiguration: virtualMachineConfiguration,
                     targetDedicatedComputeNodes: targetDedicated,
                     targetLowPriorityComputeNodes: targetLowPriority);
             }
@@ -210,6 +214,22 @@ namespace Microsoft.Azure.BatchExplorer.Service
             }
 
             await unboundPool.CommitAsync();
+        }
+
+        private static VirtualMachineConfiguration GetVirtualMachineConfiguration(VirtualMachineConfigurationOptions virtualMachineConfigurationOptions)
+        {
+            return new VirtualMachineConfiguration(
+                                      new ImageReference(
+                                        publisher: virtualMachineConfigurationOptions.Publisher,
+                                        offer: virtualMachineConfigurationOptions.Offer,
+                                        sku: virtualMachineConfigurationOptions.SkuId,
+                                        version: virtualMachineConfigurationOptions.Version),
+                                      virtualMachineConfigurationOptions.NodeAgentSkuId
+                                    )
+            {
+             WindowsConfiguration=virtualMachineConfigurationOptions.EnableWindowsAutomaticUpdates.HasValue ?
+                            new WindowsConfiguration(virtualMachineConfigurationOptions.EnableWindowsAutomaticUpdates) :
+                            null};
         }
 
         public async Task ResizePool(
@@ -373,8 +393,8 @@ namespace Microsoft.Azure.BatchExplorer.Service
             CloudTask unboundTask = new CloudTask(options.TaskId, options.CommandLine);
             if (options.IsMultiInstanceTask)
             {
-                unboundTask.MultiInstanceSettings = new MultiInstanceSettings(options.InstanceNumber);
-                unboundTask.MultiInstanceSettings.CoordinationCommandLine = options.BackgroundCommand;
+                unboundTask.MultiInstanceSettings = new MultiInstanceSettings(options.CommandLine,options.InstanceNumber);
+                //unboundTask.MultiInstanceSettings.CoordinationCommandLine = options.BackgroundCommand;
                 unboundTask.MultiInstanceSettings.CommonResourceFiles = options.CommonResourceFiles.ConvertAll(f => new ResourceFile(f.BlobSource, f.FilePath));
             }
             unboundTask.UserIdentity = new UserIdentity(new AutoUserSpecification(
