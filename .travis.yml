@@ -16,6 +16,8 @@ addons:
 env:
   - BATCH_SAMPLES_DIR=Python/Batch
 install:
+  - python -m pip install --upgrade pip
+  - pip install --upgrade setuptools
   - pip install -r $BATCH_SAMPLES_DIR/requirements.txt
   - pip install coveralls flake8 pytest pytest-cov requests_mock
   # install Java stuff
