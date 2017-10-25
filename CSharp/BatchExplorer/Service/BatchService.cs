@@ -162,15 +162,17 @@ namespace Microsoft.Azure.BatchExplorer.Service
                     poolId,
                     virtualMachineSize: virtualMachineSize,
                     virtualMachineConfiguration: new VirtualMachineConfiguration(
-                        virtualMachineConfigurationOptions.NodeAgentSkuId,
+                        nodeAgentSkuId: virtualMachineConfigurationOptions.NodeAgentSkuId,
                         imageReference: new ImageReference(
                             publisher: virtualMachineConfigurationOptions.Publisher,
                             offer: virtualMachineConfigurationOptions.Offer,
                             sku: virtualMachineConfigurationOptions.SkuId,
-                            version: virtualMachineConfigurationOptions.Version),
-                        windowsConfiguration: virtualMachineConfigurationOptions.EnableWindowsAutomaticUpdates.HasValue ?
-                            new WindowsConfiguration(virtualMachineConfigurationOptions.EnableWindowsAutomaticUpdates) :
-                            null),
+                            version: virtualMachineConfigurationOptions.Version))
+                            {
+                                WindowsConfiguration = virtualMachineConfigurationOptions.EnableWindowsAutomaticUpdates.HasValue ?
+                                    new WindowsConfiguration(virtualMachineConfigurationOptions.EnableWindowsAutomaticUpdates) :
+                                    null
+                            },
                     targetDedicatedComputeNodes: targetDedicated,
                     targetLowPriorityComputeNodes: targetLowPriority);
             }
@@ -373,8 +375,7 @@ namespace Microsoft.Azure.BatchExplorer.Service
             CloudTask unboundTask = new CloudTask(options.TaskId, options.CommandLine);
             if (options.IsMultiInstanceTask)
             {
-                unboundTask.MultiInstanceSettings = new MultiInstanceSettings(options.InstanceNumber);
-                unboundTask.MultiInstanceSettings.CoordinationCommandLine = options.BackgroundCommand;
+                unboundTask.MultiInstanceSettings = new MultiInstanceSettings(options.BackgroundCommand, options.InstanceNumber);
                 unboundTask.MultiInstanceSettings.CommonResourceFiles = options.CommonResourceFiles.ConvertAll(f => new ResourceFile(f.BlobSource, f.FilePath));
             }
             unboundTask.UserIdentity = new UserIdentity(new AutoUserSpecification(

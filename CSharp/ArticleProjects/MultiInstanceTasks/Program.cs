@@ -85,10 +85,7 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
                 // The CoordinationCommandLine is run by the primary and subtasks, and is
                 // used in this sample to start SMPD on the compute nodes.
                 multiInstanceTask.MultiInstanceSettings =
-                    new MultiInstanceSettings(numberOfNodes)
-                    {
-                        CoordinationCommandLine = @"cmd /c start cmd /c smpd.exe -d"
-                    };
+                    new MultiInstanceSettings(@"cmd /c start cmd /c smpd.exe -d", numberOfNodes);
 
                 // Submit the task to the job. Batch will take care of creating one primary and
                 // enough subtasks to match the total number of nodes allocated to the task,
