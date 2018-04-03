@@ -48,11 +48,11 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
 
         // Batch start task telemetry runner
         private const string BatchStartTaskFolderName = "StartTask";
-        private const string BatchStartTaskTelemetryRunnerName = "Microsfot.Azure.Batch.Samples.TelemetryStartTask.exe";
+        private const string BatchStartTaskTelemetryRunnerName = "Microsoft.Azure.Batch.Samples.TelemetryStartTask.exe";
         private const string BatchStartTaskTelemetryRunnerAIConfig = "ApplicationInsights.config";
 
         // Container where monitoring assemblies are placed
-        private const string AIBlobConatinerName = "batchmonitoringassemblies";
+        private const string AIBlobContainerName = "batchmonitoringassemblies";
 
         public async static Task JobMain(string[] args)
         {
@@ -93,7 +93,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
 
                 var resourceHelperTask = SampleHelpers.UploadResourcesAndCreateResourceFileReferencesAsync(
                     cloudStorageAccount,
-                    AIBlobConatinerName,
+                    AIBlobContainerName,
                     files);
 
                 List<ResourceFile> resourceFiles = resourceHelperTask.Result;
