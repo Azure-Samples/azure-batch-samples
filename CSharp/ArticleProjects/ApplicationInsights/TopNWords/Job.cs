@@ -179,7 +179,9 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                     {
                         CloudTask task = new CloudTask("task_no_" + i, String.Format("{0} --Task {1} {2} {3} {4}",
                             TopNWordsExeName,
-                            "https://onbehalfoutput.blob.core.windows.net/" + documents[i],
+                            string.Format("https://{0}.blob.core.windows.net/{1}",
+                                accountSettings.StorageAccountName,
+                                documents[i]),
                             topNWordsConfiguration.TopWordCount,
                             accountSettings.StorageAccountName,
                             accountSettings.StorageAccountKey));
