@@ -137,8 +137,7 @@ if __name__ == '__main__':
 
     # Main application command to execute multiinstance task on a group of
     # nodes, eg. MPI.
-    true_application_cmdline = 'sudo -u _azbatch ' \
-                               '$AZ_BATCH_TASK_WORKING_DIR/application-cmd ' \
+    true_application_cmdline = '$AZ_BATCH_TASK_WORKING_DIR/application-cmd ' \
                                '{} {} {} $AZ_BATCH_TASK_SHARED_DIR ' \
                                '$AZ_BATCH_HOST_LIST'. \
         format(_NUM_INSTANCES, _NUM_PROCESSES_PER_VM, _NUM_ITERATIONS_OPENFOAM)
