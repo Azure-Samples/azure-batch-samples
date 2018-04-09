@@ -53,29 +53,6 @@ path invocation. This sample can be run on Windows with an appropriate openssl
 binary and modified openssl invocations (i.e., `openssl.exe` instead of
 `openssl`).
 
-#### [sample4\_docker\_swarm.py](./sample4\_docker\_swarm.py)
-**Note:** Please take a look at the
-[Batch Shipyard](https://github.com/Azure/batch-shipyard) toolkit for
-managing batch-style Docker workloads on Azure Batch. This toolkit provides
-a vast array of features from automatic Docker Host engine installation
-and image deployment to support for GPUs and Infiniband/RDMA in Docker
-containers.
-
-If you wish to manually manage your Docker containers on Azure Batch then
-this sample shows how to create a pool of compute nodes that are also
-clustered into a docker swarm and how to schedule docker run tasks to the
-compute pool through the Batch scheduler. Additionally, this sample shows how
-to connect to the docker swarm locally through an ssh tunnel. This sample
-showcases a variety of Azure Batch interaction including: creating a inter-node
-communication enabled pool, adding a compute node user with an ssh key,
-retrieving remote login settings for a compute node, and adding an affinitized
-task for a compute node. This sample is geared towards Linux with the
-assumption of ssh and docker tools available from the machine executing the
-sample. There is an additional configuration option to generate an ssh
-tunnel script to interact with the batch pool after the sample is run. When
-using this option, you will also need to disable the delete pool option as
-well.
-
 ## Azure Batch on Linux Best Practices
 
 Although some of the Python samples are not specific to Linux, the Azure Batch
