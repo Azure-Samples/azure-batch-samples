@@ -9,6 +9,7 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
     using Common;
     using Microsoft.Azure.Batch;
     using Microsoft.Azure.Batch.Auth;
+    using Microsoft.Extensions.Configuration;
     using WindowsAzure.Storage;
     using WindowsAzure.Storage.Auth;
 
@@ -34,17 +35,18 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
                 "Microsoft.Azure.Batch.FileStaging.dll",
                 "Microsoft.Rest.ClientRuntime.dll",
                 "Microsoft.Rest.ClientRuntime.Azure.dll",
-                "Microsoft.Data.Services.Client.dll",
                 "Newtonsoft.Json.dll",
-                "Microsoft.Data.Edm.dll",
-                "Microsoft.Data.OData.dll",
-                "System.Spatial.dll",
+                "System.Net.Http.dll"
             };
 
         public JobSubmitter()
         {
-            this.jobManagerSettings = Settings.Default;
-            this.accountSettings = AccountSettings.Default;
+            this.jobManagerSettings = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("settings.json")
+                .Build()
+                .Get<Settings>();
+            this.accountSettings = SampleHelpers.LoadAccountSettings();
         }
 
         public JobSubmitter(AccountSettings accountSettings, Settings settings)
@@ -99,7 +101,8 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
 
                     // Wait for the job manager to complete
                     CloudTask jobManagerTask = await batchClient.JobOperations.GetTaskAsync(jobId, JobManagerTaskId);
-                    await GettingStartedCommon.WaitForTasksAndPrintOutputAsync(batchClient, new List<CloudTask>{ jobManagerTask }, TimeSpan.FromMinutes(10));
+                    await GettingStartedCommon.WaitForTasksAndPrintOutputAsync(batchClient,
+                        new List<CloudTask> {jobManagerTask}, TimeSpan.FromMinutes(10));
                 }
                 finally
                 {
@@ -137,7 +140,7 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
                 poolId: this.jobManagerSettings.PoolId,
                 targetDedicatedComputeNodes: this.jobManagerSettings.PoolTargetNodeCount,
                 virtualMachineSize: this.jobManagerSettings.PoolNodeVirtualMachineSize,
-                cloudServiceConfiguration: new CloudServiceConfiguration(this.jobManagerSettings.PoolOSFamily));
+                cloudServiceConfiguration: new CloudServiceConfiguration(this.jobManagerSettings.PoolOsFamily));
 
             // Create a new start task to facilitate pool-wide file management or installation.
             // In this case, we just add a single dummy data file to the StartTask.

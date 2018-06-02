@@ -3,6 +3,7 @@
 namespace Microsoft.Azure.Batch.Samples.TextSearch
 {
     using System;
+    using System.IO;
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading.Tasks;
@@ -11,6 +12,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
     using Microsoft.Azure.Batch.Common;
     using Microsoft.WindowsAzure.Storage;
     using Microsoft.WindowsAzure.Storage.Auth;
+    using Microsoft.Extensions.Configuration;
 
     /// <summary>
     /// Submits the job to the Batch Service and waits for it to complete.
@@ -28,8 +30,12 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
         public JobSubmitter()
         {
             //Load the configuration settings.
-            this.textSearchSettings = Settings.Default;
-            this.accountSettings = AccountSettings.Default;
+            this.textSearchSettings = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("settings.json")
+                .Build()
+                .Get<Settings>();
+            this.accountSettings = SampleHelpers.LoadAccountSettings();
         }
 
         /// <summary>
@@ -95,10 +101,10 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                 PoolSpecification poolSpecification = new PoolSpecification()
                     {
                         TargetDedicatedComputeNodes = numberOfPoolComputeNodes,
-                        VirtualMachineSize = "small",
+                        VirtualMachineSize = "standard_d1_v2",
                         //You can learn more about os families and versions at: 
                         //http://azure.microsoft.com/documentation/articles/cloud-services-guestos-update-matrix
-                        CloudServiceConfiguration = new CloudServiceConfiguration(osFamily: "4")
+                        CloudServiceConfiguration = new CloudServiceConfiguration(osFamily: "5")
                     };
 
                 //Use the auto pool feature of the Batch Service to create a pool when the job is created.

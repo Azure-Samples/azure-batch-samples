@@ -13,8 +13,6 @@ namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs
     using Microsoft.WindowsAzure.Storage.Auth;
     using Microsoft.WindowsAzure.Storage.Blob;
     using System;
-    using System.Collections.Generic;
-    using System.Linq;
 
     // This sample application demonstrates how to use the Azure Batch File Conventions
     // library to persist task output to Azure Storage, and retrieve the stored output
@@ -29,12 +27,16 @@ namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs
         public static void Main(string[] args)
         {
             // Configure your AccountSettings in the Microsoft.Azure.Batch.Samples.Common project within this solution
-            BatchSharedKeyCredentials cred = new BatchSharedKeyCredentials(AccountSettings.Default.BatchServiceUrl,
-                                                                           AccountSettings.Default.BatchAccountName,
-                                                                           AccountSettings.Default.BatchAccountKey);
+            AccountSettings accountSettings = SampleHelpers.LoadAccountSettings();
 
-            StorageCredentials storageCred = new StorageCredentials(AccountSettings.Default.StorageAccountName,
-                                                                    AccountSettings.Default.StorageAccountKey);
+            BatchSharedKeyCredentials cred = new BatchSharedKeyCredentials(
+                accountSettings.BatchServiceUrl,
+                accountSettings.BatchAccountName,
+                accountSettings.BatchAccountKey);
+
+            StorageCredentials storageCred = new StorageCredentials(
+                accountSettings.StorageAccountName,
+                accountSettings.StorageAccountKey);
 
             CloudStorageAccount storageAccount = new CloudStorageAccount(storageCred, true);
 

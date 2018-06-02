@@ -60,10 +60,13 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
 
             TimeSpan timeout = TimeSpan.FromMinutes(30);
 
+            AccountSettings accountSettings = SampleHelpers.LoadAccountSettings();
+
             // Configure your AccountSettings in the Microsoft.Azure.Batch.Samples.Common project within this solution
-            BatchSharedKeyCredentials cred = new BatchSharedKeyCredentials(AccountSettings.Default.BatchServiceUrl,
-                                                                           AccountSettings.Default.BatchAccountName,
-                                                                           AccountSettings.Default.BatchAccountKey);
+            BatchSharedKeyCredentials cred = new BatchSharedKeyCredentials(
+                accountSettings.BatchServiceUrl,
+                accountSettings.BatchAccountName,
+                accountSettings.BatchAccountKey);
 
             using (BatchClient batchClient = BatchClient.Open(cred))
             {
@@ -193,11 +196,11 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
             // is therefore considered "unbound," and we can modify its properties.
             Console.WriteLine($"Creating pool [{poolId}]...");
             CloudPool unboundPool =
-                batchClient.PoolOperations.CreatePool(poolId: poolId,
-                                                      virtualMachineSize: "small",
-                                                      targetDedicatedComputeNodes: numberOfNodes,
-                                                      cloudServiceConfiguration:
-                                                          new CloudServiceConfiguration(osFamily: "4"));
+                batchClient.PoolOperations.CreatePool(
+                    poolId: poolId,
+                    virtualMachineSize: "standard_d1_v2",
+                    targetDedicatedComputeNodes: numberOfNodes,
+                    cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "5"));
 
             // REQUIRED for communication between the MS-MPI processes (in this
             // sample, MPIHelloWorld.exe) running on the different nodes

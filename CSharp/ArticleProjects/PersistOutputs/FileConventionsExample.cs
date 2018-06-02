@@ -24,10 +24,11 @@
             const string appPackageVersion = "1.0";
 
             // Create and configure an unbound pool.
-            CloudPool pool = batchClient.PoolOperations.CreatePool(poolId: poolId,
-                virtualMachineSize: "small",
+            CloudPool pool = batchClient.PoolOperations.CreatePool(
+                poolId: poolId,
+                virtualMachineSize: "standard_d1_v2",
                 targetDedicatedComputeNodes: nodeCount,
-                cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "4"));
+                cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "5"));
 
             // Specify the application and version to deploy to the compute nodes. You must
             // first build PersistOutputsTask, then upload it as an application package.

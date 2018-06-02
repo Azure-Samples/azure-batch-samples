@@ -38,7 +38,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
         private static async Task MainAsync(string[] args)
         {
             // You may adjust these values to experiment with different compute resource scenarios.
-            const string nodeSize = "small";
+            const string nodeSize = "standard_d1_v2";
             const string osFamily = "5";
             const int nodeCount = 1;
 
@@ -50,9 +50,12 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
 
             // Set up access to your Batch account with a BatchClient. Configure your AccountSettings in the
             // Microsoft.Azure.Batch.Samples.Common project within this solution.
-            BatchSharedKeyCredentials cred = new BatchSharedKeyCredentials(AccountSettings.Default.BatchServiceUrl,
-                                                                           AccountSettings.Default.BatchAccountName,
-                                                                           AccountSettings.Default.BatchAccountKey);
+            AccountSettings accountSettings = SampleHelpers.LoadAccountSettings();
+
+            BatchSharedKeyCredentials cred = new BatchSharedKeyCredentials(
+                accountSettings.BatchServiceUrl,
+                accountSettings.BatchAccountName,
+                accountSettings.BatchAccountKey);
 
             try
             {
@@ -61,10 +64,11 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
                     // Create the pool.
                     Console.WriteLine("Creating pool [{0}]...", poolId);
                     CloudPool unboundPool =
-                        batchClient.PoolOperations.CreatePool(poolId: poolId,
-                                                              cloudServiceConfiguration: new CloudServiceConfiguration(osFamily),
-                                                              virtualMachineSize: nodeSize,
-                                                              targetDedicatedComputeNodes: nodeCount);
+                        batchClient.PoolOperations.CreatePool(
+                            poolId: poolId,
+                            cloudServiceConfiguration: new CloudServiceConfiguration(osFamily),
+                            virtualMachineSize: nodeSize,
+                            targetDedicatedComputeNodes: nodeCount);
                     await unboundPool.CommitAsync();
 
                     // Create the job and specify that it uses tasks dependencies.

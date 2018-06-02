@@ -1,9 +1,8 @@
 ﻿//Copyright (c) Microsoft Corporation
 
-using System;
-
 namespace Microsoft.Azure.Batch.Samples.TextSearch
 {
+    using System;
     using Common;
 
     /// <summary>

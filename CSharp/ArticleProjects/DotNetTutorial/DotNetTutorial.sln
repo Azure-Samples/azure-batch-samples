@@ -1,11 +1,11 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 14.00
-# Visual Studio 2015
-VisualStudioVersion = 14.0.25123.0
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26430.12
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetTutorial", "DotNetTutorial.csproj", "{AD320481-FDB0-4257-A550-40E3524BAD84}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotNetTutorial", "DotNetTutorial.csproj", "{AD320481-FDB0-4257-A550-40E3524BAD84}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskApplication", "TaskApplication\TaskApplication.csproj", "{90B219DE-7129-4048-B1A2-9EF712F3CD8D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TaskApplication", "TaskApplication\TaskApplication.csproj", "{90B219DE-7129-4048-B1A2-9EF712F3CD8D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

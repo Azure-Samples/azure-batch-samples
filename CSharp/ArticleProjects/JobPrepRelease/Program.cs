@@ -3,7 +3,7 @@
 // Companion project to the following article:
 // https://azure.microsoft.com/documentation/articles/batch-job-prep-release/
 
-namespace JobPrepRelease
+namespace Microsoft.Azure.Batch.Samples.Articles.JobPrepRelease
 {
     using System;
     using System.Collections.Generic;
@@ -59,20 +59,24 @@ namespace JobPrepRelease
             // The job release task will then delete the text file from the shared directory
             const string jobReleaseCmdLine = "cmd /c del " + taskOutputFile;
 
+            var accountSettings = SampleHelpers.LoadAccountSettings();
+
             // Configure your AccountSettings in the Microsoft.Azure.Batch.Samples.Common project within this solution
-            BatchSharedKeyCredentials cred = new BatchSharedKeyCredentials(AccountSettings.Default.BatchServiceUrl,
-                                                                           AccountSettings.Default.BatchAccountName,
-                                                                           AccountSettings.Default.BatchAccountKey);
+            BatchSharedKeyCredentials cred = new BatchSharedKeyCredentials(
+                accountSettings.BatchServiceUrl,
+                accountSettings.BatchAccountName,
+                accountSettings.BatchAccountKey);
 
             // Initialize the BatchClient for access to your Batch account
             using (BatchClient batchClient = await BatchClient.OpenAsync(cred))
             {
                 // Create a CloudPool (or obtain an existing pool with the specified ID)
-                CloudPool pool = await ArticleHelpers.CreatePoolIfNotExistAsync(batchClient,
-                                                                      poolId,
-                                                                      "small",
-                                                                      2,
-                                                                      1);
+                CloudPool pool = await ArticleHelpers.CreatePoolIfNotExistAsync(
+                    batchClient,
+                    poolId,
+                    "standard_d1_v2",
+                    2,
+                    1);
                 
                 // Create a CloudJob (or obtain an existing job with the specified ID)
                 CloudJob job = await SampleHelpers.GetJobIfExistAsync(batchClient, jobId);

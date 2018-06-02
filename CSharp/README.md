@@ -1,7 +1,12 @@
 ## General Info
 
 ### Visual Studio Requirements
-You will need VS 2015 or later to compile the projects. If you don't have it, you can download the community edition [here](https://www.visualstudio.com/products/visual-studio-community-vs.aspx) for free.
+You will need Visual Studio 2017 or later to compile the projects. If you don't have it, you can download the community edition [here](https://www.visualstudio.com/products/visual-studio-community-vs.aspx) for free.
+
+### A note on .NET Core
+The samples currently all target .NET Framework. Most samples can easily be changed to target .NET Core by changing the .csproj to produce a netcoreapp binary instead of a net462 binary. In the case of samples with
+worker task exectuables or JobManager executables a standalone .NET Core binary distribution must be produced, zipped, uploaded to Azure Storage, and unzipped on the node prior to execution of the task process.
+In order to keep the samples simple, this is left as an exercize to the reader.
 
 ### Building the Samples
 Download the samples and open the solution file for each one using Visual Studio. Right click on the solution and select "Rebuild". Visual Studio will analyze the dependencies and download the dependent binaries from [nuget.org](http://www.nuget.org/packages/Azure.Batch/).

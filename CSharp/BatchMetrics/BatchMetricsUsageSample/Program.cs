@@ -23,7 +23,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
 
             try
             {
-                AccountSettings accountSettings = AccountSettings.Default;
+                AccountSettings accountSettings = SampleHelpers.LoadAccountSettings();
                 MainAsync(accountSettings).Wait();
             }
             catch (AggregateException ex)
