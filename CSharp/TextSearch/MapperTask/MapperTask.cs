@@ -6,8 +6,8 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
     using System.IO;
     using System.Text.RegularExpressions;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.Configuration;
     using Microsoft.WindowsAzure.Storage.Blob;
-
 
     /// <summary>
     /// The mapper task - it downloads a file from Azure Storage and processes it searching for a regular expression match on 
@@ -25,7 +25,11 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
         public MapperTask(string blobSas)
         {
             this.blobSas = blobSas;
-            this.configurationSettings = Settings.Default;
+            this.configurationSettings = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("settings.json")
+                .Build()
+                .Get<Settings>();
         }
 
         /// <summary>

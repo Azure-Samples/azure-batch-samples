@@ -45,7 +45,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
         private static async Task MainAsync(string[] args)
         {
             // You may adjust these values to experiment with different compute resource scenarios.
-            const string nodeSize     = "small";
+            const string nodeSize     = "standard_d1_v2";
             const int nodeCount       = 4;
             const int maxTasksPerNode = 4;
             const int taskCount       = 32;
@@ -74,18 +74,22 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
 
             // Set up access to your Batch account with a BatchClient. Configure your AccountSettings in the
             // Microsoft.Azure.Batch.Samples.Common project within this solution.
-            BatchSharedKeyCredentials cred = new BatchSharedKeyCredentials(AccountSettings.Default.BatchServiceUrl,
-                                                                           AccountSettings.Default.BatchAccountName,
-                                                                           AccountSettings.Default.BatchAccountKey);
-            
+            AccountSettings accountSettings = SampleHelpers.LoadAccountSettings();
+
+            BatchSharedKeyCredentials cred = new BatchSharedKeyCredentials(
+                accountSettings.BatchServiceUrl,
+                accountSettings.BatchAccountName,
+                accountSettings.BatchAccountKey);
+
             using (BatchClient batchClient = await BatchClient.OpenAsync(cred))
             {
                 // Create a CloudPool, or obtain an existing pool with the specified ID
-                CloudPool pool = await ArticleHelpers.CreatePoolIfNotExistAsync(batchClient,
-                                                                      poolId,
-                                                                      nodeSize,
-                                                                      nodeCount,
-                                                                      maxTasksPerNode);
+                CloudPool pool = await ArticleHelpers.CreatePoolIfNotExistAsync(
+                    batchClient,
+                    poolId,
+                    nodeSize,
+                    nodeCount,
+                    maxTasksPerNode);
 
                 // Create a CloudJob, or obtain an existing pool with the specified ID
                 CloudJob job = await ArticleHelpers.CreateJobIfNotExistAsync(batchClient, poolId, jobId);
@@ -151,9 +155,9 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
 
                 // Get a collection of the completed tasks sorted by the compute nodes on which they executed
                 List<CloudTask> completedTasks = allTasks
-                                                .Where(t => t.State == TaskState.Completed)
-                                                .OrderBy(t => t.ComputeNodeInformation.ComputeNodeId)
-                                                .ToList();
+                    .Where(t => t.State == TaskState.Completed)
+                    .OrderBy(t => t.ComputeNodeInformation.ComputeNodeId)
+                    .ToList();
 
                 // Print the completed task information
                 Console.WriteLine();
@@ -174,9 +178,9 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
 
                 // Get a collection of the uncompleted tasks which may exist if the TaskMonitor timeout was hit
                 List<CloudTask> uncompletedTasks = allTasks
-                                                   .Where(t => t.State != TaskState.Completed)
-                                                   .OrderBy(t => t.Id)
-                                                   .ToList();
+                    .Where(t => t.State != TaskState.Completed)
+                    .OrderBy(t => t.Id)
+                    .ToList();
 
                 // Print a list of uncompleted tasks, if any
                 Console.WriteLine();

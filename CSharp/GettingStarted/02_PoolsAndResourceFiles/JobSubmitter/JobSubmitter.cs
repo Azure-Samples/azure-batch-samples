@@ -11,6 +11,7 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
     using Microsoft.Azure.Batch;
     using Microsoft.Azure.Batch.Auth;
     using Microsoft.Azure.Batch.FileStaging;
+    using Microsoft.Extensions.Configuration;
     using WindowsAzure.Storage;
     using WindowsAzure.Storage.Auth;
 
@@ -29,8 +30,12 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
 
         public JobSubmitter()
         {
-            this.poolsAndResourceFileSettings = Settings.Default;
-            this.accountSettings = AccountSettings.Default;
+            this.accountSettings = SampleHelpers.LoadAccountSettings();
+            this.poolsAndResourceFileSettings = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("settings.json")
+                .Build()
+                .Get<Settings>();
         }
 
         public JobSubmitter(AccountSettings accountSettings, Settings settings)
@@ -132,7 +137,7 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
                 poolId: this.poolsAndResourceFileSettings.PoolId,
                 targetDedicatedComputeNodes: this.poolsAndResourceFileSettings.PoolTargetNodeCount,
                 virtualMachineSize: this.poolsAndResourceFileSettings.PoolNodeVirtualMachineSize,
-                cloudServiceConfiguration: new CloudServiceConfiguration(this.poolsAndResourceFileSettings.PoolOSFamily));
+                cloudServiceConfiguration: new CloudServiceConfiguration(this.poolsAndResourceFileSettings.PoolOsFamily));
 
             // Create a new start task to facilitate pool-wide file management or installation.
             // In this case, we just add a single dummy data file to the StartTask.

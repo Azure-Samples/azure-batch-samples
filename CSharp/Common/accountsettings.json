@@ -1,0 +1,8 @@
+﻿{
+  "batchAccountName": "",
+  "batchAccountKey": "",
+  "batchServiceUrl": "",
+  "storageAccountName": "",
+  "storageAccountKey": "",
+  "storageServiceUrl": "core.windows.net"
+}

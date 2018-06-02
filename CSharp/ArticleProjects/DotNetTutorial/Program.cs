@@ -75,8 +75,8 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
             timer.Start();
 
             // Construct the Storage account connection string
-            string storageConnectionString = String.Format("DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1}",
-                                                            StorageAccountName, StorageAccountKey);
+            string storageConnectionString =
+                $"DefaultEndpointsProtocol=https;AccountName={StorageAccountName};AccountKey={StorageAccountKey}";
 
             // Retrieve the storage account
             CloudStorageAccount storageAccount = CloudStorageAccount.Parse(storageConnectionString);
@@ -104,9 +104,9 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
             // The collection of data files that are to be processed by the tasks
             List<string> inputFilePaths = new List<string>
             {
-                @"..\..\taskdata1.txt",
-                @"..\..\taskdata2.txt",
-                @"..\..\taskdata3.txt"
+                @"taskdata1.txt",
+                @"taskdata2.txt",
+                @"taskdata3.txt"
             };
 
             // Upload the application and its dependencies to Azure Storage. This is the application that will
@@ -216,7 +216,7 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
             string sasContainerToken = container.GetSharedAccessSignature(sasConstraints);
 
             // Return the URL string for the container, including the SAS token
-            return String.Format("{0}{1}", container.Uri, sasContainerToken);
+            return string.Format("{0}{1}", container.Uri, sasContainerToken);
         }
 
         /// <summary>
@@ -267,7 +267,7 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
 
             // Construct the SAS URL for blob
             string sasBlobToken = blobData.GetSharedAccessSignature(sasConstraints);
-            string blobSasUri = String.Format("{0}{1}", blobData.Uri, sasBlobToken);
+            string blobSasUri = $"{blobData.Uri}{sasBlobToken}";
 
             return new ResourceFile(blobSasUri, blobName);
         }
@@ -293,8 +293,8 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
                 pool = batchClient.PoolOperations.CreatePool(
                     poolId: poolId,
                     targetDedicatedComputeNodes: 3,                                             // 3 compute nodes
-                    virtualMachineSize: "small",                                                // single-core, 1.75 GB memory, 225 GB disk
-                    cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "4"));   // Windows Server 2012 R2
+                    virtualMachineSize: "standard_d1_v2",                                       // single-core, 3.5 GB memory, 50 GB disk
+                    cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "5"));   // Windows Server 2016
 
                 // Create and assign the StartTask that will be executed when compute nodes join the pool.
                 // In this case, we copy the StartTask's resource files (that will be automatically downloaded
@@ -372,7 +372,8 @@ namespace Microsoft.Azure.Batch.Samples.DotNetTutorial
             foreach (ResourceFile inputFile in inputFiles)
             {
                 string taskId = "topNtask" + inputFiles.IndexOf(inputFile);
-                string taskCommandLine = String.Format("cmd /c %AZ_BATCH_NODE_SHARED_DIR%\\TaskApplication.exe {0} 3 \"{1}\"", inputFile.FilePath, outputContainerSasUrl);
+                string taskCommandLine =
+                    $"cmd /c %AZ_BATCH_NODE_SHARED_DIR%\\TaskApplication.exe {inputFile.FilePath} 3 \"{outputContainerSasUrl}\"";
 
                 CloudTask task = new CloudTask(taskId, taskCommandLine);
                 task.ResourceFiles = new List<ResourceFile> { inputFile };

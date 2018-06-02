@@ -2,6 +2,9 @@
 
 These projects contain the sample code backing various articles in [Batch documentation](http://azure.microsoft.com/documentation/services/batch/).
 
+### [ApplicationInsights](./ApplicationInsights)
+This article shows how to add and configure the Application Insights library into your solution and instrument your application code. Futhermore it provides examples on how to monitor your application via the Azure portal and build custom dashboards.
+
 ### [DotNetTutorial](./DotNetTutorial)
 This solution includes two projects - *DotNetTutorial* and *TaskApplication* - that together demonstrate a common Batch application workflow. While the code in the solution does not demonstrate every feature of the Batch service, it is intended to act as a primer for basic Batch concepts and features such as pools, nodes, jobs, and tasks, as well as demonstrate interaction between Batch and the Azure Storage service. This sample backs the code snippets found in [Get started with the Azure Batch library for .NET](https://azure.microsoft.com/documentation/articles/batch-dotnet-get-started/).
 
@@ -19,7 +22,7 @@ The ParallelTasks sample project backs the code snippets found in [Maximize Azur
 
 ### [PersistOutputs](./PersistOutputs)
 
-This PersistOutputs sample project backs the code snippets found in [Persist Azure Batch job and task output](http://azure.microsoft.com/documentation/articles/batch-task-output/). This Visual Studio 2015 solution demonstrates how to use the [Azure Batch File Conventions](https://www.nuget.org/packages/Microsoft.Azure.Batch.Conventions.Files/) library to persist task output to durable storage.
+This PersistOutputs sample project backs the code snippets found in [Persist Azure Batch job and task output](http://azure.microsoft.com/documentation/articles/batch-task-output/). This Visual Studio 2017 solution demonstrates how to use the [Azure Batch File Conventions](https://www.nuget.org/packages/Microsoft.Azure.Batch.Conventions.Files/) library to persist task output to durable storage.
 
 ### [TaskDependencies](./TaskDependencies)
 The TaskDependencies sample project demonstrates the use of the task dependency feature of Azure Batch. With task dependencies, you can create tasks that depend on the completion of other tasks before they are executed.

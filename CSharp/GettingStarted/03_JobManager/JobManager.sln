@@ -1,15 +1,15 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 14.00
-# Visual Studio 2015
-VisualStudioVersion = 14.0.25123.0
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26430.12
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JobSubmitter", "JobSubmitter\JobSubmitter.csproj", "{96FA96C5-2982-4A67-9939-58D03D5E7414}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JobSubmitter", "JobSubmitter\JobSubmitter.csproj", "{96FA96C5-2982-4A67-9939-58D03D5E7414}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleTask", "..\Shared\SimpleTask\SimpleTask.csproj", "{0950B124-DEED-4F4C-B067-70E0AE06B41C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SimpleTask", "..\Shared\SimpleTask\SimpleTask.csproj", "{0950B124-DEED-4F4C-B067-70E0AE06B41C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Azure.Batch.Samples.Common", "..\..\Common\Microsoft.Azure.Batch.Samples.Common.csproj", "{612B170A-1697-4C40-BD57-26A6C8AC6534}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Azure.Batch.Samples.Common", "..\..\Common\Microsoft.Azure.Batch.Samples.Common.csproj", "{612B170A-1697-4C40-BD57-26A6C8AC6534}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleJobManagerTask", "SampleJobManager\SampleJobManagerTask.csproj", "{AEE5AF9A-4581-469F-9A75-B4C7121C493D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SampleJobManagerTask", "SampleJobManager\SampleJobManagerTask.csproj", "{AEE5AF9A-4581-469F-9A75-B4C7121C493D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

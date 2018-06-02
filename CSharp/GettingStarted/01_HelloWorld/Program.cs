@@ -3,11 +3,13 @@
 namespace Microsoft.Azure.Batch.Samples.HelloWorld
 {
     using System;
+    using System.IO;
     using System.Collections.Generic;
     using System.Threading.Tasks;
     using Auth;
     using Batch.Common;
     using Common;
+    using Microsoft.Extensions.Configuration;
 
     /// <summary>
     /// The main program of the HelloWorld sample
@@ -18,9 +20,15 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
         {
             try
             {
-                Settings helloWorldConfigurationSettings = Settings.Default;
-                AccountSettings accountSettings = AccountSettings.Default;
-                HelloWorldAsync(accountSettings, helloWorldConfigurationSettings).Wait();
+                AccountSettings accountSettings = SampleHelpers.LoadAccountSettings();
+
+                Settings helloWorldSettings = new ConfigurationBuilder()
+                    .SetBasePath(Directory.GetCurrentDirectory())
+                    .AddJsonFile("settings.json")
+                    .Build()
+                    .Get<Settings>();
+
+                HelloWorldAsync(accountSettings, helloWorldSettings).Wait();
             }
             catch (AggregateException aggregateException)
             {
@@ -105,7 +113,7 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
                     {
                         TargetDedicatedComputeNodes = configurationSettings.PoolTargetNodeCount,
                         CloudServiceConfiguration = new CloudServiceConfiguration(configurationSettings.PoolOSFamily),
-                        VirtualMachineSize = configurationSettings.PoolNodeVirtualMachineSize,                        
+                        VirtualMachineSize = configurationSettings.PoolNodeVirtualMachineSize
                     },
                     KeepAlive = false,
                     PoolLifetimeOption = PoolLifetimeOption.Job

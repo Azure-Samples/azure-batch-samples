@@ -45,7 +45,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries
         private static async Task MainAsync(string[] args)
         {
             // You may adjust these values to experiment with different compute resource scenarios.
-            const string nodeSize     = "small";
+            const string nodeSize     = "standard_d1_v2";
             const int nodeCount       = 1;
             const int maxTasksPerNode = 4;
 
@@ -55,21 +55,24 @@ namespace Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries
             const string poolId = "EfficientListQueriesSamplePool";
             const string jobId  = "EfficientListQueriesSampleJob";
 
+            var accountSettings = SampleHelpers.LoadAccountSettings();
+
             // Set up the credentials required by the BatchClient. Configure your AccountSettings in the
             // Microsoft.Azure.Batch.Samples.Common project within this solution.
-            BatchSharedKeyCredentials cred = new BatchSharedKeyCredentials(AccountSettings.Default.BatchServiceUrl,
-                                                                           AccountSettings.Default.BatchAccountName,
-                                                                           AccountSettings.Default.BatchAccountKey);
-            
+            BatchSharedKeyCredentials cred = new BatchSharedKeyCredentials(
+                accountSettings.BatchServiceUrl,
+                accountSettings.BatchAccountName,
+                accountSettings.BatchAccountKey);
 
             using (BatchClient batchClient = await BatchClient.OpenAsync(cred))
             {
                 // Create a CloudPool, or obtain an existing pool with the specified ID
-                CloudPool pool = await ArticleHelpers.CreatePoolIfNotExistAsync(batchClient,
-                                                                      poolId,
-                                                                      nodeSize,
-                                                                      nodeCount,
-                                                                      maxTasksPerNode);
+                CloudPool pool = await ArticleHelpers.CreatePoolIfNotExistAsync(
+                    batchClient,
+                    poolId,
+                    nodeSize,
+                    nodeCount,
+                    maxTasksPerNode);
                 
                 // Create a CloudJob, or obtain an existing job with the specified ID
                 CloudJob job = await ArticleHelpers.CreateJobIfNotExistAsync(batchClient, poolId, jobId);
@@ -191,11 +194,11 @@ namespace Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries
             stopwatch.Stop();
             
             Console.WriteLine("{0} tasks retrieved in {1} (ExpandClause: {2} | FilterClause: {3} | SelectClause: {4})",
-                        taskList.Count, 
-                        stopwatch.Elapsed, 
-                        detail.ExpandClause, 
-                        detail.FilterClause, 
-                        detail.SelectClause);
+                taskList.Count,
+                stopwatch.Elapsed,
+                detail.ExpandClause,
+                detail.FilterClause,
+                detail.SelectClause);
         }
     }
 }

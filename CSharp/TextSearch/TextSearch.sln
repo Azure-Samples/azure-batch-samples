@@ -1,19 +1,19 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 14.00
-# Visual Studio 2015
-VisualStudioVersion = 14.0.25123.0
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26430.12
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JobSubmitter", "JobSubmitter\JobSubmitter.csproj", "{63AABF29-A1A2-4B12-89CB-BFB5E7D90D6D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JobSubmitter", "JobSubmitter\JobSubmitter.csproj", "{63AABF29-A1A2-4B12-89CB-BFB5E7D90D6D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JobManagerTask", "JobManagerTask\JobManagerTask.csproj", "{4BE37BD8-64B0-4A18-90AC-5A9337A2D5C3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JobManagerTask", "JobManagerTask\JobManagerTask.csproj", "{4BE37BD8-64B0-4A18-90AC-5A9337A2D5C3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common", "Common\Common.csproj", "{C3C6C51E-0BB3-4C86-95DA-913CCE289390}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Common", "Common\Common.csproj", "{C3C6C51E-0BB3-4C86-95DA-913CCE289390}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MapperTask", "MapperTask\MapperTask.csproj", "{F1AF014B-B6E9-4B13-9F9B-13C3C190453B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MapperTask", "MapperTask\MapperTask.csproj", "{F1AF014B-B6E9-4B13-9F9B-13C3C190453B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReducerTask", "ReducerTask\ReducerTask.csproj", "{AB57D31E-3493-48BB-8367-87F51668DC9D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ReducerTask", "ReducerTask\ReducerTask.csproj", "{AB57D31E-3493-48BB-8367-87F51668DC9D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Azure.Batch.Samples.Common", "..\Common\Microsoft.Azure.Batch.Samples.Common.csproj", "{612B170A-1697-4C40-BD57-26A6C8AC6534}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Azure.Batch.Samples.Common", "..\Common\Microsoft.Azure.Batch.Samples.Common.csproj", "{612B170A-1697-4C40-BD57-26A6C8AC6534}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

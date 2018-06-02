@@ -12,7 +12,7 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
     {
         public static void Main(string[] args)
         {
-            // This will boost parallel submission speed for REST APIs. If your use requires many simultaneous service calls set this number to something large, such as 100.  
+            // This will boost parallel submission speed for REST APIs. If your use requires many simultaneous service calls set this number to something large, such as 100.
             // See: https://msdn.microsoft.com/en-us/library/system.net.servicepointmanager.defaultconnectionlimit.aspx for more info.
             System.Net.ServicePointManager.DefaultConnectionLimit = 20;
 
