@@ -19,10 +19,6 @@ with version 2.7 or 3.3+. You will also need to install the
 Installation can be performed using the [requirements.txt](./requirements.txt)
 file via the command `pip install -r requirements.txt`
 
-You can also optionally use the
-[Visual Studio project](./BatchSamples.pyproj) and the
-[Python Tools for Visual Studio plugin](https://github.com/Microsoft/PTVS/wiki/PTVS-Installation).
-
 ### List of Samples
 
 #### [sample1\_helloworld.py](./sample1_helloworld.py)
