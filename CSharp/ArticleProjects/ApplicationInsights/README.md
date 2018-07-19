@@ -310,8 +310,8 @@ binaries on the machine and keep a process running indefinitely.
 CloudPool pool = client.PoolOperations.CreatePool(
     topNWordsConfiguration.PoolId,
     targetDedicated: topNWordsConfiguration.PoolNodeCount,
-    virtualMachineSize: "small",
-    cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "4"));
+    virtualMachineSize: "standard_d1_v2",
+    cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "5"));
 
 // Create file staging objects that represent the executable and its dependent assembly to run as the task.
 // These files are copied to every node before the corresponding task is scheduled to run on that node.

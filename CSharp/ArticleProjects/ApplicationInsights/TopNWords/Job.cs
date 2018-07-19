@@ -6,15 +6,15 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
     using System.Collections.Generic;
     using System.Collections.Concurrent;
     using System.IO;
+    using System.Threading.Tasks;
     using Microsoft.Azure.Batch.Auth;
     using Microsoft.Azure.Batch.Common;
     using Microsoft.Azure.Batch.FileStaging;
+    using Microsoft.Extensions.Configuration;
     using Microsoft.WindowsAzure.Storage;
     using Microsoft.WindowsAzure.Storage.Auth;
     using Microsoft.WindowsAzure.Storage.Blob;
-
     using Common;
-    using System.Threading.Tasks;
 
     /// <summary>
     /// In this sample, the Batch Service is used to process a set of input blobs in parallel on multiple 
@@ -27,7 +27,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
     public static class Job
     {
         // files that are required on the compute nodes that run the tasks
-        private const string TopNWordsExeName = "TopNWordsSample.exe";
+        private const string TopNWordsExeName = "TopNWords.exe";
         private const string StorageClientDllName = "Microsoft.WindowsAzure.Storage.dll";
         private const string BooksContainerName = "documents";
 
@@ -47,18 +47,20 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
     };
 
         // Batch start task telemetry runner
-        private const string BatchStartTaskFolderName = "StartTask";
-        private const string BatchStartTaskTelemetryRunnerName = "Microsfot.Azure.Batch.Samples.TelemetryStartTask.exe";
-        private const string BatchStartTaskTelemetryRunnerAIConfig = "ApplicationInsights.config";
+        private const string BatchStartTaskTelemetryRunnerName = "Microsoft.Azure.Batch.Samples.TelemetryStartTask.exe";
 
         // Container where monitoring assemblies are placed
-        private const string AIBlobConatinerName = "batchmonitoringassemblies";
+        private const string AIBlobContainerName = "batchmonitoringassemblies";
 
         public async static Task JobMain(string[] args)
         {
             //Load the configuration
-            Settings topNWordsConfiguration = Settings.Default;
-            AccountSettings accountSettings = AccountSettings.Default;
+            Settings topNWordsConfiguration = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("settings.json")
+                .Build()
+                .Get<Settings>();
+            AccountSettings accountSettings = SampleHelpers.LoadAccountSettings();
 
             CloudStorageAccount cloudStorageAccount = new CloudStorageAccount(
                 new StorageCredentials(
@@ -76,24 +78,24 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
             {
                 string stagingContainer = null;
 
-                //OSFamily 4 == OS 2012 R2. You can learn more about os families and versions at:
+                //OSFamily 5 == Windows 2016. You can learn more about os families and versions at:
                 //http://msdn.microsoft.com/en-us/library/azure/ee924680.aspx
                 CloudPool pool = client.PoolOperations.CreatePool(
                     topNWordsConfiguration.PoolId,
                     targetDedicatedComputeNodes: topNWordsConfiguration.PoolNodeCount,
-                    virtualMachineSize: "small",
-                    cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "4"));
+                    virtualMachineSize: "standard_d1_v2",
+                    cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "5"));
 
                 List<string> files = new List<string>
                 {
-                    Path.Combine(BatchStartTaskFolderName, BatchStartTaskTelemetryRunnerName),
+                    BatchStartTaskTelemetryRunnerName
                 };
 
                 files.AddRange(AIFilesToUpload);
 
                 var resourceHelperTask = SampleHelpers.UploadResourcesAndCreateResourceFileReferencesAsync(
                     cloudStorageAccount,
-                    AIBlobConatinerName,
+                    AIBlobContainerName,
                     files);
 
                 List<ResourceFile> resourceFiles = resourceHelperTask.Result;
@@ -108,28 +110,6 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                 try
                 {
                     await GettingStartedCommon.CreatePoolIfNotExistAsync(client, pool);
-                }
-                catch (AggregateException ae)
-                {
-                    // Go through all exceptions and dump useful information
-                    ae.Handle(x =>
-                    {
-                        Console.Error.WriteLine("Creating pool ID {0} failed", topNWordsConfiguration.PoolId);
-                        if (x is BatchException)
-                        {
-                            BatchException be = x as BatchException;
-
-                            Console.WriteLine(be.ToString());
-                            Console.WriteLine();
-                        }
-                        else
-                        {
-                            Console.WriteLine(x);
-                        }
-
-                        // can't continue without a pool
-                        return false;
-                    });
                 }
                 catch (BatchException be)
                 {
@@ -179,7 +159,9 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                     {
                         CloudTask task = new CloudTask("task_no_" + i, String.Format("{0} --Task {1} {2} {3} {4}",
                             TopNWordsExeName,
-                            "https://onbehalfoutput.blob.core.windows.net/" + documents[i],
+                            string.Format("https://{0}.blob.core.windows.net/{1}",
+                                accountSettings.StorageAccountName,
+                                documents[i]),
                             topNWordsConfiguration.TopWordCount,
                             accountSettings.StorageAccountName,
                             accountSettings.StorageAccountKey));
@@ -303,29 +285,6 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                 Console.WriteLine("Deleting container: {0}", fileStagingContainer);
                 container.DeleteIfExists();
             }
-        }
-
-        /// <summary>
-        /// Upload a text file to a cloud blob.
-        /// </summary>
-        /// <param name="accountSettings">The account settings.</param>
-        /// <param name="fileName">The name of the file to upload</param>
-        /// <returns>The URI of the blob.</returns>
-        private static string UploadFileToCloudBlob(AccountSettings accountSettings, string fileName)
-        {
-            CloudBlobClient client = GetCloudBlobClient(
-                accountSettings.StorageAccountName,
-                accountSettings.StorageAccountKey,
-                accountSettings.StorageServiceUrl);
-
-            //Create the "books" container if it doesn't exist.
-            CloudBlobContainer container = client.GetContainerReference(BooksContainerName);
-            container.CreateIfNotExists();
-
-            //Upload the blob.
-            CloudBlockBlob blob = container.GetBlockBlobReference(fileName);
-            blob.UploadFromFile(fileName);
-            return blob.Uri.ToString();
         }
     }
 }

@@ -3,11 +3,13 @@
 namespace Microsoft.Azure.Batch.Samples.TextSearch
 {
     using System;
+    using System.IO;
     using System.Collections.Generic;
     using System.Threading.Tasks;
     using Common;
     using Microsoft.Azure.Batch.Auth;
     using Microsoft.Azure.Batch.Common;
+    using Microsoft.Extensions.Configuration;
     using WindowsAzure.Storage;
     using WindowsAzure.Storage.Auth;
 
@@ -27,8 +29,12 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
         /// </summary>
         public TextSearchJobManagerTask()
         {
-            this.textSearchSettings = Settings.Default;
-            this.accountSettings = AccountSettings.Default;
+            this.textSearchSettings = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("settings.json")
+                .Build()
+                .Get<Settings>();
+            this.accountSettings = SampleHelpers.LoadAccountSettings();
 
             //Read some important data from preconfigured environment variables on the Batch compute node.
             this.accountName = Environment.GetEnvironmentVariable("AZ_BATCH_ACCOUNT_NAME");

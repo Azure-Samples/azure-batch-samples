@@ -10,6 +10,8 @@ namespace Microsoft.Azure.Batch.Samples.Common
     using System.Threading.Tasks;
     using Microsoft.WindowsAzure.Storage;
     using Microsoft.WindowsAzure.Storage.Blob;
+    using Microsoft.Extensions.Configuration;
+
 
     /// <summary>
     /// Class containing helpers for the GettingStarted samples.
@@ -152,9 +154,10 @@ namespace Microsoft.Azure.Batch.Samples.Common
                 CloudBlobClient client = cloudStorageAccount.CreateCloudBlobClient();
                 CloudBlobContainer container = client.GetContainerReference(containerName);
                 CloudBlockBlob blob = container.GetBlockBlobReference(fileName);
-                
+
                 //Create the container if it doesn't exist.
-                await container.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Off, null, null).ConfigureAwait(continueOnCapturedContext: false); //Forbid public access
+                await container.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Off, null, null)
+                    .ConfigureAwait(continueOnCapturedContext: false); //Forbid public access
 
                 Console.WriteLine("Uploading {0} to {1}", filePath, blob.Uri);
                 using (FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
@@ -175,10 +178,11 @@ namespace Microsoft.Azure.Batch.Samples.Common
                         if (storageException.RequestInformation != null &&
                             storageException.RequestInformation.ExtendedErrorInformation != null)
                         {
-                            StorageExtendedErrorInformation errorInfo = storageException.RequestInformation.ExtendedErrorInformation;
+                            StorageExtendedErrorInformation errorInfo =
+                                storageException.RequestInformation.ExtendedErrorInformation;
                             Console.WriteLine("Extended error information. Code: {0}, Message: {1}",
-                                              errorInfo.ErrorMessage,
-                                              errorInfo.ErrorCode);
+                                errorInfo.ErrorMessage,
+                                errorInfo.ErrorCode);
 
                             if (errorInfo.AdditionalDetails != null)
                             {
@@ -193,7 +197,6 @@ namespace Microsoft.Azure.Batch.Samples.Common
 
                 throw; //Rethrow on blob upload failure.
             }
-
         }
 
         /// <summary>
@@ -348,6 +351,16 @@ namespace Microsoft.Azure.Batch.Samples.Common
             }
 
             return builder.ToString();
+        }
+
+        public static AccountSettings LoadAccountSettings()
+        {
+            AccountSettings accountSettings = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("accountsettings.json")
+                .Build()
+                .Get<AccountSettings>();
+            return accountSettings;
         }
     }
 }

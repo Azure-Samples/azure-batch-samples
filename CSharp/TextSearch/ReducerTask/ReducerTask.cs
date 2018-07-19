@@ -3,9 +3,11 @@
 namespace Microsoft.Azure.Batch.Samples.TextSearch
 {
     using System;
+    using System.IO;
     using System.Threading.Tasks;
     using Common;
     using Microsoft.Azure.Batch.Auth;
+    using Microsoft.Extensions.Configuration;
 
     /// <summary>
     /// The reducer task.  This task aggregates the results from mapper tasks and prints the results.
@@ -23,8 +25,12 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
         /// </summary>
         public ReducerTask()
         {
-            this.textSearchSettings = Settings.Default;
-            this.accountSettings = AccountSettings.Default;
+            this.textSearchSettings = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("settings.json")
+                .Build()
+                .Get<Settings>();
+            this.accountSettings = SampleHelpers.LoadAccountSettings();
 
             //Read some important data from preconfigured environment variables on the Batch compute node.
             this.accountName = Environment.GetEnvironmentVariable("AZ_BATCH_ACCOUNT_NAME");

@@ -4,8 +4,14 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
 {
     using System.Text;
 
-    public partial class Settings
+    public class Settings
     {
+        public bool ShouldUploadResources { get; set; }
+        public bool ShouldDeleteJob { get; set; }
+        public string RegularExpression { get; set; }
+        public string BlobContainer { get; set; }
+        public int NumberOfMapperTasks { get; set; }
+
         public override string ToString()
         {
             StringBuilder stringBuilder = new StringBuilder();

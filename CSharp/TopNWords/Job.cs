@@ -1,17 +1,18 @@
 ﻿//Copyright (c) Microsoft Corporation
 
-using System;
-using System.Collections.Generic;
-using System.Collections.Concurrent;
-using Microsoft.Azure.Batch.Auth;
-using Microsoft.Azure.Batch.Common;
-using Microsoft.Azure.Batch.FileStaging;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Auth;
-using Microsoft.WindowsAzure.Storage.Blob;
-
 namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Collections.Concurrent;
+    using System.IO;
+    using Microsoft.Azure.Batch.Auth;
+    using Microsoft.Azure.Batch.Common;
+    using Microsoft.Azure.Batch.FileStaging;
+    using Microsoft.WindowsAzure.Storage;
+    using Microsoft.WindowsAzure.Storage.Auth;
+    using Microsoft.WindowsAzure.Storage.Blob;
+    using Microsoft.Extensions.Configuration;
     using Common;
 
     /// <summary>
@@ -25,14 +26,18 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
     public static class Job
     {
         // files that are required on the compute nodes that run the tasks
-        private const string TopNWordsExeName = "TopNWordsSample.exe";
+        private const string TopNWordsExeName = "TopNWords.exe";
         private const string StorageClientDllName = "Microsoft.WindowsAzure.Storage.dll";
 
         public static void JobMain(string[] args)
         {
             //Load the configuration
-            Settings topNWordsConfiguration = Settings.Default;
-            AccountSettings accountSettings = AccountSettings.Default;
+            Settings topNWordsConfiguration = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("settings.json")
+                .Build()
+                .Get<Settings>();
+            AccountSettings accountSettings = SampleHelpers.LoadAccountSettings();
 
             CloudStorageAccount cloudStorageAccount = new CloudStorageAccount(
                 new StorageCredentials(
@@ -50,42 +55,15 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
             {
                 string stagingContainer = null;
 
-                //OSFamily 4 == OS 2012 R2. You can learn more about os families and versions at:
+                //OSFamily 5 == Windows 2016. You can learn more about os families and versions at:
                 //http://msdn.microsoft.com/en-us/library/azure/ee924680.aspx
                 CloudPool pool = client.PoolOperations.CreatePool(
                     topNWordsConfiguration.PoolId, 
                     targetDedicatedComputeNodes: topNWordsConfiguration.PoolNodeCount,
-                    virtualMachineSize: "small",
-                    cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "4"));
+                    virtualMachineSize: "standard_d1_v2",
+                    cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "5"));
                 Console.WriteLine("Adding pool {0}", topNWordsConfiguration.PoolId);
-
-                try
-                {
-                    pool.Commit();
-                }
-                catch (AggregateException ae)
-                {
-                    // Go through all exceptions and dump useful information
-                    ae.Handle(x =>
-                    {
-                        Console.Error.WriteLine("Creating pool ID {0} failed", topNWordsConfiguration.PoolId);
-                        if (x is BatchException)
-                        {
-                            BatchException be = x as BatchException;
-
-                            Console.WriteLine(be.ToString());
-                            Console.WriteLine();
-                        }
-                        else
-                        {
-                            Console.WriteLine(x);
-                        }
-
-                        // can't continue without a pool
-                        return false;
-                    });
-                }
-                
+                GettingStartedCommon.CreatePoolIfNotExistAsync(client, pool).Wait();
 
                 try
                 {
@@ -110,15 +88,15 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                     //
                     // You'll need to observe the behavior and use published techniques for finding the right balance of performance versus
                     // complexity.
-                    string bookFileUri = UploadBookFileToCloudBlob(accountSettings, topNWordsConfiguration.BookFileName);
-                    Console.WriteLine("{0} uploaded to cloud", topNWordsConfiguration.BookFileName);
+                    string bookFileUri = UploadBookFileToCloudBlob(accountSettings, topNWordsConfiguration.FileName);
+                    Console.WriteLine("{0} uploaded to cloud", topNWordsConfiguration.FileName);
 
                     // initialize a collection to hold the tasks that will be submitted in their entirety
                     List<CloudTask> tasksToRun = new List<CloudTask>(topNWordsConfiguration.NumberOfTasks);
 
                     for (int i = 1; i <= topNWordsConfiguration.NumberOfTasks; i++)
                     {
-                        CloudTask task = new CloudTask("task_no_" + i, String.Format("{0} --Task {1} {2} {3} {4}",
+                        CloudTask task = new CloudTask("task_no_" + i, string.Format("{0} --Task {1} {2} {3} {4}",
                             TopNWordsExeName,
                             bookFileUri,
                             topNWordsConfiguration.TopWordCount,
@@ -174,9 +152,9 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                     foreach (CloudTask t in ourTasks)
                     {
                         Console.WriteLine("Task " + t.Id);
-                        Console.WriteLine("stdout:" + Environment.NewLine + t.GetNodeFile(Constants.StandardOutFileName).ReadAsString());
+                        Console.WriteLine("stdout:" + Environment.NewLine + t.GetNodeFile(Batch.Constants.StandardOutFileName).ReadAsString());
                         Console.WriteLine();
-                        Console.WriteLine("stderr:" + Environment.NewLine + t.GetNodeFile(Constants.StandardErrorFileName).ReadAsString());
+                        Console.WriteLine("stderr:" + Environment.NewLine + t.GetNodeFile(Batch.Constants.StandardErrorFileName).ReadAsString());
                     }
                 }
                 finally

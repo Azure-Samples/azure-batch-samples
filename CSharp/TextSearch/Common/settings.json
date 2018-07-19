@@ -1,0 +1,8 @@
+﻿{
+  "shouldUploadResources": true,
+  "shouldDeleteJob": true,
+  "regularExpression": "I observe",
+  "poolId": "PoolsAndResourceFilesPool",
+  "numberOfMapperTasks":  2, 
+  "blobContainer": "TextSearchContainer"
+}

@@ -1,11 +1,19 @@
-﻿//Copyright (c) Microsoft Corporation
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
 
 namespace Microsoft.Azure.Batch.Samples.Common
 {
-    using System.Text;
-
-    public partial class AccountSettings
+    public class AccountSettings
     {
+        public string BatchServiceUrl { get; set; }
+        public string BatchAccountName { get; set; }
+        public string BatchAccountKey { get; set; }
+
+        public string StorageServiceUrl { get; set; }
+        public string StorageAccountName { get; set; }
+        public string StorageAccountKey { get; set; }
+
         public override string ToString()
         {
             StringBuilder stringBuilder = new StringBuilder();
@@ -25,5 +33,5 @@ namespace Microsoft.Azure.Batch.Samples.Common
         {
             stringBuilder.AppendFormat("{0} = {1}", settingName, settingValue).AppendLine();
         }
-    }
+}
 }

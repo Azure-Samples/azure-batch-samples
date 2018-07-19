@@ -29,7 +29,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
             CloudPool pool = batchClient.PoolOperations.CreatePool(poolId: poolId,
                 virtualMachineSize: nodeSize,
                 targetDedicatedComputeNodes: nodeCount,
-                cloudServiceConfiguration: new CloudServiceConfiguration("4"));
+                cloudServiceConfiguration: new CloudServiceConfiguration("5"));
             
             pool.MaxTasksPerComputeNode = maxTasksPerNode;
 
