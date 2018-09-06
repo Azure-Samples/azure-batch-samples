@@ -88,7 +88,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                 this.accountSettings.BatchAccountName,
                 this.accountSettings.BatchAccountKey);
 
-            using (BatchClient batchClient = await BatchClient.OpenAsync(credentials))
+            using (BatchClient batchClient = BatchClient.Open(credentials))
             {
                 //
                 // Construct the job properties in local memory before commiting them to the Batch Service.

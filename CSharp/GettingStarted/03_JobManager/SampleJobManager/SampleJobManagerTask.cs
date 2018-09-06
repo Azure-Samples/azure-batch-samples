@@ -64,7 +64,7 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
                 this.configurationSettings.StorageAccountUrl,
                 useHttps: true);
             
-            using (BatchClient batchClient = await BatchClient.OpenAsync(credentials))
+            using (BatchClient batchClient = BatchClient.Open(credentials))
             {
                 HashSet<string> blobContainerNames = new HashSet<string>();
 

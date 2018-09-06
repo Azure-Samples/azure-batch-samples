@@ -48,7 +48,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                 this.accountSettings.BatchAccountName,
                 this.accountSettings.BatchAccountKey); 
 
-            using (BatchClient batchClient = await BatchClient.OpenAsync(credentials))
+            using (BatchClient batchClient = BatchClient.Open(credentials))
             {
                 //Gather each Mapper tasks output and write it to standard out.
                 for (int i = 0; i < this.textSearchSettings.NumberOfMapperTasks; i++)
