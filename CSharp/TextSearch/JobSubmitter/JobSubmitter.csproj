@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.Batch" Version="8.1.2" />
+    <PackageReference Include="Microsoft.Azure.Batch" Version="9.0.0" />
     <PackageReference Include="WindowsAzure.Storage" Version="9.2.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="2.1.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.1.0" />

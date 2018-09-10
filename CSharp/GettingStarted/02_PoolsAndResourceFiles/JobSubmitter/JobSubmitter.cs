@@ -69,7 +69,7 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
                     useHttps: true);
 
             // Get an instance of the BatchClient for a given Azure Batch account.
-            using (BatchClient batchClient = await BatchClient.OpenAsync(credentials))
+            using (BatchClient batchClient = BatchClient.Open(credentials))
             {
                 // add a retry policy. The built-in policies are No Retry (default), Linear Retry, and Exponential Retry
                 batchClient.CustomBehaviors.Add(RetryPolicyProvider.ExponentialRetryProvider(TimeSpan.FromSeconds(5), 3));

@@ -68,7 +68,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.JobPrepRelease
                 accountSettings.BatchAccountKey);
 
             // Initialize the BatchClient for access to your Batch account
-            using (BatchClient batchClient = await BatchClient.OpenAsync(cred))
+            using (BatchClient batchClient = BatchClient.Open(cred))
             {
                 // Create a CloudPool (or obtain an existing pool with the specified ID)
                 CloudPool pool = await ArticleHelpers.CreatePoolIfNotExistAsync(

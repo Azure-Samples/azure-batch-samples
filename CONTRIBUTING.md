@@ -32,11 +32,5 @@ Note that this will miss updating the shared projects, so you'll have to do thos
 ##### Using a text replace
 You can also just do a textual replace.  This can be done as long as the dependencies have not changed between the old and new versions of the Azure.Batch NuGet package.
 
-The following commands can be used to perform the textual replace:
-`rep.exe -find:"Azure.Batch.3.0.0" -replace:"Azure.Batch.3.1.0" -r *.csproj`
-
-`rep.exe -find:"Include=\"Microsoft.Azure.Batch, Version=3.0.0.0" -replace:"Include=\"Microsoft.Azure.Batch, Version=3.1.0.0" -r *.csproj`
-
-`rep.exe -find:"package id=\"Azure.Batch\" version=\"3.0.0\"" -replace:"package id=\"Azure.Batch\" version=\"3.1.0\"" -r packages.config`
-
+The following commands can be used to perform the textual replace: `rep.exe -find:"<PackageReference Include=\"Microsoft.Azure.Batch\" Version=\"8.1.2\" /> -replace:"<PackageReference Include=\"Microsoft.Azure.Batch\" Version=\"9.0.0\" />" -r *.csproj`
  

@@ -59,7 +59,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
 
             try
             {
-                using (BatchClient batchClient = await BatchClient.OpenAsync(cred))
+                using (BatchClient batchClient = BatchClient.Open(cred))
                 {
                     // Create the pool.
                     Console.WriteLine("Creating pool [{0}]...", poolId);
@@ -161,7 +161,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
             }
             finally
             {
-                using (BatchClient batchClient = await BatchClient.OpenAsync(cred))
+                using (BatchClient batchClient = BatchClient.Open(cred))
                 {
                     CloudJob job = await batchClient.JobOperations.GetJobAsync(jobId);
 

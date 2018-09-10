@@ -68,7 +68,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                 this.accountSettings.StorageServiceUrl,
                 useHttps: true);
 
-            using (BatchClient batchClient = await BatchClient.OpenAsync(batchSharedKeyCredentials))
+            using (BatchClient batchClient = BatchClient.Open(batchSharedKeyCredentials))
             {
                 //Construct a container SAS to provide the Batch Service access to the files required to
                 //run the mapper and reducer tasks.

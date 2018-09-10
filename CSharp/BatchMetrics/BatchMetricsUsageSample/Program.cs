@@ -44,7 +44,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
                 accountSettings.BatchAccountName,
                 accountSettings.BatchAccountKey);
 
-            using (var batchClient = await BatchClient.OpenAsync(credentials))
+            using (var batchClient = BatchClient.Open(credentials))
             {
                 // Create a MetricMonitor.  Once started, this will periodically fetch job metrics
                 // (specifically, the counts of tasks in different states) from Azure Batch.
