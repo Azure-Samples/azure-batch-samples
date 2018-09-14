@@ -1,3 +1,9 @@
+---
+services: batch
+platforms: dotnet, python, java, nodejs
+author: batch-samples-team
+---
+
 [![Build status](https://ci.appveyor.com/api/projects/status/j3gnm8slcaysr6va/branch/master?svg=true)](https://ci.appveyor.com/project/matthchr/azure-batch-samples/branch/master)
 
 # azure-batch-samples
