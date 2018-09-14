@@ -53,7 +53,7 @@ def submit_job_and_add_task(batch_client, job_id, vm_size, vm_count):
             pool=batchmodels.PoolSpecification(
                 vm_size=vm_size,
                 target_dedicated_nodes=vm_count,
-                cloud_service_configuration={'os_family': "4"}),
+                cloud_service_configuration={'os_family': "5"}),
             keep_alive=False,
             pool_lifetime_option=batchmodels.PoolLifetimeOption.job))
 

@@ -109,10 +109,11 @@ def encrypt_localfile_to_blob_storage(
     rsakeypfx = 'rsakey.pfx'
     sha1_cert_tp = generate_secrets(rsakeypem, rsakeypfx)
     subprocess.check_call(
-        ['blobxfer', storage_account_name, container, localresource,
-         '--storageaccountkey', storage_account_key, '--upload',
-         '--rsaprivatekey', rsakeypem, '--collate', '.', '--no-skiponmatch',
-         '--no-progressbar']
+        ['blobxfer', 'upload', '--storage-account', storage_account_name,
+         '--remote-path', container, '--local-path', localresource,
+         '--storage-account-key', storage_account_key,
+         '--rsa-private-key', rsakeypem,
+         '--no-progress-bar']
     )
     # remove rsakey.pem
     if rm_rsakey_pemfile:
@@ -136,7 +137,9 @@ def add_certificate_to_account(
         base64.b64encode(open(pfxfile, 'rb').read()))
     batch_client.certificate.add(
         certificate=batchmodels.CertificateAddParameter(
-            sha1_cert_tp, 'sha1', data,
+            thumbprint=sha1_cert_tp,
+            thumbprint_algorithm='sha1',
+            data=data,
             certificate_format=batchmodels.CertificateFormat.pfx,
             password=pfx_password)
     )
@@ -191,7 +194,8 @@ def create_pool_and_wait_for_node(
             wait_for_success=True),
         certificate_references=[
             batchmodels.CertificateReference(
-                sha1_cert_tp, 'sha1',
+                thumbprint=sha1_cert_tp,
+                thumbprint_algorithm='sha1',
                 visibility=[batchmodels.CertificateVisibility.task])
         ],
     )
@@ -241,9 +245,9 @@ def submit_job_and_add_task(
          '$AZ_BATCH_CERTIFICATES_DIR/privatekey.pem -nodes -password '
          'file:$AZ_BATCH_CERTIFICATES_DIR/sha1-{tp}.pfx.pw').format(
              tp=sha1_cert_tp),
-        ('blobxfer {sa} {cont} . --saskey "{sas}" --download '
-         '--remoteresource {rf} --rsaprivatekey '
-         '$AZ_BATCH_CERTIFICATES_DIR/privatekey.pem').format(
+        ('blobxfer download --storage-account {sa} '
+         '--remote-path {cont}/{rf} --local-path . --sas "{sas}" '
+         '--rsa-private-key $AZ_BATCH_CERTIFICATES_DIR/privatekey.pem').format(
              sa=storage_account_name, cont=container, sas=sastoken,
              rf=resourcefile),
         'echo secret.txt contents:',
