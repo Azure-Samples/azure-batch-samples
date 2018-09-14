@@ -247,8 +247,8 @@ def create_job(batch_service_client, job_id, pool_id):
     print('Creating job [{}]...'.format(job_id))
 
     job = batchmodels.JobAddParameter(
-        job_id,
-        batchmodels.PoolInformation(pool_id=pool_id))
+        id=job_id,
+        pool_info=batchmodels.PoolInformation(pool_id=pool_id))
 
     try:
         batch_service_client.job.add(job)
