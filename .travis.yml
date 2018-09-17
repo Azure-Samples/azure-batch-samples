@@ -24,8 +24,8 @@ install:
   - export PATH="/usr/lib/jvm/java-8-oracle:$PATH"
   - export JAVA_HOME="/usr/lib/jvm/java-8-oracle"
   - mkdir mvn
-  - wget "http://www-eu.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz"
-  - tar -zxvf apache-maven-3.3.9-bin.tar.gz -C ./mvn
+  - wget "http://www-us.apache.org/dist/maven/maven-3/3.5.4/binaries/apache-maven-3.5.4-bin.tar.gz"
+  - tar -zxvf apache-maven-3.5.4-bin.tar.gz -C ./mvn
   - export PATH=`pwd`/mvn/bin:$PATH
   - mvn -v
 script:
