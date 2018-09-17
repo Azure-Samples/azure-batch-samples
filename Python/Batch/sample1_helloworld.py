@@ -47,13 +47,15 @@ def submit_job_and_add_task(batch_client, job_id, vm_size, vm_count):
     :param str job_id: The id of the job to create.
     """
 
+    cloud_service_config = batchmodels.CloudServiceConfiguration(
+        os_family='5')
     pool_info = batchmodels.PoolInformation(
         auto_pool_specification=batchmodels.AutoPoolSpecification(
             auto_pool_id_prefix="HelloWorld",
             pool=batchmodels.PoolSpecification(
                 vm_size=vm_size,
                 target_dedicated_nodes=vm_count,
-                cloud_service_configuration={'os_family': "5"}),
+                cloud_service_configuration=cloud_service_config),
             keep_alive=False,
             pool_lifetime_option=batchmodels.PoolLifetimeOption.job))
 
