@@ -1,3 +1,4 @@
 * text=auto
 # Set the default behavior of Linux shell scripts to lf
 *.sh text eol=lf
+Python/Batch/article_samples/mpi/data/* text eol=lf
