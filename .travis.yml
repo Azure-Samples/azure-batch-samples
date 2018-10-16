@@ -10,6 +10,9 @@ python:
   #- pypy3
 addons:
   apt:
+    config:
+      retries: true
+    update: true  
     packages:
       - oracle-java8-installer
 env:
