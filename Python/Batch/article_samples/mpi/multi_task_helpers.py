@@ -43,8 +43,11 @@ import common.helpers  # noqa
 
 
 def create_pool_and_wait_for_vms(
-        batch_service_client, pool_id, publisher, offer, sku, vm_size,
-        target_dedicated_nodes, command_line, resource_files, elevation_level):
+        batch_service_client, pool_id,
+        publisher, offer, sku, vm_size,
+        target_dedicated_nodes,
+        command_line=None, resource_files=None,
+        elevation_level=batchmodels.ElevationLevel.admin):
     """
     Creates a pool of compute nodes with the specified OS settings.
 
@@ -54,8 +57,7 @@ def create_pool_and_wait_for_vms(
     :param str publisher: Marketplace Image publisher
     :param str offer: Marketplace Image offer
     :param str sku: Marketplace Image sku
-    :param str vm_size: The size of VM, eg 'Standard_A1' or 'Standard_D1'
-     as per
+    :param str vm_size: The size of VM, eg 'Standard_A1' or 'Standard_D1' per
     https://azure.microsoft.com/en-us/documentation/articles/
     virtual-machines-windows-sizes/
     :param int target_dedicated_nodes: Number of target VMs for the pool
@@ -95,7 +97,7 @@ def create_pool_and_wait_for_vms(
             command_line=command_line,
             user_identity=batchmodels.UserIdentity(auto_user=user),
             wait_for_success=True,
-            resource_files=resource_files),
+            resource_files=resource_files) if command_line else None,
     )
 
     common.helpers.create_pool_if_not_exist(batch_service_client, new_pool)
@@ -116,9 +118,11 @@ def create_pool_and_wait_for_vms(
             pool_id))
 
 
-def add_task(batch_service_client, job_id, task_id, application_cmdline,
-             input_files, elevation_level, num_instances,
-             coordination_cmdline, common_files):
+def add_task(
+        batch_service_client, job_id, task_id, num_instances,
+        application_cmdline, input_files, elevation_level,
+        output_file_names, output_container_sas,
+        coordination_cmdline, common_files):
     """
     Adds a task for each input file in the collection to the specified job.
 
@@ -147,18 +151,26 @@ def add_task(batch_service_client, job_id, task_id, application_cmdline,
     user = batchmodels.AutoUserSpecification(
         scope=batchmodels.AutoUserScope.pool,
         elevation_level=elevation_level)
+    output_file = batchmodels.OutputFile(
+        file_pattern=output_file_names,
+        destination=batchmodels.OutputFileDestination(
+            container=batchmodels.OutputFileBlobContainerDestination(
+                container_url=output_container_sas)),
+        upload_options=batchmodels.OutputFileUploadOptions(
+            upload_condition=batchmodels.
+            OutputFileUploadCondition.task_completion))
     task = batchmodels.TaskAddParameter(
         id=task_id,
         command_line=application_cmdline,
         user_identity=batchmodels.UserIdentity(auto_user=user),
         resource_files=input_files,
-        multi_instance_settings=multi_instance_settings
-    )
+        multi_instance_settings=multi_instance_settings,
+        output_files=[output_file])
     batch_service_client.task.add(job_id, task)
 
 
-def wait_for_subtasks_to_complete(batch_service_client, job_id, task_id,
-                                  timeout):
+def wait_for_subtasks_to_complete(
+        batch_service_client, job_id, task_id, timeout):
     """
     Returns when all subtasks in the specified task reach the Completed state.
 

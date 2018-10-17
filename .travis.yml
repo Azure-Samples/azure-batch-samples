@@ -2,7 +2,6 @@ language: python
 cache: pip
 python:
   - 2.7
-  - 3.3
   - 3.4
   - 3.5
   # disable pypy until travis upgrades to at least pypy2.6 due to cryptography
@@ -11,6 +10,9 @@ python:
   #- pypy3
 addons:
   apt:
+    config:
+      retries: true
+    update: true  
     packages:
       - oracle-java8-installer
 env:
