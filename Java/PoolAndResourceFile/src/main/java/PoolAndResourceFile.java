@@ -122,8 +122,8 @@ public class PoolAndResourceFile {
         // Create storage credential from name and key
         StorageCredentials credentials = new StorageCredentialsAccountAndKey(storageAccountName, storageAccountKey);
 
-        // Create storage account
-        CloudStorageAccount storageAccount = new CloudStorageAccount(credentials);
+        // Create storage account. The 'true' sets the client to use HTTPS for communication with the account
+        CloudStorageAccount storageAccount = new CloudStorageAccount(credentials, true);
 
         // Create the blob client
         CloudBlobClient blobClient =  storageAccount.createCloudBlobClient();
