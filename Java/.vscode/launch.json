@@ -1,0 +1,29 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Debug (Launch) - Current File",
+            "request": "launch",
+            "mainClass": "${file}"
+        },
+        {
+            "type": "java",
+            "name": "Debug (Launch)-PoolAndResourceFile<PoolAndResourceFile>",
+            "request": "launch",
+            "mainClass": "PoolAndResourceFile",
+            "projectName": "PoolAndResourceFile",
+            "cwd": "${workspaceFolder}/PoolAndResourceFile",
+            "env": {
+                "AZURE_BATCH_ENDPOINT": "",
+                "AZURE_BATCH_ACCOUNT": "",
+                "AZURE_BATCH_ACCESS_KEY": "",
+                "STORAGE_ACCOUNT_NAME": "",
+                "STORAGE_ACCOUNT_KEY": ""
+            }
+        }
+    ]
+}
