@@ -71,6 +71,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
         {
             this.insightsClient = telemetryClient;
             this.taskId = Environment.GetEnvironmentVariable("AZ_BATCH_TASK_ID");
+            this.insightsClient.Context.Operation.Id = taskId;
         }
 
         public void CountWords(string blobName, int numTopN, string storageAccountName, string storageAccountKey)
@@ -97,11 +98,14 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                 insightsClient.TrackMetric("Blob download in seconds", downloadTime.TotalSeconds, this.CommonProperties);
 
                 memoryStream.Position = 0; //Reset the stream
+
+                Dictionary<String, Double> topWordsMetrics = new Dictionary<string, double>();
                 using (StreamReader sr = new StreamReader(memoryStream))
                 {
                     var myStr = sr.ReadToEnd();
                     string[] words = myStr.Split(' ');
                     this.insightsClient.TrackTrace(string.Format("Task {0}: Found {1} words", this.taskId, words.Length), SeverityLevel.Verbose, this.CommonProperties);
+                    this.insightsClient.TrackMetric("Number of words found", words.Length, this.commonProperties);
                     var topNWords =
                         words.
                          Where(word => word.Length > 0).
@@ -109,12 +113,14 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                          OrderByDescending(x => x.Value).
                          Take(numTopN).
                          ToList();
+
                     foreach (var pair in topNWords)
                     {
                         Console.WriteLine("{0} {1}", pair.Key, pair.Value);
+                        topWordsMetrics.Add(pair.Key, pair.Value);
                     }
                 }
-                insightsClient.TrackEvent("Done counting words", this.CommonProperties);
+                insightsClient.TrackEvent("Done counting words", this.CommonProperties, topWordsMetrics);
             }
         }
         
