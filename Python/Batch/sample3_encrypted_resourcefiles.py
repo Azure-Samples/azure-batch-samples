@@ -201,6 +201,21 @@ def create_pool_and_wait_for_node(
     )
     common.helpers.create_pool_if_not_exist(batch_client, pool)
 
+    # because we want all nodes to be available before any tasks are assigned
+    # to the pool, here we will wait for all compute nodes to reach idle
+    nodes = common.helpers.wait_for_all_nodes_state(
+        batch_client, pool,
+        frozenset(
+            (batchmodels.ComputeNodeState.start_task_failed,
+             batchmodels.ComputeNodeState.unusable,
+             batchmodels.ComputeNodeState.idle)
+        )
+    )
+    # ensure all node are idle
+    if any(node.state != batchmodels.ComputeNodeState.idle for node in nodes):
+        raise RuntimeError('node(s) of pool {} not in idle state'.format(
+            pool_id))
+
 
 def submit_job_and_add_task(
         batch_client, block_blob_client, storage_account_name,
