@@ -257,8 +257,7 @@ def submit_job_and_add_task(
     task = batchmodels.TaskAddParameter(
         id="MyEncryptedResourceTask",
         command_line=common.helpers.wrap_commands_in_shell(
-            'linux', task_commands),
-    )
+            'linux', task_commands))
 
     batch_client.task.add(job_id=job.id, task=task)
 

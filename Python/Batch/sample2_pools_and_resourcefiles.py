@@ -82,7 +82,7 @@ def create_pool(batch_client, block_blob_client, pool_id, vm_size, vm_count):
             command_line="python " + _SIMPLE_TASK_NAME,
             resource_files=[batchmodels.ResourceFile(
                             file_path=_SIMPLE_TASK_NAME,
-                            blob_source=sas_url)]))
+                            http_url=sas_url)]))
 
     common.helpers.create_pool_if_not_exist(batch_client, pool)
 
@@ -120,7 +120,7 @@ def submit_job_and_add_task(batch_client, block_blob_client, job_id, pool_id):
         command_line="python " + _SIMPLE_TASK_NAME,
         resource_files=[batchmodels.ResourceFile(
                         file_path=_SIMPLE_TASK_NAME,
-                        blob_source=sas_url)])
+                        http_url=sas_url)])
 
     batch_client.task.add(job_id=job.id, task=task)
 
