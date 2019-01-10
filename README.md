@@ -16,7 +16,7 @@ Before you can interact with the Batch service, you will need a Batch service ac
 You will find it useful to have an Azure Storage viewer available to assist with managing containers and blobs, as well as observing interaction of the samples with Storage. There are a number of free viewers available including the [Microsoft Azure Storage Explorer](http://storageexplorer.com/) which is cross-platform, free, and from Microsoft.
 
 ### Batch Explorer
-If you would like to visualize the samples as they run try [Batch Explorer](https://github.com/Azure/BatchExplorer). Batch Explorer is a client side tool which can assist with creating, debuging and monitoring Azure Batch Applications.
+If you would like to visualize the samples as they run try [Batch Explorer](https://azure.github.io/BatchExplorer/). Batch Explorer is a client side tool which can assist with creating, debuging and monitoring Azure Batch Applications.
 
 ### Docker Support
 Want to use Docker containers with Azure Batch? No problem! Visit [Batch Shipyard](https://github.com/Azure/batch-shipyard/) for more information.
