@@ -412,7 +412,7 @@ def upload_file_to_container(
         block_blob_client, container_name, blob_name, file_path, expiry=None,
         timeout=timeout)
     return batchmodels.ResourceFile(
-        file_path=blob_name, blob_source=sas_url)
+        file_path=blob_name, http_url=sas_url)
 
 
 def download_blob_from_container(
