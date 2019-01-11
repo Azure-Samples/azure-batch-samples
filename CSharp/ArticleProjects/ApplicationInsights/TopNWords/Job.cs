@@ -93,12 +93,10 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
 
                 files.AddRange(AIFilesToUpload);
 
-                var resourceHelperTask = SampleHelpers.UploadResourcesAndCreateResourceFileReferencesAsync(
+                List<ResourceFile> resourceFiles = await SampleHelpers.UploadResourcesAndCreateResourceFileReferencesAsync(
                     cloudStorageAccount,
                     AIBlobContainerName,
                     files);
-
-                List<ResourceFile> resourceFiles = resourceHelperTask.Result;
 
                 pool.StartTask = new StartTask()
                 {

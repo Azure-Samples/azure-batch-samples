@@ -179,8 +179,10 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
             // Upload the required files for the job manager task
             await SampleHelpers.UploadResourcesAsync(storageAccount, this.jobManagerSettings.BlobContainer, JobManagerRequiredFiles);
 
-            string containerSas = SampleHelpers.ConstructContainerSas(storageAccount, this.jobManagerSettings.BlobContainer);
-            List<ResourceFile> jobManagerResourceFiles = SampleHelpers.GetResourceFiles(containerSas, JobManagerRequiredFiles);
+            List<ResourceFile> jobManagerResourceFiles = await SampleHelpers.UploadResourcesAndCreateResourceFileReferencesAsync(
+                storageAccount,
+                this.jobManagerSettings.BlobContainer,
+                JobManagerRequiredFiles);
 
             // Set up the JobManager environment settings
             List<EnvironmentSetting> jobManagerEnvironmentSettings = new List<EnvironmentSetting>()

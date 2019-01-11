@@ -122,11 +122,11 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                     {
                         AutoPoolSpecification = autoPoolSpecification
                     };
-                
+
                 //Define the job manager for this job.  This job manager will run first and will submit the tasks for 
                 //the job.  The job manager is the executable which manages the lifetime of the job
                 //and all tasks which should run for the job.  In this case, the job manager submits the mapper and reducer tasks.
-                List<ResourceFile> jobManagerResourceFiles = SampleHelpers.GetResourceFiles(containerSasUrl, Constants.RequiredExecutableFiles);
+                List<ResourceFile> jobManagerResourceFiles = new List<ResourceFile> { ResourceFile.FromStorageContainerUrl(containerSasUrl) };
                 const string jobManagerTaskId = "JobManager";
 
                 JobManagerTask jobManagerTask = new JobManagerTask()

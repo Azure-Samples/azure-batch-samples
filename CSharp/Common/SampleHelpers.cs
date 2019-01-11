@@ -46,7 +46,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
             };
 
             string sasString = container.GetSharedAccessSignature(sasPolicy);
-            return String.Format("{0}{1}", container.Uri, sasString); ;
+            return String.Format("{0}{1}", container.Uri, sasString);
         }
 
         /// <summary>
@@ -61,7 +61,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
 
             foreach (string dependency in dependencies)
             {
-                ResourceFile resourceFile = new ResourceFile(ConstructBlobSource(containerSas, dependency), dependency);
+                ResourceFile resourceFile = ResourceFile.FromUrl(ConstructBlobSource(containerSas, dependency), dependency);
                 resourceFiles.Add(resourceFile);
             }
 
@@ -80,7 +80,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
 
             if (index != -1)
             {
-                //SAS                
+                //SAS
                 string containerAbsoluteUrl = containerSasUrl.Substring(0, index);
                 return containerAbsoluteUrl + "/" + blobName + containerSasUrl.Substring(index);
             }
@@ -88,7 +88,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
             {
                 return containerSasUrl + "/" + blobName;
             }
-        }
+         }
 
         /// <summary>
         /// Upload resources required for this job to Azure Storage.
@@ -121,7 +121,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// <param name="blobContainerName">The name of the blob container to upload the files to.</param>
         /// <param name="filePaths">The files to upload.</param>
         /// <returns>A collection of resource files.</returns>
-        public static async Task<List<ResourceFile>> UploadResourcesAndCreateResourceFileReferencesAsync(CloudStorageAccount cloudStorageAccount, string blobContainerName, List<string> filePaths)
+        public static async Task<List<ResourceFile>> UploadResourcesAndCreateResourceFileReferencesAsync(CloudStorageAccount cloudStorageAccount, string blobContainerName, IEnumerable<string> filePaths)
         {
             // Upload the file for the start task to Azure Storage
             await SampleHelpers.UploadResourcesAsync(
@@ -133,7 +133,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
             string containerSas = SampleHelpers.ConstructContainerSas(cloudStorageAccount, blobContainerName);
 
             List<string> fileNames = filePaths.Select(Path.GetFileName).ToList();
-            List<ResourceFile> resourceFiles = SampleHelpers.GetResourceFiles(containerSas, fileNames);
+            List<ResourceFile> resourceFiles = new List<ResourceFile> { ResourceFile.FromStorageContainerUrl(containerSas) };
             
             return resourceFiles;
         }
