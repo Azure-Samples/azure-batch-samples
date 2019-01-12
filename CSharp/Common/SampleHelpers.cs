@@ -23,10 +23,12 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// </summary>
         /// <param name="cloudStorageAccount">The cloud storage account.</param>
         /// <param name="containerName">The container name to construct a SAS for.</param>
-        /// <returns>The container URL with the SAS.</returns>
+        /// <param name="permissions">The permissions to generate the SAS with.</param>
+        /// <returns>The container URL with the SAS and specified permissions.</returns>
         public static string ConstructContainerSas(
             CloudStorageAccount cloudStorageAccount,
-            string containerName)
+            string containerName,
+            SharedAccessBlobPermissions permissions = SharedAccessBlobPermissions.Read)
         {
             //Lowercase the container name because containers must always be all lower case
             containerName = containerName.ToLower();
@@ -41,7 +43,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
 
             SharedAccessBlobPolicy sasPolicy = new SharedAccessBlobPolicy()
             {
-                Permissions = SharedAccessBlobPermissions.Read,
+                Permissions = permissions,
                 SharedAccessExpiryTime = sasEndTime
             };
 
@@ -88,7 +90,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
             {
                 return containerSasUrl + "/" + blobName;
             }
-         }
+        }
 
         /// <summary>
         /// Upload resources required for this job to Azure Storage.
@@ -101,14 +103,17 @@ namespace Microsoft.Azure.Batch.Samples.Common
             string containerName, 
             IEnumerable<string> filesToUpload)
         {
+            containerName = containerName.ToLower(); //Force lower case because Azure Storage only allows lower case container names.
             Console.WriteLine("Uploading resources to storage container: {0}", containerName);
 
             List<Task> asyncTasks = new List<Task>();
-            
+            CloudBlobClient client = cloudStorageAccount.CreateCloudBlobClient();
+            CloudBlobContainer container = client.GetContainerReference(containerName);
+
             //Upload any additional files specified.
             foreach (string fileName in filesToUpload)
             {
-                asyncTasks.Add(UploadFileToBlobAsync(cloudStorageAccount, containerName, fileName));
+                asyncTasks.Add(UploadFileToBlobAsync(container, fileName));
             }
 
             await Task.WhenAll(asyncTasks).ConfigureAwait(continueOnCapturedContext: false); //Wait for all the uploads to finish.
@@ -141,18 +146,13 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// <summary>
         /// Upload a file as a blob.
         /// </summary>
-        /// <param name="cloudStorageAccount">The cloud storage account to upload the file to.</param>
-        /// <param name="containerName">The name of the container to upload the blob to.</param>
+        /// <param name="container">The container to upload the blob to.</param>
         /// <param name="filePath">The path of the file to upload.</param>
-        private static async Task UploadFileToBlobAsync(CloudStorageAccount cloudStorageAccount, string containerName, string filePath)
+        private static async Task UploadFileToBlobAsync(CloudBlobContainer container, string filePath)
         {
-            containerName = containerName.ToLower(); //Force lower case because Azure Storage only allows lower case container names.
-
             try
             {
                 string fileName = Path.GetFileName(filePath);
-                CloudBlobClient client = cloudStorageAccount.CreateCloudBlobClient();
-                CloudBlobContainer container = client.GetContainerReference(containerName);
                 CloudBlockBlob blob = container.GetBlockBlobReference(fileName);
 
                 //Create the container if it doesn't exist.

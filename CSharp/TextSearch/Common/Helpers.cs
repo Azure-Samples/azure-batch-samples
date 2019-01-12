@@ -37,8 +37,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
         /// </summary>
         /// <param name="boundTask">The task.</param>
         /// <param name="dumpStandardOutOnTaskSuccess">True to log the standard output file of the task even if it succeeded.  False to not log anything if the task succeeded.</param>
-        /// <returns>The string containing the standard out of the file, or null if stdout could not be gathered.</returns>
-        public static async Task<string> CheckForTaskSuccessAsync(CloudTask boundTask, bool dumpStandardOutOnTaskSuccess)
+        public static async Task CheckForTaskSuccessAsync(CloudTask boundTask, bool dumpStandardOutOnTaskSuccess)
         {
             if (boundTask.State == TaskState.Completed)
             {
@@ -72,8 +71,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                 }
                 else
                 {
-                    string result = await GetFileAsync(boundTask, Batch.Constants.StandardOutFileName, dumpStandardOutOnTaskSuccess);
-                    return result;
+                    await GetFileAsync(boundTask, Batch.Constants.StandardOutFileName, dumpStandardOutOnTaskSuccess);
                 }
             }
             else

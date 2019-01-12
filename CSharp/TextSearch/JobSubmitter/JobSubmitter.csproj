@@ -9,7 +9,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Common\Microsoft.Azure.Batch.Samples.Common.csproj" />
     <ProjectReference Include="..\Common\Common.csproj" />
-    <ProjectReference Include="..\JobManagerTask\JobManagerTask.csproj" />
     <ProjectReference Include="..\ReducerTask\ReducerTask.csproj" />
     <ProjectReference Include="..\MapperTask\MapperTask.csproj" />
   </ItemGroup>

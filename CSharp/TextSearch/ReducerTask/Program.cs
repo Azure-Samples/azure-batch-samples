@@ -12,7 +12,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
             try
             {
                 ReducerTask reducerTask = new ReducerTask();
-                reducerTask.RunAsync().Wait();
+                reducerTask.Run();
             }
             catch (AggregateException e)
             {

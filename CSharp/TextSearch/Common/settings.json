@@ -3,6 +3,8 @@
   "shouldDeleteJob": true,
   "regularExpression": "I observe",
   "poolId": "PoolsAndResourceFilesPool",
-  "numberOfMapperTasks":  2, 
-  "blobContainer": "TextSearchContainer"
+  "numberOfMapperTasks": 2,
+  "inputBlobContainer": "textsearchinputcontainer",
+  "outputBlobContainer": "textsearchoutputcontainer",
+  "shouldDeleteContainers":  true
 }

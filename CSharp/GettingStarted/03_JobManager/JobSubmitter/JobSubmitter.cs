@@ -24,20 +24,20 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
         private const string JobManagerTaskExe = "SampleJobManagerTask.exe";
         private const string JobManagerTaskId = "SampleJobManager";
         private static readonly IReadOnlyList<string> JobManagerRequiredFiles = new List<string>()
-            {
-                JobManagerTaskExe,
-                JobManagerTaskExe + ".config",
-                "SampleJobManagerTask.pdb",
-                "SimpleTask.exe",
-                "Microsoft.Azure.Batch.Samples.Common.dll",
-                "Microsoft.WindowsAzure.Storage.dll",
-                "Microsoft.Azure.Batch.dll",
-                "Microsoft.Azure.Batch.FileStaging.dll",
-                "Microsoft.Rest.ClientRuntime.dll",
-                "Microsoft.Rest.ClientRuntime.Azure.dll",
-                "Newtonsoft.Json.dll",
-                "System.Net.Http.dll"
-            };
+        {
+            JobManagerTaskExe,
+            JobManagerTaskExe + ".config",
+            "SampleJobManagerTask.pdb",
+            "SimpleTask.exe",
+            "Microsoft.Azure.Batch.Samples.Common.dll",
+            "Microsoft.WindowsAzure.Storage.dll",
+            "Microsoft.Azure.Batch.dll",
+            "Microsoft.Azure.Batch.FileStaging.dll",
+            "Microsoft.Rest.ClientRuntime.dll",
+            "Microsoft.Rest.ClientRuntime.Azure.dll",
+            "Newtonsoft.Json.dll",
+            "System.Net.Http.dll"
+        };
 
         public JobSubmitter()
         {
@@ -186,26 +186,26 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
 
             // Set up the JobManager environment settings
             List<EnvironmentSetting> jobManagerEnvironmentSettings = new List<EnvironmentSetting>()
-                {
-                    // No need to pass the batch account name as an environment variable since the batch service provides
-                    // an environment variable for each task which contains the account name
+            {
+                // No need to pass the batch account name as an environment variable since the batch service provides
+                // an environment variable for each task which contains the account name
 
-                    new EnvironmentSetting("SAMPLE_BATCH_KEY", this.accountSettings.BatchAccountKey),
-                    new EnvironmentSetting("SAMPLE_BATCH_URL", this.accountSettings.BatchServiceUrl),
+                new EnvironmentSetting("SAMPLE_BATCH_KEY", this.accountSettings.BatchAccountKey),
+                new EnvironmentSetting("SAMPLE_BATCH_URL", this.accountSettings.BatchServiceUrl),
 
-                    new EnvironmentSetting("SAMPLE_STORAGE_ACCOUNT", this.accountSettings.StorageAccountName),
-                    new EnvironmentSetting("SAMPLE_STORAGE_KEY", this.accountSettings.StorageAccountKey),
-                    new EnvironmentSetting("SAMPLE_STORAGE_URL", this.accountSettings.StorageServiceUrl),
-                };
+                new EnvironmentSetting("SAMPLE_STORAGE_ACCOUNT", this.accountSettings.StorageAccountName),
+                new EnvironmentSetting("SAMPLE_STORAGE_KEY", this.accountSettings.StorageAccountKey),
+                new EnvironmentSetting("SAMPLE_STORAGE_URL", this.accountSettings.StorageServiceUrl),
+            };
 
             unboundJob.JobManagerTask = new JobManagerTask()
-                {
-                    Id = JobManagerTaskId,
-                    CommandLine = JobManagerTaskExe,
-                    ResourceFiles = jobManagerResourceFiles,
-                    KillJobOnCompletion = true,
-                    EnvironmentSettings = jobManagerEnvironmentSettings
-                };
+            {
+                Id = JobManagerTaskId,
+                CommandLine = JobManagerTaskExe,
+                ResourceFiles = jobManagerResourceFiles,
+                KillJobOnCompletion = true,
+                EnvironmentSettings = jobManagerEnvironmentSettings
+            };
 
             // Commit Job to create it in the service
             await unboundJob.CommitAsync();

@@ -56,7 +56,12 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                 this.accountSettings.StorageServiceUrl,
                 useHttps: true);
 
-            //Upload resources if required.
+            //Upload resources if required
+            Console.WriteLine($"Creating container {this.textSearchSettings.OutputBlobContainer} if it doesn't exist...");
+            var blobClient = cloudStorageAccount.CreateCloudBlobClient();
+            var outputContainer = blobClient.GetContainerReference(this.textSearchSettings.OutputBlobContainer);
+            await outputContainer.CreateIfNotExistsAsync();
+
             if (this.textSearchSettings.ShouldUploadResources)
             {
                 Console.WriteLine("Splitting file: {0} into {1} subfiles", 
@@ -73,14 +78,21 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
 
                 await SampleHelpers.UploadResourcesAsync(
                     cloudStorageAccount,
-                    this.textSearchSettings.BlobContainer,
+                    this.textSearchSettings.InputBlobContainer,
                     files);
             }
             
             //Generate a SAS for the container.
-            string containerSasUrl = SampleHelpers.ConstructContainerSas(
+            string inputContainerSasUrl = SampleHelpers.ConstructContainerSas(
                 cloudStorageAccount,
-                this.textSearchSettings.BlobContainer);
+                this.textSearchSettings.InputBlobContainer,
+                permissions: WindowsAzure.Storage.Blob.SharedAccessBlobPermissions.Read);
+
+            string outputContainerSasUrl = SampleHelpers.ConstructContainerSas(
+                cloudStorageAccount,
+                this.textSearchSettings.OutputBlobContainer,
+                permissions: WindowsAzure.Storage.Blob.SharedAccessBlobPermissions.Read |
+                    WindowsAzure.Storage.Blob.SharedAccessBlobPermissions.Write);
 
             //Set up the Batch Service credentials used to authenticate with the Batch Service.
             BatchSharedKeyCredentials credentials = new BatchSharedKeyCredentials(
@@ -94,103 +106,105 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                 // Construct the job properties in local memory before commiting them to the Batch Service.
                 //
 
-                //Allow enough compute nodes in the pool to run each mapper task, and 1 extra to run the job manager.
-                int numberOfPoolComputeNodes = 1 + this.textSearchSettings.NumberOfMapperTasks;
+                //Allow enough compute nodes in the pool to run each mapper task
+                int numberOfPoolComputeNodes = this.textSearchSettings.NumberOfMapperTasks;
 
                 //Define the pool specification for the pool which the job will run on.
                 PoolSpecification poolSpecification = new PoolSpecification()
-                    {
-                        TargetDedicatedComputeNodes = numberOfPoolComputeNodes,
-                        VirtualMachineSize = "standard_d1_v2",
-                        //You can learn more about os families and versions at: 
-                        //http://azure.microsoft.com/documentation/articles/cloud-services-guestos-update-matrix
-                        CloudServiceConfiguration = new CloudServiceConfiguration(osFamily: "5")
-                    };
+                {
+                    TargetDedicatedComputeNodes = numberOfPoolComputeNodes,
+                    VirtualMachineSize = "standard_d1_v2",
+                    //You can learn more about os families and versions at: 
+                    //http://azure.microsoft.com/documentation/articles/cloud-services-guestos-update-matrix
+                    CloudServiceConfiguration = new CloudServiceConfiguration(osFamily: "5")
+                };
 
                 //Use the auto pool feature of the Batch Service to create a pool when the job is created.
                 //This creates a new pool for each job which is added.
                 AutoPoolSpecification autoPoolSpecification = new AutoPoolSpecification()
-                    {
-                        AutoPoolIdPrefix= "TextSearchPool",
-                        KeepAlive = false,
-                        PoolLifetimeOption = PoolLifetimeOption.Job,
-                        PoolSpecification = poolSpecification
-                    };
+                {
+                    AutoPoolIdPrefix= "TextSearchPool",
+                    KeepAlive = false,
+                    PoolLifetimeOption = PoolLifetimeOption.Job,
+                    PoolSpecification = poolSpecification
+                };
 
                 //Define the pool information for this job -- it will run on the pool defined by the auto pool specification above.
                 PoolInformation poolInformation = new PoolInformation()
-                    {
-                        AutoPoolSpecification = autoPoolSpecification
-                    };
-
-                //Define the job manager for this job.  This job manager will run first and will submit the tasks for 
-                //the job.  The job manager is the executable which manages the lifetime of the job
-                //and all tasks which should run for the job.  In this case, the job manager submits the mapper and reducer tasks.
-                List<ResourceFile> jobManagerResourceFiles = new List<ResourceFile> { ResourceFile.FromStorageContainerUrl(containerSasUrl) };
-                const string jobManagerTaskId = "JobManager";
-
-                JobManagerTask jobManagerTask = new JobManagerTask()
-                    {
-                        ResourceFiles = jobManagerResourceFiles,
-                        CommandLine = Constants.JobManagerExecutable,
-
-                        //Determines if the job should terminate when the job manager process exits.
-                        KillJobOnCompletion = true,
-                        Id = jobManagerTaskId
-                    };
+                {
+                    AutoPoolSpecification = autoPoolSpecification
+                };
 
                 //Create the unbound job in local memory.  An object which exists only in local memory (and not on the Batch Service) is "unbound".
                 string jobId = Environment.GetEnvironmentVariable("USERNAME") + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
 
                 CloudJob unboundJob = batchClient.JobOperations.CreateJob(jobId, poolInformation);
-                unboundJob.JobManagerTask = jobManagerTask; //Assign the job manager task to this job
+                unboundJob.UsesTaskDependencies = true;
 
                 try
                 {
                     //Commit the unbound job to the Batch Service.
-                    Console.WriteLine("Adding job: {0} to the Batch Service.", unboundJob.Id);
+                    Console.WriteLine($"Adding job: {unboundJob.Id} to the Batch Service.");
                     await unboundJob.CommitAsync(); //Issues a request to the Batch Service to add the job which was defined above.
 
-                    //
-                    // Wait for the job manager task to complete.
-                    //
-                    
+                    // Add tasks to the job
+                    var mapperTasks = CreateMapperTasks(inputContainerSasUrl, outputContainerSasUrl);
+                    var reducerTask = CreateReducerTask(inputContainerSasUrl, outputContainerSasUrl, mapperTasks);
+
+                    var tasksToAdd = Enumerable.Concat(mapperTasks, new[] { reducerTask });
+
+                    //Submit the unbound task collection to the Batch Service.
+                    //Use the AddTask method which takes a collection of CloudTasks for the best performance.
+                    Console.WriteLine("Submitting {0} mapper tasks", this.textSearchSettings.NumberOfMapperTasks);
+                    Console.WriteLine("Submitting 1 reducer task");
+                    await batchClient.JobOperations.AddTaskAsync(jobId, tasksToAdd);
+
                     //An object which is backed by a corresponding Batch Service object is "bound."
                     CloudJob boundJob = await batchClient.JobOperations.GetJobAsync(jobId);
 
-                    CloudTask boundJobManagerTask = await boundJob.GetTaskAsync(jobManagerTaskId);
+                    // Update the job now that we've added tasks so that when all of the tasks which we have added
+                    // are complete, the job will automatically move to the completed state.
+                    boundJob.OnAllTasksComplete = OnAllTasksComplete.TerminateJob;
+                    boundJob.Commit();
+                    boundJob.Refresh();
 
+                    //
+                    // Wait for the tasks to complete.
+                    //
+                    List<CloudTask> tasks = await batchClient.JobOperations.ListTasks(jobId).ToListAsync();
                     TimeSpan maxJobCompletionTimeout = TimeSpan.FromMinutes(30);
-                    
+
                     // Monitor the current tasks to see when they are done.
-                    // Occasionally a task may get killed and requeued during an upgrade or hardware failure, including the job manager
-                    // task.  The job manager will be re-run in this case.  Robustness against this was not added into the sample for 
+                    // Occasionally a task may get killed and requeued during an upgrade or hardware failure, 
+                    // Robustness against this was not added into the sample for 
                     // simplicity, but should be added into any production code.
                     Console.WriteLine("Waiting for job's tasks to complete");
 
                     TaskStateMonitor taskStateMonitor = batchClient.Utilities.CreateTaskStateMonitor();
                     try
                     {
-                        await taskStateMonitor.WhenAll(new List<CloudTask> { boundJobManagerTask }, TaskState.Completed, maxJobCompletionTimeout);
+                        await taskStateMonitor.WhenAll(tasks, TaskState.Completed, maxJobCompletionTimeout);
                     }
                     finally
                     {
-                        Console.WriteLine("Done waiting for job manager task.");
+                        Console.WriteLine("Done waiting for all tasks to complete");
 
-                        await boundJobManagerTask.RefreshAsync();
+                        // Refresh the task list
+                        tasks = await batchClient.JobOperations.ListTasks(jobId).ToListAsync();
 
                         //Check to ensure the job manager task exited successfully.
-                        await Helpers.CheckForTaskSuccessAsync(boundJobManagerTask, dumpStandardOutOnTaskSuccess: false);
+                        foreach (var task in tasks)
+                        {
+                            await Helpers.CheckForTaskSuccessAsync(task, dumpStandardOutOnTaskSuccess: false);
+                        }
                     }
 
                     //
                     // Download and write out the reducer tasks output
                     //
-
-                    string reducerText = await SampleHelpers.DownloadBlobTextAsync(cloudStorageAccount, this.textSearchSettings.BlobContainer, Constants.ReducerTaskResultBlobName);
+                    string reducerText = await SampleHelpers.DownloadBlobTextAsync(cloudStorageAccount, this.textSearchSettings.OutputBlobContainer, Constants.ReducerTaskResultBlobName);
                     Console.WriteLine("Reducer reuslts:");
                     Console.WriteLine(reducerText);
-
                 }
                 finally
                 {
@@ -199,14 +213,83 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                     //keep alive property is set to false.
                     if (this.textSearchSettings.ShouldDeleteJob)
                     {
-                        Console.WriteLine("Deleting job {0}", jobId);
+                        Console.WriteLine($"Deleting job {jobId}");
                         await batchClient.JobOperations.DeleteJobAsync(jobId);
                     }
 
-                    //Note that there were files uploaded to a container specified in the 
-                    //configuration file.  This container will not be deleted or cleaned up by this sample.
+                    if (this.textSearchSettings.ShouldDeleteContainers)
+                    {
+                        Console.WriteLine("Deleting containers");
+                        var inputContainer = blobClient.GetContainerReference(this.textSearchSettings.InputBlobContainer);
+                        await inputContainer.DeleteIfExistsAsync();
+
+                        await outputContainer.DeleteIfExistsAsync();
+                    }
+
                 }
             }
+        }
+
+        private IEnumerable<CloudTask> CreateMapperTasks(string inputContainerSas, string outputContainerSas)
+        {
+            //The collection of tasks to add to the Batch Service.
+            List<CloudTask> tasksToAdd = new List<CloudTask>();
+
+            for (int i = 0; i < this.textSearchSettings.NumberOfMapperTasks; i++)
+            {
+                string taskId = Helpers.GetMapperTaskId(i);
+                string fileBlobName = Helpers.GetSplitFileName(i);
+                string mapperFileBlobSas = SampleHelpers.ConstructBlobSource(inputContainerSas, fileBlobName);
+
+                string commandLine = string.Format("{0} {1}", Constants.MapperTaskExecutable, fileBlobName);
+                CloudTask unboundMapperTask = new CloudTask(taskId, commandLine);
+
+                //The set of files (exes, dlls and configuration files) required to run the mapper task. They have already been uploaded
+                //so just get their sas's
+                IReadOnlyList<string> mapperTaskRequiredFiles = Constants.RequiredExecutableFiles;
+                List<ResourceFile> mapperTaskResourceFiles = SampleHelpers.GetResourceFiles(inputContainerSas, mapperTaskRequiredFiles);
+                mapperTaskResourceFiles.Add(ResourceFile.FromUrl(mapperFileBlobSas, fileBlobName));
+
+                unboundMapperTask.OutputFiles = new List<OutputFile>
+                {
+                    new OutputFile(
+                        filePattern: "..\\stdout.txt",
+                        destination: new OutputFileDestination(
+                            container: new OutputFileBlobContainerDestination(outputContainerSas, path: taskId)),
+                        uploadOptions: new OutputFileUploadOptions(uploadCondition: OutputFileUploadCondition.TaskSuccess))
+                };
+                unboundMapperTask.ResourceFiles = mapperTaskResourceFiles;
+
+                yield return unboundMapperTask;
+            }
+        }
+
+        private CloudTask CreateReducerTask(string inputContainerSas, string outputContainerSas, IEnumerable<CloudTask> mapperTasks)
+        {
+            CloudTask unboundReducerTask = new CloudTask(Constants.ReducerTaskId, Constants.ReducerTaskExecutable);
+
+            //The set of files (exes, dlls and configuration files) required to run the reducer task.
+            List<ResourceFile> reducerTaskResourceFiles = SampleHelpers.GetResourceFiles(inputContainerSas, Constants.RequiredExecutableFiles);
+
+            //The mapper outputs to reduce
+            var mapperOutputs = Enumerable.Range(0, this.textSearchSettings.NumberOfMapperTasks).Select(Helpers.GetMapperTaskId);
+            reducerTaskResourceFiles.AddRange(SampleHelpers.GetResourceFiles(outputContainerSas, mapperOutputs));
+            unboundReducerTask.ResourceFiles = reducerTaskResourceFiles;
+
+            // Upload the reducer task stdout as the result file for the entire job
+            unboundReducerTask.OutputFiles = new List<OutputFile>
+            {
+                new OutputFile(
+                    filePattern: "..\\stdout.txt",
+                    destination: new OutputFileDestination(
+                        container: new OutputFileBlobContainerDestination(outputContainerSas, path: Constants.ReducerTaskResultBlobName)),
+                    uploadOptions: new OutputFileUploadOptions(uploadCondition: OutputFileUploadCondition.TaskSuccess))
+            };
+
+            // Depend on the mapper tasks so that they are all complete before the reducer runs
+            unboundReducerTask.DependsOn = TaskDependencies.OnTasks(mapperTasks);
+
+            return unboundReducerTask;
         }
 
     }
