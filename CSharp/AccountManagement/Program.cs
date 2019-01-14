@@ -80,10 +80,11 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
             // to query AAD for information that lies outside the application's tenant (such as for
             // querying subscription information in your Azure account).
             AuthenticationContext authContext = new AuthenticationContext(AuthorityUri);
-            AuthenticationResult authResult = authContext.AcquireToken(ResourceUri,
-                                                                       ClientId,
-                                                                       new Uri(RedirectUri),
-                                                                       PromptBehavior.Auto);
+            AuthenticationResult authResult = await authContext.AcquireTokenAsync(
+                ResourceUri,
+                ClientId,
+                new Uri(RedirectUri),
+                new PlatformParameters(PromptBehavior.Auto));
 
             // The first credential object is used when querying for subscriptions, and is therefore
             // not associated with a specific subscription.
