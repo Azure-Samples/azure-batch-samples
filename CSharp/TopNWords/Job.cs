@@ -96,21 +96,18 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
 
                     for (int i = 1; i <= topNWordsConfiguration.NumberOfTasks; i++)
                     {
-                        CloudTask task = new CloudTask("task_no_" + i, string.Format("{0} --Task {1} {2} {3} {4}",
-                            TopNWordsExeName,
-                            bookFileUri,
-                            topNWordsConfiguration.TopWordCount,
-                            accountSettings.StorageAccountName,
-                            accountSettings.StorageAccountKey));
+                        CloudTask task = new CloudTask(
+                            id: $"task_no_{i}",
+                            commandline: $"{TopNWordsExeName} --Task {bookFileUri} {topNWordsConfiguration.TopWordCount} {accountSettings.StorageAccountName} {accountSettings.StorageAccountKey}");
 
                         //This is the list of files to stage to a container -- for each job, one container is created and 
                         //files all resolve to Azure Blobs by their name (so two tasks with the same named file will create just 1 blob in
                         //the container).
                         task.FilesToStage = new List<IFileStagingProvider>
-                                            {
-                                                topNWordExe, 
-                                                storageDll
-                                            };
+                        {
+                            topNWordExe,
+                            storageDll
+                        };
 
                         tasksToRun.Add(task);
                     }

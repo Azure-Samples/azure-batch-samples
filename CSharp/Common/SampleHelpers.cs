@@ -23,10 +23,12 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// </summary>
         /// <param name="cloudStorageAccount">The cloud storage account.</param>
         /// <param name="containerName">The container name to construct a SAS for.</param>
-        /// <returns>The container URL with the SAS.</returns>
+        /// <param name="permissions">The permissions to generate the SAS with.</param>
+        /// <returns>The container URL with the SAS and specified permissions.</returns>
         public static string ConstructContainerSas(
             CloudStorageAccount cloudStorageAccount,
-            string containerName)
+            string containerName,
+            SharedAccessBlobPermissions permissions = SharedAccessBlobPermissions.Read)
         {
             //Lowercase the container name because containers must always be all lower case
             containerName = containerName.ToLower();
@@ -41,12 +43,12 @@ namespace Microsoft.Azure.Batch.Samples.Common
 
             SharedAccessBlobPolicy sasPolicy = new SharedAccessBlobPolicy()
             {
-                Permissions = SharedAccessBlobPermissions.Read,
+                Permissions = permissions,
                 SharedAccessExpiryTime = sasEndTime
             };
 
             string sasString = container.GetSharedAccessSignature(sasPolicy);
-            return String.Format("{0}{1}", container.Uri, sasString); ;
+            return String.Format("{0}{1}", container.Uri, sasString);
         }
 
         /// <summary>
@@ -61,7 +63,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
 
             foreach (string dependency in dependencies)
             {
-                ResourceFile resourceFile = new ResourceFile(ConstructBlobSource(containerSas, dependency), dependency);
+                ResourceFile resourceFile = ResourceFile.FromUrl(ConstructBlobSource(containerSas, dependency), dependency);
                 resourceFiles.Add(resourceFile);
             }
 
@@ -80,7 +82,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
 
             if (index != -1)
             {
-                //SAS                
+                //SAS
                 string containerAbsoluteUrl = containerSasUrl.Substring(0, index);
                 return containerAbsoluteUrl + "/" + blobName + containerSasUrl.Substring(index);
             }
@@ -101,14 +103,17 @@ namespace Microsoft.Azure.Batch.Samples.Common
             string containerName, 
             IEnumerable<string> filesToUpload)
         {
+            containerName = containerName.ToLower(); //Force lower case because Azure Storage only allows lower case container names.
             Console.WriteLine("Uploading resources to storage container: {0}", containerName);
 
             List<Task> asyncTasks = new List<Task>();
-            
+            CloudBlobClient client = cloudStorageAccount.CreateCloudBlobClient();
+            CloudBlobContainer container = client.GetContainerReference(containerName);
+
             //Upload any additional files specified.
             foreach (string fileName in filesToUpload)
             {
-                asyncTasks.Add(UploadFileToBlobAsync(cloudStorageAccount, containerName, fileName));
+                asyncTasks.Add(UploadFileToBlobAsync(container, fileName));
             }
 
             await Task.WhenAll(asyncTasks).ConfigureAwait(continueOnCapturedContext: false); //Wait for all the uploads to finish.
@@ -121,7 +126,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// <param name="blobContainerName">The name of the blob container to upload the files to.</param>
         /// <param name="filePaths">The files to upload.</param>
         /// <returns>A collection of resource files.</returns>
-        public static async Task<List<ResourceFile>> UploadResourcesAndCreateResourceFileReferencesAsync(CloudStorageAccount cloudStorageAccount, string blobContainerName, List<string> filePaths)
+        public static async Task<List<ResourceFile>> UploadResourcesAndCreateResourceFileReferencesAsync(CloudStorageAccount cloudStorageAccount, string blobContainerName, IEnumerable<string> filePaths)
         {
             // Upload the file for the start task to Azure Storage
             await SampleHelpers.UploadResourcesAsync(
@@ -133,7 +138,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
             string containerSas = SampleHelpers.ConstructContainerSas(cloudStorageAccount, blobContainerName);
 
             List<string> fileNames = filePaths.Select(Path.GetFileName).ToList();
-            List<ResourceFile> resourceFiles = SampleHelpers.GetResourceFiles(containerSas, fileNames);
+            List<ResourceFile> resourceFiles = new List<ResourceFile> { ResourceFile.FromStorageContainerUrl(containerSas) };
             
             return resourceFiles;
         }
@@ -141,18 +146,13 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// <summary>
         /// Upload a file as a blob.
         /// </summary>
-        /// <param name="cloudStorageAccount">The cloud storage account to upload the file to.</param>
-        /// <param name="containerName">The name of the container to upload the blob to.</param>
+        /// <param name="container">The container to upload the blob to.</param>
         /// <param name="filePath">The path of the file to upload.</param>
-        private static async Task UploadFileToBlobAsync(CloudStorageAccount cloudStorageAccount, string containerName, string filePath)
+        private static async Task UploadFileToBlobAsync(CloudBlobContainer container, string filePath)
         {
-            containerName = containerName.ToLower(); //Force lower case because Azure Storage only allows lower case container names.
-
             try
             {
                 string fileName = Path.GetFileName(filePath);
-                CloudBlobClient client = cloudStorageAccount.CreateCloudBlobClient();
-                CloudBlobContainer container = client.GetContainerReference(containerName);
                 CloudBlockBlob blob = container.GetBlockBlobReference(fileName);
 
                 //Create the container if it doesn't exist.

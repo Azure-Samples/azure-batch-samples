@@ -7,24 +7,22 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
     using System.Text.RegularExpressions;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Configuration;
-    using Microsoft.WindowsAzure.Storage.Blob;
 
     /// <summary>
-    /// The mapper task - it downloads a file from Azure Storage and processes it searching for a regular expression match on 
-    /// each file line.
+    /// The mapper task - it processes a file by performing a regular expression match on each line.
     /// </summary>
     public class MapperTask
     {
         private readonly Settings configurationSettings;
-        private readonly string blobSas;
+        private readonly string fileName;
 
         /// <summary>
-        /// Constructs a mapper task object with the specified blob SAS.
+        /// Constructs a mapper task object with the specified file name.
         /// </summary>
-        /// <param name="blobSas">The blob SAS to use.</param>
-        public MapperTask(string blobSas)
+        /// <param name="blobSas">The file name to process.</param>
+        public MapperTask(string fileName)
         {
-            this.blobSas = blobSas;
+            this.fileName = fileName;
             this.configurationSettings = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("settings.json")
@@ -37,34 +35,25 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
         /// </summary>
         public async Task RunAsync()
         {
-            CloudBlockBlob blob = new CloudBlockBlob(new Uri(this.blobSas));
-            Console.WriteLine("Matches in blob: {0}/{1}", blob.Container.Name, blob.Name);
-
-            using (Stream memoryStream = new MemoryStream())
+            using (FileStream fileStream = File.Open(this.fileName, FileMode.Open))
+            using (StreamReader streamReader = new StreamReader(fileStream))
             {
-                //Download the blob.
-                await blob.DownloadToStreamAsync(memoryStream);
-                memoryStream.Seek(0, SeekOrigin.Begin);
+                Regex regex = new Regex(this.configurationSettings.RegularExpression);
 
-                using (StreamReader streamReader = new StreamReader(memoryStream))
+                int lineCount = 0;
+
+                //Read the file content.
+                while (!streamReader.EndOfStream)
                 {
-                    Regex regex = new Regex(this.configurationSettings.RegularExpression);
+                    ++lineCount;
+                    string textLine = await streamReader.ReadLineAsync();
 
-                    int lineCount = 0;
-
-                    //Read the file content.
-                    while (!streamReader.EndOfStream)
+                    //If the line matches the search parameters, then print it out.
+                    if (textLine.Length > 0)
                     {
-                        ++lineCount;
-                        string textLine = await streamReader.ReadLineAsync();
-
-                        //If the line matches the search parameters, then print it out.
-                        if (textLine.Length > 0)
+                        if (regex.Match(textLine).Success)
                         {
-                            if (regex.Match(textLine).Success)
-                            {
-                                Console.WriteLine("Match: \"{0}\" -- line: {1}", textLine, lineCount);
-                            }
+                            Console.WriteLine("Match: \"{0}\" -- line: {1}", textLine, lineCount);
                         }
                     }
                 }
