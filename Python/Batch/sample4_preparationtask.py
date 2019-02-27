@@ -37,8 +37,10 @@ def submit_job_and_add_task(batch_client, job_id, vm_size, vm_count):
     job = batchmodels.JobAddParameter(
         id=job_id, 
         pool_info=pool_info,
-        job_preparation_task=batch.models.JobPreparationTask(command_line= preptaskcommand, wait_for_success=True )
-        )
+        job_preparation_task=batch.models.JobPreparationTask(
+            command_line= preptaskcommand,
+            wait_for_success=True)
+    )
 
     batch_client.job.add(job)
 
@@ -88,7 +90,7 @@ def execute_sample(global_config, sample_config):
 
     # Retry 5 times -- default is 3
     batch_client.config.retry_policy.retries = 5
-    job_id = common.helpers.generate_unique_resource_name("HelloWorldwithJobpreparationtask")
+    job_id = common.helpers.generate_unique_resource_name("samplePrepJob")
 
     try:
         submit_job_and_add_task(
