@@ -14,8 +14,6 @@ import azure.batch.models as batchmodels
 
 import common.helpers
 
-preptaskcommand = 'cmd /c set'
-
 
 def submit_job_and_add_task(batch_client, job_id, vm_size, vm_count):
     """Submits a job to the Azure Batch service
@@ -35,6 +33,8 @@ def submit_job_and_add_task(batch_client, job_id, vm_size, vm_count):
             keep_alive=False,
             pool_lifetime_option=batchmodels.PoolLifetimeOption.job))
 
+    preptaskcommand = 'cmd /c set'
+    
     job = batchmodels.JobAddParameter(id=job_id, pool_info=pool_info, job_preparation_task=batch.models.JobPreparationTask(
             command_line= preptaskcommand,
             wait_for_success=True)
@@ -117,6 +117,7 @@ if __name__ == '__main__':
     global_config.read(common.helpers._SAMPLES_CONFIG_FILE_NAME)
 
     sample_config = configparser.ConfigParser()
-    sample_config.read(os.path.splitext(os.path.basename(__file__))[0] + '.cfg')
+    sample_config.read(
+        os.path.splitext(os.path.basename(__file__))[0] + '.cfg')
 
     execute_sample(global_config, sample_config)
