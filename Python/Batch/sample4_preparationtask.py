@@ -35,10 +35,11 @@ def submit_job_and_add_task(batch_client, job_id, vm_size, vm_count):
             keep_alive=False,
             pool_lifetime_option=batchmodels.PoolLifetimeOption.job))
 
-    job = batchmodels.JobAddParameter(id=job_id, pool_info=pool_info,
+    job = batchmodels.JobAddParameter(
+        id=job_id,
+        pool_info=pool_info,
         job_preparation_task=batch.models.JobPreparationTask(
-            command_line=common.helpers.wrap_commands_in_shell(
-                'windows', [preptaskcommand]),
+            command_line=preptaskcommand,
             wait_for_success=True)
     )
 
