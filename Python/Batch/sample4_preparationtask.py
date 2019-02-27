@@ -36,9 +36,9 @@ def submit_job_and_add_task(batch_client, job_id, vm_size, vm_count):
             pool_lifetime_option=batchmodels.PoolLifetimeOption.job))
 
     job = batchmodels.JobAddParameter(id=job_id, pool_info=pool_info,
-            job_preparation_task=batch.models.JobPreparationTask(
-                command_line= preptaskcommand,
-                wait_for_success=True)
+        job_preparation_task=batch.models.JobPreparationTask(
+            command_line= preptaskcommand,
+            wait_for_success=True)
     )
 
     batch_client.job.add(job)
@@ -118,6 +118,7 @@ if __name__ == '__main__':
     global_config.read(common.helpers._SAMPLES_CONFIG_FILE_NAME)
 
     sample_config = configparser.ConfigParser()
-    sample_config.read(os.path.splitext(os.path.basename(__file__))[0] + '.cfg')
+    sample_config.read(
+        os.path.splitext(os.path.basename(__file__))[0] + '.cfg')
 
     execute_sample(global_config, sample_config)
