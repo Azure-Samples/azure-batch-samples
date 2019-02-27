@@ -16,8 +16,9 @@ import common.helpers
 
 preptaskcommand = 'cmd /c set'
 
+
 def submit_job_and_add_task(batch_client, job_id, vm_size, vm_count):
-    """Submits a job to the Azure Batch service 
+    """Submits a job to the Azure Batch service
     and adds a simple task with preparation task
     :param batch_client: The batch client to use.
     :type batch_client: `batchserviceclient.BatchServiceClient`
@@ -34,10 +35,7 @@ def submit_job_and_add_task(batch_client, job_id, vm_size, vm_count):
             keep_alive=False,
             pool_lifetime_option=batchmodels.PoolLifetimeOption.job))
 
-    job = batchmodels.JobAddParameter(
-        id=job_id, 
-        pool_info=pool_info,
-        job_preparation_task=batch.models.JobPreparationTask(
+    job = batchmodels.JobAddParameter(id=job_id, pool_info=pool_info, job_preparation_task=batch.models.JobPreparationTask(
             command_line= preptaskcommand,
             wait_for_success=True)
     )
