@@ -1,4 +1,4 @@
-# sample5_preparationtask.py Code Sample
+# sample5_preparationtask.py code sample
 
 from __future__ import print_function
 try:
