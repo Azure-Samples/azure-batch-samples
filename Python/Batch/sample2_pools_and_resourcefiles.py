@@ -169,7 +169,7 @@ def execute_sample(global_config, sample_config):
         batch_account_key)
     batch_client = batch.BatchServiceClient(
         credentials,
-        base_url=batch_service_url)
+        batch_url=batch_service_url)
 
     # Retry 5 times -- default is 3
     batch_client.config.retry_policy.retries = 5
