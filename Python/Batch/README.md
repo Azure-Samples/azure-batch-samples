@@ -49,6 +49,11 @@ path invocation. This sample can be run on Windows with an appropriate openssl
 binary and modified openssl invocations (i.e., `openssl.exe` instead of
 `openssl`).
 
+#### [sample4\_preparationtask.py](./sample4_preparationtask.py)
+This sample demonstrates using a `JobPreparationTask` to list environment 
+variables. This sample is geared towards Windows with the deployment of
+a Windows pool.
+
 ## Azure Batch on Linux Best Practices
 
 Although some of the Python samples are not specific to Linux, the Azure Batch
