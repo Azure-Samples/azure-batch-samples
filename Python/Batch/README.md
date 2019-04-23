@@ -50,10 +50,9 @@ binary and modified openssl invocations (i.e., `openssl.exe` instead of
 `openssl`).
 
 #### [sample4\_preparationtask.py](./sample4_preparationtask.py)
-This sample demostrates preparation task with batch job to show environment 
-variables using command line as an example before executing normal batch 
-task on each nodes. It spin-up a fixed pool of windows paas cloud service 
-and submits a simple python script as the only task of the job.
+This sample demonstrates using a `JobPreparationTask` to list environment 
+variables. This sample is geared towards Windows with the deployment of
+a Windows pool.
 
 ## Azure Batch on Linux Best Practices
 

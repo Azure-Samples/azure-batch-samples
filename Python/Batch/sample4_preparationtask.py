@@ -14,7 +14,7 @@ import azure.batch.models as batchmodels
 
 import common.helpers
 
-preptaskcommand = 'cmd /c set'
+prep_task_command = 'cmd /c set'
 
 
 def submit_job_and_add_task(batch_client, job_id, vm_size, vm_count):
@@ -39,7 +39,7 @@ def submit_job_and_add_task(batch_client, job_id, vm_size, vm_count):
         id=job_id,
         pool_info=pool_info,
         job_preparation_task=batch.models.JobPreparationTask(
-            command_line=preptaskcommand,
+            command_line=prep_task_command,
             wait_for_success=True)
     )
 
