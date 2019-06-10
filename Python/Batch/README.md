@@ -49,6 +49,16 @@ path invocation. This sample can be run on Windows with an appropriate openssl
 binary and modified openssl invocations (i.e., `openssl.exe` instead of
 `openssl`).
 
+#### [sample4\_job\_scheduler.py](./sample4_job_scheduler.py)
+This sample shows how to run a Python script on a Windows machine. The StartTask 
+method is first used to download and install Python, before a job schedule,
+running every 10 minutes until 30 minutes has passed, is added to the pool. This 
+sample uses an auto pool to scale each pool to the scope of a job and to ensure 
+it has a lifetime only as long as each job in the schedule. The sample uses the 
+JobManagerTask method to run a simple python script as its only task. The focus
+of this sample is on the API calls required to create an auto pool and add a job 
+schedule to the Batch service. 
+
 ## Azure Batch on Linux Best Practices
 
 Although some of the Python samples are not specific to Linux, the Azure Batch
