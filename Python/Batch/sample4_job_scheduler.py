@@ -114,10 +114,10 @@ def create_job_schedule(batch_client, job_schedule_id, vm_size, vm_count,
         do_not_run_after=do_not_run_after,
         recurrence_interval=datetime.timedelta(minutes=10))
 
-    scheduled_job = batchmodels.JobScheduleAddParameter(id=job_schedule_id,
-                                                        schedule=schedule,
-                                                        job_specification=
-                                                            job_spec)
+    scheduled_job = batchmodels.JobScheduleAddParameter(
+        id=job_schedule_id,
+        schedule=schedule,
+        job_specification=job_spec)
 
     batch_client.job_schedule.add(cloud_job_schedule=scheduled_job)
 
