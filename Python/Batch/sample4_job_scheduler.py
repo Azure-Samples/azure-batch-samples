@@ -47,7 +47,7 @@ _SIMPLE_TASK_PATH = os.path.join('resources', 'simple_task.py')
 _PYTHON_DOWNLOAD = \
     'https://www.python.org/ftp/python/3.7.3/python-3.7.3-amd64.exe'
 _PYTHON_INSTALL = \
-    '.\python373.exe /passive InstallAllUsers=1 PrependPath=1 Include_test=0'
+    r'.\python373.exe /passive InstallAllUsers=1 PrependPath=1 Include_test=0'
 _USER_ELEVATION_LEVEL = 'admin'
 
 
@@ -108,7 +108,7 @@ def create_job_schedule(batch_client, job_schedule_id, vm_size, vm_count,
                 http_url=sas_url)]))
 
     do_not_run_after = datetime.datetime.utcnow() \
-                       + datetime.timedelta(minutes=30)
+        + datetime.timedelta(minutes=30)
 
     schedule = batchmodels.Schedule(
         do_not_run_after=do_not_run_after,
