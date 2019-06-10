@@ -25,6 +25,7 @@
 # DEALINGS IN THE SOFTWARE.
 
 from __future__ import print_function
+
 try:
     import configparser
 except ImportError:
@@ -43,12 +44,15 @@ import common.helpers
 _CONTAINER_NAME = 'jobscheduler'
 _SIMPLE_TASK_NAME = 'simple_task.py'
 _SIMPLE_TASK_PATH = os.path.join('resources', 'simple_task.py')
-_PYTHON_DOWNLOAD = 'https://www.python.org/ftp/python/3.7.3/python-3.7.3-amd64.exe'
-_PYTHON_INSTALL = '.\python373.exe /passive InstallAllUsers=1 PrependPath=1 Include_test=0'
+_PYTHON_DOWNLOAD = \
+    'https://www.python.org/ftp/python/3.7.3/python-3.7.3-amd64.exe'
+_PYTHON_INSTALL = \
+    '.\python373.exe /passive InstallAllUsers=1 PrependPath=1 Include_test=0'
 _USER_ELEVATION_LEVEL = 'admin'
 
 
-def create_job_schedule(batch_client, job_schedule_id, vm_size, vm_count, block_blob_client):
+def create_job_schedule(batch_client, job_schedule_id, vm_size, vm_count,
+                        block_blob_client):
     """Creates an Azure Batch pool and job schedule with the specified ids.
 
     :param batch_client: The batch client to use.
@@ -62,9 +66,12 @@ def create_job_schedule(batch_client, job_schedule_id, vm_size, vm_count, block_
     cloud_service_config = batchmodels.CloudServiceConfiguration(os_family='6')
 
     user_id = batchmodels.UserIdentity(
-        auto_user=batchmodels.AutoUserSpecification(elevation_level=_USER_ELEVATION_LEVEL))
+        auto_user=batchmodels.AutoUserSpecification(
+            elevation_level=_USER_ELEVATION_LEVEL))
 
-    python_download = batchmodels.ResourceFile(http_url=_PYTHON_DOWNLOAD, file_path='python373.exe')
+    python_download = batchmodels.ResourceFile(
+        http_url=_PYTHON_DOWNLOAD,
+        file_path='python373.exe')
 
     pool_info = batchmodels.PoolInformation(
         auto_pool_specification=batchmodels.AutoPoolSpecification(
@@ -74,7 +81,8 @@ def create_job_schedule(batch_client, job_schedule_id, vm_size, vm_count, block_
                 target_dedicated_nodes=vm_count,
                 cloud_service_configuration=cloud_service_config,
                 start_task=batchmodels.StartTask(
-                    command_line=common.helpers.wrap_commands_in_shell('windows', ['{}'.format(_PYTHON_INSTALL)]),
+                    command_line=common.helpers.wrap_commands_in_shell(
+                        'windows', ['{}'.format(_PYTHON_INSTALL)]),
                     resource_files=[python_download],
                     wait_for_success=True,
                     user_identity=user_id)),
@@ -93,18 +101,23 @@ def create_job_schedule(batch_client, job_schedule_id, vm_size, vm_count, block_
         on_all_tasks_complete=batchmodels.OnAllTasksComplete.terminate_job,
         job_manager_task=batchmodels.JobManagerTask(
             id="JobManagerTask",
-            command_line=common.helpers.wrap_commands_in_shell('windows', ['python {}'.format(_SIMPLE_TASK_NAME)]),
+            command_line=common.helpers.wrap_commands_in_shell(
+                'windows', ['python {}'.format(_SIMPLE_TASK_NAME)]),
             resource_files=[batchmodels.ResourceFile(
                 file_path=_SIMPLE_TASK_NAME,
                 http_url=sas_url)]))
 
-    do_not_run_after = datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
+    do_not_run_after = datetime.datetime.utcnow() \
+                       + datetime.timedelta(minutes=30)
 
     schedule = batchmodels.Schedule(
         do_not_run_after=do_not_run_after,
         recurrence_interval=datetime.timedelta(minutes=10))
 
-    scheduled_job = batchmodels.JobScheduleAddParameter(id=job_schedule_id, schedule=schedule, job_specification=job_spec)
+    scheduled_job = batchmodels.JobScheduleAddParameter(id=job_schedule_id,
+                                                        schedule=schedule,
+                                                        job_specification=
+                                                            job_spec)
 
     batch_client.job_schedule.add(cloud_job_schedule=scheduled_job)
 
@@ -159,7 +172,8 @@ def execute_sample(global_config, sample_config):
         endpoint_suffix=storage_account_suffix)
 
     batch_client.config.retry_policy.retries = 5
-    job_schedule_id = common.helpers.generate_unique_resource_name("JobScheduler")
+    job_schedule_id = common.helpers.generate_unique_resource_name(
+        "JobScheduler")
 
     try:
         create_job_schedule(
@@ -177,7 +191,12 @@ def execute_sample(global_config, sample_config):
         tasks = batch_client.task.list(job_schedule_id)
         task_ids = [task.id for task in tasks]
 
-        common.helpers.print_task_output(batch_client, job_schedule_id, task_ids)
+        common.helpers.print_task_output(batch_client, job_schedule_id,
+                                         task_ids)
+
+    except batchmodels.BatchErrorException as e:
+        for x in e.error.values:
+            print("BatchErrorException: ", x)
 
     finally:
         if should_delete_job_schedule:
