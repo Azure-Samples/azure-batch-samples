@@ -82,8 +82,8 @@ def select_latest_verified_vm_image_with_node_agent_sku(
         (sku, image_ref) for sku in node_agent_skus for image_ref in sorted(
             sku.verified_image_references, key=lambda item: item.sku)
         if image_ref.publisher.lower() == publisher.lower() and
-           image_ref.offer.lower() == offer.lower() and
-           image_ref.sku.startswith(sku_starts_with)
+        image_ref.offer.lower() == offer.lower() and
+        image_ref.sku.startswith(sku_starts_with)
     ]
     # skus are listed in reverse order, pick first for latest
     sku_to_use, image_ref_to_use = skus_to_use[0]
@@ -450,7 +450,7 @@ def generate_unique_resource_name(resource_prefix):
     :rtype: str
     """
     return resource_prefix + "-" + \
-           datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+        datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
 
 
 def query_yes_no(question, default="yes"):
