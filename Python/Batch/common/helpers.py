@@ -31,7 +31,6 @@ import time
 import azure.storage.blob as azureblob
 import azure.batch.models as batchmodels
 
-
 _STANDARD_OUT_FILE_NAME = 'stdout.txt'
 _STANDARD_ERROR_FILE_NAME = 'stderr.txt'
 _SAMPLES_CONFIG_FILE_NAME = 'configuration.cfg'
@@ -40,6 +39,7 @@ _SAMPLES_CONFIG_FILE_NAME = 'configuration.cfg'
 class TimeoutError(Exception):
     """An error which can occur if a timeout has expired.
     """
+
     def __init__(self, message):
         self.message = message
 
@@ -82,8 +82,8 @@ def select_latest_verified_vm_image_with_node_agent_sku(
         (sku, image_ref) for sku in node_agent_skus for image_ref in sorted(
             sku.verified_image_references, key=lambda item: item.sku)
         if image_ref.publisher.lower() == publisher.lower() and
-        image_ref.offer.lower() == offer.lower() and
-        image_ref.sku.startswith(sku_starts_with)
+           image_ref.offer.lower() == offer.lower() and
+           image_ref.sku.startswith(sku_starts_with)
     ]
     # skus are listed in reverse order, pick first for latest
     sku_to_use, image_ref_to_use = skus_to_use[0]
@@ -450,7 +450,7 @@ def generate_unique_resource_name(resource_prefix):
     :rtype: str
     """
     return resource_prefix + "-" + \
-        datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+           datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
 
 
 def query_yes_no(question, default="yes"):
@@ -516,3 +516,49 @@ def wrap_commands_in_shell(ostype, commands):
         return 'cmd.exe /c "{}"'.format('&'.join(commands))
     else:
         raise ValueError('unknown ostype: {}'.format(ostype))
+
+
+def wait_for_job_creation(batch_client, job_schedule_id, timeout):
+    """Waits for a job to be created and returns a job id.
+
+       :param batch_client: The batch client to use.
+       :type batch_client: `batchserviceclient.BatchServiceClient`
+       :param str job_schedule_id: The id of the job schedule to monitor.
+       :param timeout: The maximum amount of time to wait.
+       :type timeout: `datetime.timedelta`
+       """
+    cloud_job_schedule = batch_client.job_schedule.get(
+        job_schedule_id=job_schedule_id)
+
+    time_to_timeout_at = datetime.datetime.now() + timeout
+
+    while datetime.datetime.now() < time_to_timeout_at:
+        print("Checking if job exists...")
+        if cloud_job_schedule.execution_info.recent_job.id is not None:
+            return cloud_job_schedule.execution_info.recent_job.id
+        time.sleep(1)
+
+    raise TimeoutError("Timed out waiting for tasks to complete")
+
+
+def wait_for_job_schedule_to_complete(batch_client, job_schedule_id, timeout):
+    """Waits for a job schedule to complete.
+
+       :param batch_client: The batch client to use.
+       :type batch_client: `batchserviceclient.BatchServiceClient`
+       :param str job_schedule_id: The id of the job schedule to monitor.
+       :param timeout: The maximum amount of time to wait.
+       :type timeout: `datetime.datetime`
+       """
+
+    cloud_job_schedule = batch_client.job_schedule.get(
+        job_schedule_id=job_schedule_id)
+
+    while datetime.datetime.now() < timeout:
+        print("Checking if job schedule is complete...")
+        state = cloud_job_schedule.state
+        if state == batchmodels.JobScheduleState.completed:
+            return
+        time.sleep(10)
+
+    return

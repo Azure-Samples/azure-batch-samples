@@ -50,14 +50,20 @@ binary and modified openssl invocations (i.e., `openssl.exe` instead of
 `openssl`).
 
 #### [sample4\_job\_scheduler.py](./sample4_job_scheduler.py)
-This sample shows how to run a Python script on a Windows machine. The StartTask 
-method is first used to download and install Python, before a job schedule,
-running every 10 minutes until 30 minutes has passed, is added to the pool. This 
-sample uses an auto pool to scale each pool to the scope of a job and to ensure 
-it has a lifetime only as long as each job in the schedule. The sample uses the 
-JobManagerTask method to run a simple python script as its only task. The focus
-of this sample is on the API calls required to create an auto pool and add a job 
-schedule to the Batch service. 
+This sample demonstrates how to use a Job Schedule to run recurring work. The 
+sample creates a Job Schedule with a Job specification that has an AutoPool 
+with a StartTask and a JobManager Task. The Job Schedule will create a Job, 
+at which point the AutoPool for that Job is created. The AutoPool's StartTask 
+will run on every Compute Node, downloading and installing Python. Once completed, 
+the Job's JobManager Task will execute, running a simple Python program. The Job 
+will complete once all tasks under it (here, only the Job Manager) have 
+completed, at which point the Job Schedule is able to create the next Job 
+recurrence based on its schedule. This Job Schedule is configured to run every 
+10 minutes, for 30 minutes in total. The Jobs created underneath the Job 
+Schedule will each create their own CloudServices AutoPool. The AutoPool's 
+lifetime is scoped to the Job, the Job terminates once all Tasks under it are 
+completed, and the Job Schedule will terminate after the 30 minute duration.
+
 
 ## Azure Batch on Linux Best Practices
 

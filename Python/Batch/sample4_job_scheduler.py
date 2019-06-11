@@ -49,6 +49,8 @@ _PYTHON_DOWNLOAD = \
 _PYTHON_INSTALL = \
     r'.\python373.exe /passive InstallAllUsers=1 PrependPath=1 Include_test=0'
 _USER_ELEVATION_LEVEL = 'admin'
+_START_TIME = datetime.datetime.utcnow()
+_END_TIME = _START_TIME + datetime.timedelta(minutes=30)
 
 
 def create_job_schedule(batch_client, job_schedule_id, vm_size, vm_count,
@@ -94,7 +96,7 @@ def create_job_schedule(batch_client, job_schedule_id, vm_size, vm_count,
         _CONTAINER_NAME,
         _SIMPLE_TASK_NAME,
         _SIMPLE_TASK_PATH,
-        datetime.datetime.utcnow() + datetime.timedelta(hours=1))
+        datetime.datetime.utcnow() + datetime.timedelta(minutes=30))
 
     job_spec = batchmodels.JobSpecification(
         pool_info=pool_info,
@@ -183,15 +185,23 @@ def execute_sample(global_config, sample_config):
             pool_vm_count,
             block_blob_client)
 
-        common.helpers.wait_for_tasks_to_complete(
+        print("Start time: ", _START_TIME)
+        print("Delete time: ", _END_TIME)
+
+        recent_job = common.helpers.wait_for_job_creation(
             batch_client,
             job_schedule_id,
+            datetime.timedelta(minutes=5))
+
+        common.helpers.wait_for_tasks_to_complete(
+            batch_client,
+            recent_job,
             datetime.timedelta(minutes=25))
 
-        tasks = batch_client.task.list(job_schedule_id)
+        tasks = batch_client.task.list(recent_job)
         task_ids = [task.id for task in tasks]
 
-        common.helpers.print_task_output(batch_client, job_schedule_id,
+        common.helpers.print_task_output(batch_client, recent_job,
                                          task_ids)
 
     except batchmodels.BatchErrorException as e:
@@ -199,6 +209,10 @@ def execute_sample(global_config, sample_config):
             print("BatchErrorException: ", x)
 
     finally:
+        common.helpers.wait_for_job_schedule_to_complete(
+            batch_client,
+            job_schedule_id,
+            _END_TIME + datetime.timedelta(minutes=10))
         if should_delete_job_schedule:
             print("Deleting job schedule: ", job_schedule_id)
             batch_client.job_schedule.delete(job_schedule_id)
