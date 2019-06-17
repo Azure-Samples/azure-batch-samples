@@ -518,7 +518,7 @@ def wrap_commands_in_shell(ostype, commands):
         raise ValueError('unknown ostype: {}'.format(ostype))
 
 
-def wait_for_job_creation(batch_client, job_schedule_id, timeout):
+def wait_for_job_under_job_schedule(batch_client, job_schedule_id, timeout):
     """Waits for a job to be created and returns a job id.
 
        :param batch_client: The batch client to use.

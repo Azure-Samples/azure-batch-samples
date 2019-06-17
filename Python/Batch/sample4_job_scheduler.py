@@ -188,7 +188,7 @@ def execute_sample(global_config, sample_config):
         print("Start time: ", _START_TIME)
         print("Delete time: ", _END_TIME)
 
-        recent_job = common.helpers.wait_for_job_creation(
+        recent_job = common.helpers.wait_for_job_under_job_schedule(
             batch_client,
             job_schedule_id,
             datetime.timedelta(minutes=5))
