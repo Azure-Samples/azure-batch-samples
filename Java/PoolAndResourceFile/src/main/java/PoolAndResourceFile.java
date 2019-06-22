@@ -148,6 +148,13 @@ public class PoolAndResourceFile {
         return blobClient.getContainerReference(containerName);
     }
 
+    /**
+     * @param sharedAccessBlobPermissions
+     * @param expiry
+     *          expiry in number of days
+     * @return
+     *          shared access blob policy with permission and expiry
+     */
     private static SharedAccessBlobPolicy getSharedAccessBlobPolicy(SharedAccessBlobPermissions sharedAccessBlobPermissions, int expiry) {
         SharedAccessBlobPolicy policy = new SharedAccessBlobPolicy();
         EnumSet<SharedAccessBlobPermissions> perEnumSet = EnumSet.of(sharedAccessBlobPermissions);
@@ -193,7 +200,16 @@ public class PoolAndResourceFile {
         return blob.getUri() + "?" + sas;
     }
 
-
+    /**
+     *
+     * @param container
+     *          container to upload the file
+     * @param filePattern
+     *          all the files matching the given pattern will be upload to container
+     * @return  list of output files
+     * @throws StorageException
+     * @throws InvalidKeyException
+     */
     private static List<OutputFile> getOutputFiles(CloudBlobContainer container, String filePattern) throws StorageException, InvalidKeyException {
         // Create policy with 1 day write permission
         SharedAccessBlobPolicy policy = getSharedAccessBlobPolicy(SharedAccessBlobPermissions.WRITE, 1);
@@ -248,7 +264,8 @@ public class PoolAndResourceFile {
         // Create task
         TaskAddParameter taskToAdd = new TaskAddParameter();
         // Create files named test2.txt and test3.csv. later we can transfer these files from vm to storage container using a file pattern
-        taskToAdd.withId("mytask").withCommandLine(String.format("cat %s && touch test2.txt && touch test3.csv", BLOB_FILE_NAME));
+        String command = String.format("cat %s && cp %s test2.txt && cp %s test3.csv", BLOB_FILE_NAME, BLOB_FILE_NAME, BLOB_FILE_NAME);
+        taskToAdd.withId("mytask").withCommandLine(String.format("/bin/bash -c \"%s\"", command));
 
         String sas = uploadFileToCloud(container, BLOB_FILE_NAME, LOCAL_FILE_PATH);
 
@@ -355,6 +372,7 @@ public class PoolAndResourceFile {
         // Create storage container
         CloudBlobContainer container = createBlobContainer(storageAccountName, storageAccountKey, "poolsandresourcefiles");
         CloudBlobContainer taskOutputFileUploadContainer = createBlobContainer(storageAccountName, storageAccountKey, "taskoutputfiles");
+        taskOutputFileUploadContainer.createIfNotExists();
 
         String userName = System.getProperty("user.name");
         String poolId = userName + "-pooltest";
@@ -366,7 +384,7 @@ public class PoolAndResourceFile {
             submitJobAndAddTask(client, container, taskOutputFileUploadContainer, sharedPool.id(), jobId);
             if (waitForTasksToComplete(client, jobId, TASK_COMPLETE_TIMEOUT)) {
                 // Check of the task output files uploaded to container
-                for (ListBlobItem listBlobItem: taskOutputFileUploadContainer.listBlobs()) {
+                for (ListBlobItem listBlobItem : taskOutputFileUploadContainer.listBlobs()) {
                     System.out.println("Uri of uploaded files after task completion: " + listBlobItem.getUri().toString());
                 }
                 // Get the task command output file
