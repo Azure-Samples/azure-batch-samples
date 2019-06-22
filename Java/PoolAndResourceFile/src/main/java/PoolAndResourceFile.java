@@ -365,6 +365,10 @@ public class PoolAndResourceFile {
             CloudPool sharedPool = createPoolIfNotExists(client, poolId);
             submitJobAndAddTask(client, container, taskOutputFileUploadContainer, sharedPool.id(), jobId);
             if (waitForTasksToComplete(client, jobId, TASK_COMPLETE_TIMEOUT)) {
+                // Check of the task output files uploaded to container
+                for (ListBlobItem listBlobItem: taskOutputFileUploadContainer.listBlobs()) {
+                    System.out.println("Uri of uploaded files after task completion: " + listBlobItem.getUri().toString());
+                }
                 // Get the task command output file
                 CloudTask task = client.taskOperations().getTask(jobId, "mytask");
 
