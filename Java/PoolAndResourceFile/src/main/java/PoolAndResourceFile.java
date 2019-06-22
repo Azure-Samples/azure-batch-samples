@@ -124,13 +124,14 @@ public class PoolAndResourceFile {
      *            storage account name
      * @param storageAccountKey
      *            storage account key
+     * @param containerName
+     *            container name
      * @return CloudBlobContainer instance
      * @throws URISyntaxException
      * @throws StorageException
      */
-    private static CloudBlobContainer createBlobContainer(String storageAccountName, String storageAccountKey)
+    private static CloudBlobContainer createBlobContainer(String storageAccountName, String storageAccountKey, String containerName)
             throws URISyntaxException, StorageException {
-        String CONTAINER_NAME = "poolsandresourcefiles";
 
         // Create storage credential from name and key
         StorageCredentials credentials = new StorageCredentialsAccountAndKey(storageAccountName, storageAccountKey);
@@ -144,7 +145,19 @@ public class PoolAndResourceFile {
 
         // Get a reference to a container.
         // The container name must be lower case
-        return blobClient.getContainerReference(CONTAINER_NAME);
+        return blobClient.getContainerReference(containerName);
+    }
+
+    private static SharedAccessBlobPolicy getSharedAccessBlobPolicy(SharedAccessBlobPermissions sharedAccessBlobPermissions, int expiry) {
+        SharedAccessBlobPolicy policy = new SharedAccessBlobPolicy();
+        EnumSet<SharedAccessBlobPermissions> perEnumSet = EnumSet.of(sharedAccessBlobPermissions);
+        policy.setPermissions(perEnumSet);
+
+        Calendar c = Calendar.getInstance();
+        c.setTime(new Date());
+        c.add(Calendar.DATE, expiry);
+        policy.setSharedAccessExpiryTime(c.getTime());
+        return policy;
     }
 
     /**
@@ -173,18 +186,33 @@ public class PoolAndResourceFile {
         blob.upload(new FileInputStream(source), source.length());
 
         // Create policy with 1 day read permission
-        SharedAccessBlobPolicy policy = new SharedAccessBlobPolicy();
-        EnumSet<SharedAccessBlobPermissions> perEnumSet = EnumSet.of(SharedAccessBlobPermissions.READ);
-        policy.setPermissions(perEnumSet);
-
-        Calendar c = Calendar.getInstance();
-        c.setTime(new Date());
-        c.add(Calendar.DATE, 1);
-        policy.setSharedAccessExpiryTime(c.getTime());
+        SharedAccessBlobPolicy policy = getSharedAccessBlobPolicy(SharedAccessBlobPermissions.READ, 1);
 
         // Create SAS key
         String sas = blob.generateSharedAccessSignature(policy, null);
         return blob.getUri() + "?" + sas;
+    }
+
+
+    private static List<OutputFile> getOutputFiles(CloudBlobContainer container, String filePattern) throws StorageException, InvalidKeyException {
+        // Create policy with 1 day write permission
+        SharedAccessBlobPolicy policy = getSharedAccessBlobPolicy(SharedAccessBlobPermissions.WRITE, 1);
+        String sasToken = container.generateSharedAccessSignature(policy, null);
+        String containerSasUrl = String.format("%s?%s", container.getUri().toString(), sasToken);
+        OutputFileBlobContainerDestination outputFileBlobContainerDestination =
+                new OutputFileBlobContainerDestination()
+                        .withContainerUrl(containerSasUrl);
+
+        List<OutputFile> outputFiles = new ArrayList<>();
+        OutputFile outputFile = new OutputFile()
+                .withFilePattern(filePattern)
+                .withDestination(new OutputFileDestination()
+                        .withContainer(outputFileBlobContainerDestination))
+                .withUploadOptions(new OutputFileUploadOptions()
+                        .withUploadCondition(OutputFileUploadCondition.TASK_COMPLETION));
+
+        outputFiles.add(outputFile);
+        return outputFiles;
     }
 
     /**
@@ -194,6 +222,8 @@ public class PoolAndResourceFile {
      *            batch client instance
      * @param container
      *            blob container to upload the resource file
+     * @param outputFileUploadContainer
+     *            blob container to upload the output files generated during task execution
      * @param poolId
      *            pool id
      * @param jobId
@@ -204,7 +234,7 @@ public class PoolAndResourceFile {
      * @throws InvalidKeyException
      * @throws URISyntaxException
      */
-    private static void submitJobAndAddTask(BatchClient client, CloudBlobContainer container, String poolId,
+    private static void submitJobAndAddTask(BatchClient client, CloudBlobContainer container, CloudBlobContainer outputFileUploadContainer, String poolId,
             String jobId)
             throws BatchErrorException, IOException, StorageException, InvalidKeyException, URISyntaxException {
         String BLOB_FILE_NAME = "test.txt";
@@ -217,7 +247,8 @@ public class PoolAndResourceFile {
 
         // Create task
         TaskAddParameter taskToAdd = new TaskAddParameter();
-        taskToAdd.withId("mytask").withCommandLine(String.format("cat %s", BLOB_FILE_NAME));
+        // Create files named test2.txt and test3.csv. later we can transfer these files from vm to storage container using a file pattern
+        taskToAdd.withId("mytask").withCommandLine(String.format("cat %s && touch test2.txt && touch test3.csv", BLOB_FILE_NAME));
 
         String sas = uploadFileToCloud(container, BLOB_FILE_NAME, LOCAL_FILE_PATH);
 
@@ -227,6 +258,9 @@ public class PoolAndResourceFile {
         List<ResourceFile> files = new ArrayList<ResourceFile>();
         files.add(file);
         taskToAdd.withResourceFiles(files);
+
+        //
+        taskToAdd.withOutputFiles(getOutputFiles(outputFileUploadContainer, "*.txt"));
 
         // Add task to job
         client.taskOperations().createTask(jobId, taskToAdd);
@@ -319,7 +353,8 @@ public class PoolAndResourceFile {
         BatchClient client = BatchClient.open(cred);
 
         // Create storage container
-        CloudBlobContainer container = createBlobContainer(storageAccountName, storageAccountKey);
+        CloudBlobContainer container = createBlobContainer(storageAccountName, storageAccountKey, "poolsandresourcefiles");
+        CloudBlobContainer taskOutputFileUploadContainer = createBlobContainer(storageAccountName, storageAccountKey, "taskoutputfiles");
 
         String userName = System.getProperty("user.name");
         String poolId = userName + "-pooltest";
@@ -328,7 +363,7 @@ public class PoolAndResourceFile {
 
         try {
             CloudPool sharedPool = createPoolIfNotExists(client, poolId);
-            submitJobAndAddTask(client, container, sharedPool.id(), jobId);
+            submitJobAndAddTask(client, container, taskOutputFileUploadContainer, sharedPool.id(), jobId);
             if (waitForTasksToComplete(client, jobId, TASK_COMPLETE_TIMEOUT)) {
                 // Get the task command output file
                 CloudTask task = client.taskOperations().getTask(jobId, "mytask");
@@ -364,6 +399,7 @@ public class PoolAndResourceFile {
 
             if (shouldDeleteContainer) {
                 container.deleteIfExists();
+                taskOutputFileUploadContainer.deleteIfExists();
             }
         }
     }
