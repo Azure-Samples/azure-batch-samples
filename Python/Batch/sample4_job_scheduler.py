@@ -100,6 +100,8 @@ def create_job_schedule(batch_client, job_schedule_id, vm_size, vm_count,
 
     job_spec = batchmodels.JobSpecification(
         pool_info=pool_info,
+        # Terminate job once all tasks under it are complete to allow for a new
+        # job to be created under the schedule
         on_all_tasks_complete=batchmodels.OnAllTasksComplete.terminate_job,
         job_manager_task=batchmodels.JobManagerTask(
             id="JobManagerTask",
