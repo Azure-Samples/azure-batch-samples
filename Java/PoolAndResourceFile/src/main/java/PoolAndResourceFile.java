@@ -149,6 +149,8 @@ public class PoolAndResourceFile {
     }
 
     /**
+     * Get shared access blob policy with access permissions and expiry to be used to create sas token
+     *
      * @param sharedAccessBlobPermissions
      * @param expiry
      *          expiry in number of days
@@ -201,6 +203,7 @@ public class PoolAndResourceFile {
     }
 
     /**
+     * Creates a list of output files matching a file pattern, these files will be uploaded to azure container after task completion
      *
      * @param container
      *          container to upload the file
@@ -210,7 +213,7 @@ public class PoolAndResourceFile {
      * @throws StorageException
      * @throws InvalidKeyException
      */
-    private static List<OutputFile> getOutputFiles(CloudBlobContainer container, String filePattern) throws StorageException, InvalidKeyException {
+    private static List<OutputFile> createOutputFiles(CloudBlobContainer container, String filePattern) throws StorageException, InvalidKeyException {
         // Create policy with 1 day write permission
         SharedAccessBlobPolicy policy = getSharedAccessBlobPolicy(SharedAccessBlobPermissions.WRITE, 1);
         String sasToken = container.generateSharedAccessSignature(policy, null);
@@ -236,7 +239,7 @@ public class PoolAndResourceFile {
      * 
      * @param client
      *            batch client instance
-     * @param container
+     * @param resourceFileUploadContainer
      *            blob container to upload the resource file
      * @param outputFileUploadContainer
      *            blob container to upload the output files generated during task execution
@@ -250,7 +253,7 @@ public class PoolAndResourceFile {
      * @throws InvalidKeyException
      * @throws URISyntaxException
      */
-    private static void submitJobAndAddTask(BatchClient client, CloudBlobContainer container, CloudBlobContainer outputFileUploadContainer, String poolId,
+    private static void submitJobAndAddTask(BatchClient client, CloudBlobContainer resourceFileUploadContainer, CloudBlobContainer outputFileUploadContainer, String poolId,
             String jobId)
             throws BatchErrorException, IOException, StorageException, InvalidKeyException, URISyntaxException {
         String BLOB_FILE_NAME = "test.txt";
@@ -267,7 +270,7 @@ public class PoolAndResourceFile {
         String command = String.format("cat %s && cp %s test2.txt && cp %s test3.csv", BLOB_FILE_NAME, BLOB_FILE_NAME, BLOB_FILE_NAME);
         taskToAdd.withId("mytask").withCommandLine(String.format("/bin/bash -c \"%s\"", command));
 
-        String sas = uploadFileToCloud(container, BLOB_FILE_NAME, LOCAL_FILE_PATH);
+        String sas = uploadFileToCloud(resourceFileUploadContainer, BLOB_FILE_NAME, LOCAL_FILE_PATH);
 
         // Associate resource file with task
         ResourceFile file = new ResourceFile();
@@ -370,7 +373,7 @@ public class PoolAndResourceFile {
         BatchClient client = BatchClient.open(cred);
 
         // Create storage container
-        CloudBlobContainer container = createBlobContainer(storageAccountName, storageAccountKey, "poolsandresourcefiles");
+        CloudBlobContainer resourceFileUploadContainer = createBlobContainer(storageAccountName, storageAccountKey, "poolsandresourcefiles");
         CloudBlobContainer taskOutputFileUploadContainer = createBlobContainer(storageAccountName, storageAccountKey, "taskoutputfiles");
         taskOutputFileUploadContainer.createIfNotExists();
 
@@ -381,7 +384,7 @@ public class PoolAndResourceFile {
 
         try {
             CloudPool sharedPool = createPoolIfNotExists(client, poolId);
-            submitJobAndAddTask(client, container, taskOutputFileUploadContainer, sharedPool.id(), jobId);
+            submitJobAndAddTask(client, resourceFileUploadContainer, taskOutputFileUploadContainer, sharedPool.id(), jobId);
             if (waitForTasksToComplete(client, jobId, TASK_COMPLETE_TIMEOUT)) {
                 // Check of the task output files uploaded to container
                 for (ListBlobItem listBlobItem : taskOutputFileUploadContainer.listBlobs()) {
@@ -420,7 +423,7 @@ public class PoolAndResourceFile {
             }
 
             if (shouldDeleteContainer) {
-                container.deleteIfExists();
+                resourceFileUploadContainer.deleteIfExists();
                 taskOutputFileUploadContainer.deleteIfExists();
             }
         }
