@@ -49,6 +49,21 @@ path invocation. This sample can be run on Windows with an appropriate openssl
 binary and modified openssl invocations (i.e., `openssl.exe` instead of
 `openssl`).
 
+#### [sample4\_job\_scheduler.py](./sample4_job_scheduler.py)
+This sample demonstrates how to use a Job Schedule to run recurring work. The 
+sample creates a Job Schedule with a Job specification that has an AutoPool 
+with a StartTask and a JobManager Task. The Job Schedule will create a Job, 
+at which point the AutoPool for that Job is created. The AutoPool's StartTask 
+will run on every Compute Node, downloading and installing Python. Once completed, 
+the Job's JobManager Task will execute, running a simple Python program. The Job 
+will complete once all tasks under it (here, only the Job Manager) have 
+completed, at which point the Job Schedule is able to create the next Job 
+recurrence based on its schedule. This Job Schedule is configured to run every 
+10 minutes, for 30 minutes in total. The Jobs created underneath the Job 
+Schedule will each create their own CloudServices AutoPool. The AutoPool's 
+lifetime is scoped to the Job.
+
+
 ## Azure Batch on Linux Best Practices
 
 Although some of the Python samples are not specific to Linux, the Azure Batch
