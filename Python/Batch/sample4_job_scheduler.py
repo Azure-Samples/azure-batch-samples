@@ -203,18 +203,21 @@ def execute_sample(global_config, sample_config):
         tasks = batch_client.task.list(recent_job)
         task_ids = [task.id for task in tasks]
 
-        common.helpers.print_task_output(batch_client, recent_job,
-                                         task_ids)
+        common.helpers.print_task_output(
+            batch_client,
+            recent_job,
+            task_ids)
+
+        common.helpers.wait_for_job_schedule_to_complete(
+            batch_client,
+            job_schedule_id,
+            _END_TIME + datetime.timedelta(minutes=10))
 
     except batchmodels.BatchErrorException as e:
         for x in e.error.values:
             print("BatchErrorException: ", x)
 
     finally:
-        common.helpers.wait_for_job_schedule_to_complete(
-            batch_client,
-            job_schedule_id,
-            _END_TIME + datetime.timedelta(minutes=10))
         if should_delete_job_schedule:
             print("Deleting job schedule: ", job_schedule_id)
             batch_client.job_schedule.delete(job_schedule_id)

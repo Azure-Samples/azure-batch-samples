@@ -61,8 +61,7 @@ completed, at which point the Job Schedule is able to create the next Job
 recurrence based on its schedule. This Job Schedule is configured to run every 
 10 minutes, for 30 minutes in total. The Jobs created underneath the Job 
 Schedule will each create their own CloudServices AutoPool. The AutoPool's 
-lifetime is scoped to the Job, the Job terminates once all Tasks under it are 
-completed, and the Job Schedule will terminate after the 30 minute duration.
+lifetime is scoped to the Job.
 
 
 ## Azure Batch on Linux Best Practices
