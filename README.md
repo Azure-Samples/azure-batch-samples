@@ -1,12 +1,22 @@
 ---
-services: batch
-platforms: dotnet, python, java, nodejs
-author: batch-samples-team
+page_type: sample
+languages:
+- csharp
+- python
+- java
+- javascript
+- nodejs
+products:
+- azure
+- azure-batch
+- dotnet
+description: "A set of HPC and Batch related samples that demonstrate the usage of Azure Batch services along with some general utilities."
 ---
 
 [![Build status](https://ci.appveyor.com/api/projects/status/j3gnm8slcaysr6va/branch/master?svg=true)](https://ci.appveyor.com/project/matthchr/azure-batch-samples/branch/master)
 
-# azure-batch-samples
+# Azure Batch Samples
+
 This GitHub repository contains a set of HPC and Batch related samples that demonstrate the usage of Microsoft Azure Batch services along with some general purpose utilities. See [http://azure.microsoft.com/services/batch/](http://azure.microsoft.com/services/batch/) for more information on the Azure Batch service.
 
 ### Batch Account
