@@ -9,7 +9,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
     /// </summary>
     public static class Constants
     {
-        public const string JobManagerExecutable = "JobManagerTask.exe";
+        public const string JobManagerExecutable = "JobSubmitter.exe";
         public const string MapperTaskExecutable = "MapperTask.exe";
         public const string ReducerTaskExecutable = "ReducerTask.exe";
         public const string ReducerTaskResultBlobName = "ReducerTaskOutput";
@@ -26,7 +26,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
             {
                 JobManagerExecutable,
                 JobManagerExecutable + ".config",
-                "JobManagerTask.pdb",
+                "JobSubmitter.pdb",
                 MapperTaskExecutable,
                 MapperTaskExecutable + ".config",
                 "MapperTask.pdb",
