@@ -48,7 +48,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
             };
 
             string sasString = container.GetSharedAccessSignature(sasPolicy);
-            return String.Format("{0}{1}", container.Uri, sasString);
+            return $"{container.Uri}{sasString}";
         }
 
         /// <summary>
@@ -135,7 +135,10 @@ namespace Microsoft.Azure.Batch.Samples.Common
                 filePaths).ConfigureAwait(continueOnCapturedContext: false);
 
             // Generate resource file references to the blob we just uploaded
-            string containerSas = SampleHelpers.ConstructContainerSas(cloudStorageAccount, blobContainerName);
+            string containerSas = SampleHelpers.ConstructContainerSas(
+                cloudStorageAccount,
+                blobContainerName,
+                permissions: SharedAccessBlobPermissions.Read | SharedAccessBlobPermissions.List);
 
             List<string> fileNames = filePaths.Select(Path.GetFileName).ToList();
             List<ResourceFile> resourceFiles = new List<ResourceFile> { ResourceFile.FromStorageContainerUrl(containerSas) };
@@ -317,25 +320,12 @@ namespace Microsoft.Azure.Batch.Samples.Common
             return jobs.FirstOrDefault();
         }
 
-        public struct SkuAndImage
+        public static async Task<ImageInformation> GetNodeAgentSkuReferenceAsync(BatchClient client, Func<ImageReference, bool> scanFunc)
         {
-            public SkuAndImage(NodeAgentSku sku, ImageReference image)
-            {
-                this.Sku = sku;
-                this.Image = image;
-            }
+            List<ImageInformation> imageInformationList = await client.PoolOperations.ListSupportedImages().ToListAsync();
 
-            public NodeAgentSku Sku { get; }
-            public ImageReference Image { get; }
-        }
-
-        public static async Task<SkuAndImage> GetNodeAgentSkuReferenceAsync(BatchClient client, Func<ImageReference, bool> scanFunc)
-        {
-            List<NodeAgentSku> nodeAgentSkus = await client.PoolOperations.ListNodeAgentSkus().ToListAsync();
-            NodeAgentSku nodeAgentSku = nodeAgentSkus.First(sku => sku.VerifiedImageReferences.FirstOrDefault(scanFunc) != null);
-            ImageReference imageReference = nodeAgentSku.VerifiedImageReferences.First(scanFunc);
-
-            return new SkuAndImage(nodeAgentSku, imageReference);
+            var result = imageInformationList.First(imageInfo => scanFunc(imageInfo.ImageReference));
+            return result;
         }
 
         public static string GetFailureInfoDetails(TaskFailureInformation failureInfo)
