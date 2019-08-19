@@ -37,7 +37,8 @@ This sample demonstrates efficient list queries and provides a utility library f
 This set of samples is intended to be the starting point for learning the concepts behind Azure Batch and its API. It covers basic features of the service, including jobs, pools, tasks, and more.
 
 ### [TextSearch](./TextSearch)
-This map-reduce style sample uses Azure Batch to perform parallel text processing on an input file by splitting it up into multiple sub-files and performing regular expression matching on each sub-file. A Job Manager task is used to orchestrate the mapper and reducer tasks with the results rolled-up into a final report. See the readme in the source directory for more information.
+This map-reduce style sample uses Azure Batch to perform parallel text processing on an input file by splitting it up into multiple sub-files and performing regular expression matching on each sub-file.
+This sample makes use of a variety of Azure Batch features, such as auto-pool functionality, task `ResourceFiles` for moving data into VMs, task `OutputFiles` for moving data out of VMs, and task dependencies for specifying tasks relationships to one another. See the readme in the source directory for more information.
 
 ### [TopNWords](./TopNWords)
 This sample demonstrates how to process a set of input blobs in parallel on multiple compute nodes. In this case, there is only one blob but the code can be expanded to load more blobs and bind them to individual tasks. The task writes a list of length N to stdout that contains the words in the blob with the highest occurrence count. A run-once job is created followed by the creation of multiple tasks with each task processing its blob. The job code then waits for each of the tasks to complete and prints out the list generated for each input blob.

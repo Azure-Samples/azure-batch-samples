@@ -40,7 +40,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
         /// <summary>
         /// Runs the reducer task.
         /// </summary>
-        public async Task RunAsync()
+        public void Run()
         {
             //Set up the Batch Service credentials used to authenticate with the Batch Service.
             BatchSharedKeyCredentials credentials = new BatchSharedKeyCredentials(
@@ -54,16 +54,8 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                 for (int i = 0; i < this.textSearchSettings.NumberOfMapperTasks; i++)
                 {
                     string mapperTaskId = Helpers.GetMapperTaskId(i);
-
-                    //Download the standard out from each mapper task.
-                    NodeFile mapperFile = await batchClient.JobOperations.GetNodeFileAsync(
-                        this.jobId, 
-                        mapperTaskId, 
-                        Batch.Constants.StandardOutFileName);
-
-                    string taskFileString = await mapperFile.ReadAsStringAsync();
-                    Console.WriteLine(taskFileString);
-
+                    string mapperFileContent = File.ReadAllText(mapperTaskId);
+                    Console.WriteLine(mapperFileContent);
                     Console.WriteLine();
                 }
             }

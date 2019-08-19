@@ -1,12 +1,22 @@
 ---
-services: batch
-platforms: dotnet, python, java, nodejs
-author: batch-samples-team
+page_type: sample
+languages:
+- csharp
+- python
+- java
+- javascript
+- nodejs
+products:
+- azure
+- azure-batch
+- dotnet
+description: "A set of HPC and Batch related samples that demonstrate the usage of Azure Batch services along with some general utilities."
 ---
 
 [![Build status](https://ci.appveyor.com/api/projects/status/j3gnm8slcaysr6va/branch/master?svg=true)](https://ci.appveyor.com/project/matthchr/azure-batch-samples/branch/master)
 
-# azure-batch-samples
+# Azure Batch Samples
+
 This GitHub repository contains a set of HPC and Batch related samples that demonstrate the usage of Microsoft Azure Batch services along with some general purpose utilities. See [http://azure.microsoft.com/services/batch/](http://azure.microsoft.com/services/batch/) for more information on the Azure Batch service.
 
 ### Batch Account
@@ -14,6 +24,9 @@ Before you can interact with the Batch service, you will need a Batch service ac
 
 ### Azure Storage viewer
 You will find it useful to have an Azure Storage viewer available to assist with managing containers and blobs, as well as observing interaction of the samples with Storage. There are a number of free viewers available including the [Microsoft Azure Storage Explorer](http://storageexplorer.com/) which is cross-platform, free, and from Microsoft.
+
+### Batch Explorer
+If you would like to visualize the samples as they run try [Batch Explorer](https://azure.github.io/BatchExplorer/). Batch Explorer is a client side tool which can assist with creating, debuging and monitoring Azure Batch Applications.
 
 ### Docker Support
 Want to use Docker containers with Azure Batch? No problem! Visit [Batch Shipyard](https://github.com/Azure/batch-shipyard/) for more information.

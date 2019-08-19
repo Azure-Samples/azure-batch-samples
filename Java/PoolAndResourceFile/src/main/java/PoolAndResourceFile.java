@@ -9,15 +9,18 @@ import com.microsoft.azure.storage.*;
 import com.microsoft.azure.storage.blob.*;
 
 import com.microsoft.azure.batch.*;
-import com.microsoft.azure.batch.auth.BatchSharedKeyCredentials;
+import com.microsoft.azure.batch.auth.*;
 import com.microsoft.azure.batch.protocol.models.*;
 
 public class PoolAndResourceFile {
 
     /**
      * Create IaaS pool if pool isn't exist
-     * @param client batch client instance
-     * @param poolId the pool id
+     * 
+     * @param client
+     *            batch client instance
+     * @param poolId
+     *            the pool id
      * @return the pool instance
      * @throws BatchErrorException
      * @throws IllegalArgumentException
@@ -25,7 +28,8 @@ public class PoolAndResourceFile {
      * @throws InterruptedException
      * @throws TimeoutException
      */
-    private static CloudPool createPoolIfNotExists(BatchClient client, String poolId) throws BatchErrorException, IllegalArgumentException, IOException, InterruptedException, TimeoutException {
+    private static CloudPool createPoolIfNotExists(BatchClient client, String poolId)
+            throws BatchErrorException, IllegalArgumentException, IOException, InterruptedException, TimeoutException {
         // Create a pool with 1 A1 VM
         String osPublisher = "OpenLogic";
         String osOffer = "CentOS";
@@ -37,7 +41,8 @@ public class PoolAndResourceFile {
         // Check if pool exists
         if (!client.poolOperations().existsPool(poolId)) {
 
-            // See detail of creating IaaS pool at https://blogs.technet.microsoft.com/windowshpc/2016/03/29/introducing-linux-support-on-azure-batch/
+            // See detail of creating IaaS pool at
+            // https://blogs.technet.microsoft.com/windowshpc/2016/03/29/introducing-linux-support-on-azure-batch/
             // Get the sku image reference
             List<NodeAgentSku> skus = client.accountOperations().listNodeAgentSkus();
             String skuId = null;
@@ -46,7 +51,8 @@ public class PoolAndResourceFile {
             for (NodeAgentSku sku : skus) {
                 if (sku.osType() == OSType.LINUX) {
                     for (ImageReference imgRef : sku.verifiedImageReferences()) {
-                        if (imgRef.publisher().equalsIgnoreCase(osPublisher) && imgRef.offer().equalsIgnoreCase(osOffer)) {
+                        if (imgRef.publisher().equalsIgnoreCase(osPublisher)
+                                && imgRef.offer().equalsIgnoreCase(osOffer)) {
                             imageRef = imgRef;
                             skuId = sku.id();
                             break;
@@ -82,7 +88,8 @@ public class PoolAndResourceFile {
             throw new TimeoutException("The pool did not reach a steady state in the allotted time");
         }
 
-        // The VMs in the pool don't need to be in and IDLE state in order to submit a job.
+        // The VMs in the pool don't need to be in and IDLE state in order to submit a
+        // job.
         // The following code is just an example of how to poll for the VM state
         startTime = System.currentTimeMillis();
         elapsedTime = 0L;
@@ -90,7 +97,9 @@ public class PoolAndResourceFile {
 
         // Wait for at least 1 VM to reach the IDLE state
         while (elapsedTime < VM_READY_TIMEOUT.toMillis()) {
-            List<ComputeNode> nodeCollection = client.computeNodeOperations().listComputeNodes(poolId, new DetailLevel.Builder().withSelectClause("id, state").withFilterClause("state eq 'idle'").build());
+            List<ComputeNode> nodeCollection = client.computeNodeOperations().listComputeNodes(poolId,
+                    new DetailLevel.Builder().withSelectClause("id, state").withFilterClause("state eq 'idle'")
+                            .build());
             if (!nodeCollection.isEmpty()) {
                 hasIdleVM = true;
                 break;
@@ -110,23 +119,28 @@ public class PoolAndResourceFile {
 
     /**
      * Create blob container in order to upload file
-     * @param storageAccountName storage account name
-     * @param storageAccountKey storage account key
+     * 
+     * @param storageAccountName
+     *            storage account name
+     * @param storageAccountKey
+     *            storage account key
      * @return CloudBlobContainer instance
      * @throws URISyntaxException
      * @throws StorageException
      */
-    private static CloudBlobContainer createBlobContainer(String storageAccountName, String storageAccountKey) throws URISyntaxException, StorageException {
+    private static CloudBlobContainer createBlobContainer(String storageAccountName, String storageAccountKey)
+            throws URISyntaxException, StorageException {
         String CONTAINER_NAME = "poolsandresourcefiles";
 
         // Create storage credential from name and key
         StorageCredentials credentials = new StorageCredentialsAccountAndKey(storageAccountName, storageAccountKey);
 
-        // Create storage account. The 'true' sets the client to use HTTPS for communication with the account
+        // Create storage account. The 'true' sets the client to use HTTPS for
+        // communication with the account
         CloudStorageAccount storageAccount = new CloudStorageAccount(credentials, true);
 
         // Create the blob client
-        CloudBlobClient blobClient =  storageAccount.createCloudBlobClient();
+        CloudBlobClient blobClient = storageAccount.createCloudBlobClient();
 
         // Get a reference to a container.
         // The container name must be lower case
@@ -135,16 +149,21 @@ public class PoolAndResourceFile {
 
     /**
      * Upload file to blob container and return sas key
-     * @param container blob container
-     * @param fileName the file name of blob
-     * @param filePath the local file path
+     * 
+     * @param container
+     *            blob container
+     * @param fileName
+     *            the file name of blob
+     * @param filePath
+     *            the local file path
      * @return SAS key for the uploaded file
      * @throws URISyntaxException
      * @throws IOException
      * @throws InvalidKeyException
      * @throws StorageException
      */
-    private static String uploadFileToCloud(CloudBlobContainer container, String fileName, String filePath) throws URISyntaxException, IOException, InvalidKeyException, StorageException {
+    private static String uploadFileToCloud(CloudBlobContainer container, String fileName, String filePath)
+            throws URISyntaxException, IOException, InvalidKeyException, StorageException {
         // Create the container if it does not exist.
         container.createIfNotExists();
 
@@ -170,17 +189,24 @@ public class PoolAndResourceFile {
 
     /**
      * Create a job with a single task
-     * @param client batch client instance
-     * @param container blob container to upload the resource file
-     * @param poolId pool id
-     * @param jobId job id
+     * 
+     * @param client
+     *            batch client instance
+     * @param container
+     *            blob container to upload the resource file
+     * @param poolId
+     *            pool id
+     * @param jobId
+     *            job id
      * @throws BatchErrorException
      * @throws IOException
      * @throws StorageException
      * @throws InvalidKeyException
      * @throws URISyntaxException
      */
-    private static void submitJobAndAddTask(BatchClient client, CloudBlobContainer container, String poolId, String jobId) throws BatchErrorException, IOException, StorageException, InvalidKeyException, URISyntaxException {
+    private static void submitJobAndAddTask(BatchClient client, CloudBlobContainer container, String poolId,
+            String jobId)
+            throws BatchErrorException, IOException, StorageException, InvalidKeyException, URISyntaxException {
         String BLOB_FILE_NAME = "test.txt";
         String LOCAL_FILE_PATH = "./" + BLOB_FILE_NAME;
 
@@ -197,7 +223,7 @@ public class PoolAndResourceFile {
 
         // Associate resource file with task
         ResourceFile file = new ResourceFile();
-        file.withFilePath(BLOB_FILE_NAME).withBlobSource(sas);
+        file.withFilePath(BLOB_FILE_NAME).withHttpUrl(sas);
         List<ResourceFile> files = new ArrayList<ResourceFile>();
         files.add(file);
         taskToAdd.withResourceFiles(files);
@@ -208,20 +234,26 @@ public class PoolAndResourceFile {
 
     /**
      * Wait all tasks under a specified job to be completed
-     * @param client batch client instance
-     * @param jobId job id
-     * @param expiryTime the waiting period
+     * 
+     * @param client
+     *            batch client instance
+     * @param jobId
+     *            job id
+     * @param expiryTime
+     *            the waiting period
      * @return if task completed in time, return true, otherwise, return false
      * @throws BatchErrorException
      * @throws IOException
      * @throws InterruptedException
      */
-    private static boolean waitForTasksToComplete(BatchClient client, String jobId, Duration expiryTime) throws BatchErrorException, IOException, InterruptedException {
+    private static boolean waitForTasksToComplete(BatchClient client, String jobId, Duration expiryTime)
+            throws BatchErrorException, IOException, InterruptedException {
         long startTime = System.currentTimeMillis();
         long elapsedTime = 0L;
 
         while (elapsedTime < expiryTime.toMillis()) {
-            List<CloudTask> taskCollection = client.taskOperations().listTasks(jobId, new DetailLevel.Builder().withSelectClause("id, state").build());
+            List<CloudTask> taskCollection = client.taskOperations().listTasks(jobId,
+                    new DetailLevel.Builder().withSelectClause("id, state").build());
 
             boolean allComplete = true;
             for (CloudTask task : taskCollection) {
@@ -249,12 +281,15 @@ public class PoolAndResourceFile {
 
     /**
      * print BatchErrorException to console
-     * @param err BatchErrorException instance
+     * 
+     * @param err
+     *            BatchErrorException instance
      */
     private static void printBatchException(BatchErrorException err) {
         System.out.println(String.format("BatchError %s", err.toString()));
         if (err.body() != null) {
-            System.out.println(String.format("BatchError code = %s, message = %s", err.body().code(), err.body().message().value()));
+            System.out.println(String.format("BatchError code = %s, message = %s", err.body().code(),
+                    err.body().message().value()));
             if (err.body().values() != null) {
                 for (BatchErrorDetail detail : err.body().values()) {
                     System.out.println(String.format("Detail %s=%s", detail.key(), detail.value()));
@@ -288,10 +323,10 @@ public class PoolAndResourceFile {
 
         String userName = System.getProperty("user.name");
         String poolId = userName + "-pooltest";
-        String jobId = "HelloWorldJob-" + userName + "-" + (new Date()).toString().replace(' ', '-').replace(':', '-').replace('.', '-');
+        String jobId = "HelloWorldJob-" + userName + "-"
+                + (new Date()).toString().replace(' ', '-').replace(':', '-').replace('.', '-');
 
-        try
-        {
+        try {
             CloudPool sharedPool = createPoolIfNotExists(client, poolId);
             submitJobAndAddTask(client, container, sharedPool.id(), jobId);
             if (waitForTasksToComplete(client, jobId, TASK_COMPLETE_TIMEOUT)) {
@@ -302,18 +337,14 @@ public class PoolAndResourceFile {
                 client.fileOperations().getFileFromTask(jobId, task.id(), STANDARD_CONSOLE_OUTPUT_FILENAME, stream);
                 String fileContent = stream.toString("UTF-8");
                 System.out.println(fileContent);
-            }
-            else {
+            } else {
                 throw new TimeoutException("Task did not complete within the specified timeout");
             }
-        }
-        catch (BatchErrorException err) {
+        } catch (BatchErrorException err) {
             printBatchException(err);
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             ex.printStackTrace();
-        }
-        finally {
+        } finally {
             // Clean up the resource if necessary
             if (shouldDeleteJob) {
                 try {

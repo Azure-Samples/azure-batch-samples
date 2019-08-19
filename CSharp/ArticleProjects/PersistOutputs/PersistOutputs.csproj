@@ -17,8 +17,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.Batch" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Azure.Batch.Conventions.Files" Version="3.1.0" />
+    <PackageReference Include="Microsoft.Azure.Batch" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Azure.Batch.Conventions.Files" Version="3.3.0" />
   
   </ItemGroup>
 

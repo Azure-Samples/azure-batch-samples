@@ -23,14 +23,6 @@ If you want to write the output of the build to a file you can tack on ` >> mybu
 #### Update the Azure.Batch NuGet project reference
 The Azure Batch samples should be kept up to date with the latest Azure.Batch NuGet package.
 
-##### Using nuget.exe
-To update the NuGet reference the easiest way is to use the nuget command line:
-`for /R %f in (*.sln) do (nuget restore "%f" & nuget update %f -Id Azure.Batch)`
-
-Note that this will miss updating the shared projects, so you'll have to do those by hand (either with the command line or with visual studio).  If you do those as well, note that you'll have to fix up the `HintPath` to point to `$(SolutionDirectory)` again.
-
 ##### Using a text replace
-You can also just do a textual replace.  This can be done as long as the dependencies have not changed between the old and new versions of the Azure.Batch NuGet package.
-
-The following commands can be used to perform the textual replace: `rep.exe -find:"<PackageReference Include=\"Microsoft.Azure.Batch\" Version=\"8.1.2\" /> -replace:"<PackageReference Include=\"Microsoft.Azure.Batch\" Version=\"9.0.0\" />" -r *.csproj`
+The following commands can be used to perform the textual replace: `rep.exe -find:"<PackageReference Include=\"Microsoft.Azure.Batch\" Version=\"8.1.2\" />" -replace:"<PackageReference Include=\"Microsoft.Azure.Batch\" Version=\"9.0.0\" />" -r *.csproj`
  

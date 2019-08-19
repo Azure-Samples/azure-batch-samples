@@ -1,4 +1,4 @@
-# sample2_pools_and_resourcefiles.py Code Sample
+# sample4_job_scheduler.py Code Sample
 #
 # Copyright (c) Microsoft Corporation
 #
@@ -25,104 +25,105 @@
 # DEALINGS IN THE SOFTWARE.
 
 from __future__ import print_function
+
 try:
     import configparser
 except ImportError:
     import ConfigParser as configparser
+
 import datetime
 import os
 
-import azure.storage.blob as azureblob
 import azure.batch.batch_service_client as batch
+import azure.storage.blob as azureblob
 import azure.batch.batch_auth as batchauth
 import azure.batch.models as batchmodels
 
 import common.helpers
 
-_CONTAINER_NAME = 'poolsandresourcefiles'
+_CONTAINER_NAME = 'jobscheduler'
 _SIMPLE_TASK_NAME = 'simple_task.py'
 _SIMPLE_TASK_PATH = os.path.join('resources', 'simple_task.py')
+_PYTHON_DOWNLOAD = \
+    'https://www.python.org/ftp/python/3.7.3/python-3.7.3-amd64.exe'
+_PYTHON_INSTALL = \
+    r'.\python373.exe /passive InstallAllUsers=1 PrependPath=1 Include_test=0'
+_USER_ELEVATION_LEVEL = 'admin'
+_START_TIME = datetime.datetime.utcnow()
+_END_TIME = _START_TIME + datetime.timedelta(minutes=30)
 
 
-def create_pool(batch_client, block_blob_client, pool_id, vm_size, vm_count):
-    """Creates an Azure Batch pool with the specified id.
+def create_job_schedule(batch_client, job_schedule_id, vm_size, vm_count,
+                        block_blob_client):
+    """Creates an Azure Batch pool and job schedule with the specified ids.
 
     :param batch_client: The batch client to use.
     :type batch_client: `batchserviceclient.BatchServiceClient`
-    :param block_blob_client: The storage block blob client to use.
-    :type block_blob_client: `azure.storage.blob.BlockBlobService`
-    :param str pool_id: The id of the pool to create.
+    :param str job_schedule_id: The id of the job schedule to create
     :param str vm_size: vm size (sku)
     :param int vm_count: number of vms to allocate
-    """
-    # pick the latest supported 16.04 sku for UbuntuServer
-    sku_to_use, image_ref_to_use = \
-        common.helpers.select_latest_verified_vm_image_with_node_agent_sku(
-            batch_client, 'Canonical', 'UbuntuServer', '16.04')
-
-    block_blob_client.create_container(
-        _CONTAINER_NAME,
-        fail_on_exist=False)
-
-    sas_url = common.helpers.upload_blob_and_create_sas(
-        block_blob_client,
-        _CONTAINER_NAME,
-        _SIMPLE_TASK_NAME,
-        _SIMPLE_TASK_PATH,
-        datetime.datetime.utcnow() + datetime.timedelta(hours=1))
-
-    pool = batchmodels.PoolAddParameter(
-        id=pool_id,
-        virtual_machine_configuration=batchmodels.VirtualMachineConfiguration(
-            image_reference=image_ref_to_use,
-            node_agent_sku_id=sku_to_use),
-        vm_size=vm_size,
-        target_dedicated_nodes=vm_count,
-        start_task=batchmodels.StartTask(
-            command_line="python " + _SIMPLE_TASK_NAME,
-            resource_files=[batchmodels.ResourceFile(
-                            file_path=_SIMPLE_TASK_NAME,
-                            http_url=sas_url)]))
-
-    common.helpers.create_pool_if_not_exist(batch_client, pool)
-
-
-def submit_job_and_add_task(batch_client, block_blob_client, job_id, pool_id):
-    """Submits a job to the Azure Batch service and adds
-    a task that runs a python script.
-
-    :param batch_client: The batch client to use.
-    :type batch_client: `batchserviceclient.BatchServiceClient`
     :param block_blob_client: The storage block blob client to use.
     :type block_blob_client: `azure.storage.blob.BlockBlobService`
-    :param str job_id: The id of the job to create.
-    :param str pool_id: The id of the pool to use.
     """
-    job = batchmodels.JobAddParameter(
-        id=job_id,
-        pool_info=batchmodels.PoolInformation(pool_id=pool_id))
+    cloud_service_config = batchmodels.CloudServiceConfiguration(os_family='6')
 
-    batch_client.job.add(job)
+    user_id = batchmodels.UserIdentity(
+        auto_user=batchmodels.AutoUserSpecification(
+            elevation_level=_USER_ELEVATION_LEVEL))
 
-    block_blob_client.create_container(
-        _CONTAINER_NAME,
-        fail_on_exist=False)
+    python_download = batchmodels.ResourceFile(
+        http_url=_PYTHON_DOWNLOAD,
+        file_path='python373.exe')
+
+    pool_info = batchmodels.PoolInformation(
+        auto_pool_specification=batchmodels.AutoPoolSpecification(
+            auto_pool_id_prefix="JobScheduler",
+            pool=batchmodels.PoolSpecification(
+                vm_size=vm_size,
+                target_dedicated_nodes=vm_count,
+                cloud_service_configuration=cloud_service_config,
+                start_task=batchmodels.StartTask(
+                    command_line=common.helpers.wrap_commands_in_shell(
+                        'windows', ['{}'.format(_PYTHON_INSTALL)]),
+                    resource_files=[python_download],
+                    wait_for_success=True,
+                    user_identity=user_id)),
+            keep_alive=False,
+            pool_lifetime_option=batchmodels.PoolLifetimeOption.job))
 
     sas_url = common.helpers.upload_blob_and_create_sas(
         block_blob_client,
         _CONTAINER_NAME,
         _SIMPLE_TASK_NAME,
         _SIMPLE_TASK_PATH,
-        datetime.datetime.utcnow() + datetime.timedelta(hours=1))
+        datetime.datetime.utcnow() + datetime.timedelta(minutes=30))
 
-    task = batchmodels.TaskAddParameter(
-        id="MyPythonTask",
-        command_line="python " + _SIMPLE_TASK_NAME,
-        resource_files=[batchmodels.ResourceFile(
-                        file_path=_SIMPLE_TASK_NAME,
-                        http_url=sas_url)])
+    job_spec = batchmodels.JobSpecification(
+        pool_info=pool_info,
+        # Terminate job once all tasks under it are complete to allow for a new
+        # job to be created under the schedule
+        on_all_tasks_complete=batchmodels.OnAllTasksComplete.terminate_job,
+        job_manager_task=batchmodels.JobManagerTask(
+            id="JobManagerTask",
+            command_line=common.helpers.wrap_commands_in_shell(
+                'windows', ['python {}'.format(_SIMPLE_TASK_NAME)]),
+            resource_files=[batchmodels.ResourceFile(
+                file_path=_SIMPLE_TASK_NAME,
+                http_url=sas_url)]))
 
-    batch_client.task.add(job_id=job.id, task=task)
+    do_not_run_after = datetime.datetime.utcnow() \
+        + datetime.timedelta(minutes=30)
+
+    schedule = batchmodels.Schedule(
+        do_not_run_after=do_not_run_after,
+        recurrence_interval=datetime.timedelta(minutes=10))
+
+    scheduled_job = batchmodels.JobScheduleAddParameter(
+        id=job_schedule_id,
+        schedule=schedule,
+        job_specification=job_spec)
+
+    batch_client.job_schedule.add(cloud_job_schedule=scheduled_job)
 
 
 def execute_sample(global_config, sample_config):
@@ -147,12 +148,9 @@ def execute_sample(global_config, sample_config):
     should_delete_container = sample_config.getboolean(
         'DEFAULT',
         'shoulddeletecontainer')
-    should_delete_job = sample_config.getboolean(
+    should_delete_job_schedule = sample_config.getboolean(
         'DEFAULT',
-        'shoulddeletejob')
-    should_delete_pool = sample_config.getboolean(
-        'DEFAULT',
-        'shoulddeletepool')
+        'shoulddeletejobschedule')
     pool_vm_size = sample_config.get(
         'DEFAULT',
         'poolvmsize')
@@ -167,55 +165,66 @@ def execute_sample(global_config, sample_config):
     credentials = batchauth.SharedKeyCredentials(
         batch_account_name,
         batch_account_key)
+
     batch_client = batch.BatchServiceClient(
         credentials,
         batch_url=batch_service_url)
-
-    # Retry 5 times -- default is 3
-    batch_client.config.retry_policy.retries = 5
 
     block_blob_client = azureblob.BlockBlobService(
         account_name=storage_account_name,
         account_key=storage_account_key,
         endpoint_suffix=storage_account_suffix)
 
-    job_id = common.helpers.generate_unique_resource_name(
-        "PoolsAndResourceFilesJob")
-    pool_id = "PoolsAndResourceFilesPool"
-    try:
-        create_pool(
-            batch_client,
-            block_blob_client,
-            pool_id,
-            pool_vm_size,
-            pool_vm_count)
+    batch_client.config.retry_policy.retries = 5
+    job_schedule_id = common.helpers.generate_unique_resource_name(
+        "JobScheduler")
 
-        submit_job_and_add_task(
+    try:
+        create_job_schedule(
             batch_client,
-            block_blob_client,
-            job_id, pool_id)
+            job_schedule_id,
+            pool_vm_size,
+            pool_vm_count,
+            block_blob_client)
+
+        print("Start time: ", _START_TIME)
+        print("Delete time: ", _END_TIME)
+
+        recent_job = common.helpers.wait_for_job_under_job_schedule(
+            batch_client,
+            job_schedule_id,
+            datetime.timedelta(minutes=5))
 
         common.helpers.wait_for_tasks_to_complete(
             batch_client,
-            job_id,
+            recent_job,
             datetime.timedelta(minutes=25))
 
-        tasks = batch_client.task.list(job_id)
+        tasks = batch_client.task.list(recent_job)
         task_ids = [task.id for task in tasks]
 
-        common.helpers.print_task_output(batch_client, job_id, task_ids)
+        common.helpers.print_task_output(
+            batch_client,
+            recent_job,
+            task_ids)
+
+        common.helpers.wait_for_job_schedule_to_complete(
+            batch_client,
+            job_schedule_id,
+            _END_TIME + datetime.timedelta(minutes=10))
+
+    except batchmodels.BatchErrorException as e:
+        for x in e.error.values:
+            print("BatchErrorException: ", x)
+
     finally:
-        # clean up
+        if should_delete_job_schedule:
+            print("Deleting job schedule: ", job_schedule_id)
+            batch_client.job_schedule.delete(job_schedule_id)
         if should_delete_container:
             block_blob_client.delete_container(
                 _CONTAINER_NAME,
                 fail_not_exist=False)
-        if should_delete_job:
-            print("Deleting job: ", job_id)
-            batch_client.job.delete(job_id)
-        if should_delete_pool:
-            print("Deleting pool: ", pool_id)
-            batch_client.pool.delete(pool_id)
 
 
 if __name__ == '__main__':
