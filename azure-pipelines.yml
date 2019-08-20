@@ -6,9 +6,6 @@
 trigger:
 - master
 
-pool:
-  vmImage: 'ubuntu-latest'
-
 jobs:
 - job: 'PythonTest'
   pool:
@@ -46,3 +43,17 @@ jobs:
       publishJUnitResults: false
       testResultsFiles: '**/TEST-*.xml'
       goals: 'package'
+
+- job: 'DotNetTest'
+  pool:
+    vmImage: 'vs2017-win2016'
+  steps:
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'restore'
+      projects: '**.csproj'
+      feedsToUse: 'select'
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'build'
+      projects: '**.csproj'
