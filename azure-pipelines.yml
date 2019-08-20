@@ -26,7 +26,7 @@ jobs:
       python -m pip install --upgrade setuptools
       python -m pip install -r $(System.DefaultWorkingDirectory)/Python/Batch/requirements.txt
       python -m pip install coveralls flake8 pytest pytest-cov requests_mock
-      flake8 $(System.DefaultWorkingDirectory)/Python/Batch
+      python -m flake8 $(System.DefaultWorkingDirectory)/Python/Batch
   displayName: 'Run lint tests'
 
 - job: 'JavaTest'
