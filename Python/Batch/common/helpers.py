@@ -76,18 +76,22 @@ def select_latest_verified_vm_image_with_node_agent_sku(
     :return: (node agent sku id to use, vm image ref to use)
     """
     # get verified vm image list and node agent sku ids from service
-    node_agent_skus = batch_client.account.list_node_agent_skus()
+    options = batchmodels.AccountListSupportedImagesOptions(
+        filter="verificationType eq 'verified'")
+    images = batch_client.account.list_supported_images(
+        account_list_supported_images_options=options)
+
     # pick the latest supported sku
     skus_to_use = [
-        (sku, image_ref) for sku in node_agent_skus for image_ref in sorted(
-            sku.verified_image_references, key=lambda item: item.sku)
-        if image_ref.publisher.lower() == publisher.lower() and
-        image_ref.offer.lower() == offer.lower() and
-        image_ref.sku.startswith(sku_starts_with)
+        (image.node_agent_sku_id, image.image_reference) for image in images
+        if image.image_reference.publisher.lower() == publisher.lower() and
+        image.image_reference.offer.lower() == offer.lower() and
+        image.image_reference.sku.startswith(sku_starts_with)
     ]
-    # skus are listed in reverse order, pick first for latest
-    sku_to_use, image_ref_to_use = skus_to_use[0]
-    return (sku_to_use.id, image_ref_to_use)
+
+    # pick first
+    agent_sku_id, image_ref_to_use = skus_to_use[0]
+    return (agent_sku_id, image_ref_to_use)
 
 
 def wait_for_tasks_to_complete(batch_client, job_id, timeout):
@@ -527,14 +531,15 @@ def wait_for_job_under_job_schedule(batch_client, job_schedule_id, timeout):
        :param timeout: The maximum amount of time to wait.
        :type timeout: `datetime.timedelta`
        """
-    cloud_job_schedule = batch_client.job_schedule.get(
-        job_schedule_id=job_schedule_id)
-
     time_to_timeout_at = datetime.datetime.now() + timeout
 
     while datetime.datetime.now() < time_to_timeout_at:
+        cloud_job_schedule = batch_client.job_schedule.get(
+            job_schedule_id=job_schedule_id)
+
         print("Checking if job exists...")
-        if cloud_job_schedule.execution_info.recent_job.id is not None:
+        if (cloud_job_schedule.execution_info.recent_job) and (
+                cloud_job_schedule.execution_info.recent_job.id is not None):
             return cloud_job_schedule.execution_info.recent_job.id
         time.sleep(1)
 
@@ -550,11 +555,10 @@ def wait_for_job_schedule_to_complete(batch_client, job_schedule_id, timeout):
        :param timeout: The maximum amount of time to wait.
        :type timeout: `datetime.datetime`
        """
-
-    cloud_job_schedule = batch_client.job_schedule.get(
-        job_schedule_id=job_schedule_id)
-
     while datetime.datetime.now() < timeout:
+        cloud_job_schedule = batch_client.job_schedule.get(
+            job_schedule_id=job_schedule_id)
+
         print("Checking if job schedule is complete...")
         state = cloud_job_schedule.state
         if state == batchmodels.JobScheduleState.completed:
