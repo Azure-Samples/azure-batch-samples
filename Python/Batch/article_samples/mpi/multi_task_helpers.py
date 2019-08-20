@@ -35,7 +35,7 @@ try:
 except NameError:
     pass
 
-import azure.batch.batch_service_client as batch
+import azure.batch._batch_service_client as batch
 import azure.batch.models as batchmodels
 
 sys.path.append('.')
