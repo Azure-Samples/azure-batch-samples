@@ -9,11 +9,41 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+jobs:
+- job: 'PythonTest'
+  pool:
+    vmImage: 'vs2017-win2016'
+  strategy:
+    matrix:
+      Python27:
+        python.version: '2.7'
+      Python35:
+        python.version: '3.5'
+      Python36:
+        python.version: '3.6'
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(python.version)'
+  - script: |
+    python -m pip install --upgrade setuptools
+    python -m pip install -r $(System.DefaultWorkingDirectory)/Python/Batch/requirements.txt
+    python -m pip install coveralls flake8 pytest pytest-cov requests_mock
+    flake8 $(System.DefaultWorkingDirectory)/Python/Batch
+  displayName: 'Run lint tests'
+
+- job: 'JavaTest'
+  pool:
+    vmImage: 'vs2017-win2016'
+  steps:
+  - task: Maven@3
+    inputs:
+      mavenPomFile: '$(System.DefaultWorkingDirectory)/Java/pom.xml'
+      mavenOptions: '-Xmx3072m'
+      javaHomeOption: 'JDKVersion'
+      jdkVersionOption: '1.8'
+      jdkArchitectureOption: 'x64'
+      publishJUnitResults: false
+      testResultsFiles: '**/TEST-*.xml'
+      goals: 'package'
