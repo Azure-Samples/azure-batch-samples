@@ -5,6 +5,7 @@
     using System.Linq;
     using Batch.Common;
     using Conventions.Files;
+    using Microsoft.WindowsAzure.Storage;
 
     public static class BatchExtensions
     {
@@ -43,22 +44,20 @@
 
         public static CloudTask WithOutputFile(
             this CloudTask task,
+            CloudJob job,
             string pattern,
             string containerUrl,
             JobOutputKind outputKind,
             OutputFileUploadCondition uploadCondition)
         {
-            Func<string> pathFunc = () =>
-            {
-                bool patternContainsWildcard = pattern.Contains("*");
-
-                return patternContainsWildcard ? $"${outputKind}" : $"${outputKind}\\{pattern}";
-            };
+            var outputBase = job.GetOutputStoragePath(outputKind);
+            bool patternContainsWildcard = pattern.Contains("*");
+            var path = patternContainsWildcard ? outputBase : $"{outputBase}/{pattern}";
 
             return task.WithOutputFile(
                 pattern,
                 containerUrl,
-                pathFunc,
+                path,
                 uploadCondition);
         }
 
@@ -69,17 +68,14 @@
             TaskOutputKind outputKind,
             OutputFileUploadCondition uploadCondition)
         {
-            Func<string> pathFunc = () =>
-            {
-                bool patternContainsWildcard = pattern.Contains("*");
-
-                return patternContainsWildcard ? $"{task.Id}\\${outputKind}" : $"{task.Id}\\${outputKind}\\{pattern}";
-            };
+            var outputBase = task.GetOutputStoragePath(outputKind);
+            bool patternContainsWildcard = pattern.Contains("*");
+            var path = patternContainsWildcard ? outputBase : $"{outputBase}/{pattern}";
 
             return task.WithOutputFile(
                 pattern,
                 containerUrl,
-                pathFunc,
+                path,
                 uploadCondition);
         }
 
@@ -87,15 +83,13 @@
             this CloudTask task,
             string pattern,
             string containerUrl,
-            Func<string> pathFunc,
+            string path,
             OutputFileUploadCondition uploadCondition)
         {
             if (task.OutputFiles == null)
             {
                 task.OutputFiles = new List<OutputFile>();
             }
-
-            string path = pathFunc();
 
             task.OutputFiles.Add(
                 new OutputFile(
