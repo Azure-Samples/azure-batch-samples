@@ -17,7 +17,7 @@
     <dependency>
       <groupId>com.microsoft.azure</groupId>
       <artifactId>azure-batch</artifactId>
-      <version>5.0.1</version>
+      <version>7.0.0</version>
     </dependency>
     <dependency>
       <groupId>com.microsoft.rest</groupId>
