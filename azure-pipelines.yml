@@ -1,0 +1,59 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- master
+
+jobs:
+- job: 'PythonTest'
+  pool:
+    vmImage: 'vs2017-win2016'
+  strategy:
+    matrix:
+      Python27:
+        python.version: '2.7'
+      Python35:
+        python.version: '3.5'
+      Python36:
+        python.version: '3.6'
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(python.version)'
+  - script: |
+      python -m pip install --upgrade setuptools
+      python -m pip install -r $(System.DefaultWorkingDirectory)/Python/Batch/requirements.txt
+      python -m pip install coveralls flake8 pytest pytest-cov requests_mock
+      python -m flake8 $(System.DefaultWorkingDirectory)/Python/Batch
+  displayName: 'Run lint tests'
+
+- job: 'JavaTest'
+  pool:
+    vmImage: 'vs2017-win2016'
+  steps:
+  - task: Maven@3
+    inputs:
+      mavenPomFile: '$(System.DefaultWorkingDirectory)/Java/pom.xml'
+      mavenOptions: '-Xmx3072m'
+      javaHomeOption: 'JDKVersion'
+      jdkVersionOption: '1.8'
+      jdkArchitectureOption: 'x64'
+      publishJUnitResults: false
+      testResultsFiles: '**/TEST-*.xml'
+      goals: 'package'
+
+- job: 'DotNetTest'
+  pool:
+    vmImage: 'vs2017-win2016'
+  steps:
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'restore'
+      projects: '**/*.csproj'
+      feedsToUse: 'select'
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'build'
+      projects: '**/*.csproj'

@@ -15,7 +15,7 @@ You can contribute to [Azure batch samples](https://github.com/Azure/azure-batch
 #### Building the CSharp samples
 To build all the CSharp samples without opening Visual Studio, you can use this simple script:
 ```
-for /R %f in (*.sln) do (nuget restore "%f" & msbuild /m "%f")
+for /R %f in (*.sln) do (dotnet build "%f")
 ```
 
 If you want to write the output of the build to a file you can tack on ` >> mybuild.tmp` to the end of the command.
@@ -24,5 +24,4 @@ If you want to write the output of the build to a file you can tack on ` >> mybu
 The Azure Batch samples should be kept up to date with the latest Azure.Batch NuGet package.
 
 ##### Using a text replace
-The following commands can be used to perform the textual replace: `rep.exe -find:"<PackageReference Include=\"Microsoft.Azure.Batch\" Version=\"8.1.2\" />" -replace:"<PackageReference Include=\"Microsoft.Azure.Batch\" Version=\"9.0.0\" />" -r *.csproj`
- 
+The following commands can be used to perform the textual replace: `rep.exe -find:"<PackageReference Include=\"Microsoft.Azure.Batch\" Version=\"10.0.0\" />" -replace:"<PackageReference Include=\"Microsoft.Azure.Batch\" Version=\"12.0.0\" />" -r *.csproj`

@@ -44,17 +44,17 @@ public class PoolAndResourceFile {
             // See detail of creating IaaS pool at
             // https://blogs.technet.microsoft.com/windowshpc/2016/03/29/introducing-linux-support-on-azure-batch/
             // Get the sku image reference
-            List<NodeAgentSku> skus = client.accountOperations().listNodeAgentSkus();
+            List<ImageInformation> skus = client.accountOperations().listSupportedImages();
             String skuId = null;
             ImageReference imageRef = null;
 
-            for (NodeAgentSku sku : skus) {
+            for (ImageInformation sku : skus) {
                 if (sku.osType() == OSType.LINUX) {
-                    for (ImageReference imgRef : sku.verifiedImageReferences()) {
-                        if (imgRef.publisher().equalsIgnoreCase(osPublisher)
-                                && imgRef.offer().equalsIgnoreCase(osOffer)) {
-                            imageRef = imgRef;
-                            skuId = sku.id();
+                    if (sku.verificationType() == VerificationType.VERIFIED) {
+                        if (sku.imageReference().publisher().equalsIgnoreCase(osPublisher)
+                                && sku.imageReference().offer().equalsIgnoreCase(osOffer)) {
+                            imageRef = sku.imageReference();
+                            skuId = sku.nodeAgentSKUId();
                             break;
                         }
                     }
@@ -208,7 +208,7 @@ public class PoolAndResourceFile {
             String jobId)
             throws BatchErrorException, IOException, StorageException, InvalidKeyException, URISyntaxException {
         String BLOB_FILE_NAME = "test.txt";
-        String LOCAL_FILE_PATH = "./" + BLOB_FILE_NAME;
+        String LOCAL_FILE_PATH = "./PoolAndResourceFile/" + BLOB_FILE_NAME;
 
         // Create job run at the specified pool
         PoolInformation poolInfo = new PoolInformation();

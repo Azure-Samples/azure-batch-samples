@@ -183,19 +183,19 @@
         private static async Task CreatePoolAsync(BatchClient batchClient, string poolId, int nodeCount)
         {
             Func<ImageReference, bool> imageScanner = imageRef =>
-                imageRef.Publisher == "MicrosoftWindowsServer" &&
-                imageRef.Offer == "WindowsServer" &&
-                imageRef.Sku.Contains("2012-R2-Datacenter");
+                imageRef.Publisher.Equals("MicrosoftWindowsServer", StringComparison.InvariantCultureIgnoreCase) &&
+                imageRef.Offer.Equals("WindowsServer", StringComparison.InvariantCultureIgnoreCase) &&
+                imageRef.Sku.IndexOf("2012-R2-Datacenter", StringComparison.InvariantCultureIgnoreCase) > -1;
 
-            SampleHelpers.SkuAndImage skuAndImage = await SampleHelpers.GetNodeAgentSkuReferenceAsync(batchClient, imageScanner);
+            ImageInformation imageInfo = await SampleHelpers.GetNodeAgentSkuReferenceAsync(batchClient, imageScanner);
 
             // Create and configure an unbound pool.
             CloudPool pool = batchClient.PoolOperations.CreatePool(poolId: poolId,
                 virtualMachineSize: "standard_d1_v2",
                 targetDedicatedComputeNodes: nodeCount,
                 virtualMachineConfiguration: new VirtualMachineConfiguration(
-                    skuAndImage.Image,
-                    skuAndImage.Sku.Id));
+                    imageInfo.ImageReference,
+                    imageInfo.NodeAgentSkuId));
 
             // Commit the pool to the Batch service
             await GettingStartedCommon.CreatePoolIfNotExistAsync(batchClient, pool);
