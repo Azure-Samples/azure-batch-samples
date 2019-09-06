@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "Getting started sample in Node.js for deploying Azure batch jobs",
   "dependencies": {
-    "azure-batch": "1.0.0-prev",    
-    "node-uuid": "1.4.8"    
+    "azure-batch": "^8.0.0",
+    "package.json": "^2.0.1"
   },
   "main": "nodejs_batch_client_sample.js",
   "scripts": {
