@@ -31,7 +31,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
         private static readonly TimeSpan JobTaskTimeoutIncrement = TimeSpan.FromSeconds(10);
         private const string JobTaskIdPrefix = "testtask-";
         private static readonly TimeSpan JobInterval = TimeSpan.FromMinutes(2);
-      
+
         public JobSubmitter(BatchClient batchClient)
         {
             this.batchClient = batchClient;
@@ -48,7 +48,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
                 virtualMachineSize: PoolNodeSize,
                 cloudServiceConfiguration: new CloudServiceConfiguration(PoolOSFamily));
 
-            pool.MaxTasksPerComputeNode = 2;
+            pool.TaskSlotsPerNode = 2;
 
             var createPoolResult = await GettingStartedCommon.CreatePoolIfNotExistAsync(this.batchClient, pool);
 

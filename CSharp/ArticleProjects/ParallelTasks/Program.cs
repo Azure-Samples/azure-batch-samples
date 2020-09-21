@@ -45,13 +45,13 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
         private static async Task MainAsync(string[] args)
         {
             // You may adjust these values to experiment with different compute resource scenarios.
-            const string nodeSize     = "standard_d1_v2";
-            const int nodeCount       = 4;
-            const int maxTasksPerNode = 4;
-            const int taskCount       = 32;
+            const string nodeSize      = "standard_d1_v2";
+            const int nodeCount        = 4;
+            const int taskSlotsPerNode = 4;
+            const int taskCount        = 32;
 
             // Ensure there are enough tasks to help avoid hitting some timeout conditions below
-            int minimumTaskCount = nodeCount * maxTasksPerNode * 2;
+            int minimumTaskCount = nodeCount * taskSlotsPerNode * 2;
             if (taskCount < minimumTaskCount)
             {
                 Console.WriteLine("You must specify at least two tasks per node core for this sample ({0} tasks in this configuration).", minimumTaskCount);
@@ -61,6 +61,11 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
                 return;
             }
   
+            // In this sample, each task is assigned with random required slots; adjust these values
+            // to simulate variable task slots together with allowed task slots per compute node
+            const int minTaskSlots     = 1;
+            const int maxTaskSlots     = 2;
+
             // In this sample, the tasks simply ping localhost on the compute nodes; adjust these
             // values to simulate variable task duration
             const int minPings = 30;
@@ -89,7 +94,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
                     poolId,
                     nodeSize,
                     nodeCount,
-                    maxTasksPerNode);
+                    taskSlotsPerNode);
 
                 // Create a CloudJob, or obtain an existing pool with the specified ID
                 CloudJob job = await ArticleHelpers.CreateJobIfNotExistAsync(batchClient, poolId, jobId);
@@ -102,7 +107,10 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
                 {
                     string taskId = "task" + i.ToString().PadLeft(3, '0');
                     string taskCommandLine = "ping -n " + rand.Next(minPings, maxPings + 1).ToString() + " localhost";
-                    CloudTask task = new CloudTask(taskId, taskCommandLine);
+                    CloudTask task = new CloudTask(taskId, taskCommandLine)
+                    {
+                        RequiredSlots = rand.Next(minTaskSlots, maxTaskSlots + 1)
+                    };
                     tasks.Add(task);
                 }
 
@@ -129,6 +137,18 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
                 await GettingStartedCommon.PrintNodeTasksAsync(batchClient, pool.Id);
                 Console.WriteLine();
 
+                // Print out running task and task slot counts on all nodes.
+                Console.WriteLine();
+                await GettingStartedCommon.PrintNodeTaskCountsAsync(batchClient, pool.Id);
+                Console.WriteLine();
+
+                // Print out task and task slot counts of the job.
+                // Note: it may have delay as Batch service is aggregating task counts for the job.
+                await Task.Delay(TimeSpan.FromSeconds(5));
+                Console.WriteLine();
+                await GettingStartedCommon.PrintJobTaskCountsAsync(batchClient, jobId);
+                Console.WriteLine();
+
                 // Pause execution while we wait for all of the tasks to complete
                 Console.WriteLine("Waiting for task completion...");
                 Console.WriteLine();
@@ -147,10 +167,16 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
 
                 stopwatch.Stop();
 
+                // Print out job task counts again.
+                await Task.Delay(TimeSpan.FromSeconds(5));
+                Console.WriteLine();
+                await GettingStartedCommon.PrintJobTaskCountsAsync(batchClient, jobId);
+                Console.WriteLine();
+
                 // Obtain the tasks, specifying a detail level to limit the number of properties returned for each task.
                 // If you have a large number of tasks, specifying a DetailLevel is extremely important in reducing the
                 // amount of data transferred, lowering your query response times in increasing performance.
-                ODATADetailLevel detail = new ODATADetailLevel(selectClause: "id,commandLine,nodeInfo,state");
+                ODATADetailLevel detail = new ODATADetailLevel(selectClause: "id,commandLine,nodeInfo,state,requiredSlots");
                 IPagedEnumerable<CloudTask> allTasks = batchClient.JobOperations.ListTasks(job.Id, detail);
 
                 // Get a collection of the completed tasks sorted by the compute nodes on which they executed
@@ -173,7 +199,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
 
                     lastNodeId = task.ComputeNodeInformation.ComputeNodeId;
 
-                    Console.WriteLine("\t{0}: {1}", task.Id, task.CommandLine);
+                    Console.WriteLine($"\t{task.Id} (slots={task.RequiredSlots}): {task.CommandLine}");
                 }
 
                 // Get a collection of the uncompleted tasks which may exist if the TaskMonitor timeout was hit
@@ -200,11 +226,11 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
 
                 // Print some summary information
                 Console.WriteLine();
-                Console.WriteLine("             Nodes: " + nodeCount);
-                Console.WriteLine("         Node size: " + nodeSize);
-                Console.WriteLine("Max tasks per node: " + pool.MaxTasksPerComputeNode);
-                Console.WriteLine("             Tasks: " + tasks.Count);
-                Console.WriteLine("          Duration: " + stopwatch.Elapsed);
+                Console.WriteLine("              Nodes: " + nodeCount);
+                Console.WriteLine("          Node size: " + nodeSize);
+                Console.WriteLine("Task slots per node: " + pool.TaskSlotsPerNode);
+                Console.WriteLine("              Tasks: " + tasks.Count);
+                Console.WriteLine("           Duration: " + stopwatch.Elapsed);
                 Console.WriteLine();
                 Console.WriteLine("Done!");
                 Console.WriteLine();
