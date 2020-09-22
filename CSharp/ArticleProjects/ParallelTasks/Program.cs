@@ -63,8 +63,15 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
   
             // In this sample, each task is assigned with random required slots; adjust these values
             // to simulate variable task slots together with allowed task slots per compute node
-            const int minTaskSlots     = 1;
             const int maxTaskSlots     = 2;
+            if (maxTaskSlots > taskSlotsPerNode)
+            {
+                Console.WriteLine("Invalid task slot configuration: maxTaskSlots for task should not be greater than pool's TaskSlotsPerNode");
+                Console.WriteLine();
+
+                // Invalid task slot configuration, exit the application
+                return;
+            }
 
             // In this sample, the tasks simply ping localhost on the compute nodes; adjust these
             // values to simulate variable task duration
@@ -109,7 +116,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
                     string taskCommandLine = "ping -n " + rand.Next(minPings, maxPings + 1).ToString() + " localhost";
                     CloudTask task = new CloudTask(taskId, taskCommandLine)
                     {
-                        RequiredSlots = rand.Next(minTaskSlots, maxTaskSlots + 1)
+                        RequiredSlots = rand.Next(1, maxTaskSlots + 1)
                     };
                     tasks.Add(task);
                 }
@@ -229,6 +236,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
                 Console.WriteLine("              Nodes: " + nodeCount);
                 Console.WriteLine("          Node size: " + nodeSize);
                 Console.WriteLine("Task slots per node: " + pool.TaskSlotsPerNode);
+                Console.WriteLine(" Max slots per task: " + maxTaskSlots);
                 Console.WriteLine("              Tasks: " + tasks.Count);
                 Console.WriteLine("           Duration: " + stopwatch.Elapsed);
                 Console.WriteLine();
