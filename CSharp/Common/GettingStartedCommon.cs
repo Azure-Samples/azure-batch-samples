@@ -94,6 +94,53 @@ namespace Microsoft.Azure.Batch.Samples.Common
             Console.WriteLine("==================");
         }
 
+        /// <summary>
+        /// Prints running task and task slot counts to the console for each of the nodes in the specified pool.
+        /// </summary>
+        /// <param name="batchClient">The Batch client.</param>
+        /// <param name="poolId">The ID of the <see cref="CloudPool"/> containing the nodes whose task information should be printed to the console.</param>
+        /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
+        public static async Task PrintNodeTaskCountsAsync(BatchClient batchClient, string poolId)
+        {
+            Console.WriteLine("Listing Node Running Task Counts");
+            Console.WriteLine("==================");
+
+            ODATADetailLevel nodeDetail = new ODATADetailLevel(selectClause: "id,runningTasksCount,runningTaskSlotsCount");
+            IPagedEnumerable<ComputeNode> nodes = batchClient.PoolOperations.ListComputeNodes(poolId, nodeDetail);
+            
+            await nodes.ForEachAsync(node =>
+            {
+                Console.WriteLine();
+                Console.WriteLine(node.Id + " :");
+                Console.WriteLine($"RunningTasks = {node.RunningTasksCount}, RunningTaskSlots = {node.RunningTaskSlotsCount}");
+                
+            }).ConfigureAwait(continueOnCapturedContext: false);
+
+            Console.WriteLine("==================");
+        }
+
+        /// <summary>
+        /// Prints task and task slot counts per task state for the specified job.
+        /// </summary>
+        /// <param name="batchClient">The Batch client.</param>
+        /// <param name="poolId">The ID of the <see cref="CloudJob"/>.</param>
+        /// <returns>A <see cref="System.Threading.Tasks.Task"/> object that represents the asynchronous operation.</returns>
+        public static async Task PrintJobTaskCountsAsync(BatchClient batchClient, string jobId)
+        {
+            Console.WriteLine("Listing Job Task Counts");
+            Console.WriteLine("==================");
+
+            TaskCountsResult result = await batchClient.JobOperations.GetJobTaskCountsAsync(jobId);
+
+            Console.WriteLine();
+            Console.WriteLine(jobId + " :");
+            Console.WriteLine("\t\tActive\tRunning\tCompleted");
+            Console.WriteLine($"TaskCounts:\t{result.TaskCounts.Active}\t{result.TaskCounts.Running}\t{result.TaskCounts.Completed}");
+            Console.WriteLine($"TaskSlotCounts:\t{result.TaskSlotCounts.Active}\t{result.TaskSlotCounts.Running}\t{result.TaskSlotCounts.Completed}");
+
+            Console.WriteLine("==================");
+        }
+
         public static string CreateJobId(string prefix)
         {
             // a job is uniquely identified by its ID so your account name along with a timestamp is added as suffix

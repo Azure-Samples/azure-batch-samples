@@ -39,7 +39,7 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
                 Console.ReadLine();
             }
         }
-        
+
         public static async Task MainAsync()
         {
             const string poolId = "MultiInstanceSamplePool";
@@ -206,7 +206,7 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
             // sample, MPIHelloWorld.exe) running on the different nodes
             unboundPool.InterComputeNodeCommunicationEnabled = true;
             // REQUIRED for multi-instance tasks
-            unboundPool.MaxTasksPerComputeNode = 1;
+            unboundPool.TaskSlotsPerNode = 1;
 
             // Specify the application and version to deploy to the compute nodes.
             unboundPool.ApplicationPackageReferences = new List<ApplicationPackageReference>

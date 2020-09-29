@@ -47,7 +47,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries
             // You may adjust these values to experiment with different compute resource scenarios.
             const string nodeSize     = "standard_d1_v2";
             const int nodeCount       = 1;
-            const int maxTasksPerNode = 4;
+            const int taskSlotsPerNode = 4;
 
             // Adjust the task count to experiment with different list operation query durations
             const int taskCount = 5000;
@@ -72,8 +72,8 @@ namespace Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries
                     poolId,
                     nodeSize,
                     nodeCount,
-                    maxTasksPerNode);
-                
+                    taskSlotsPerNode);
+
                 // Create a CloudJob, or obtain an existing job with the specified ID
                 CloudJob job = await ArticleHelpers.CreateJobIfNotExistAsync(batchClient, poolId, jobId);
 
@@ -190,9 +190,9 @@ namespace Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries
             Stopwatch stopwatch = Stopwatch.StartNew();
 
             taskList.AddRange(await batchClient.JobOperations.ListTasks(jobId, detail).ToListAsync());
-            
+
             stopwatch.Stop();
-            
+
             Console.WriteLine("{0} tasks retrieved in {1} (ExpandClause: {2} | FilterClause: {3} | SelectClause: {4})",
                 taskList.Count,
                 stopwatch.Elapsed,

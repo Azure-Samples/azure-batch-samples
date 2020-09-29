@@ -10,11 +10,11 @@
     <ProjectReference Include="..\..\..\Common\Microsoft.Azure.Batch.Samples.Common.csproj" />
     <ProjectReference Include="..\Microsoft.Azure.Batch.Samples.TelemetryInitializer\Microsoft.Azure.Batch.Samples.TelemetryInitializer.csproj" />
     <ProjectReference Include="..\Microsoft.Azure.Batch.Samples.TelemetryStartTask\Microsoft.Azure.Batch.Samples.TelemetryStartTask.csproj" />
-    
+
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.Batch" Version="12.0.0" />
+    <PackageReference Include="Microsoft.Azure.Batch" Version="14.0.0" />
     <PackageReference Include="Microsoft.Azure.Batch.FileStaging" Version="8.3.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="2.1.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.1.0" />

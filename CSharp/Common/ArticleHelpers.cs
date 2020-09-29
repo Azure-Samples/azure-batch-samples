@@ -21,22 +21,22 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// <param name="poolId">The ID of the <see cref="CloudPool"/>.</param>
         /// <param name="nodeSize">The size of the nodes within the pool.</param>
         /// <param name="nodeCount">The number of nodes to create within the pool.</param>
-        /// <param name="maxTasksPerNode">The maximum number of tasks to run concurrently on each node.</param>
+        /// <param name="taskSlotsPerNode">The number of task slots to run concurrent tasks on each node.</param>
         /// <returns>A bound <see cref="CloudPool"/> with the specified properties.</returns>
-        public async static Task<CloudPool> CreatePoolIfNotExistAsync(BatchClient batchClient, string poolId, string nodeSize, int nodeCount, int maxTasksPerNode)
+        public async static Task<CloudPool> CreatePoolIfNotExistAsync(BatchClient batchClient, string poolId, string nodeSize, int nodeCount, int taskSlotsPerNode)
         {
             // Create and configure an unbound pool with the specified ID
             CloudPool pool = batchClient.PoolOperations.CreatePool(poolId: poolId,
                 virtualMachineSize: nodeSize,
                 targetDedicatedComputeNodes: nodeCount,
                 cloudServiceConfiguration: new CloudServiceConfiguration("5"));
-            
-            pool.MaxTasksPerComputeNode = maxTasksPerNode;
 
-            // We want each node to be completely filled with tasks (i.e. up to maxTasksPerNode) before
+            pool.TaskSlotsPerNode = taskSlotsPerNode;
+
+            // We want each node to be completely filled with tasks (i.e. up to taskSlotsPerNode) before
             // tasks are assigned to the next node in the pool
             pool.TaskSchedulingPolicy = new TaskSchedulingPolicy(ComputeNodeFillType.Pack);
-            
+
             await GettingStartedCommon.CreatePoolIfNotExistAsync(batchClient, pool).ConfigureAwait(continueOnCapturedContext: false);
 
             return await batchClient.PoolOperations.GetPoolAsync(poolId).ConfigureAwait(continueOnCapturedContext: false);
