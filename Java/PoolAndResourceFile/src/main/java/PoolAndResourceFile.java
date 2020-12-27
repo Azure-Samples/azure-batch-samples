@@ -356,7 +356,7 @@ public class PoolAndResourceFile {
 
             if (shouldDeletePool) {
                 try {
-                    client.jobOperations().deleteJob(poolId);
+                    client.poolOperations().deletePool(poolId);;
                 } catch (BatchErrorException err) {
                     printBatchException(err);
                 }
