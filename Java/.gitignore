@@ -38,6 +38,7 @@ local.properties
 target
 .idea
 *.iml
+.java-version
 
 # Mac OS #
 .DS_Store
@@ -48,3 +49,4 @@ Thumbs.db
 
 # reduced pom files should not be included
 dependency-reduced-pom.xml
+
