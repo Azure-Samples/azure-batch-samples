@@ -3,22 +3,17 @@ services: Batch
 platforms: java
 ---
 
-#Getting Started with Batch - Create Pool - in Java
+## Description
+When run, this sample will:
 
-
-  Azure Batch sample for managing pool -
-   - Create IaaS pool
-   - Wait the VMs to be ready
-   - Submit a simple job with task associated with resource file
-     - Upload file to Azure storage
-     - Generate the SAS url for the file
-     - Associate the resource with task
-   - Wait the task to finish
-   - Delete the job and the pool
- 
+- Create an Azure Batch pool with a single dedicated node
+- Wait for the nodes to be ready
+- Create a storage container and upload a resource file to it
+- Submit a job with 5 tasks associated with the resource file
+- Wait for all tasks to finish
+- Delete the job, the pool and the storage container
 
 ## Running this Sample
-
 To run this sample:
 
 Set the following environment variables:
@@ -35,9 +30,3 @@ Clone repo and compile the code:
     cd azure-batch-samples/Java/PoolAndResourceFile
 
     mvn clean compile exec:java
-
-## More information
-
-[http://azure.com/java](http://azure.com/java)
-
-If you don't have a Microsoft Azure subscription you can get a FREE trial account [here](http://go.microsoft.com/fwlink/?LinkId=330212)
