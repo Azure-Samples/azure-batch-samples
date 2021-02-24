@@ -5,11 +5,9 @@
   "description": "Getting started sample in Node.js for deploying Azure batch jobs",
   "dependencies": {
     "@azure/batch": "^8.0.0",
-    "@azure/ms-rest-nodeauth": "^3.0.6",
-    "azure-batch": "^8.0.0",
-    "package.json": "^2.0.1"
+    "@azure/ms-rest-nodeauth": "^3.0.6"
   },
-  "main": "nodejs_batch_client_sample.js",
+  "main": "sample.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
