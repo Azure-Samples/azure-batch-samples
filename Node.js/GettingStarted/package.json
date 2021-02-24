@@ -1,8 +1,11 @@
 {
   "name": "nodejsgettingstarted",
+  "type": "module",
   "version": "1.0.0",
   "description": "Getting started sample in Node.js for deploying Azure batch jobs",
   "dependencies": {
+    "@azure/batch": "^8.0.0",
+    "@azure/ms-rest-nodeauth": "^3.0.6",
     "azure-batch": "^8.0.0",
     "package.json": "^2.0.1"
   },
