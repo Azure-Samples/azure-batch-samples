@@ -24,38 +24,46 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-from __future__ import print_function
-try:
-    import configparser
-except ImportError:
-    import ConfigParser as configparser
 import datetime
 import os
+from configparser import ConfigParser
 
-import azure.batch._batch_service_client as batch
-import azure.batch.batch_auth as batchauth
+from azure.batch import BatchServiceClient
+from azure.batch.batch_auth import SharedKeyCredentials
 import azure.batch.models as batchmodels
 
 import common.helpers
 
 
-def submit_job_and_add_task(batch_client, job_id, vm_size, vm_count):
+def submit_job_and_add_task(
+    batch_client: BatchServiceClient,
+    job_id: str,
+    vm_size: str,
+    node_count: int
+):
     """Submits a job to the Azure Batch service and adds a simple task.
 
     :param batch_client: The batch client to use.
-    :type batch_client: `batchserviceclient.BatchServiceClient`
-    :param str job_id: The id of the job to create.
+    :param job_id: The id of the job to create.
+    :param vm_size: The VM size to use.
+    :param node_count: The number of dedicated nodes to start.
     """
 
-    cloud_service_config = batchmodels.CloudServiceConfiguration(
-        os_family='5')
+    vm_config = batchmodels.VirtualMachineConfiguration(
+        image_reference=batchmodels.ImageReference(
+            publisher="canonical",
+            offer="ubuntuserver",
+            sku="18.04-lts"
+        ),
+        node_agent_sku_id="batch.node.ubuntu 18.04"
+    )
     pool_info = batchmodels.PoolInformation(
         auto_pool_specification=batchmodels.AutoPoolSpecification(
             auto_pool_id_prefix="HelloWorld",
             pool=batchmodels.PoolSpecification(
                 vm_size=vm_size,
-                target_dedicated_nodes=vm_count,
-                cloud_service_configuration=cloud_service_config),
+                target_dedicated_nodes=node_count,
+                virtual_machine_configuration=vm_config),
             keep_alive=False,
             pool_lifetime_option=batchmodels.PoolLifetimeOption.job))
 
@@ -66,19 +74,17 @@ def submit_job_and_add_task(batch_client, job_id, vm_size, vm_count):
     task = batchmodels.TaskAddParameter(
         id="HelloWorld",
         command_line=common.helpers.wrap_commands_in_shell(
-            'windows', ['echo Hello world from the Batch Hello world sample!'])
+            'linux', ['echo Hello world from the Batch Hello world sample!'])
     )
 
     batch_client.task.add(job_id=job.id, task=task)
 
 
-def execute_sample(global_config, sample_config):
+def execute_sample(global_config: ConfigParser, sample_config: ConfigParser):
     """Executes the sample with the specified configurations.
 
     :param global_config: The global configuration to use.
-    :type global_config: `configparser.ConfigParser`
     :param sample_config: The sample specific configuration to use.
-    :type sample_config: `configparser.ConfigParser`
     """
     # Set up the configuration
     batch_account_key = global_config.get('Batch', 'batchaccountkey')
@@ -99,11 +105,11 @@ def execute_sample(global_config, sample_config):
     common.helpers.print_configuration(global_config)
     common.helpers.print_configuration(sample_config)
 
-    credentials = batchauth.SharedKeyCredentials(
+    credentials = SharedKeyCredentials(
         batch_account_name,
         batch_account_key)
 
-    batch_client = batch.BatchServiceClient(
+    batch_client = BatchServiceClient(
         credentials,
         batch_url=batch_service_url)
 
@@ -134,10 +140,10 @@ def execute_sample(global_config, sample_config):
 
 
 if __name__ == '__main__':
-    global_config = configparser.ConfigParser()
-    global_config.read(common.helpers._SAMPLES_CONFIG_FILE_NAME)
+    global_config = ConfigParser()
+    global_config.read(common.helpers.SAMPLES_CONFIG_FILE_NAME)
 
-    sample_config = configparser.ConfigParser()
+    sample_config = ConfigParser()
     sample_config.read(
         os.path.splitext(os.path.basename(__file__))[0] + '.cfg')
 

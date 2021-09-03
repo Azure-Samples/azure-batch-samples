@@ -23,17 +23,29 @@
 # DEALINGS IN THE SOFTWARE.
 
 from __future__ import print_function
+from configparser import ConfigParser
 import datetime
 import io
 import os
 import time
+from typing import Any, List, Set, Tuple, Union
 
-import azure.storage.blob as azureblob
+from azure.core.exceptions import ResourceExistsError
+
+from azure.storage.blob import (
+    BlobServiceClient,
+    ContainerSasPermissions,
+    BlobSasPermissions,
+    generate_container_sas,
+    generate_blob_sas
+)
+from azure.batch import BatchServiceClient
 import azure.batch.models as batchmodels
 
-_STANDARD_OUT_FILE_NAME = 'stdout.txt'
-_STANDARD_ERROR_FILE_NAME = 'stderr.txt'
-_SAMPLES_CONFIG_FILE_NAME = 'configuration.cfg'
+
+STANDARD_OUT_FILE_NAME = 'stdout.txt'
+STANDARD_ERROR_FILE_NAME = 'stderr.txt'
+SAMPLES_CONFIG_FILE_NAME = 'configuration.cfg'
 
 
 class TimeoutError(Exception):
@@ -44,35 +56,33 @@ class TimeoutError(Exception):
         self.message = message
 
 
-def decode_string(string, encoding=None):
+def decode_string(string: Union[str, bytes], encoding: str = 'utf-8') -> str:
     """Decode a string with specified encoding
 
-    :type string: str or bytes
     :param string: string to decode
-    :param str encoding: encoding of string to decode
-    :rtype: str
+    :param encoding: encoding of string to decode
     :return: decoded string
     """
     if isinstance(string, str):
         return string
-    if encoding is None:
-        encoding = 'utf-8'
     if isinstance(string, bytes):
         return string.decode(encoding)
     raise ValueError('invalid string type: {}'.format(type(string)))
 
 
 def select_latest_verified_vm_image_with_node_agent_sku(
-        batch_client, publisher, offer, sku_starts_with):
+    batch_client: BatchServiceClient,
+    publisher: str,
+    offer: str,
+    sku_starts_with: str
+) -> Tuple[str, batchmodels.ImageReference]:
     """Select the latest verified image that Azure Batch supports given
     a publisher, offer and sku (starts with filter).
 
     :param batch_client: The batch client to use.
-    :type batch_client: `batchserviceclient.BatchServiceClient`
-    :param str publisher: vm image publisher
-    :param str offer: vm image offer
-    :param str sku_starts_with: vm sku starts with filter
-    :rtype: tuple
+    :param publisher: vm image publisher
+    :param offer: vm image offer
+    :param sku_starts_with: vm sku starts with filter
     :return: (node agent sku id to use, vm image ref to use)
     """
     # get verified vm image list and node agent sku ids from service
@@ -94,14 +104,16 @@ def select_latest_verified_vm_image_with_node_agent_sku(
     return (agent_sku_id, image_ref_to_use)
 
 
-def wait_for_tasks_to_complete(batch_client, job_id, timeout):
+def wait_for_tasks_to_complete(
+    batch_client: BatchServiceClient,
+    job_id: str,
+    timeout: datetime.timedelta
+):
     """Waits for all the tasks in a particular job to complete.
 
     :param batch_client: The batch client to use.
-    :type batch_client: `batchserviceclient.BatchServiceClient`
-    :param str job_id: The id of the job to monitor.
+    :param job_id: The id of the job to monitor.
     :param timeout: The maximum amount of time to wait.
-    :type timeout: `datetime.timedelta`
     """
     time_to_timeout_at = datetime.datetime.now() + timeout
 
@@ -118,25 +130,28 @@ def wait_for_tasks_to_complete(batch_client, job_id, timeout):
     raise TimeoutError("Timed out waiting for tasks to complete")
 
 
-def print_task_output(batch_client, job_id, task_ids, encoding=None):
+def print_task_output(
+    batch_client: BatchServiceClient,
+    job_id: str,
+    task_ids: List[str],
+    encoding: str = None
+):
     """Prints the stdout and stderr for each task specified.
 
     :param batch_client: The batch client to use.
-    :type batch_client: `batchserviceclient.BatchServiceClient`
-    :param str job_id: The id of the job to monitor.
+    :param job_id: The id of the job to monitor.
     :param task_ids: The collection of tasks to print the output for.
-    :type task_ids: `list`
-    :param str encoding: The encoding to use when downloading the file.
+    :param encoding: The encoding to use when downloading the file.
     """
     for task_id in task_ids:
         file_text = read_task_file_as_string(
             batch_client,
             job_id,
             task_id,
-            _STANDARD_OUT_FILE_NAME,
+            STANDARD_OUT_FILE_NAME,
             encoding)
         print("{} content for task {}: ".format(
-            _STANDARD_OUT_FILE_NAME,
+            STANDARD_OUT_FILE_NAME,
             task_id))
         print(file_text)
 
@@ -144,19 +159,18 @@ def print_task_output(batch_client, job_id, task_ids, encoding=None):
             batch_client,
             job_id,
             task_id,
-            _STANDARD_ERROR_FILE_NAME,
+            STANDARD_ERROR_FILE_NAME,
             encoding)
         print("{} content for task {}: ".format(
-            _STANDARD_ERROR_FILE_NAME,
+            STANDARD_ERROR_FILE_NAME,
             task_id))
         print(file_text)
 
 
-def print_configuration(config):
+def print_configuration(config: ConfigParser):
     """Prints the configuration being used as a dictionary
 
     :param config: The configuration.
-    :type config: `configparser.ConfigParser`
     """
     configuration_dict = {s: dict(config.items(s)) for s in
                           config.sections() + ['DEFAULT']}
@@ -165,68 +179,76 @@ def print_configuration(config):
     print(configuration_dict)
 
 
-def _read_stream_as_string(stream, encoding):
+def _read_stream_as_string(stream, encoding: str = None) -> str:
     """Read stream as string
 
     :param stream: input stream generator
-    :param str encoding: The encoding of the file. The default is utf-8.
+    :param encoding: The encoding of the file. The default is utf-8.
     :return: The file content.
-    :rtype: str
     """
+    if encoding is None:
+        encoding = 'utf-8'
+
     output = io.BytesIO()
     try:
         for data in stream:
             output.write(data)
-        if encoding is None:
-            encoding = 'utf-8'
         return output.getvalue().decode(encoding)
+    except Exception:
+        raise RuntimeError('Could not write data to stream or decode bytes')
     finally:
         output.close()
-    raise RuntimeError('could not write data to stream or decode bytes')
 
 
 def read_task_file_as_string(
-        batch_client, job_id, task_id, file_name, encoding=None):
+    batch_client: BatchServiceClient,
+    job_id: str,
+    task_id: str,
+    file_name: str,
+    encoding: str = None
+) -> str:
     """Reads the specified file as a string.
 
     :param batch_client: The batch client to use.
-    :type batch_client: `batchserviceclient.BatchServiceClient`
-    :param str job_id: The id of the job.
-    :param str task_id: The id of the task.
-    :param str file_name: The name of the file to read.
-    :param str encoding: The encoding of the file. The default is utf-8.
+    :param job_id: The id of the job.
+    :param task_id: The id of the task.
+    :param file_name: The name of the file to read.
+    :param encoding: The encoding of the file. The default is utf-8.
     :return: The file content.
-    :rtype: str
     """
     stream = batch_client.file.get_from_task(job_id, task_id, file_name)
     return _read_stream_as_string(stream, encoding)
 
 
 def read_compute_node_file_as_string(
-        batch_client, pool_id, node_id, file_name, encoding=None):
+    batch_client: BatchServiceClient,
+    pool_id: str,
+    node_id: str,
+    file_name: str,
+    encoding: str = None
+) -> str:
     """Reads the specified file as a string.
 
     :param batch_client: The batch client to use.
-    :type batch_client: `batchserviceclient.BatchServiceClient`
-    :param str pool_id: The id of the pool.
-    :param str node_id: The id of the node.
-    :param str file_name: The name of the file to read.
-    :param str encoding: The encoding of the file.  The default is utf-8
+    :param pool_id: The id of the pool.
+    :param node_id: The id of the node.
+    :param file_name: The name of the file to read.
+    :param encoding: The encoding of the file.  The default is utf-8
     :return: The file content.
-    :rtype: str
     """
     stream = batch_client.file.get_from_compute_node(
         pool_id, node_id, file_name)
     return _read_stream_as_string(stream, encoding)
 
 
-def create_pool_if_not_exist(batch_client, pool):
+def create_pool_if_not_exist(
+    batch_client: BatchServiceClient,
+    pool: batchmodels.PoolAddParameter
+):
     """Creates the specified pool if it doesn't already exist
 
     :param batch_client: The batch client to use.
-    :type batch_client: `batchserviceclient.BatchServiceClient`
     :param pool: The pool to create.
-    :type pool: `batchserviceclient.models.PoolAddParameter`
     """
     try:
         print("Attempting to create pool:", pool.id)
@@ -239,14 +261,17 @@ def create_pool_if_not_exist(batch_client, pool):
             print("Pool {!r} already exists".format(pool.id))
 
 
-def create_job(batch_service_client, job_id, pool_id):
+def create_job(
+    batch_service_client: BatchServiceClient,
+    job_id: str,
+    pool_id: str
+):
     """
     Creates a job with the specified ID, associated with the specified pool.
 
     :param batch_service_client: A Batch service client.
-    :type batch_service_client: `azure.batch.BatchServiceClient`
-    :param str job_id: The ID for the job.
-    :param str pool_id: The ID for the pool.
+    :param job_id: The ID for the job.
+    :param pool_id: The ID for the pool.
     """
     print('Creating job [{}]...'.format(job_id))
 
@@ -256,7 +281,7 @@ def create_job(batch_service_client, job_id, pool_id):
 
     try:
         batch_service_client.job.add(job)
-    except batchmodels.batch_error.BatchErrorException as err:
+    except batchmodels.BatchErrorException as err:
         print_batch_exception(err)
         if err.error.code != "JobExists":
             raise
@@ -264,23 +289,25 @@ def create_job(batch_service_client, job_id, pool_id):
             print("Job {!r} already exists".format(job_id))
 
 
-def wait_for_all_nodes_state(batch_client, pool, node_state):
+def wait_for_all_nodes_state(
+    batch_client: BatchServiceClient,
+    pool_id: str,
+    node_state: Set[batchmodels.ComputeNodeState]
+) -> List[batchmodels.ComputeNode]:
     """Waits for all nodes in pool to reach any specified state in set
 
     :param batch_client: The batch client to use.
-    :type batch_client: `batchserviceclient.BatchServiceClient`
     :param pool: The pool containing the node.
-    :type pool: `batchserviceclient.models.CloudPool`
-    :param set node_state: node states to wait for
-    :rtype: list
-    :return: list of `batchserviceclient.models.ComputeNode`
+    :param node_state: node states to wait for
+    :return: list of compute nodes
     """
     print('waiting for all nodes in pool {} to reach one of: {!r}'.format(
-        pool.id, node_state))
+        pool_id, node_state))
     i = 0
     while True:
         # refresh pool to ensure that there is no resize error
-        pool = batch_client.pool.get(pool.id)
+        pool = batch_client.pool.get(pool_id)  # type: Any
+
         if pool.resize_errors is not None:
             resize_errors = "\n".join([repr(e) for e in pool.resize_errors])
             raise RuntimeError(
@@ -298,19 +325,21 @@ def wait_for_all_nodes_state(batch_client, pool, node_state):
 
 
 def create_container_and_create_sas(
-        block_blob_client, container_name, permission, expiry=None,
-        timeout=None):
+    blob_service_client: BlobServiceClient,
+    container_name: str,
+    permission: ContainerSasPermissions,
+    expiry: datetime.datetime = None,
+    timeout: int = None
+) -> str:
     """Create a blob sas token
 
-    :param block_blob_client: The storage block blob client to use.
-    :type block_blob_client: `azure.storage.blob.BlockBlobService`
-    :param str container_name: The name of the container to upload the blob to.
+    :param blob_service_client: The storage block blob client to use.
+    :param container_name: The name of the container to upload the blob to.
+    :param permission The permissions of the SAS token
     :param expiry: The SAS expiry time.
-    :type expiry: `datetime.datetime`
-    :param int timeout: timeout in minutes from now for expiry,
+    :param timeout: timeout in minutes from now for expiry,
         will only be used if expiry is not specified
     :return: A SAS token
-    :rtype: str
     """
     if expiry is None:
         if timeout is None:
@@ -318,114 +347,167 @@ def create_container_and_create_sas(
         expiry = datetime.datetime.utcnow() + datetime.timedelta(
             minutes=timeout)
 
-    block_blob_client.create_container(
-        container_name,
-        fail_on_exist=False)
+    try:
+        blob_service_client.create_container(container_name)
+    except ResourceExistsError:
+        pass
 
-    return block_blob_client.generate_container_shared_access_signature(
+    storage_account_name = blob_service_client.account_name
+    if not storage_account_name:
+        raise ValueError("Blob service client must have a valid account name")
+
+    return generate_container_sas(
+        account_name=storage_account_name,
         container_name=container_name, permission=permission, expiry=expiry)
 
 
 def create_sas_token(
-        block_blob_client, container_name, blob_name, permission, expiry=None,
-        timeout=None):
+    blob_service_client: BlobServiceClient,
+    container_name: str,
+    blob_name: str,
+    permission: BlobSasPermissions,
+    expiry: datetime.datetime = None,
+    timeout: int = None
+) -> str:
     """Create a blob sas token
 
-    :param block_blob_client: The storage block blob client to use.
-    :type block_blob_client: `azure.storage.blob.BlockBlobService`
-    :param str container_name: The name of the container to upload the blob to.
-    :param str blob_name: The name of the blob to upload the local file to.
+    :param blob_service_client: The storage block blob client to use.
+    :param container_name: The name of the container to upload the blob to.
+    :param blob_name: The name of the blob to upload the local file to.
+    :param permission The permissions of the SAS token
     :param expiry: The SAS expiry time.
-    :type expiry: `datetime.datetime`
-    :param int timeout: timeout in minutes from now for expiry,
+    :param timeout: timeout in minutes from now for expiry,
         will only be used if expiry is not specified
     :return: A SAS token
-    :rtype: str
     """
     if expiry is None:
         if timeout is None:
             timeout = 30
         expiry = datetime.datetime.utcnow() + datetime.timedelta(
             minutes=timeout)
-    return block_blob_client.generate_blob_shared_access_signature(
-        container_name, blob_name, permission=permission, expiry=expiry)
+
+    if not blob_service_client.account_name:
+        raise ValueError("Blob service client must have a valid account name")
+    if not blob_service_client.credential:
+        raise ValueError("Blob service client must have a valid credential")
+
+    return generate_blob_sas(
+        account_name=blob_service_client.account_name,
+        account_key=blob_service_client.credential.account_key,
+        container_name=container_name,
+        blob_name=blob_name,
+        permission=permission,
+        expiry=expiry)
+
+
+def build_sas_url(
+    blob_service_client: BlobServiceClient,
+    container_name: str,
+    blob_name: str,
+    sas_token: str
+) -> str:
+    """Builds a signed URL for a blob
+
+    :param blob_service_client: The blob service client
+    :param container_name: The name of the blob container
+    :param blob_name: The name of the blob
+    :param sas_token: An SAS token
+    """
+    base_url = str(blob_service_client.url)
+    if not base_url.endswith("/"):
+        base_url += "/"
+
+    return "%s%s/%s?%s" % (
+        base_url,
+        container_name,
+        blob_name,
+        sas_token
+    )
 
 
 def upload_blob_and_create_sas(
-        block_blob_client, container_name, blob_name, file_name, expiry,
-        timeout=None):
+    blob_service_client: BlobServiceClient,
+    container_name: str,
+    blob_name: str,
+    file_name: str,
+    expiry: datetime.datetime = None,
+    timeout: int = None
+) -> str:
     """Uploads a file from local disk to Azure Storage and creates
     a SAS for it.
 
-    :param block_blob_client: The storage block blob client to use.
-    :type block_blob_client: `azure.storage.blob.BlockBlobService`
-    :param str container_name: The name of the container to upload the blob to.
-    :param str blob_name: The name of the blob to upload the local file to.
-    :param str file_name: The name of the local file to upload.
+    :param blob_service_client: The storage block blob client to use.
+    :param container_name: The name of the container to upload the blob to.
+    :param blob_name: The name of the blob to upload the local file to.
+    :param file_name: The name of the local file to upload.
     :param expiry: The SAS expiry time.
-    :type expiry: `datetime.datetime`
     :param int timeout: timeout in minutes from now for expiry,
         will only be used if expiry is not specified
     :return: A SAS URL to the blob with the specified expiry time.
-    :rtype: str
     """
-    block_blob_client.create_container(
-        container_name,
-        fail_on_exist=False)
+    try:
+        blob_service_client.create_container(container_name)
+    except ResourceExistsError:
+        pass
 
-    block_blob_client.create_blob_from_path(
-        container_name,
-        blob_name,
-        file_name)
+    blob_client = blob_service_client.get_blob_client(
+        container=container_name, blob=blob_name)
+
+    with open(file_name, "rb") as data:
+        blob_client.upload_blob(data, overwrite=True)
 
     sas_token = create_sas_token(
-        block_blob_client,
+        blob_service_client,
         container_name,
         blob_name,
-        permission=azureblob.BlobPermissions.READ,
+        permission=BlobSasPermissions.from_string("r"),
         expiry=expiry,
         timeout=timeout)
 
-    sas_url = block_blob_client.make_blob_url(
+    return build_sas_url(
+        blob_service_client,
         container_name,
         blob_name,
-        sas_token=sas_token)
-
-    return sas_url
+        sas_token)
 
 
 def upload_file_to_container(
-        block_blob_client, container_name, file_path, timeout):
+    blob_service_client: BlobServiceClient,
+    container_name: str,
+    file_path: str,
+    timeout: int
+) -> batchmodels.ResourceFile:
     """
     Uploads a local file to an Azure Blob storage container.
 
-    :param block_blob_client: A blob service client.
-    :type block_blob_client: `azure.storage.blob.BlockBlobService`
-    :param str container_name: The name of the Azure Blob storage container.
-    :param str file_path: The local path to the file.
-    :param int timeout: timeout in minutes from now for expiry,
+    :param blob_service_client: A blob service client.
+    :param container_name: The name of the Azure Blob storage container.
+    :param file_path: The local path to the file.
+    :param timeout: timeout in minutes from now for expiry,
         will only be used if expiry is not specified
-    :rtype: `azure.batch.models.ResourceFile`
     :return: A ResourceFile initialized with a SAS URL appropriate for Batch
-    tasks.
+        tasks.
     """
     blob_name = os.path.basename(file_path)
     print('Uploading file {} to container [{}]...'.format(
         file_path, container_name))
     sas_url = upload_blob_and_create_sas(
-        block_blob_client, container_name, blob_name, file_path, expiry=None,
+        blob_service_client, container_name, blob_name, file_path, expiry=None,
         timeout=timeout)
     return batchmodels.ResourceFile(
         file_path=blob_name, http_url=sas_url)
 
 
 def download_blob_from_container(
-        block_blob_client, container_name, blob_name, directory_path):
+    blob_service_client: BlobServiceClient,
+    container_name: str,
+    blob_name: str,
+    directory_path: str
+):
     """
     Downloads specified blob from the specified Azure Blob storage container.
 
-    :param block_blob_client: A blob service client.
-    :type block_blob_client: `azure.storage.blob.BlockBlobService`
+    :param blob_service_client: A blob service client.
     :param container_name: The Azure Blob storage container from which to
         download file.
     :param blob_name: The name of blob to be downloaded
@@ -436,8 +518,13 @@ def download_blob_from_container(
 
     destination_file_path = os.path.join(directory_path, blob_name)
 
-    block_blob_client.get_blob_to_path(
-        container_name, blob_name, destination_file_path)
+    blob_client = blob_service_client.get_blob_client(
+        container=container_name, blob=blob_name)
+
+    blob = blob_client.download_blob()
+
+    with open(destination_file_path, "wb") as destination_file:
+        blob.download_to_stream(destination_file)
 
     print('  Downloaded blob [{}] from container [{}] to {}'.format(
         blob_name, container_name, destination_file_path))
@@ -445,26 +532,24 @@ def download_blob_from_container(
     print('  Download complete!')
 
 
-def generate_unique_resource_name(resource_prefix):
+def generate_unique_resource_name(resource_prefix: str) -> str:
     """Generates a unique resource name by appending a time
     string after the specified prefix.
 
-    :param str resource_prefix: The resource prefix to use.
+    :param resource_prefix: The resource prefix to use.
     :return: A string with the format "resource_prefix-<time>".
-    :rtype: str
     """
     return resource_prefix + "-" + \
         datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
 
 
-def query_yes_no(question, default="yes"):
+def query_yes_no(question: str, default: str = "yes") -> str:
     """
     Prompts the user for yes/no input, displaying the specified question text.
 
-    :param str question: The text of the prompt for input.
-    :param str default: The default if the user hits <ENTER>. Acceptable values
+    :param question: The text of the prompt for input.
+    :param default: The default if the user hits <ENTER>. Acceptable values
     are 'yes', 'no', and None.
-    :rtype: str
     :return: 'yes' or 'no'
     """
     valid = {'y': 'yes', 'n': 'no'}
@@ -477,17 +562,21 @@ def query_yes_no(question, default="yes"):
     else:
         raise ValueError("Invalid default answer: '{}'".format(default))
 
+    choice = default
+
     while 1:
-        choice = input(question + prompt).lower()
-        if default and not choice:
-            return default
+        user_input = input(question + prompt).lower()
+        if not user_input:
+            break
         try:
-            return valid[choice[0]]
+            choice = valid[user_input[0]]
         except (KeyError, IndexError):
             print("Please respond with 'yes' or 'no' (or 'y' or 'n').\n")
 
+    return choice
 
-def print_batch_exception(batch_exception):
+
+def print_batch_exception(batch_exception: batchmodels.BatchErrorException):
     """
     Prints the contents of the specified Batch exception.
 
@@ -505,12 +594,11 @@ def print_batch_exception(batch_exception):
     print('-------------------------------------------')
 
 
-def wrap_commands_in_shell(ostype, commands):
+def wrap_commands_in_shell(ostype: str, commands: List[str]) -> str:
     """Wrap commands in a shell
 
-    :param list commands: list of commands to wrap
-    :param str ostype: OS type, linux or windows
-    :rtype: str
+    :param ostype: OS type, linux or windows
+    :param commands: list of commands to wrap
     :return: a shell wrapping commands
     """
     if ostype.lower() == 'linux':
@@ -522,47 +610,49 @@ def wrap_commands_in_shell(ostype, commands):
         raise ValueError('unknown ostype: {}'.format(ostype))
 
 
-def wait_for_job_under_job_schedule(batch_client, job_schedule_id, timeout):
+def wait_for_job_under_job_schedule(
+    batch_client: BatchServiceClient,
+    job_schedule_id: str,
+    timeout: datetime.timedelta
+):
     """Waits for a job to be created and returns a job id.
 
        :param batch_client: The batch client to use.
-       :type batch_client: `batchserviceclient.BatchServiceClient`
-       :param str job_schedule_id: The id of the job schedule to monitor.
+       :param job_schedule_id: The id of the job schedule to monitor.
        :param timeout: The maximum amount of time to wait.
-       :type timeout: `datetime.timedelta`
-       """
+    """
     time_to_timeout_at = datetime.datetime.now() + timeout
 
     while datetime.datetime.now() < time_to_timeout_at:
         cloud_job_schedule = batch_client.job_schedule.get(
-            job_schedule_id=job_schedule_id)
+            job_schedule_id=job_schedule_id)  # type: Any
 
         print("Checking if job exists...")
-        if (cloud_job_schedule.execution_info.recent_job) and (
-                cloud_job_schedule.execution_info.recent_job.id is not None):
-            return cloud_job_schedule.execution_info.recent_job.id
+        job = cloud_job_schedule.execution_info.recent_job
+        if job and job.id is not None:
+            return job.id
         time.sleep(1)
 
     raise TimeoutError("Timed out waiting for tasks to complete")
 
 
-def wait_for_job_schedule_to_complete(batch_client, job_schedule_id, timeout):
+def wait_for_job_schedule_to_complete(
+    batch_client: BatchServiceClient,
+    job_schedule_id: str,
+    timeout_at: datetime.datetime
+):
     """Waits for a job schedule to complete.
 
        :param batch_client: The batch client to use.
-       :type batch_client: `batchserviceclient.BatchServiceClient`
-       :param str job_schedule_id: The id of the job schedule to monitor.
+       :param job_schedule_id: The id of the job schedule to monitor.
        :param timeout: The maximum amount of time to wait.
-       :type timeout: `datetime.datetime`
-       """
-    while datetime.datetime.now() < timeout:
+    """
+    while datetime.datetime.now() < timeout_at:
         cloud_job_schedule = batch_client.job_schedule.get(
-            job_schedule_id=job_schedule_id)
+            job_schedule_id=job_schedule_id)  # type: Any
 
         print("Checking if job schedule is complete...")
         state = cloud_job_schedule.state
         if state == batchmodels.JobScheduleState.completed:
             return
         time.sleep(10)
-
-    return
