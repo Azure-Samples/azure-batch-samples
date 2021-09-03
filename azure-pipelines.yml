@@ -9,7 +9,7 @@ trigger:
 jobs:
 - job: 'PythonTest'
   pool:
-    vmImage: 'vs2017-win2016'
+    vmImage: 'windows-2019'
   strategy:
     matrix:
       Python27:
@@ -31,7 +31,7 @@ jobs:
 
 - job: 'JavaTest'
   pool:
-    vmImage: 'vs2017-win2016'
+    vmImage: 'windows-2019'
   steps:
   - task: Maven@3
     inputs:
@@ -46,7 +46,7 @@ jobs:
 
 - job: 'DotNetTest'
   pool:
-    vmImage: 'vs2017-win2016'
+    vmImage: 'windows-2019'
   steps:
   - task: DotNetCoreCLI@2
     inputs:
