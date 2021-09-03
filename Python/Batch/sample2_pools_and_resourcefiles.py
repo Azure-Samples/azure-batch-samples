@@ -24,17 +24,15 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-from __future__ import print_function
-try:
-    import configparser
-except ImportError:
-    import ConfigParser as configparser
 import datetime
 import os
+from configparser import ConfigParser
 
-import azure.storage.blob as azureblob
-import azure.batch._batch_service_client as batch
-import azure.batch.batch_auth as batchauth
+from azure.core.exceptions import ResourceExistsError
+
+from azure.storage.blob import BlobServiceClient
+from azure.batch import BatchServiceClient
+from azure.batch.batch_auth import SharedKeyCredentials
 import azure.batch.models as batchmodels
 
 import common.helpers
@@ -44,28 +42,32 @@ _SIMPLE_TASK_NAME = 'simple_task.py'
 _SIMPLE_TASK_PATH = os.path.join('resources', 'simple_task.py')
 
 
-def create_pool(batch_client, block_blob_client, pool_id, vm_size, vm_count):
+def create_pool(
+        batch_client: BatchServiceClient,
+        blob_service_client: BlobServiceClient,
+        pool_id: str,
+        vm_size: str,
+        vm_count: int):
     """Creates an Azure Batch pool with the specified id.
 
     :param batch_client: The batch client to use.
-    :type batch_client: `batchserviceclient.BatchServiceClient`
-    :param block_blob_client: The storage block blob client to use.
-    :type block_blob_client: `azure.storage.blob.BlockBlobService`
-    :param str pool_id: The id of the pool to create.
-    :param str vm_size: vm size (sku)
-    :param int vm_count: number of vms to allocate
+    :param blob_service_client: The storage block blob client to use.
+    :param pool_id: The id of the pool to create.
+    :param vm_size: vm size (sku)
+    :param vm_count: number of vms to allocate
     """
     # pick the latest supported 16.04 sku for UbuntuServer
     sku_to_use, image_ref_to_use = \
         common.helpers.select_latest_verified_vm_image_with_node_agent_sku(
-            batch_client, 'Canonical', 'UbuntuServer', '16.04')
+            batch_client, 'canonical', 'ubuntuserver', '18.04')
 
-    block_blob_client.create_container(
-        _CONTAINER_NAME,
-        fail_on_exist=False)
+    try:
+        blob_service_client.create_container(_CONTAINER_NAME)
+    except ResourceExistsError:
+        pass
 
     sas_url = common.helpers.upload_blob_and_create_sas(
-        block_blob_client,
+        blob_service_client,
         _CONTAINER_NAME,
         _SIMPLE_TASK_NAME,
         _SIMPLE_TASK_PATH,
@@ -87,16 +89,18 @@ def create_pool(batch_client, block_blob_client, pool_id, vm_size, vm_count):
     common.helpers.create_pool_if_not_exist(batch_client, pool)
 
 
-def submit_job_and_add_task(batch_client, block_blob_client, job_id, pool_id):
+def submit_job_and_add_task(
+        batch_client: BatchServiceClient,
+        blob_service_client: BlobServiceClient,
+        job_id: str,
+        pool_id: str):
     """Submits a job to the Azure Batch service and adds
     a task that runs a python script.
 
     :param batch_client: The batch client to use.
-    :type batch_client: `batchserviceclient.BatchServiceClient`
-    :param block_blob_client: The storage block blob client to use.
-    :type block_blob_client: `azure.storage.blob.BlockBlobService`
-    :param str job_id: The id of the job to create.
-    :param str pool_id: The id of the pool to use.
+    :param blob_service_client: The storage block blob client to use.
+    :param job_id: The id of the job to create.
+    :param pool_id: The id of the pool to use.
     """
     job = batchmodels.JobAddParameter(
         id=job_id,
@@ -104,12 +108,13 @@ def submit_job_and_add_task(batch_client, block_blob_client, job_id, pool_id):
 
     batch_client.job.add(job)
 
-    block_blob_client.create_container(
-        _CONTAINER_NAME,
-        fail_on_exist=False)
+    try:
+        blob_service_client.create_container(_CONTAINER_NAME)
+    except ResourceExistsError:
+        pass
 
     sas_url = common.helpers.upload_blob_and_create_sas(
-        block_blob_client,
+        blob_service_client,
         _CONTAINER_NAME,
         _SIMPLE_TASK_NAME,
         _SIMPLE_TASK_PATH,
@@ -125,24 +130,19 @@ def submit_job_and_add_task(batch_client, block_blob_client, job_id, pool_id):
     batch_client.task.add(job_id=job.id, task=task)
 
 
-def execute_sample(global_config, sample_config):
+def execute_sample(global_config: ConfigParser, sample_config: ConfigParser):
     """Executes the sample with the specified configurations.
 
     :param global_config: The global configuration to use.
-    :type global_config: `configparser.ConfigParser`
     :param sample_config: The sample specific configuration to use.
-    :type sample_config: `configparser.ConfigParser`
     """
     # Set up the configuration
     batch_account_key = global_config.get('Batch', 'batchaccountkey')
     batch_account_name = global_config.get('Batch', 'batchaccountname')
     batch_service_url = global_config.get('Batch', 'batchserviceurl')
 
+    storage_account_url = global_config.get('Storage', 'storageaccounturl')
     storage_account_key = global_config.get('Storage', 'storageaccountkey')
-    storage_account_name = global_config.get('Storage', 'storageaccountname')
-    storage_account_suffix = global_config.get(
-        'Storage',
-        'storageaccountsuffix')
 
     should_delete_container = sample_config.getboolean(
         'DEFAULT',
@@ -164,20 +164,20 @@ def execute_sample(global_config, sample_config):
     common.helpers.print_configuration(global_config)
     common.helpers.print_configuration(sample_config)
 
-    credentials = batchauth.SharedKeyCredentials(
+    credentials = SharedKeyCredentials(
         batch_account_name,
         batch_account_key)
-    batch_client = batch.BatchServiceClient(
+
+    batch_client = BatchServiceClient(
         credentials,
         batch_url=batch_service_url)
 
     # Retry 5 times -- default is 3
     batch_client.config.retry_policy.retries = 5
 
-    block_blob_client = azureblob.BlockBlobService(
-        account_name=storage_account_name,
-        account_key=storage_account_key,
-        endpoint_suffix=storage_account_suffix)
+    blob_service_client = BlobServiceClient(
+        account_url=storage_account_url,
+        credential=storage_account_key)
 
     job_id = common.helpers.generate_unique_resource_name(
         "PoolsAndResourceFilesJob")
@@ -185,14 +185,14 @@ def execute_sample(global_config, sample_config):
     try:
         create_pool(
             batch_client,
-            block_blob_client,
+            blob_service_client,
             pool_id,
             pool_vm_size,
             pool_vm_count)
 
         submit_job_and_add_task(
             batch_client,
-            block_blob_client,
+            blob_service_client,
             job_id, pool_id)
 
         common.helpers.wait_for_tasks_to_complete(
@@ -207,9 +207,7 @@ def execute_sample(global_config, sample_config):
     finally:
         # clean up
         if should_delete_container:
-            block_blob_client.delete_container(
-                _CONTAINER_NAME,
-                fail_not_exist=False)
+            blob_service_client.delete_container(_CONTAINER_NAME)
         if should_delete_job:
             print("Deleting job: ", job_id)
             batch_client.job.delete(job_id)
@@ -219,10 +217,10 @@ def execute_sample(global_config, sample_config):
 
 
 if __name__ == '__main__':
-    global_config = configparser.ConfigParser()
-    global_config.read(common.helpers._SAMPLES_CONFIG_FILE_NAME)
+    global_config = ConfigParser()
+    global_config.read(common.helpers.SAMPLES_CONFIG_FILE_NAME)
 
-    sample_config = configparser.ConfigParser()
+    sample_config = ConfigParser()
     sample_config.read(
         os.path.splitext(os.path.basename(__file__))[0] + '.cfg')
 

@@ -12,12 +12,10 @@ jobs:
     vmImage: 'windows-2019'
   strategy:
     matrix:
-      Python27:
-        python.version: '2.7'
-      Python35:
-        python.version: '3.5'
-      Python36:
-        python.version: '3.6'
+      PythonMinVersion:
+        python.version: '3.7'
+      PythonMaxVersion:
+        python.version: '3.10'
   steps:
   - task: UsePythonVersion@0
     inputs:
