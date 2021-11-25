@@ -14,6 +14,14 @@ namespace Microsoft.Azure.Batch.Samples.SimpleTask
             {
                 Console.WriteLine("Found a file: {0}", file);
             }
+
+            foreach (var file in Directory.EnumerateDirectories("Z:\\"))
+            {
+                Console.WriteLine("Found a file: {0}", file);
+            }
+
+            Console.WriteLine($"Started with arg: {args[0]}");
+
         }
     }
 }
