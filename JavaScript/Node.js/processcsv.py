@@ -1,15 +1,15 @@
 import csv
 import json
-from azure.storage.blob import BlockBlobService
+from azure.storage.blob import BlobServiceClient
 import datetime
 import os
 import argparse
 
 #### Recommendation: Store these as environment variables or download it from Key Vault
 
-storage_acc_name = '<storage-account-name>'
+storage_acc_url = 'https://<AZURE_STORAGE_ACCOUNT_NAME>.blob.core.windows.net'
 storage_acc_key = '<storage-account-key>'
-block_blob_service = BlockBlobService(account_name=storage_acc_name,account_key=storage_acc_key)
+block_blob_service = BlobServiceClient(account_url=storage_acc_url,credential=storage_acc_key)
 ####
 
 def getfilename(name):
@@ -24,10 +24,11 @@ def processcsvfile(fname,seperator,outdir,outfname):
         print("loaded file " + fname)
         all_vals = []
         for rows in allrows:
+            line = ""
             if isHeaderLoaded is False:
                 # Getting the first line as header
                 header = rows
-                isHeaderLoaded = true
+                isHeaderLoaded = True
             else:
                 if len(header) > 0:
                     i = 0
@@ -41,7 +42,6 @@ def processcsvfile(fname,seperator,outdir,outfname):
                         i = i + 1
                     line = line + "}" 
             all_vals.append(json.loads(json.dumps(line)))
-            line = ""
         if not os.path.exists(outdir):
             os.makedirs(outdir)
         json_fpath = outdir + "/" + outfname + '.json'
@@ -60,22 +60,32 @@ if __name__ == "__main__":
     container = args.container
     pattern = args.pattern   
 
+    container_client = block_blob_service.get_container_client(container)
+
     print("Processing files from container : " + str(container))
     if pattern is not None:
-        blob_list = block_blob_service.list_blobs(container_name=container, prefix=pattern)
+        blob_list = container_client.list_blobs(name_starts_with=pattern)
     else:
-        blob_list = block_blob_service.list_blobs(container_name=container)
+        blob_list = container_client.list_blobs()
     
     for blob in blob_list:
         print("Processing blob : " + blob.name)
-        blob_name = getfilename(blob.name)
+        blob_name = getfilename(blob.name).split('.')[0]
         downloadedblob = "downloaded_" + blob_name 
-        block_blob_service.get_blob_to_path(container_name=container,blob_name=blob.name, file_path=downloadedblob, open_mode='w')
+
+         #Download the blob locally
+        blob_client = container_client.get_blob_client(blob.name)
+        with open(downloadedblob, "wb") as my_blob:
+            downloaded_blob_stream = blob_client.download_blob()
+            my_blob.write(downloaded_blob_stream.readall())
+
         if pattern is not None:
             json_outpath = processcsvfile(fname=downloadedblob,seperator="|",outfname=blob_name,outdir='jsonfiles/' + container + "/" + pattern)
-            print("uploading blob" + json_outpath)
-            block_blob_service.create_blob_from_path(container_name=container,blob_name=str(pattern+ 'json/' + blob_name + ".json"),file_path=json_outpath) 
+            print("uploading blob " + json_outpath)
+            with open(json_outpath, "rb") as data:
+                container_client.upload_blob(name=str(pattern + 'json/' + blob_name + ".json"), data=data)
         else:
             json_outpath = processcsvfile(fname=downloadedblob,seperator="|",outfname=blob_name,outdir='jsonfiles/' + container + "/")
-            print("uploading blob" + json_outpath)
-            block_blob_service.create_blob_from_path(container_name=container,blob_name=str('json/' + blob_name + ".json"),file_path=json_outpath)            
+            print("uploading blob " + json_outpath)
+            with open(json_outpath, "rb") as data:
+                container_client.upload_blob(name=str('json/' + blob_name + ".json"), data=data)
