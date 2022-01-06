@@ -70,7 +70,8 @@ if __name__ == "__main__":
     
     for blob in blob_list:
         print("Processing blob : " + blob.name)
-        blob_name = getfilename(blob.name).split('.')[0]
+        blob_name = getfilename(blob.name)
+        blob_name_without_extension = blob_name.split('.')[0]
         downloadedblob = "downloaded_" + blob_name 
 
          #Download the blob locally
@@ -79,13 +80,18 @@ if __name__ == "__main__":
             downloaded_blob_stream = blob_client.download_blob()
             my_blob.write(downloaded_blob_stream.readall())
 
+        output_dir = ""
+        uploaded_blob_name = ""
+
         if pattern is not None:
-            json_outpath = processcsvfile(fname=downloadedblob,seperator="|",outfname=blob_name,outdir='jsonfiles/' + container + "/" + pattern)
-            print("uploading blob " + json_outpath)
-            with open(json_outpath, "rb") as data:
-                container_client.upload_blob(name=str(pattern + 'json/' + blob_name + ".json"), data=data)
+            output_dir = "jsonfiles/" + container + "/" + pattern
+            uploaded_blob_name = str(pattern + 'json/' + blob_name_without_extension + ".json")
+            
         else:
-            json_outpath = processcsvfile(fname=downloadedblob,seperator="|",outfname=blob_name,outdir='jsonfiles/' + container + "/")
-            print("uploading blob " + json_outpath)
-            with open(json_outpath, "rb") as data:
-                container_client.upload_blob(name=str('json/' + blob_name + ".json"), data=data)
+            output_dir = "jsonfiles/" + container + "/"
+            uploaded_blob_name = str('json/' + blob_name_without_extension + ".json")
+
+        json_outpath = processcsvfile(fname=downloadedblob,seperator="|",outfname=blob_name_without_extension,outdir=output_dir)
+        print("uploading blob " + json_outpath)
+        with open(json_outpath, "rb") as data:
+                container_client.upload_blob(name=uploaded_blob_name, data=data)
