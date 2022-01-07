@@ -6,10 +6,10 @@ const batchAccountKey = '<batch-account-key>';
 const batchEndpoint = '<batch-account-url>';
 
 // Replace values with SAS URIs of the shell script file
-const sh_url = "https://batchdevsgsa.blob.core.windows.net/downloads/startup_prereq.sh?st=2017-04-10T18%3A11%3A00Z&se=2020-03-11T18%3A11%3A00Z&sp=rl&sv=2018-03-28&sr=b&sig=xxxx";
+const sh_url = "<startup prereq script SAS URI>";
 
 // Replace values with SAS URIs of the Python script file
-const scriptURI = "https://batchdevsgsa.blob.core.windows.net/downloads/processcsv.py?st=2017-04-10T18%3A11%3A00Z&se=2020-03-11T18%3A11%3A00Z&sp=rl&sv=2018-03-28&sr=b&sig=xxxx";
+const scriptURI = "<python script SAS URI>";
 
 
 const credentials = new BatchSharedKeyCredentials(batchAccountName, batchAccountKey);
@@ -26,13 +26,13 @@ const jobId = "processcsvjob";
 const imgRef = {
     publisher: "Canonical",
     offer: "UbuntuServer",
-    sku: "16.04-LTS",
+    sku: "18.04-LTS",
     version: "latest"
 }
 // Pool VM configuraion object
 const vmConfig = {
     imageReference: imgRef,
-    nodeAgentSKUId: "batch.node.ubuntu 16.04"
+    nodeAgentSKUId: "batch.node.ubuntu 18.04"
 };
 // Number of VMs to create in a pool
 const numVms = 4;
@@ -67,7 +67,13 @@ function createJob() {
         id: "installprereq",
         commandLine: "sudo sh startup_prereq.sh > startup.log",
         resourceFiles: [{ 'httpUrl': sh_url, 'filePath': 'startup_prereq.sh' }],
-        waitForSuccess: true, runElevated: true
+        waitForSuccess: true, runElevated: true,
+        userIdentity: {
+            autoUser: {
+                elevationLevel: "admin",
+                scope: "pool"
+            }
+          }
     };
 
     // Setting Batch Pool ID
@@ -95,7 +101,7 @@ function createJob() {
 
 function createTasks() {
     console.log("Creating tasks....");
-    const containerList = ["con1", "con2", "con3", "con4"];
+    const containerList = ["con1", "con2", "con3", "con4"];      //Replace with list of blob containers within storage account
     containerList.forEach(function (val, index) {
         console.log("Submitting task for container : " + val);
         const containerName = val;

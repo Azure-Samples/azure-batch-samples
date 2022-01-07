@@ -8,5 +8,4 @@ sudo apt-get -y install libssl-dev
 sudo apt-get -y install libffi-dev
 sudo pip install -U pyOpenSSL
 sudo pip install cryptography && echo 'y'
-sudo pip install azure && echo 'y'
-sudo pip install azure-storage --upgrade && echo 'y'
+sudo pip install azure-storage-blob --upgrade && echo 'y'
