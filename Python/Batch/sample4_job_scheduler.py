@@ -24,19 +24,21 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-from __future__ import print_function
+"""
+Create a job schedule
+"""
 
-try:
-    import configparser
-except ImportError:
-    import ConfigParser as configparser
+from configparser import ConfigParser
 
 import datetime
 import os
 
-import azure.batch._batch_service_client as batch
-import azure.storage.blob as azureblob
-import azure.batch.batch_auth as batchauth
+from azure.core.exceptions import ResourceNotFoundError
+
+from azure.storage.blob import BlobServiceClient
+
+from azure.batch import BatchServiceClient
+from azure.batch.batch_auth import SharedKeyCredentials
 import azure.batch.models as batchmodels
 
 import common.helpers
@@ -53,19 +55,29 @@ _START_TIME = datetime.datetime.utcnow()
 _END_TIME = _START_TIME + datetime.timedelta(minutes=30)
 
 
-def create_job_schedule(batch_client, job_schedule_id, vm_size, vm_count,
-                        block_blob_client):
+def create_job_schedule(
+    batch_client: BatchServiceClient,
+    job_schedule_id: str,
+    vm_size: str,
+    vm_count: int,
+    blob_service_client: BlobServiceClient
+):
     """Creates an Azure Batch pool and job schedule with the specified ids.
 
     :param batch_client: The batch client to use.
-    :type batch_client: `batchserviceclient.BatchServiceClient`
-    :param str job_schedule_id: The id of the job schedule to create
-    :param str vm_size: vm size (sku)
-    :param int vm_count: number of vms to allocate
-    :param block_blob_client: The storage block blob client to use.
-    :type block_blob_client: `azure.storage.blob.BlockBlobService`
+    :param job_schedule_id: The id of the job schedule to create
+    :param vm_size: vm size (sku)
+    :param vm_count: number of vms to allocate
+    :param blob_service_client: The storage block blob client to use.
     """
-    cloud_service_config = batchmodels.CloudServiceConfiguration(os_family='6')
+    vm_config = batchmodels.VirtualMachineConfiguration(
+        image_reference=batchmodels.ImageReference(
+            publisher="microsoftwindowsserver",
+            offer="windowsserver",
+            sku="2019-datacenter-core"
+        ),
+        node_agent_sku_id="batch.node.windows amd64"
+    )
 
     user_id = batchmodels.UserIdentity(
         auto_user=batchmodels.AutoUserSpecification(
@@ -81,10 +93,10 @@ def create_job_schedule(batch_client, job_schedule_id, vm_size, vm_count,
             pool=batchmodels.PoolSpecification(
                 vm_size=vm_size,
                 target_dedicated_nodes=vm_count,
-                cloud_service_configuration=cloud_service_config,
+                virtual_machine_configuration=vm_config,
                 start_task=batchmodels.StartTask(
                     command_line=common.helpers.wrap_commands_in_shell(
-                        'windows', ['{}'.format(_PYTHON_INSTALL)]),
+                        'windows', [f'{_PYTHON_INSTALL}']),
                     resource_files=[python_download],
                     wait_for_success=True,
                     user_identity=user_id)),
@@ -92,7 +104,7 @@ def create_job_schedule(batch_client, job_schedule_id, vm_size, vm_count,
             pool_lifetime_option=batchmodels.PoolLifetimeOption.job))
 
     sas_url = common.helpers.upload_blob_and_create_sas(
-        block_blob_client,
+        blob_service_client,
         _CONTAINER_NAME,
         _SIMPLE_TASK_NAME,
         _SIMPLE_TASK_PATH,
@@ -106,7 +118,7 @@ def create_job_schedule(batch_client, job_schedule_id, vm_size, vm_count,
         job_manager_task=batchmodels.JobManagerTask(
             id="JobManagerTask",
             command_line=common.helpers.wrap_commands_in_shell(
-                'windows', ['python {}'.format(_SIMPLE_TASK_NAME)]),
+                'windows', [f'python {_SIMPLE_TASK_NAME}']),
             resource_files=[batchmodels.ResourceFile(
                 file_path=_SIMPLE_TASK_NAME,
                 http_url=sas_url)]))
@@ -126,7 +138,7 @@ def create_job_schedule(batch_client, job_schedule_id, vm_size, vm_count,
     batch_client.job_schedule.add(cloud_job_schedule=scheduled_job)
 
 
-def execute_sample(global_config, sample_config):
+def execute_sample(global_config: ConfigParser, sample_config: ConfigParser):
     """Executes the sample with the specified configurations.
 
     :param global_config: The global configuration to use.
@@ -140,10 +152,7 @@ def execute_sample(global_config, sample_config):
     batch_service_url = global_config.get('Batch', 'batchserviceurl')
 
     storage_account_key = global_config.get('Storage', 'storageaccountkey')
-    storage_account_name = global_config.get('Storage', 'storageaccountname')
-    storage_account_suffix = global_config.get(
-        'Storage',
-        'storageaccountsuffix')
+    storage_account_url = global_config.get('Storage', 'storageaccounturl')
 
     should_delete_container = sample_config.getboolean(
         'DEFAULT',
@@ -162,18 +171,17 @@ def execute_sample(global_config, sample_config):
     common.helpers.print_configuration(global_config)
     common.helpers.print_configuration(sample_config)
 
-    credentials = batchauth.SharedKeyCredentials(
+    credentials = SharedKeyCredentials(
         batch_account_name,
         batch_account_key)
 
-    batch_client = batch.BatchServiceClient(
+    batch_client = BatchServiceClient(
         credentials,
         batch_url=batch_service_url)
 
-    block_blob_client = azureblob.BlockBlobService(
-        account_name=storage_account_name,
-        account_key=storage_account_key,
-        endpoint_suffix=storage_account_suffix)
+    blob_service_client = BlobServiceClient(
+        account_url=storage_account_url,
+        credential=storage_account_key)
 
     batch_client.config.retry_policy.retries = 5
     job_schedule_id = common.helpers.generate_unique_resource_name(
@@ -185,7 +193,7 @@ def execute_sample(global_config, sample_config):
             job_schedule_id,
             pool_vm_size,
             pool_vm_count,
-            block_blob_client)
+            blob_service_client)
 
         print("Start time: ", _START_TIME)
         print("Delete time: ", _END_TIME)
@@ -213,26 +221,27 @@ def execute_sample(global_config, sample_config):
             job_schedule_id,
             _END_TIME + datetime.timedelta(minutes=10))
 
-    except batchmodels.BatchErrorException as e:
-        for x in e.error.values:
-            print("BatchErrorException: ", x)
+    except batchmodels.BatchErrorException as err:
+        for value in err.error.values:
+            print("BatchErrorException: ", value)
 
     finally:
         if should_delete_job_schedule:
             print("Deleting job schedule: ", job_schedule_id)
             batch_client.job_schedule.delete(job_schedule_id)
         if should_delete_container:
-            block_blob_client.delete_container(
-                _CONTAINER_NAME,
-                fail_not_exist=False)
+            try:
+                blob_service_client.delete_container(_CONTAINER_NAME)
+            except ResourceNotFoundError:
+                pass
 
 
 if __name__ == '__main__':
-    global_config = configparser.ConfigParser()
-    global_config.read(common.helpers._SAMPLES_CONFIG_FILE_NAME)
+    global_cfg = ConfigParser()
+    global_cfg.read(common.helpers.SAMPLES_CONFIG_FILE_NAME)
 
-    sample_config = configparser.ConfigParser()
-    sample_config.read(
+    sample_cfg = ConfigParser()
+    sample_cfg.read(
         os.path.splitext(os.path.basename(__file__))[0] + '.cfg')
 
-    execute_sample(global_config, sample_config)
+    execute_sample(global_cfg, sample_cfg)
