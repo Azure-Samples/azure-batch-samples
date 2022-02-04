@@ -24,6 +24,10 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
+"""
+Submit a simple 'hello world' task
+"""
+
 import datetime
 import os
 from configparser import ConfigParser
@@ -140,11 +144,11 @@ def execute_sample(global_config: ConfigParser, sample_config: ConfigParser):
 
 
 if __name__ == '__main__':
-    global_config = ConfigParser()
-    global_config.read(common.helpers.SAMPLES_CONFIG_FILE_NAME)
+    global_cfg = ConfigParser()
+    global_cfg.read(common.helpers.SAMPLES_CONFIG_FILE_NAME)
 
-    sample_config = ConfigParser()
-    sample_config.read(
+    sample_cfg = ConfigParser()
+    sample_cfg.read(
         os.path.splitext(os.path.basename(__file__))[0] + '.cfg')
 
-    execute_sample(global_config, sample_config)
+    execute_sample(global_cfg, sample_cfg)

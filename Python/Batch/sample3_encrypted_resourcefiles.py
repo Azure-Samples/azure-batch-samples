@@ -24,6 +24,10 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
+"""
+Submit a task which uses encrypted resource files
+"""
+
 import base64
 from configparser import ConfigParser
 import datetime
@@ -140,7 +144,7 @@ def add_certificate_to_account(
     :param sha1_cert_tp: sha1 thumbprint of pfx
     :param rm_pfxfile: remove PFX file from local disk
     """
-    print('adding pfx cert {} to account'.format(sha1_cert_tp))
+    print(f'adding pfx cert {sha1_cert_tp} to account')
     data = common.helpers.decode_string(
         base64.b64encode(open(pfxfile, 'rb').read()))
     batch_client.certificate.add(
@@ -226,8 +230,7 @@ def create_pool_and_wait_for_node(
     )
     # ensure all node are idle
     if any(node.state != batchmodels.ComputeNodeState.idle for node in nodes):
-        raise RuntimeError('node(s) of pool {} not in idle state'.format(
-            pool_id))
+        raise RuntimeError(f'node(s) of pool {pool_id} not in idle state')
 
 
 def submit_job_and_add_task(
@@ -275,17 +278,16 @@ def submit_job_and_add_task(
     # $AZ_BATCH_CERTIFICATES_DIR where the cert itself has a naming convention
     # of <thumbprint algorithm>-<lowercase thumbprint>.<certificate format>
     task_commands = [
-        ('openssl pkcs12 -in $AZ_BATCH_CERTIFICATES_DIR/sha1-{tp}.pfx -out '
-         '$AZ_BATCH_CERTIFICATES_DIR/privatekey.pem -nodes -password '
-         'file:$AZ_BATCH_CERTIFICATES_DIR/sha1-{tp}.pfx.pw').format(
-             tp=sha1_cert_tp),
-        ('blobxfer download --storage-account {sa} '
-         '--remote-path {cont}/{rf} --local-path . --sas "{sas}" '
-         '--rsa-private-key $AZ_BATCH_CERTIFICATES_DIR/privatekey.pem').format(
-             sa=storage_account_name, cont=container, sas=sastoken,
-             rf=resourcefile),
+        (f'openssl pkcs12 '
+         f'-in $AZ_BATCH_CERTIFICATES_DIR/sha1-{sha1_cert_tp}.pfx '
+         f'-out $AZ_BATCH_CERTIFICATES_DIR/privatekey.pem -nodes -password '
+         f'file:$AZ_BATCH_CERTIFICATES_DIR/sha1-{sha1_cert_tp}.pfx.pw'),
+        (f'blobxfer download --storage-account {storage_account_name} '
+         f'--remote-path {container}/{resourcefile} '
+         f'--local-path . --sas "{sastoken}" '
+         '--rsa-private-key $AZ_BATCH_CERTIFICATES_DIR/privatekey.pem'),
         'echo secret.txt contents:',
-        'cat {}'.format(resourcefile)
+        f'cat {resourcefile}'
     ]
 
     task = batchmodels.TaskAddParameter(
@@ -408,36 +410,36 @@ def execute_sample(global_config: ConfigParser, sample_config: ConfigParser):
     finally:
         # perform clean up
         if should_delete_container:
-            print('Deleting container: {}'.format(_CONTAINER_NAME))
+            print(f'Deleting container: {_CONTAINER_NAME}')
             try:
                 blob_service_client.delete_container(_CONTAINER_NAME)
             except ResourceNotFoundError:
                 pass
         if should_delete_job:
-            print('Deleting job: {}'.format(job_id))
+            print(f'Deleting job: {job_id}')
             batch_client.job.delete(job_id)
         if should_delete_pool:
-            print('Deleting pool: {}'.format(pool_id))
+            print(f'Deleting pool: {pool_id}')
             batch_client.pool.delete(pool_id)
         if should_delete_cert and sha1_cert_tp is not None:
             # cert deletion requires no active references to cert, so
             # override any config settings for preserving job/pool
             if not should_delete_job:
-                print('Deleting job: {}'.format(job_id))
+                print(f'Deleting job: {job_id}')
                 batch_client.job.delete(job_id)
             if not should_delete_pool:
-                print('Deleting pool: {}'.format(pool_id))
+                print(f'Deleting pool: {pool_id}')
                 batch_client.pool.delete(pool_id)
-            print('Deleting cert: {}'.format(sha1_cert_tp))
+            print(f'Deleting cert: {sha1_cert_tp}')
             batch_client.certificate.delete('sha1', sha1_cert_tp)
 
 
 if __name__ == '__main__':
-    global_config = ConfigParser()
-    global_config.read(common.helpers.SAMPLES_CONFIG_FILE_NAME)
+    global_cfg = ConfigParser()
+    global_cfg.read(common.helpers.SAMPLES_CONFIG_FILE_NAME)
 
-    sample_config = ConfigParser()
-    sample_config.read(
+    sample_cfg = ConfigParser()
+    sample_cfg.read(
         os.path.splitext(os.path.basename(__file__))[0] + '.cfg')
 
-    execute_sample(global_config, sample_config)
+    execute_sample(global_cfg, sample_cfg)

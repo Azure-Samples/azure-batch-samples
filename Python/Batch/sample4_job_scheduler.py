@@ -24,6 +24,10 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
+"""
+Create a job schedule
+"""
+
 from configparser import ConfigParser
 
 import datetime
@@ -92,7 +96,7 @@ def create_job_schedule(
                 virtual_machine_configuration=vm_config,
                 start_task=batchmodels.StartTask(
                     command_line=common.helpers.wrap_commands_in_shell(
-                        'windows', ['{}'.format(_PYTHON_INSTALL)]),
+                        'windows', [f'{_PYTHON_INSTALL}']),
                     resource_files=[python_download],
                     wait_for_success=True,
                     user_identity=user_id)),
@@ -114,7 +118,7 @@ def create_job_schedule(
         job_manager_task=batchmodels.JobManagerTask(
             id="JobManagerTask",
             command_line=common.helpers.wrap_commands_in_shell(
-                'windows', ['python {}'.format(_SIMPLE_TASK_NAME)]),
+                'windows', [f'python {_SIMPLE_TASK_NAME}']),
             resource_files=[batchmodels.ResourceFile(
                 file_path=_SIMPLE_TASK_NAME,
                 http_url=sas_url)]))
@@ -217,9 +221,9 @@ def execute_sample(global_config: ConfigParser, sample_config: ConfigParser):
             job_schedule_id,
             _END_TIME + datetime.timedelta(minutes=10))
 
-    except batchmodels.BatchErrorException as e:
-        for x in e.error.values:
-            print("BatchErrorException: ", x)
+    except batchmodels.BatchErrorException as err:
+        for value in err.error.values:
+            print("BatchErrorException: ", value)
 
     finally:
         if should_delete_job_schedule:
@@ -233,11 +237,11 @@ def execute_sample(global_config: ConfigParser, sample_config: ConfigParser):
 
 
 if __name__ == '__main__':
-    global_config = ConfigParser()
-    global_config.read(common.helpers.SAMPLES_CONFIG_FILE_NAME)
+    global_cfg = ConfigParser()
+    global_cfg.read(common.helpers.SAMPLES_CONFIG_FILE_NAME)
 
-    sample_config = ConfigParser()
-    sample_config.read(
+    sample_cfg = ConfigParser()
+    sample_cfg.read(
         os.path.splitext(os.path.basename(__file__))[0] + '.cfg')
 
-    execute_sample(global_config, sample_config)
+    execute_sample(global_cfg, sample_cfg)

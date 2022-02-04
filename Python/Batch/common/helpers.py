@@ -22,13 +22,17 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
+"""
+Batch sample helpers
+"""
+
 from __future__ import print_function
 from configparser import ConfigParser
 import datetime
 import io
 import os
 import time
-from typing import Any, List, Set, Tuple, Union
+from typing import List, Set, Tuple, Union
 
 from azure.core.exceptions import ResourceExistsError
 
@@ -48,12 +52,13 @@ STANDARD_ERROR_FILE_NAME = 'stderr.txt'
 SAMPLES_CONFIG_FILE_NAME = 'configuration.cfg'
 
 
-class TimeoutError(Exception):
+class TimeoutExpiredError(Exception):
     """An error which can occur if a timeout has expired.
     """
 
     def __init__(self, message):
         self.message = message
+        super().__init__(self.message)
 
 
 def decode_string(string: Union[str, bytes], encoding: str = 'utf-8') -> str:
@@ -67,7 +72,7 @@ def decode_string(string: Union[str, bytes], encoding: str = 'utf-8') -> str:
         return string
     if isinstance(string, bytes):
         return string.decode(encoding)
-    raise ValueError('invalid string type: {}'.format(type(string)))
+    raise ValueError(f'invalid string type: {type(string)}')
 
 
 def select_latest_verified_vm_image_with_node_agent_sku(
@@ -127,7 +132,7 @@ def wait_for_tasks_to_complete(
             return
         time.sleep(5)
 
-    raise TimeoutError("Timed out waiting for tasks to complete")
+    raise TimeoutExpiredError("Timed out waiting for tasks to complete")
 
 
 def print_task_output(
@@ -150,9 +155,7 @@ def print_task_output(
             task_id,
             STANDARD_OUT_FILE_NAME,
             encoding)
-        print("{} content for task {}: ".format(
-            STANDARD_OUT_FILE_NAME,
-            task_id))
+        print(f"{STANDARD_OUT_FILE_NAME} content for task {task_id}: ")
         print(file_text)
 
         file_text = read_task_file_as_string(
@@ -161,9 +164,7 @@ def print_task_output(
             task_id,
             STANDARD_ERROR_FILE_NAME,
             encoding)
-        print("{} content for task {}: ".format(
-            STANDARD_ERROR_FILE_NAME,
-            task_id))
+        print(f"{STANDARD_ERROR_FILE_NAME} content for task {task_id}: ")
         print(file_text)
 
 
@@ -194,8 +195,9 @@ def _read_stream_as_string(stream, encoding: str = None) -> str:
         for data in stream:
             output.write(data)
         return output.getvalue().decode(encoding)
-    except Exception:
-        raise RuntimeError('Could not write data to stream or decode bytes')
+    except Exception as err:
+        raise RuntimeError(
+            'Could not write data to stream or decode bytes') from err
     finally:
         output.close()
 
@@ -254,11 +256,11 @@ def create_pool_if_not_exist(
         print("Attempting to create pool:", pool.id)
         batch_client.pool.add(pool)
         print("Created pool:", pool.id)
-    except batchmodels.BatchErrorException as e:
-        if e.error.code != "PoolExists":
+    except batchmodels.BatchErrorException as err:
+        if err.error.code != "PoolExists":
             raise
         else:
-            print("Pool {!r} already exists".format(pool.id))
+            print(f"Pool {pool.id!r} already exists")
 
 
 def create_job(
@@ -273,7 +275,7 @@ def create_job(
     :param job_id: The ID for the job.
     :param pool_id: The ID for the pool.
     """
-    print('Creating job [{}]...'.format(job_id))
+    print(f'Creating job [{job_id}]...')
 
     job = batchmodels.JobAddParameter(
         id=job_id,
@@ -286,7 +288,7 @@ def create_job(
         if err.error.code != "JobExists":
             raise
         else:
-            print("Job {!r} already exists".format(job_id))
+            print(f"Job {job_id!r} already exists")
 
 
 def wait_for_all_nodes_state(
@@ -301,8 +303,8 @@ def wait_for_all_nodes_state(
     :param node_state: node states to wait for
     :return: list of compute nodes
     """
-    print('waiting for all nodes in pool {} to reach one of: {!r}'.format(
-        pool_id, node_state))
+    print(f'waiting for all nodes in pool {pool_id} '
+          'to reach one of: {node_state!r}')
     i = 0
     while True:
         # refresh pool to ensure that there is no resize error
@@ -311,16 +313,16 @@ def wait_for_all_nodes_state(
         if pool.resize_errors is not None:
             resize_errors = "\n".join([repr(e) for e in pool.resize_errors])
             raise RuntimeError(
-                'resize error encountered for pool {}:\n{}'.format(
-                    pool.id, resize_errors))
+                f'resize error encountered for '
+                f'pool {pool.id}:\n{resize_errors}')
         nodes = list(batch_client.compute_node.list(pool.id))
         if (len(nodes) >= pool.target_dedicated_nodes and
                 all(node.state in node_state for node in nodes)):
             return nodes
         i += 1
         if i % 3 == 0:
-            print('waiting for {} nodes to reach desired state...'.format(
-                pool.target_dedicated_nodes))
+            print(f'waiting for {pool.target_dedicated_nodes} '
+                  'nodes to reach desired state...')
         time.sleep(10)
 
 
@@ -417,12 +419,7 @@ def build_sas_url(
     if not base_url.endswith("/"):
         base_url += "/"
 
-    return "%s%s/%s?%s" % (
-        base_url,
-        container_name,
-        blob_name,
-        sas_token
-    )
+    return f"{base_url}{container_name}/{blob_name}?{sas_token}"
 
 
 def upload_blob_and_create_sas(
@@ -489,8 +486,7 @@ def upload_file_to_container(
         tasks.
     """
     blob_name = os.path.basename(file_path)
-    print('Uploading file {} to container [{}]...'.format(
-        file_path, container_name))
+    print(f'Uploading file {file_path} to container [{container_name}]...')
     sas_url = upload_blob_and_create_sas(
         blob_service_client, container_name, blob_name, file_path, expiry=None,
         timeout=timeout)
@@ -513,8 +509,7 @@ def download_blob_from_container(
     :param blob_name: The name of blob to be downloaded
     :param directory_path: The local directory to which to download the file.
     """
-    print('Downloading result file from container [{}]...'.format(
-        container_name))
+    print(f'Downloading result file from container [{container_name}]...')
 
     destination_file_path = os.path.join(directory_path, blob_name)
 
@@ -526,8 +521,9 @@ def download_blob_from_container(
     with open(destination_file_path, "wb") as destination_file:
         blob.download_to_stream(destination_file)
 
-    print('  Downloaded blob [{}] from container [{}] to {}'.format(
-        blob_name, container_name, destination_file_path))
+    print(
+        f'  Downloaded blob [{blob_name}] from container [{container_name}]'
+        f' to {destination_file_path}')
 
     print('  Download complete!')
 
@@ -560,7 +556,7 @@ def query_yes_no(question: str, default: str = "yes") -> str:
     elif default == 'no':
         prompt = ' [y/N] '
     else:
-        raise ValueError("Invalid default answer: '{}'".format(default))
+        raise ValueError(f"Invalid default answer: '{default}'")
 
     choice = default
 
@@ -590,7 +586,7 @@ def print_batch_exception(batch_exception: batchmodels.BatchErrorException):
         if batch_exception.error.values:
             print()
             for mesg in batch_exception.error.values:
-                print('{}:\t{}'.format(mesg.key, mesg.value))
+                print(f'{mesg.key}:\t{mesg.value}')
     print('-------------------------------------------')
 
 
@@ -602,12 +598,12 @@ def wrap_commands_in_shell(ostype: str, commands: List[str]) -> str:
     :return: a shell wrapping commands
     """
     if ostype.lower() == 'linux':
-        return '/bin/bash -c \'set -e; set -o pipefail; {}; wait\''.format(
-            ';'.join(commands))
+        return (f'/bin/bash -c '
+                f'\'set -e; set -o pipefail; {";".join(commands)}; wait\'')
     elif ostype.lower() == 'windows':
-        return 'cmd.exe /c "{}"'.format('&'.join(commands))
+        return f'cmd.exe /c "{"&".join(commands)}"'
     else:
-        raise ValueError('unknown ostype: {}'.format(ostype))
+        raise ValueError(f'unknown ostype: {ostype}')
 
 
 def wait_for_job_under_job_schedule(
@@ -633,7 +629,7 @@ def wait_for_job_under_job_schedule(
             return job.id
         time.sleep(1)
 
-    raise TimeoutError("Timed out waiting for tasks to complete")
+    raise TimeoutExpiredError("Timed out waiting for tasks to complete")
 
 
 def wait_for_job_schedule_to_complete(
