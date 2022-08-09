@@ -8,8 +8,10 @@ namespace Microsoft.Azure.Batch.Samples.Common
     using System.Linq;
     using System.Text;
     using System.Threading.Tasks;
-    using Microsoft.WindowsAzure.Storage;
-    using Microsoft.WindowsAzure.Storage.Blob;
+    using global::Azure;
+    using global::Azure.Storage.Blobs;
+    using global::Azure.Storage.Blobs.Models;
+    using global::Azure.Storage.Sas;
     using Microsoft.Extensions.Configuration;
 
 
@@ -26,29 +28,31 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// <param name="permissions">The permissions to generate the SAS with.</param>
         /// <returns>The container URL with the SAS and specified permissions.</returns>
         public static string ConstructContainerSas(
-            CloudStorageAccount cloudStorageAccount,
+            BlobServiceClient blobClient,
             string containerName,
-            SharedAccessBlobPermissions permissions = SharedAccessBlobPermissions.Read)
+            BlobSasPermissions permissions = BlobSasPermissions.Read)
         {
             //Lowercase the container name because containers must always be all lower case
             containerName = containerName.ToLower();
             
-            CloudBlobClient client = cloudStorageAccount.CreateCloudBlobClient();
-
-            CloudBlobContainer container = client.GetContainerReference(containerName);
+            BlobContainerClient container = blobClient.GetBlobContainerClient(containerName);
 
             DateTimeOffset sasStartTime = DateTime.UtcNow;
             TimeSpan sasDuration = TimeSpan.FromHours(2);
             DateTimeOffset sasEndTime = sasStartTime.Add(sasDuration);
 
-            SharedAccessBlobPolicy sasPolicy = new SharedAccessBlobPolicy()
+            BlobSasBuilder sasBuilder = new BlobSasBuilder()
             {
-                Permissions = permissions,
-                SharedAccessExpiryTime = sasEndTime
+                BlobContainerName = container.Name,
+                Resource = "c",
+                ExpiresOn = sasEndTime
             };
 
-            string sasString = container.GetSharedAccessSignature(sasPolicy);
-            return $"{container.Uri}{sasString}";
+            sasBuilder.SetPermissions(permissions);
+
+            Uri sasUri = container.GenerateSasUri(sasBuilder);
+
+            return sasUri.AbsoluteUri;
         }
 
         /// <summary>
@@ -99,7 +103,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// <param name="containerName">The name of the container to upload the resources to.</param>
         /// <param name="filesToUpload">Additional files to upload.</param>
         public static async Task UploadResourcesAsync(
-            CloudStorageAccount cloudStorageAccount, 
+            BlobServiceClient blobClient, 
             string containerName, 
             IEnumerable<string> filesToUpload)
         {
@@ -107,8 +111,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
             Console.WriteLine("Uploading resources to storage container: {0}", containerName);
 
             List<Task> asyncTasks = new List<Task>();
-            CloudBlobClient client = cloudStorageAccount.CreateCloudBlobClient();
-            CloudBlobContainer container = client.GetContainerReference(containerName);
+            BlobContainerClient container = blobClient.GetBlobContainerClient(containerName);
 
             //Upload any additional files specified.
             foreach (string fileName in filesToUpload)
@@ -126,19 +129,19 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// <param name="blobContainerName">The name of the blob container to upload the files to.</param>
         /// <param name="filePaths">The files to upload.</param>
         /// <returns>A collection of resource files.</returns>
-        public static async Task<List<ResourceFile>> UploadResourcesAndCreateResourceFileReferencesAsync(CloudStorageAccount cloudStorageAccount, string blobContainerName, IEnumerable<string> filePaths)
+        public static async Task<List<ResourceFile>> UploadResourcesAndCreateResourceFileReferencesAsync(BlobServiceClient blobClient, string blobContainerName, IEnumerable<string> filePaths)
         {
             // Upload the file for the start task to Azure Storage
             await SampleHelpers.UploadResourcesAsync(
-                cloudStorageAccount,
+                blobClient,
                 blobContainerName,
                 filePaths).ConfigureAwait(continueOnCapturedContext: false);
 
             // Generate resource file references to the blob we just uploaded
             string containerSas = SampleHelpers.ConstructContainerSas(
-                cloudStorageAccount,
+                blobClient,
                 blobContainerName,
-                permissions: SharedAccessBlobPermissions.Read | SharedAccessBlobPermissions.List);
+                permissions: BlobSasPermissions.Read | BlobSasPermissions.List);
 
             List<string> fileNames = filePaths.Select(Path.GetFileName).ToList();
             List<ResourceFile> resourceFiles = new List<ResourceFile> { ResourceFile.FromStorageContainerUrl(containerSas) };
@@ -151,22 +154,22 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// </summary>
         /// <param name="container">The container to upload the blob to.</param>
         /// <param name="filePath">The path of the file to upload.</param>
-        private static async Task UploadFileToBlobAsync(CloudBlobContainer container, string filePath)
+        private static async Task UploadFileToBlobAsync(BlobContainerClient container, string filePath)
         {
             try
             {
                 string fileName = Path.GetFileName(filePath);
-                CloudBlockBlob blob = container.GetBlockBlobReference(fileName);
+                BlobClient blob = container.GetBlobClient(fileName);
 
                 //Create the container if it doesn't exist.
-                await container.CreateIfNotExistsAsync(BlobContainerPublicAccessType.Off, null, null)
+                await container.CreateIfNotExistsAsync(PublicAccessType.None, null, null)
                     .ConfigureAwait(continueOnCapturedContext: false); //Forbid public access
 
                 Console.WriteLine("Uploading {0} to {1}", filePath, blob.Uri);
                 using (FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
                 {
                     //Upload the file to the specified container.
-                    await blob.UploadFromStreamAsync(fileStream).ConfigureAwait(continueOnCapturedContext: false);
+                    await blob.UploadAsync(fileStream, overwrite: true).ConfigureAwait(continueOnCapturedContext: false);
                 }
                 Console.WriteLine("Done uploading {0}", filePath);
             }
@@ -175,26 +178,29 @@ namespace Microsoft.Azure.Batch.Samples.Common
                 //If there was an AggregateException process it and dump the useful information.
                 foreach (Exception e in aggregateException.InnerExceptions)
                 {
-                    StorageException storageException = e as StorageException;
+                    RequestFailedException storageException = e as RequestFailedException;
                     if (storageException != null)
                     {
-                        if (storageException.RequestInformation != null &&
-                            storageException.RequestInformation.ExtendedErrorInformation != null)
+                        if (storageException.ErrorCode != null)
                         {
-                            StorageExtendedErrorInformation errorInfo =
-                                storageException.RequestInformation.ExtendedErrorInformation;
-                            Console.WriteLine("Extended error information. Code: {0}, Message: {1}",
-                                errorInfo.ErrorMessage,
-                                errorInfo.ErrorCode);
+                            Console.WriteLine("Error information. Code: {0}, Status: {1}, Message: {2}",
+                                storageException.ErrorCode,
+                                storageException.Status,
+                                storageException.Message);
 
-                            if (errorInfo.AdditionalDetails != null)
+                            if (storageException.Data != null)
                             {
-                                foreach (KeyValuePair<string, string> keyValuePair in errorInfo.AdditionalDetails)
+                                foreach (KeyValuePair<string, string> keyValuePair in storageException.Data)
                                 {
                                     Console.WriteLine("Key: {0}, Value: {1}", keyValuePair.Key, keyValuePair.Value);
                                 }
                             }
                         }
+
+                        if (storageException.InnerException != null)
+                        {
+                            Console.WriteLine("Inner exception: {0}", storageException.InnerException);
+                        }   
                     }
                 }
 
@@ -209,15 +215,15 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// <param name="containerName">The container name.</param>
         /// <param name="blobName">The blob name.</param>
         /// <returns>The text of the blob.</returns>
-        public static async Task<string> DownloadBlobTextAsync(CloudStorageAccount storageAccount, string containerName, string blobName)
+        public static async Task<string> DownloadBlobTextAsync(BlobServiceClient blobClient, string containerName, string blobName)
         {
             containerName = containerName.ToLower(); //Force lower case because Azure Storage only allows lower case container names.
 
-            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
-            CloudBlobContainer container = blobClient.GetContainerReference(containerName);
-            CloudBlockBlob blob = container.GetBlockBlobReference(blobName);
+            BlobContainerClient container = blobClient.GetBlobContainerClient(containerName);
+            BlobClient blob = container.GetBlobClient(blobName);
 
-            string text = await blob.DownloadTextAsync().ConfigureAwait(continueOnCapturedContext: false);
+            BlobDownloadResult downloadResult = await blob.DownloadContentAsync();
+            string text = downloadResult.Content.ToString();
 
             return text;
         }
@@ -230,16 +236,14 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// <param name="blobName">The blob name.</param>
         /// <param name="text">The text to upload.</param>
         /// <returns></returns>
-        public static async Task UploadBlobTextAsync(CloudStorageAccount storageAccount, string containerName, string blobName, string text)
+        public static async Task UploadBlobTextAsync(BlobServiceClient blobClient, string containerName, string blobName, string text)
         {
             containerName = containerName.ToLower(); //Force lower case because Azure Storage only allows lower case container names.
 
-            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
-            CloudBlobContainer blobContainer = blobClient.GetContainerReference(containerName);
+            BlobContainerClient container = blobClient.GetBlobContainerClient(containerName);
+            BlobClient blob = container.GetBlobClient(blobName);
 
-            CloudBlockBlob blob = blobContainer.GetBlockBlobReference(blobName);
-
-            await blob.UploadTextAsync(text).ConfigureAwait(continueOnCapturedContext: false);
+            await blob.UploadAsync(BinaryData.FromString(text), overwrite: true).ConfigureAwait(continueOnCapturedContext: false);
         }
 
         /// <summary>
@@ -248,12 +252,11 @@ namespace Microsoft.Azure.Batch.Samples.Common
         /// <param name="storageAccount">The storage account with the containers to delete.</param>
         /// <param name="blobContainerNames">The name of the containers created for the jobs resource files.</param>
         /// <returns>An asynchronous <see cref="Task"/> representing the operation.</returns>
-        public static async Task DeleteContainersAsync(CloudStorageAccount storageAccount, IEnumerable<string> blobContainerNames)
+        public static async Task DeleteContainersAsync(BlobServiceClient blobClient, IEnumerable<string> blobContainerNames)
         {
-            CloudBlobClient cloudBlobClient = storageAccount.CreateCloudBlobClient();
             foreach (string blobContainerName in blobContainerNames)
             {
-                CloudBlobContainer container = cloudBlobClient.GetContainerReference(blobContainerName);
+                BlobContainerClient container = blobClient.GetBlobContainerClient(blobContainerName);
                 Console.WriteLine("Deleting container: {0}", blobContainerName);
 
                 await container.DeleteAsync().ConfigureAwait(continueOnCapturedContext: false);

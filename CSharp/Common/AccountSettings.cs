@@ -14,6 +14,8 @@ namespace Microsoft.Azure.Batch.Samples.Common
         public string StorageAccountName { get; set; }
         public string StorageAccountKey { get; set; }
 
+        public string BlobEndpoint { get; set; }
+
         public override string ToString()
         {
             StringBuilder stringBuilder = new StringBuilder();
@@ -25,6 +27,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
             AddSetting(stringBuilder, "StorageAccountName", this.StorageAccountName);
             AddSetting(stringBuilder, "StorageAccountKey", this.StorageAccountKey);
             AddSetting(stringBuilder, "StorageServiceUrl", this.StorageServiceUrl);
+            AddSetting(stringBuilder, "BlobEndpoint", this.BlobEndpoint);
 
             return stringBuilder.ToString();
         }
