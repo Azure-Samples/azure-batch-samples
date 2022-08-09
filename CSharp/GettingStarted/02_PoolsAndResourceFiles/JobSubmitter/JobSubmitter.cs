@@ -8,12 +8,12 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
     using System.IO;
     using System.Threading.Tasks;
     using Common;
+    using global::Azure.Storage;
+    using global::Azure.Storage.Blobs;
     using Microsoft.Azure.Batch;
     using Microsoft.Azure.Batch.Auth;
     using Microsoft.Azure.Batch.FileStaging;
     using Microsoft.Extensions.Configuration;
-    using WindowsAzure.Storage;
-    using WindowsAzure.Storage.Auth;
 
     /// <summary>
     /// Manages submission and lifetime of the Azure Batch job and pool.
@@ -61,12 +61,8 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
                 this.accountSettings.BatchAccountName,
                 this.accountSettings.BatchAccountKey);
 
-            // Delete the blob containers which contain the task input files since we no longer need them
-            CloudStorageAccount cloudStorageAccount = new CloudStorageAccount(
-                new StorageCredentials(this.accountSettings.StorageAccountName,
-                    this.accountSettings.StorageAccountKey),
-                    this.accountSettings.StorageServiceUrl,
-                    useHttps: true);
+            StorageSharedKeyCredential keyCreds = new StorageSharedKeyCredential(this.accountSettings.StorageAccountName, this.accountSettings.StorageAccountKey);
+            BlobServiceClient blobClient = new BlobServiceClient(new Uri(this.accountSettings.BlobEndpoint), keyCreds);
 
             // Get an instance of the BatchClient for a given Azure Batch account.
             using (BatchClient batchClient = BatchClient.Open(credentials))
@@ -79,11 +75,11 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
                 try
                 {
                     // Allocate a pool
-                    await this.CreatePoolIfNotExistAsync(batchClient, cloudStorageAccount);
+                    await this.CreatePoolIfNotExistAsync(batchClient, blobClient);
 
                     // Submit the job
                     jobId = GettingStartedCommon.CreateJobId("SimpleJob");
-                    blobContainerNames = await this.SubmitJobAsync(batchClient, cloudStorageAccount, jobId);
+                    blobContainerNames = await this.SubmitJobAsync(batchClient, blobClient, jobId);
 
                     // Print out the status of the pools/jobs under this account
                     await GettingStartedCommon.PrintJobsAsync(batchClient);
@@ -98,7 +94,7 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
                     // Delete the pool (if configured) and job
 
                     // Delete Azure Storage container data
-                    await SampleHelpers.DeleteContainersAsync(cloudStorageAccount, blobContainerNames);
+                    await SampleHelpers.DeleteContainersAsync(blobClient, blobContainerNames);
 
                     // Delete Azure Batch resources
                     List<string> jobIdsToDelete = new List<string>();
@@ -126,7 +122,7 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
         /// <param name="batchClient">The BatchClient to use when interacting with the Batch service.</param>
         /// <param name="cloudStorageAccount">The CloudStorageAccount to upload start task required files to.</param>
         /// <returns>An asynchronous <see cref="Task"/> representing the operation.</returns>
-        private async Task CreatePoolIfNotExistAsync(BatchClient batchClient, CloudStorageAccount cloudStorageAccount)
+        private async Task CreatePoolIfNotExistAsync(BatchClient batchClient, BlobServiceClient blobClient)
         {
             // You can learn more about os families and versions at:
             // https://azure.microsoft.com/en-us/documentation/articles/cloud-services-guestos-update-matrix/
@@ -142,7 +138,7 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
             List<string> files = new List<string> { localSampleFilePath };
 
             List<ResourceFile> resourceFiles = await SampleHelpers.UploadResourcesAndCreateResourceFileReferencesAsync(
-                cloudStorageAccount,
+                blobClient,
                 this.poolsAndResourceFileSettings.BlobContainer,
                 files);
 
@@ -163,7 +159,7 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
         /// <param name="cloudStorageAccount">The storage account to upload the files to.</param>
         /// <param name="jobId">The ID of the job.</param>
         /// <returns>The set of container names containing the jobs input files.</returns>
-        private async Task<HashSet<string>> SubmitJobAsync(BatchClient batchClient, CloudStorageAccount cloudStorageAccount, string jobId)
+        private async Task<HashSet<string>> SubmitJobAsync(BatchClient batchClient, BlobServiceClient blobClient, string jobId)
         {
             // create an empty unbound Job
             CloudJob unboundJob = batchClient.JobOperations.CreateJob();
@@ -189,7 +185,7 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
             StagingStorageAccount fileStagingStorageAccount = new StagingStorageAccount(
                 storageAccount: this.accountSettings.StorageAccountName,
                 storageAccountKey: this.accountSettings.StorageAccountKey,
-                blobEndpoint: cloudStorageAccount.BlobEndpoint.ToString());
+                blobEndpoint: blobClient.Uri.AbsoluteUri);
 
             // add the files as a task dependency so they will be uploaded to storage before the task 
             // is submitted and downloaded to the node before the task starts execution.
