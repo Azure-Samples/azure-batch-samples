@@ -62,7 +62,7 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
                 this.accountSettings.BatchAccountKey);
 
             StorageSharedKeyCredential keyCreds = new StorageSharedKeyCredential(this.accountSettings.StorageAccountName, this.accountSettings.StorageAccountKey);
-            BlobServiceClient blobClient = new BlobServiceClient(new Uri(this.accountSettings.BlobEndpoint), keyCreds);
+            BlobServiceClient blobClient = new BlobServiceClient(new Uri(this.accountSettings.StorageServiceUrl), keyCreds);
 
             // Get an instance of the BatchClient for a given Azure Batch account.
             using (BatchClient batchClient = BatchClient.Open(credentials))
