@@ -12,9 +12,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.Batch" Version="14.0.0" />
-    <PackageReference Include="Microsoft.Azure.Batch.FileStaging" Version="8.3.0" />
-    <PackageReference Include="WindowsAzure.Storage" Version="9.3.3" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.13.0" />
+    <PackageReference Include="Microsoft.Azure.Batch" Version="15.3.0" />
+    <PackageReference Include="Microsoft.Azure.Batch.FileStaging" Version="8.4.0-alpha.20220803.5" />
   </ItemGroup>
 
 </Project>

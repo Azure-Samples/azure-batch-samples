@@ -9,12 +9,12 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
     using Auth;
     using Common;
     using FileStaging;
-    using WindowsAzure.Storage;
-    using WindowsAzure.Storage.Auth;
+    using global::Azure.Storage;
+    using global::Azure.Storage.Blobs;
 
     public class SampleJobManagerTask
     {
-        private readonly JobManagerSettings configurationSettings;
+        public JobManagerSettings configurationSettings;
 
         // The SimpleTask project is included via project-depedency, so the 
         // executable produced by that project will be in the same working 
@@ -57,13 +57,9 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
                 this.configurationSettings.BatchAccountName,
                 this.configurationSettings.BatchAccountKey);
 
-            CloudStorageAccount storageAccount = new CloudStorageAccount(
-                new StorageCredentials(
-                    this.configurationSettings.StorageAccountName,
-                    this.configurationSettings.StorageAccountKey), 
-                this.configurationSettings.StorageAccountUrl,
-                useHttps: true);
-            
+            StorageSharedKeyCredential keyCreds = new StorageSharedKeyCredential(this.configurationSettings.StorageAccountName, this.configurationSettings.StorageAccountKey);
+            BlobServiceClient blobClient = new BlobServiceClient(new Uri(this.configurationSettings.StorageAccountUrl), keyCreds);
+
             using (BatchClient batchClient = BatchClient.Open(credentials))
             {
                 HashSet<string> blobContainerNames = new HashSet<string>();
@@ -71,7 +67,7 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
                 try
                 {
                     // Submit some tasks
-                    blobContainerNames = await this.SubmitTasks(batchClient, storageAccount);
+                    blobContainerNames = await this.SubmitTasks(batchClient, blobClient);
 
                     // Wait for the tasks to finish
                     List<CloudTask> tasks = await batchClient.JobOperations.ListTasks(jobId).ToListAsync();
@@ -84,7 +80,7 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
                 finally
                 {
                     // Clean up the files for the tasks
-                    SampleHelpers.DeleteContainersAsync(storageAccount, blobContainerNames).Wait();
+                    SampleHelpers.DeleteContainersAsync(blobClient, blobContainerNames).Wait();
                 }
             }
         }
@@ -95,7 +91,7 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
         /// <param name="batchClient">The batch client to use.</param>
         /// <param name="cloudStorageAccount">The storage account to upload files to.</param>
         /// <returns>The set of blob artifacts created by file staging.</returns>
-        private async Task<HashSet<string>> SubmitTasks(BatchClient batchClient, CloudStorageAccount cloudStorageAccount)
+        private async Task<HashSet<string>> SubmitTasks(BatchClient batchClient, BlobServiceClient blobClient)
         {
             List<CloudTask> tasksToRun = new List<CloudTask>();
 
@@ -112,7 +108,7 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
             StagingStorageAccount fileStagingStorageAccount = new StagingStorageAccount(
                 storageAccount: this.configurationSettings.StorageAccountName,
                 storageAccountKey: this.configurationSettings.StorageAccountKey,
-                blobEndpoint: cloudStorageAccount.BlobEndpoint.ToString());
+                blobEndpoint: blobClient.Uri.AbsoluteUri);
 
             // add the files as a task dependency so they will be uploaded to storage before the task 
             // is submitted and downloaded to the node before the task starts execution.

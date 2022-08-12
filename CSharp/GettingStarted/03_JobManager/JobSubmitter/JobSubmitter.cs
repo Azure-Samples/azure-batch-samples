@@ -7,11 +7,11 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
     using System.IO;
     using System.Threading.Tasks;
     using Common;
+    using global::Azure.Storage;
+    using global::Azure.Storage.Blobs;
     using Microsoft.Azure.Batch;
     using Microsoft.Azure.Batch.Auth;
     using Microsoft.Extensions.Configuration;
-    using WindowsAzure.Storage;
-    using WindowsAzure.Storage.Auth;
 
     /// <summary>
     /// Manages submission and lifetime of the Azure Batch job and pool.
@@ -30,13 +30,22 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
             "SampleJobManagerTask.pdb",
             "SimpleTask.exe",
             "Microsoft.Azure.Batch.Samples.Common.dll",
-            "Microsoft.WindowsAzure.Storage.dll",
+            //"Azure.Storage.Blobs.dll",
             "Microsoft.Azure.Batch.dll",
             "Microsoft.Azure.Batch.FileStaging.dll",
             "Microsoft.Rest.ClientRuntime.dll",
             "Microsoft.Rest.ClientRuntime.Azure.dll",
             "Newtonsoft.Json.dll",
-            "System.Net.Http.dll"
+            "System.Net.Http.dll",
+            "System.Memory.dll",
+            "System.ValueTuple.dll",
+            "System.Diagnostics.DiagnosticSource.dll",
+            "System.Runtime.InteropServices.RuntimeInformation.dll",
+            //"netstandard.dll",
+            //"Azure.Storage.Common.dll",
+            //"System.Text.Json.dll",
+            //"Azure.Core.dll",
+            //"System.Threading.Tasks.Extensions.dll"
         };
 
         public JobSubmitter()
@@ -72,11 +81,8 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
                 this.accountSettings.BatchAccountName,
                 this.accountSettings.BatchAccountKey);
 
-            CloudStorageAccount cloudStorageAccount = new CloudStorageAccount(
-                new StorageCredentials(this.accountSettings.StorageAccountName,
-                    this.accountSettings.StorageAccountKey),
-                    this.accountSettings.StorageServiceUrl,
-                    useHttps: true);
+            StorageSharedKeyCredential keyCreds = new StorageSharedKeyCredential(this.accountSettings.StorageAccountName, this.accountSettings.StorageAccountKey);
+            BlobServiceClient blobClient = new BlobServiceClient(new Uri(this.accountSettings.StorageServiceUrl), keyCreds);
 
             // Get an instance of the BatchClient for a given Azure Batch account.
             using (BatchClient batchClient = BatchClient.Open(credentials))
@@ -89,11 +95,11 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
                 try
                 {
                     // Allocate a pool
-                    await this.CreatePoolIfNotExistAsync(batchClient, cloudStorageAccount);
+                    await this.CreatePoolIfNotExistAsync(batchClient, blobClient);
 
                     // Submit the job
                     jobId = GettingStartedCommon.CreateJobId("SimpleJob");
-                    await this.SubmitJobAsync(batchClient, cloudStorageAccount, jobId);
+                    await this.SubmitJobAsync(batchClient, blobClient, jobId);
 
                     // Print out the status of the pools/jobs under this account
                     await GettingStartedCommon.PrintJobsAsync(batchClient);
@@ -130,9 +136,9 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
         /// targets specified in settings.
         /// </summary>
         /// <param name="batchClient">The BatchClient to use when interacting with the Batch service.</param>
-        /// <param name="cloudStorageAccount">The CloudStorageAccount to upload start task required files to.</param>
+        /// <param name="blobClient">The BlobServiceClient associated with the .</param>
         /// <returns>An asynchronous <see cref="Task"/> representing the operation.</returns>
-        private async Task CreatePoolIfNotExistAsync(BatchClient batchClient, CloudStorageAccount cloudStorageAccount)
+        private async Task CreatePoolIfNotExistAsync(BatchClient batchClient, BlobServiceClient blobClient)
         {
             // You can learn more about os families and versions at:
             // https://azure.microsoft.com/en-us/documentation/articles/cloud-services-guestos-update-matrix/
@@ -148,7 +154,7 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
             List<string> files = new List<string> { localSampleFilePath };
             
             List<ResourceFile> resourceFiles = await SampleHelpers.UploadResourcesAndCreateResourceFileReferencesAsync(
-                cloudStorageAccount,
+                blobClient,
                 this.jobManagerSettings.BlobContainer,
                 files);
 
@@ -169,7 +175,7 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
         /// <param name="storageAccount">The cloud storage account to upload files to.</param>
         /// <param name="jobId">The ID of the job.</param>
         /// <returns>An asynchronous <see cref="Task"/> representing the operation.</returns>
-        private async Task SubmitJobAsync(BatchClient batchClient, CloudStorageAccount storageAccount, string jobId)
+        private async Task SubmitJobAsync(BatchClient batchClient, BlobServiceClient blobClient, string jobId)
         {
             // create an empty unbound Job
             CloudJob unboundJob = batchClient.JobOperations.CreateJob();
@@ -177,10 +183,10 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
             unboundJob.PoolInformation = new PoolInformation() { PoolId = this.jobManagerSettings.PoolId };
             
             // Upload the required files for the job manager task
-            await SampleHelpers.UploadResourcesAsync(storageAccount, this.jobManagerSettings.BlobContainer, JobManagerRequiredFiles);
+            await SampleHelpers.UploadResourcesAsync(blobClient, this.jobManagerSettings.BlobContainer, JobManagerRequiredFiles);
 
             List<ResourceFile> jobManagerResourceFiles = await SampleHelpers.UploadResourcesAndCreateResourceFileReferencesAsync(
-                storageAccount,
+                blobClient,
                 this.jobManagerSettings.BlobContainer,
                 JobManagerRequiredFiles);
 
@@ -195,7 +201,7 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
 
                 new EnvironmentSetting("SAMPLE_STORAGE_ACCOUNT", this.accountSettings.StorageAccountName),
                 new EnvironmentSetting("SAMPLE_STORAGE_KEY", this.accountSettings.StorageAccountKey),
-                new EnvironmentSetting("SAMPLE_STORAGE_URL", this.accountSettings.StorageServiceUrl),
+                new EnvironmentSetting("SAMPLE_STORAGE_URL", this.accountSettings.StorageServiceUrl)
             };
 
             unboundJob.JobManagerTask = new JobManagerTask()
