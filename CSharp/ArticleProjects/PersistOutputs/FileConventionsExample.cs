@@ -5,17 +5,16 @@
     using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
-    using WindowsAzure.Storage;
-    using WindowsAzure.Storage.Blob;
+    using global::Azure.Storage.Blobs;
     using Batch.Common;
     using Common;
     using Conventions.Files;
 
     public static class FileConventionsExample
     {
-        public static async Task<CloudBlobContainer> Run(
+        public static async Task<BlobContainerClient> Run(
             BatchClient batchClient,
-            CloudStorageAccount linkedStorageAccount,
+            BlobServiceClient blobClient,
             string poolId,
             int nodeCount,
             string jobId)
@@ -48,13 +47,13 @@
             CloudJob job = batchClient.JobOperations.CreateJob(jobId, new PoolInformation { PoolId = poolId });
 
             // Create the blob storage container for the outputs.
-            await job.PrepareOutputStorageAsync(linkedStorageAccount);
+            await job.PrepareOutputStorageAsync(blobClient);
 
             // Create an environment variable on the compute nodes that the
             // task application can reference when persisting its outputs.
             string containerName = job.OutputStorageContainerName();
-            CloudBlobContainer container = linkedStorageAccount.CreateCloudBlobClient().GetContainerReference(containerName);
-            string containerUrl = job.GetOutputStorageContainerUrl(linkedStorageAccount);
+            BlobContainerClient container = blobClient.GetBlobContainerClient(containerName);
+            string containerUrl = job.GetOutputStorageContainerUrl(blobClient);
             job.CommonEnvironmentSettings = new[] { new EnvironmentSetting("JOB_CONTAINER_URL", containerUrl) };
 
             // Commit the job to the Batch service
@@ -89,10 +88,10 @@
                     Console.WriteLine($"Task {task.Id} completed successfully");
                 }
 
-                foreach (OutputFileReference output in task.OutputStorage(linkedStorageAccount).ListOutputs(TaskOutputKind.TaskOutput))
+                foreach (OutputFileReference output in task.OutputStorage(blobClient).ListOutputs(TaskOutputKind.TaskOutput))
                 {
                     Console.WriteLine($"output file: {output.FilePath}");
-                    await output.DownloadToFileAsync($"{jobId}-{output.FilePath}", System.IO.FileMode.Create);
+                    await output.DownloadToFileAsync($"{jobId}-{output.FilePath}");
                 }
             }
 

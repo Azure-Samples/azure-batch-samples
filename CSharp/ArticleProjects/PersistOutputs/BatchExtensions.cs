@@ -5,7 +5,6 @@
     using System.Linq;
     using Batch.Common;
     using Conventions.Files;
-    using Microsoft.WindowsAzure.Storage;
 
     public static class BatchExtensions
     {

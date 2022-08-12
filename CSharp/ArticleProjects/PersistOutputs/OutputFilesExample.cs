@@ -5,12 +5,16 @@
     using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
-    using WindowsAzure.Storage;
-    using WindowsAzure.Storage.Blob;
+    //using WindowsAzure.Storage;
+    //using WindowsAzure.Storage.Blob;
     using Batch.Common;
     using Microsoft.Azure.Batch;
     using Common;
     using Conventions.Files;
+    using global::Azure.Storage;
+    using global::Azure.Storage.Blobs;
+    using global::Azure.Storage.Sas;
+    using global::Azure.Storage.Blobs.Specialized;
 
     public class OutputFilesExample
     {
@@ -18,9 +22,9 @@
         /// Runs a series of tasks, using the OutputFiles feature to upload the tasks files to a container.
         /// Then downloads the files from the container to the local machine.
         /// </summary>
-        public static async Task<CloudBlobContainer> Run(
+        public static async Task<BlobContainerClient> Run(
             BatchClient batchClient,
-            CloudStorageAccount storageAccount,
+            BlobServiceClient blobClient,
             string poolId,
             int nodeCount,
             string jobId)
@@ -30,15 +34,21 @@
 
             CloudJob job = batchClient.JobOperations.CreateJob(jobId, new PoolInformation { PoolId = poolId });
 
-            CloudBlobContainer container = storageAccount.CreateCloudBlobClient().GetContainerReference(containerName);
+            BlobContainerClient container = blobClient.GetBlobContainerClient(containerName);
             await container.CreateIfNotExistsAsync();
 
-            string containerSas = container.GetSharedAccessSignature(new SharedAccessBlobPolicy()
+            BlobSasBuilder sasBuilder = new BlobSasBuilder()
             {
-                Permissions = SharedAccessBlobPermissions.Write,
-                SharedAccessExpiryTime = DateTimeOffset.UtcNow.AddDays(1)
-            });
-            string containerUrl = container.Uri.AbsoluteUri + containerSas;
+                BlobContainerName = container.Name,
+                Resource = "c",
+                ExpiresOn = DateTimeOffset.UtcNow.AddDays(1)
+            };
+
+            sasBuilder.SetPermissions(BlobSasPermissions.Write);
+
+            Uri sasUri = container.GenerateSasUri(sasBuilder);
+
+            string containerUrl = sasUri.AbsoluteUri;
 
             // Commit the job to the Batch service
             await job.CommitAsync();
@@ -95,14 +105,23 @@
                     Console.WriteLine($"Task {task.Id} completed successfully");
                 }
 
-                CloudBlobDirectory directory = container.GetDirectoryReference(task.Id);
                 Directory.CreateDirectory(task.Id);
-                foreach (var blobInDirectory in directory.ListBlobs())
+                foreach (var blobItem in container.GetBlobs(prefix: task.Id))
                 {
-                    CloudBlockBlob blockBlob = blobInDirectory as CloudBlockBlob;
-                    Console.WriteLine($"  {blockBlob.Name}");
-                    await blockBlob.DownloadToFileAsync(blockBlob.Name, FileMode.Create);
+                    string blobName = blobItem.Name;
+                    BlobBaseClient baseClient = container.GetBlobBaseClient(blobName);
+                    Console.WriteLine($"  {blobName}");
+                    await baseClient.DownloadToAsync(blobName).ConfigureAwait(false);
                 }
+
+                //CloudBlobDirectory directory = container.GetDirectoryReference(task.Id);
+                //Directory.CreateDirectory(task.Id);
+                //foreach (var blobInDirectory in directory.ListBlobs())
+                //{
+                //    CloudBlockBlob blockBlob = blobInDirectory as CloudBlockBlob;
+                //    Console.WriteLine($"  {blockBlob.Name}");
+                //    await blockBlob.DownloadToFileAsync(blockBlob.Name, FileMode.Create);
+                //}
             }
 
             return container;
@@ -112,9 +131,9 @@
         /// Runs a series of tasks, using the OutputFiles feature in conjunction with the file conventions library to upload the tasks to a container.
         /// Then downloads the files from the container to the local machine.
         /// </summary>
-        public static async Task<CloudBlobContainer> RunWithConventions(
+        public static async Task<BlobContainerClient> RunWithConventions(
             BatchClient batchClient,
-            CloudStorageAccount linkedStorageAccount,
+            BlobServiceClient blobClient,
             string poolId,
             int nodeCount,
             string jobId)
@@ -125,9 +144,9 @@
 
             // Get the container URL to use
             string containerName = job.OutputStorageContainerName();
-            CloudBlobContainer container = linkedStorageAccount.CreateCloudBlobClient().GetContainerReference(containerName);
+            BlobContainerClient container = blobClient.GetBlobContainerClient(containerName);
             await container.CreateIfNotExistsAsync();
-            string containerUrl = job.GetOutputStorageContainerUrl(linkedStorageAccount);
+            string containerUrl = job.GetOutputStorageContainerUrl(blobClient);
 
             // Commit the job to the Batch service
             await job.CommitAsync();
@@ -170,10 +189,10 @@
                     Console.WriteLine($"Task {task.Id} completed successfully");
                 }
 
-                foreach (OutputFileReference output in task.OutputStorage(linkedStorageAccount).ListOutputs(TaskOutputKind.TaskOutput))
+                foreach (OutputFileReference output in task.OutputStorage(blobClient).ListOutputs(TaskOutputKind.TaskOutput))
                 {
                     Console.WriteLine($"output file: {output.FilePath}");
-                    await output.DownloadToFileAsync($"{jobId}-{output.FilePath}", System.IO.FileMode.Create);
+                    await output.DownloadToFileAsync($"{jobId}-{output.FilePath}");
                 }
             }
 

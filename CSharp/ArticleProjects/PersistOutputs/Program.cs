@@ -5,13 +5,12 @@
 
 namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs
 {
+    using global::Azure.Storage;
+    using global::Azure.Storage.Blobs;
     using Microsoft.Azure.Batch;
     using Microsoft.Azure.Batch.Auth;
     using Microsoft.Azure.Batch.Conventions.Files;
     using Microsoft.Azure.Batch.Samples.Common;
-    using Microsoft.WindowsAzure.Storage;
-    using Microsoft.WindowsAzure.Storage.Auth;
-    using Microsoft.WindowsAzure.Storage.Blob;
     using System;
 
     // This sample application demonstrates how to use the Azure Batch File Conventions
@@ -34,24 +33,21 @@ namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs
                 accountSettings.BatchAccountName,
                 accountSettings.BatchAccountKey);
 
-            StorageCredentials storageCred = new StorageCredentials(
-                accountSettings.StorageAccountName,
-                accountSettings.StorageAccountKey);
-
-            CloudStorageAccount storageAccount = new CloudStorageAccount(storageCred, true);
+            StorageSharedKeyCredential keyCreds = new StorageSharedKeyCredential(accountSettings.StorageAccountName, accountSettings.StorageAccountKey);
+            BlobServiceClient blobClient = new BlobServiceClient(new Uri(accountSettings.StorageServiceUrl), keyCreds);
 
             using (BatchClient batchClient = BatchClient.Open(cred))
             {
                 string jobId = "PersistOutput-" + DateTime.Now.ToString("yyyyMMdd-HHmmss");
                 const string poolId = "PersistOutputsSamplePool";
                 const int nodeCount = 1;
-                CloudBlobContainer container;
+                BlobContainerClient container;
 
                 Console.Write("Which persistence technology would you like to use? 1) File conventions, 2) OutputFiles, or 3) OutputFiles implementing conventions: ");
                 string response = Console.ReadLine().ToLower();
                 if (response == "1")
                 {
-                    container = FileConventionsExample.Run(batchClient, storageAccount, poolId, nodeCount, jobId).Result;
+                    container = FileConventionsExample.Run(batchClient, blobClient, poolId, nodeCount, jobId).Result;
 
                     Console.WriteLine();
                     Console.WriteLine("All tasks completed and outputs downloaded. You can view the task outputs in the Azure portal");
@@ -59,14 +55,14 @@ namespace Microsoft.Azure.Batch.Samples.Articles.PersistOutputs
                 }
                 else if (response == "2")
                 {
-                    container = OutputFilesExample.Run(batchClient, storageAccount, poolId, nodeCount, jobId).Result;
+                    container = OutputFilesExample.Run(batchClient, blobClient, poolId, nodeCount, jobId).Result;
 
                     Console.WriteLine();
                     Console.WriteLine("All tasks completed and outputs downloaded.");
                 }
                 else if (response == "3")
                 {
-                    container = OutputFilesExample.RunWithConventions(batchClient, storageAccount, poolId, nodeCount, jobId).Result;
+                    container = OutputFilesExample.RunWithConventions(batchClient, blobClient, poolId, nodeCount, jobId).Result;
 
                     Console.WriteLine();
                     Console.WriteLine("All tasks completed and outputs downloaded. You can view the task outputs in the Azure portal");
