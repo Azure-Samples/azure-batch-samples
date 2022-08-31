@@ -19,7 +19,7 @@
   <ItemGroup>
     <PackageReference Include="Azure.Storage.Blobs" Version="12.13.0" />
     <PackageReference Include="Microsoft.Azure.Batch" Version="15.3.0" />
-    <PackageReference Include="Microsoft.Azure.Batch.Conventions.Files" Version="3.6.0-alpha.20220803.5" />
+    <PackageReference Include="Microsoft.Azure.Batch.Conventions.Files" Version="4.0.0" />
 
   </ItemGroup>
 

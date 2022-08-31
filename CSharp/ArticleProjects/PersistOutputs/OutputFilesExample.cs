@@ -192,7 +192,7 @@
                 foreach (OutputFileReference output in task.OutputStorage(blobClient).ListOutputs(TaskOutputKind.TaskOutput))
                 {
                     Console.WriteLine($"output file: {output.FilePath}");
-                    await output.DownloadToFileAsync($"{jobId}-{output.FilePath}");
+                    await output.DownloadToFileAsync($"{jobId}-{task.Id}-{output.FilePath}");
                 }
             }
 
