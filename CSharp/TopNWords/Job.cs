@@ -9,11 +9,10 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
     using Microsoft.Azure.Batch.Auth;
     using Microsoft.Azure.Batch.Common;
     using Microsoft.Azure.Batch.FileStaging;
-    using Microsoft.WindowsAzure.Storage;
-    using Microsoft.WindowsAzure.Storage.Auth;
-    using Microsoft.WindowsAzure.Storage.Blob;
     using Microsoft.Extensions.Configuration;
     using Common;
+    using global::Azure.Storage.Blobs;
+    using global::Azure.Storage;
 
     /// <summary>
     /// In this sample, the Batch Service is used to process a set of input blobs in parallel on multiple 
@@ -39,17 +38,13 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                 .Get<Settings>();
             AccountSettings accountSettings = SampleHelpers.LoadAccountSettings();
 
-            CloudStorageAccount cloudStorageAccount = new CloudStorageAccount(
-                new StorageCredentials(
-                    accountSettings.StorageAccountName,
-                    accountSettings.StorageAccountKey), 
-                accountSettings.StorageServiceUrl,
-                useHttps: true);
+            StorageSharedKeyCredential keyCreds = new StorageSharedKeyCredential(accountSettings.StorageAccountName, accountSettings.StorageAccountKey);
+            BlobServiceClient blobClient = new BlobServiceClient(new Uri(accountSettings.StorageServiceUrl), keyCreds);
 
             StagingStorageAccount stagingStorageAccount = new StagingStorageAccount(
                 accountSettings.StorageAccountName,
                 accountSettings.StorageAccountKey,
-                cloudStorageAccount.BlobEndpoint.ToString());
+                blobClient.Uri.AbsoluteUri);
 
             using (BatchClient client = BatchClient.Open(new BatchSharedKeyCredentials(accountSettings.BatchServiceUrl, accountSettings.BatchAccountName, accountSettings.BatchAccountKey)))
             {
@@ -79,7 +74,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                     // create file staging objects that represent the executable and its dependent assembly to run as the task.
                     // These files are copied to every node before the corresponding task is scheduled to run on that node.
                     FileToStage topNWordExe = new FileToStage(TopNWordsExeName, stagingStorageAccount);
-                    FileToStage storageDll = new FileToStage(StorageClientDllName, stagingStorageAccount);
+                    //FileToStage storageDll = new FileToStage(StorageClientDllName, stagingStorageAccount);
 
                     // In this sample, the input data is copied separately to Storage and its URI is passed to the task as an argument.
                     // This approach is appropriate when the amount of input data is large such that copying it to every node via FileStaging
@@ -88,7 +83,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                     //
                     // You'll need to observe the behavior and use published techniques for finding the right balance of performance versus
                     // complexity.
-                    string bookFileUri = UploadBookFileToCloudBlob(accountSettings, topNWordsConfiguration.FileName);
+                    string bookFileUri = UploadBookFileToBlob(accountSettings, topNWordsConfiguration.FileName);
                     Console.WriteLine("{0} uploaded to cloud", topNWordsConfiguration.FileName);
 
                     // initialize a collection to hold the tasks that will be submitted in their entirety
@@ -105,8 +100,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                         //the container).
                         task.FilesToStage = new List<IFileStagingProvider>
                         {
-                            topNWordExe,
-                            storageDll
+                            topNWordExe
                         };
 
                         tasksToRun.Add(task);
@@ -182,11 +176,10 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
         /// <summary>
         /// create a client for accessing blob storage
         /// </summary>
-        private static CloudBlobClient GetCloudBlobClient(string accountName, string accountKey, string accountUrl)
+        private static BlobServiceClient GetBlobClient(string accountName, string accountKey, string accountUrl)
         {
-            StorageCredentials cred = new StorageCredentials(accountName, accountKey);
-            CloudStorageAccount storageAccount = new CloudStorageAccount(cred, accountUrl, useHttps: true);
-            CloudBlobClient client = storageAccount.CreateCloudBlobClient();
+            StorageSharedKeyCredential keyCreds = new StorageSharedKeyCredential(accountName, accountKey);
+            BlobServiceClient client = new BlobServiceClient(new Uri(accountUrl), keyCreds);
 
             return client;
         }
@@ -198,20 +191,20 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
         /// </summary>
         private static void DeleteContainers(AccountSettings accountSettings, string fileStagingContainer)
         {
-            CloudBlobClient client = GetCloudBlobClient(
+            BlobServiceClient client = GetBlobClient(
                 accountSettings.StorageAccountName, 
                 accountSettings.StorageAccountKey,
                 accountSettings.StorageServiceUrl);
 
             //Delete the books container
-            CloudBlobContainer container = client.GetContainerReference(booksContainerName);
+            BlobContainerClient container = client.GetBlobContainerClient(booksContainerName);
             Console.WriteLine("Deleting container: " + booksContainerName);
             container.DeleteIfExists();
 
             //Delete the file staging container
             if (!string.IsNullOrEmpty(fileStagingContainer))
             {
-                container = client.GetContainerReference(fileStagingContainer);
+                container = client.GetBlobContainerClient(fileStagingContainer);
                 Console.WriteLine("Deleting container: {0}", fileStagingContainer);
                 container.DeleteIfExists();
             }
@@ -223,20 +216,21 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
         /// <param name="accountSettings">The account settings.</param>
         /// <param name="fileName">The name of the file to upload</param>
         /// <returns>The URI of the blob.</returns>
-        private static string UploadBookFileToCloudBlob(AccountSettings accountSettings, string fileName)
+        private static string UploadBookFileToBlob(AccountSettings accountSettings, string fileName)
         {
-            CloudBlobClient client = GetCloudBlobClient(
+            BlobServiceClient client = GetBlobClient(
                 accountSettings.StorageAccountName, 
                 accountSettings.StorageAccountKey,
                 accountSettings.StorageServiceUrl);
 
             //Create the "books" container if it doesn't exist.
-            CloudBlobContainer container = client.GetContainerReference(booksContainerName);
+            BlobContainerClient container = client.GetBlobContainerClient(booksContainerName);
             container.CreateIfNotExists();
 
             //Upload the blob.
-            CloudBlockBlob blob = container.GetBlockBlobReference(fileName);
-            blob.UploadFromFile(fileName);
+            BlobClient blob = container.GetBlobClient(fileName);
+            blob.Upload(fileName);
+
             return blob.Uri.ToString();
         }
     }

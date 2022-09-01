@@ -4,8 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Microsoft.WindowsAzure.Storage.Auth;
-using Microsoft.WindowsAzure.Storage.Blob;
+using Azure.Storage;
+using Azure.Storage.Blobs.Specialized;
 
 namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
 {
@@ -29,11 +29,11 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
             string storageAccountKey = args[4];
 
             // open the cloud blob that contains the book
-            var storageCred = new StorageCredentials(storageAccountName, storageAccountKey);
-            CloudBlockBlob blob = new CloudBlockBlob(new Uri(blobName), storageCred);
+            StorageSharedKeyCredential keyCreds = new StorageSharedKeyCredential(storageAccountName, storageAccountKey);
+            BlockBlobClient blob = new BlockBlobClient(new Uri(blobName), keyCreds);
             using (Stream memoryStream = new MemoryStream())
             {
-                blob.DownloadToStream(memoryStream);
+                blob.DownloadTo(memoryStream);
                 memoryStream.Position = 0; //Reset the stream
                 var sr = new StreamReader(memoryStream);
                 var myStr = sr.ReadToEnd();
