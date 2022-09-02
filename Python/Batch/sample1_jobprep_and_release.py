@@ -39,7 +39,7 @@ import azure.batch.models as batchmodels
 import common.helpers
 
 
-def submit_job_and_add_task(
+def submit_job_with_prep_and_release_tasks(
     batch_client: BatchServiceClient,
     job_id: str,
     vm_size: str,
@@ -128,7 +128,7 @@ def execute_sample(global_config: ConfigParser, sample_config: ConfigParser):
     job_id = common.helpers.generate_unique_resource_name("JobPrepRelease")
 
     try:
-        submit_job_and_add_task(
+        submit_job_with_prep_and_release_tasks(
             batch_client,
             job_id,
             pool_vm_size,
