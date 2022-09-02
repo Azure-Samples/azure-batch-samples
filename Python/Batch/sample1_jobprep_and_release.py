@@ -73,10 +73,12 @@ def submit_job_with_prep_and_release_tasks(
 
     job = batchmodels.JobAddParameter(id=job_id, pool_info=pool_info)
 
-    job.job_preparation_task = batchmodels.JobPreparationTask(command_line=common.helpers.wrap_commands_in_shell(
+    job.job_preparation_task = batchmodels.JobPreparationTask(
+        command_line=common.helpers.wrap_commands_in_shell(
             'linux', ['echo job preparation task!']))
-    
-    job.job_release_task = batchmodels.JobReleaseTask(command_line=common.helpers.wrap_commands_in_shell(
+
+    job.job_release_task = batchmodels.JobReleaseTask(
+        command_line=common.helpers.wrap_commands_in_shell(
             'linux', ['echo job release task!']))
 
     batch_client.job.add(job)
@@ -84,7 +86,8 @@ def submit_job_with_prep_and_release_tasks(
     task = batchmodels.TaskAddParameter(
         id="JobPrepAndRelease",
         command_line=common.helpers.wrap_commands_in_shell(
-            'linux', ['echo Hello world from the Batch Job prep and release sample!'])
+            'linux', 
+            ['echo Hello world from the Batch Job prep and release sample!'])
     )
 
     batch_client.task.add(job_id=job.id, task=task)
