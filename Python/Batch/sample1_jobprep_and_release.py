@@ -86,7 +86,7 @@ def submit_job_with_prep_and_release_tasks(
     task = batchmodels.TaskAddParameter(
         id="JobPrepAndRelease",
         command_line=common.helpers.wrap_commands_in_shell(
-            'linux', 
+            'linux',
             ['echo Hello world from the Batch Job prep and release sample!'])
     )
 
