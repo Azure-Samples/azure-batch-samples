@@ -1,2 +1,2 @@
-azure-batch==11.0.0
+azure-batch==12.0.0
 azure-storage-blob==12.8.1
