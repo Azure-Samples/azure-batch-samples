@@ -343,6 +343,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
             return builder.ToString();
         }
 
+       
         public static AccountSettings LoadAccountSettings()
         {
             AccountSettings accountSettings = new ConfigurationBuilder()

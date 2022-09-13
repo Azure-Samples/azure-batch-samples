@@ -23,10 +23,14 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
         private readonly Settings poolsAndResourceFileSettings;
         private readonly AccountSettings accountSettings;
 
+        private const string exeFile = "SampleExe.exe";
+
         // The SimpleTask project is included via project-depedency, so the 
         // executable produced by that project will be in the same working 
         // directory as JobSubmitter at runtime.
-        private const string SimpleTaskExe = "SimpleTask.exe";
+        private string ExecutableFile = Path.Combine(@"C:\dev\git\azure-batch\azure-batch-samples\CSharp\GettingStarted\Shared\SimpleTask\bin\Release\net60\publish", exeFile);
+
+        private string TaskCommand = $"{exeFile} --arg 42";
 
         public JobSubmitter()
         {
@@ -139,7 +143,7 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
             // Create a new start task to facilitate pool-wide file management or installation.
             // In this case, we just add a single dummy data file to the StartTask.
             string localSampleFilePath = GettingStartedCommon.GenerateTemporaryFile("StartTask.txt", "hello from Batch PoolsAndResourceFiles sample!");
-            List<string> files = new List<string> { localSampleFilePath };
+            List<string> files = new List<string> { localSampleFilePath, ExecutableFile };
 
             List<ResourceFile> resourceFiles = await SampleHelpers.UploadResourcesAndCreateResourceFileReferencesAsync(
                 cloudStorageAccount,
@@ -169,15 +173,15 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
             CloudJob unboundJob = batchClient.JobOperations.CreateJob();
             unboundJob.Id = jobId;
             unboundJob.PoolInformation = new PoolInformation() { PoolId = this.poolsAndResourceFileSettings.PoolId };
-
+            
             // Commit Job to create it in the service
             await unboundJob.CommitAsync();
 
             List<CloudTask> tasksToRun = new List<CloudTask>();
 
             // Create a task which requires some resource files
-            CloudTask taskWithFiles = new CloudTask("task_with_file1", SimpleTaskExe);
-
+            CloudTask taskWithFiles = new CloudTask("task_with_file1", TaskCommand);
+            
             // Set up a collection of files to be staged -- these files will be uploaded to Azure Storage
             // when the tasks are submitted to the Azure Batch service.
             taskWithFiles.FilesToStage = new List<IFileStagingProvider>();
@@ -194,7 +198,7 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
             // add the files as a task dependency so they will be uploaded to storage before the task 
             // is submitted and downloaded to the node before the task starts execution.
             FileToStage helloWorldFile = new FileToStage(localSampleFile, fileStagingStorageAccount);
-            FileToStage simpleTaskFile = new FileToStage(SimpleTaskExe, fileStagingStorageAccount);
+            FileToStage simpleTaskFile = new FileToStage(ExecutableFile, fileStagingStorageAccount);
 
             // When this task is added via JobOperations.AddTaskAsync below, the FilesToStage are uploaded to storage once.
             // The Batch service does not automatically delete content from your storage account, so files added in this 
