@@ -112,9 +112,9 @@ public class PoolAndResourceFile {
     private static CloudPool createPoolIfNotExists(BatchClient client, String poolId)
             throws BatchErrorException, IllegalArgumentException, IOException, InterruptedException, TimeoutException {
         // Create a pool with 1 A1 VM
-        String osPublisher = "OpenLogic";
-        String osOffer = "CentOS";
-        String poolVMSize = "STANDARD_A1";
+        String osPublisher = "canonical";
+        String osOffer = "ubuntuserver";
+        String poolVMSize = "standard_a1_v2";
         int poolVMCount = 1;
         Duration poolSteadyTimeout = Duration.ofMinutes(5);
         Duration vmReadyTimeout = Duration.ofMinutes(20);
@@ -339,17 +339,17 @@ public class PoolAndResourceFile {
         throw new TimeoutException("Task did not complete within the specified timeout");
     }
 
-    private static void printBatchException(BatchErrorException err) {
-        System.out.printf("BatchError %s%n", err.toString());
-        if (err.body() != null) {
-            System.out.printf("BatchError code = %s, message = %s%n", err.body().code(),
-                    err.body().message().value());
-            if (err.body().values() != null) {
-                for (BatchErrorDetail detail : err.body().values()) {
-                    System.out.printf("Detail %s=%s%n", detail.key(), detail.value());
-                }
-            }
-        }
-    }
+//     private static void printBatchException(BatchErrorException err) {
+//         System.out.printf("BatchError %s%n", err.toString());
+//         if (err.body() != null) {
+//             System.out.printf("BatchError code = %s, message = %s%n", err.body().code(),
+//                     err.body().message().value());
+//             if (err.body().values() != null) {
+//                 for (BatchErrorDetail detail : err.body().values()) {
+//                     System.out.printf("Detail %s=%s%n", detail.key(), detail.value());
+//                 }
+//             }
+//         }
+//     }
 
 }
