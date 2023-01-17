@@ -38,7 +38,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
         private static async Task MainAsync(string[] args)
         {
             // You may adjust these values to experiment with different compute resource scenarios.
-            const string nodeSize = "standard_d1_v2";
+            const string nodeSize = "standard_d2_v3";
             const string osFamily = "5";
             const int nodeCount = 1;
 
@@ -66,8 +66,15 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
                     CloudPool unboundPool =
                         batchClient.PoolOperations.CreatePool(
                             poolId: poolId,
-                            cloudServiceConfiguration: new CloudServiceConfiguration(osFamily),
-                            virtualMachineSize: nodeSize,
+                            virtualMachineSize: "standard_d2_v3",
+                            virtualMachineConfiguration: new VirtualMachineConfiguration(
+                            imageReference: new ImageReference(
+                                    publisher: "MicrosoftWindowsServer",
+                                    offer: "WindowsServer",
+                                    sku: "2016-Datacenter-smalldisk",
+                                    version: "latest"
+                                ),
+                            nodeAgentSkuId: "batch.node.windows amd64"),
                             targetDedicatedComputeNodes: nodeCount);
                     await unboundPool.CommitAsync();
 

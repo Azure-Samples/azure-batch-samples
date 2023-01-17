@@ -128,13 +128,21 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
         /// <returns>An asynchronous <see cref="Task"/> representing the operation.</returns>
         private async Task CreatePoolIfNotExistAsync(BatchClient batchClient, CloudStorageAccount cloudStorageAccount)
         {
+
             // You can learn more about os families and versions at:
             // https://azure.microsoft.com/en-us/documentation/articles/cloud-services-guestos-update-matrix/
             CloudPool pool = batchClient.PoolOperations.CreatePool(
                 poolId: this.poolsAndResourceFileSettings.PoolId,
                 targetDedicatedComputeNodes: this.poolsAndResourceFileSettings.PoolTargetNodeCount,
                 virtualMachineSize: this.poolsAndResourceFileSettings.PoolNodeVirtualMachineSize,
-                cloudServiceConfiguration: new CloudServiceConfiguration(this.poolsAndResourceFileSettings.PoolOsFamily));
+                virtualMachineConfiguration: new VirtualMachineConfiguration(
+                        imageReference: new ImageReference(
+                                publisher: poolsAndResourceFileSettings.ImagePublisher,
+                                offer: poolsAndResourceFileSettings.ImageOffer,
+                                sku: poolsAndResourceFileSettings.ImageSku,
+                                version: poolsAndResourceFileSettings.ImageVersion
+                            ),
+                        nodeAgentSkuId: poolsAndResourceFileSettings.NodeAgentSkuId));
 
             // Create a new start task to facilitate pool-wide file management or installation.
             // In this case, we just add a single dummy data file to the StartTask.

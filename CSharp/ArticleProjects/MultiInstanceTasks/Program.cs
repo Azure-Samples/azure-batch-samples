@@ -198,10 +198,17 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
             CloudPool unboundPool =
                 batchClient.PoolOperations.CreatePool(
                     poolId: poolId,
-                    virtualMachineSize: "standard_d1_v2",
+                    virtualMachineSize: "standard_d2_v3",
                     targetDedicatedComputeNodes: numberOfNodes,
-                    cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "5"));
-
+                    virtualMachineConfiguration: new VirtualMachineConfiguration(
+                    imageReference: new ImageReference(
+                            publisher: "MicrosoftWindowsServer",
+                            offer: "WindowsServer",
+                            sku: "2016-Datacenter-smalldisk",
+                            version: "latest"
+                        ),
+                    nodeAgentSkuId: "batch.node.windows amd64"));
+                    
             // REQUIRED for communication between the MS-MPI processes (in this
             // sample, MPIHelloWorld.exe) running on the different nodes
             unboundPool.InterComputeNodeCommunicationEnabled = true;

@@ -21,7 +21,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
 
         private const string PoolId = "batchmetrics-testpool";
         private const int PoolNodeCount = 5;
-        private const string PoolNodeSize = "small";
+        private const string PoolNodeSize = "standard_d2_v3";
         private const string PoolOSFamily = "4";
 
         private const int TestJobCount = 10;
@@ -46,8 +46,14 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
                 poolId: PoolId,
                 targetDedicatedComputeNodes: PoolNodeCount,
                 virtualMachineSize: PoolNodeSize,
-                cloudServiceConfiguration: new CloudServiceConfiguration(PoolOSFamily));
-
+                virtualMachineConfiguration: new VirtualMachineConfiguration(
+                imageReference: new ImageReference(
+                        publisher: "MicrosoftWindowsServer",
+                        offer: "WindowsServer",
+                        sku: "2016-Datacenter-smalldisk",
+                        version: "latest"
+                    ),
+                nodeAgentSkuId: "batch.node.windows amd64"));
             pool.TaskSlotsPerNode = 2;
 
             var createPoolResult = await GettingStartedCommon.CreatePoolIfNotExistAsync(this.batchClient, pool);

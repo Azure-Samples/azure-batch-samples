@@ -17,5 +17,11 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
         public bool ShouldDeleteJob { get; set; }
         public bool ShouldDeletePool { get; set; }
         public bool ShouldDeleteContainer { get; set; }
+        public string PoolNodeVirtualMachineSize { get; set; }
+        public string ImagePublisher { get; set; }
+        public string ImageOffer { get; set; }
+        public string ImageSku { get; set; }
+        public string ImageVersion { get; set; }
+        public string NodeAgentSkuId { get; set; }        
     }
 }

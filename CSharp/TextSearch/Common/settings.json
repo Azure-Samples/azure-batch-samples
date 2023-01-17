@@ -6,5 +6,11 @@
   "numberOfMapperTasks": 2,
   "inputBlobContainer": "textsearchinputcontainer",
   "outputBlobContainer": "textsearchoutputcontainer",
-  "shouldDeleteContainers":  true
+  "shouldDeleteContainers":  true,
+  "poolNodeVirtualMachineSize": "standard_d2_v3",
+  "imagePublisher": "MicrosoftWindowsServer",
+  "imageOffer": "WindowsServer",
+  "imageSku": "2016-Datacenter-smalldisk",
+  "imageVersion": "latest",
+  "nodeAgentSkuId": "batch.node.windows amd64"      
 }

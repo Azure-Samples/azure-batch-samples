@@ -21,7 +21,7 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
             try
             {
                 AccountSettings accountSettings = SampleHelpers.LoadAccountSettings();
-
+                VirtualMachineSettings virtualMachineSettings = SampleHelpers.LoadVirtualMachineSettings();
                 Settings helloWorldSettings = new ConfigurationBuilder()
                     .SetBasePath(Directory.GetCurrentDirectory())
                     .AddJsonFile("settings.json")
@@ -49,7 +49,9 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
         /// <summary>
         /// Submits a job to the Azure Batch service, and waits for it to complete
         /// </summary>
-        private static async Task HelloWorldAsync(AccountSettings accountSettings, Settings helloWorldConfigurationSettings)
+        private static async Task HelloWorldAsync(
+            AccountSettings accountSettings, 
+            Settings helloWorldConfigurationSettings)
         {
             Console.WriteLine("Running with the following settings: ");
             Console.WriteLine("-------------------------------------");
@@ -97,7 +99,10 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
         /// <param name="configurationSettings">The configuration settings</param>
         /// <param name="jobId">The ID of the job.</param>
         /// <returns>An asynchronous <see cref="Task"/> representing the operation.</returns>
-        private static async Task SubmitJobAsync(BatchClient batchClient, Settings configurationSettings, string jobId)
+        private static async Task SubmitJobAsync(
+            BatchClient batchClient, 
+            Settings configurationSettings,
+            string jobId)
         {
             // create an empty unbound Job
             CloudJob unboundJob = batchClient.JobOperations.CreateJob();
@@ -112,8 +117,15 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
                     PoolSpecification = new PoolSpecification()
                     {
                         TargetDedicatedComputeNodes = configurationSettings.PoolTargetNodeCount,
-                        CloudServiceConfiguration = new CloudServiceConfiguration(configurationSettings.PoolOSFamily),
-                        VirtualMachineSize = configurationSettings.PoolNodeVirtualMachineSize
+                        VirtualMachineSize = configurationSettings.PoolNodeVirtualMachineSize,
+                        VirtualMachineConfiguration = new VirtualMachineConfiguration(
+                        imageReference: new ImageReference(
+                                publisher: configurationSettings.ImagePublisher,
+                                offer: configurationSettings.ImageOffer,
+                                sku: configurationSettings.ImageSku,
+                                version: configurationSettings.ImageVersion
+                            ),
+                        nodeAgentSkuId: configurationSettings.NodeAgentSkuId),
                     },
                     KeepAlive = false,
                     PoolLifetimeOption = PoolLifetimeOption.Job

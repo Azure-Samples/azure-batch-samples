@@ -24,11 +24,20 @@
             const string appPackageVersion = "1.0";
 
             // Create and configure an unbound pool.
-            CloudPool pool = batchClient.PoolOperations.CreatePool(
-                poolId: poolId,
-                virtualMachineSize: "standard_d1_v2",
+            Func<ImageReference, bool> imageScanner = imageRef =>
+                imageRef.Publisher.Equals("MicrosoftWindowsServer", StringComparison.InvariantCultureIgnoreCase) &&
+                imageRef.Offer.Equals("WindowsServer", StringComparison.InvariantCultureIgnoreCase) &&
+                imageRef.Sku.IndexOf("2012-R2-Datacenter", StringComparison.InvariantCultureIgnoreCase) > -1;
+
+            ImageInformation imageInfo = await SampleHelpers.GetNodeAgentSkuReferenceAsync(batchClient, imageScanner);
+
+            // Create and configure an unbound pool.
+            CloudPool pool = batchClient.PoolOperations.CreatePool(poolId: poolId,
+                virtualMachineSize: "standard_d2_v3",
                 targetDedicatedComputeNodes: nodeCount,
-                cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "5"));
+                virtualMachineConfiguration: new VirtualMachineConfiguration(
+                    imageInfo.ImageReference,
+                    imageInfo.NodeAgentSkuId));
 
             // Specify the application and version to deploy to the compute nodes. You must
             // first build PersistOutputsTask, then upload it as an application package.
