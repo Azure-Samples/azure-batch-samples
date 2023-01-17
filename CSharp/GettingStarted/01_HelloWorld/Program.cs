@@ -21,7 +21,6 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
             try
             {
                 AccountSettings accountSettings = SampleHelpers.LoadAccountSettings();
-                VirtualMachineSettings virtualMachineSettings = SampleHelpers.LoadVirtualMachineSettings();
                 Settings helloWorldSettings = new ConfigurationBuilder()
                     .SetBasePath(Directory.GetCurrentDirectory())
                     .AddJsonFile("settings.json")
