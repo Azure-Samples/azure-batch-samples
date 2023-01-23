@@ -29,7 +29,14 @@ namespace Microsoft.Azure.Batch.Samples.Common
             CloudPool pool = batchClient.PoolOperations.CreatePool(poolId: poolId,
                 virtualMachineSize: nodeSize,
                 targetDedicatedComputeNodes: nodeCount,
-                cloudServiceConfiguration: new CloudServiceConfiguration("5"));
+                virtualMachineConfiguration: new VirtualMachineConfiguration(
+                imageReference: new ImageReference(
+                        publisher: "MicrosoftWindowsServer",
+                        offer: "WindowsServer",
+                        sku: "2016-Datacenter-smalldisk",
+                        version: "latest"
+                    ),
+                nodeAgentSkuId: "batch.node.windows amd64"));
 
             pool.TaskSlotsPerNode = taskSlotsPerNode;
 

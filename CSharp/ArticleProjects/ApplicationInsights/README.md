@@ -310,9 +310,16 @@ binaries on the machine and keep a process running indefinitely.
 CloudPool pool = client.PoolOperations.CreatePool(
     topNWordsConfiguration.PoolId,
     targetDedicated: topNWordsConfiguration.PoolNodeCount,
-    virtualMachineSize: "standard_d1_v2",
-    cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "5"));
-
+    virtualMachineSize: "standard_d2_v3",
+    virtualMachineConfiguration: new VirtualMachineConfiguration(
+    imageReference: new ImageReference(
+            publisher: topNWordsConfiguration.ImagePublisher,
+            offer: topNWordsConfiguration.ImageOffer,
+            sku: topNWordsConfiguration.ImageSku,
+            version: topNWordsConfiguration.ImageVersion
+        ),
+    nodeAgentSkuId: topNWordsConfiguration.NodeAgentSkuId));
+    
 // Create file staging objects that represent the executable and its dependent assembly to run as the task.
 // These files are copied to every node before the corresponding task is scheduled to run on that node.
 FileToStage applicationMonitoringExe = new FileToStage(BatchApplicationInsightsAssemblyExeName, stagingStorageAccount);

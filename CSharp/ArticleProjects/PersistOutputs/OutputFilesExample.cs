@@ -191,7 +191,7 @@
 
             // Create and configure an unbound pool.
             CloudPool pool = batchClient.PoolOperations.CreatePool(poolId: poolId,
-                virtualMachineSize: "standard_d1_v2",
+                virtualMachineSize: "standard_d2_v3",
                 targetDedicatedComputeNodes: nodeCount,
                 virtualMachineConfiguration: new VirtualMachineConfiguration(
                     imageInfo.ImageReference,

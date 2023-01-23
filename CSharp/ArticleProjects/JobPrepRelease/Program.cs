@@ -74,7 +74,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.JobPrepRelease
                 CloudPool pool = await ArticleHelpers.CreatePoolIfNotExistAsync(
                     batchClient,
                     poolId,
-                    "standard_d1_v2",
+                    "standard_d2_v3",
                     2,
                     1);
                 

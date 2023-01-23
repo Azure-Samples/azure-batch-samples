@@ -13,6 +13,12 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
         public string OutputBlobContainer { get; set; }
         public int NumberOfMapperTasks { get; set; }
         public bool ShouldDeleteContainers { get; set; }
+        public string PoolNodeVirtualMachineSize { get; set; }
+        public string ImagePublisher { get; set; }
+        public string ImageOffer { get; set; }
+        public string ImageSku { get; set; }
+        public string ImageVersion { get; set; }
+        public string NodeAgentSkuId { get; set; }   
 
         public override string ToString()
         {
@@ -25,6 +31,11 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
             stringBuilder.AppendFormat("{0} = {1}", "InputBlobContainer", this.InputBlobContainer).AppendLine();
             stringBuilder.AppendFormat("{0} = {1}", "OutputBlobContainer", this.OutputBlobContainer).AppendLine();
             stringBuilder.AppendFormat("{0} = {1}", "ShouldDeleteContainers", this.ShouldDeleteContainers).AppendLine();
+            stringBuilder.AppendFormat("{0} = {1}", "PoolNodeVirtualMachineSize", this.PoolNodeVirtualMachineSize).AppendLine();
+            stringBuilder.AppendFormat("{0} = {1}", "ImagePublisher", this.ImagePublisher).AppendLine();
+            stringBuilder.AppendFormat("{0} = {1}", "ImageOffer", this.ImageOffer).AppendLine();
+            stringBuilder.AppendFormat("{0} = {1}", "ImageSku", this.ImageSku).AppendLine();
+            stringBuilder.AppendFormat("{0} = {1}", "NodeAgentSkuId", this.NodeAgentSkuId).AppendLine();
 
             return stringBuilder.ToString();
         }

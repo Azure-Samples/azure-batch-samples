@@ -140,7 +140,14 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
                 poolId: this.jobManagerSettings.PoolId,
                 targetDedicatedComputeNodes: this.jobManagerSettings.PoolTargetNodeCount,
                 virtualMachineSize: this.jobManagerSettings.PoolNodeVirtualMachineSize,
-                cloudServiceConfiguration: new CloudServiceConfiguration(this.jobManagerSettings.PoolOsFamily));
+                virtualMachineConfiguration: new VirtualMachineConfiguration(
+                        imageReference: new ImageReference(
+                                publisher: jobManagerSettings.ImagePublisher,
+                                offer: jobManagerSettings.ImageOffer,
+                                sku: jobManagerSettings.ImageSku,
+                                version: jobManagerSettings.ImageVersion
+                            ),
+                        nodeAgentSkuId: jobManagerSettings.NodeAgentSkuId));
 
             // Create a new start task to facilitate pool-wide file management or installation.
             // In this case, we just add a single dummy data file to the StartTask.

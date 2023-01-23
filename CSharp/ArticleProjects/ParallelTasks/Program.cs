@@ -45,7 +45,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
         private static async Task MainAsync(string[] args)
         {
             // You may adjust these values to experiment with different compute resource scenarios.
-            const string nodeSize      = "standard_d1_v2";
+            const string nodeSize      = "standard_d2_v3";
             const int nodeCount        = 4;
             const int taskSlotsPerNode = 4;
             const int taskCount        = 32;

@@ -1,9 +1,14 @@
 ﻿{
   "poolTargetNodeCount": 2,
-  "poolNodeVirtualMachineSize": "standard_d1_v2",
+  "poolNodeVirtualMachineSize": "standard_d2_v3",
   "poolOSFamily": "5",
   "poolId": "JobManagerSamplePool",
   "shouldDeleteJob": true,
   "shouldDeletePool": false,
-  "blobContainer": "JobManagerSampleContainer"
+  "blobContainer": "JobManagerSampleContainer",
+  "imagePublisher": "MicrosoftWindowsServer",
+  "imageOffer": "WindowsServer",
+  "imageSku": "2016-Datacenter-smalldisk",
+  "imageVersion": "latest",
+  "nodeAgentSkuId": "batch.node.windows amd64"  
 }

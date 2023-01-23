@@ -113,10 +113,17 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                 PoolSpecification poolSpecification = new PoolSpecification()
                 {
                     TargetDedicatedComputeNodes = numberOfPoolComputeNodes,
-                    VirtualMachineSize = "standard_d1_v2",
-                    //You can learn more about os families and versions at: 
-                    //http://azure.microsoft.com/documentation/articles/cloud-services-guestos-update-matrix
-                    CloudServiceConfiguration = new CloudServiceConfiguration(osFamily: "5")
+                    VirtualMachineSize = textSearchSettings.PoolNodeVirtualMachineSize,
+                    ////You can learn more about os families and versions at: 
+                    ////http://azure.microsoft.com/documentation/articles/cloud-services-guestos-update-matrix
+                    VirtualMachineConfiguration = new VirtualMachineConfiguration(
+                    imageReference: new ImageReference(
+                            publisher: textSearchSettings.ImagePublisher,
+                            offer: textSearchSettings.ImageOffer,
+                            sku: textSearchSettings.ImageSku,
+                            version: textSearchSettings.ImageVersion
+                        ),
+                    nodeAgentSkuId: textSearchSettings.NodeAgentSkuId),
                 };
 
                 //Use the auto pool feature of the Batch Service to create a pool when the job is created.

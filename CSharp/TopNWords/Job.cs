@@ -60,8 +60,15 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                 CloudPool pool = client.PoolOperations.CreatePool(
                     topNWordsConfiguration.PoolId, 
                     targetDedicatedComputeNodes: topNWordsConfiguration.PoolNodeCount,
-                    virtualMachineSize: "standard_d1_v2",
-                    cloudServiceConfiguration: new CloudServiceConfiguration(osFamily: "5"));
+                    virtualMachineSize: topNWordsConfiguration.PoolNodeVirtualMachineSize,
+                    virtualMachineConfiguration: new VirtualMachineConfiguration(
+                    imageReference: new ImageReference(
+                            publisher: topNWordsConfiguration.ImagePublisher,
+                            offer: topNWordsConfiguration.ImageOffer,
+                            sku: topNWordsConfiguration.ImageSku,
+                            version: topNWordsConfiguration.ImageVersion
+                        ),
+                    nodeAgentSkuId: topNWordsConfiguration.NodeAgentSkuId));
                 Console.WriteLine("Adding pool {0}", topNWordsConfiguration.PoolId);
                 GettingStartedCommon.CreatePoolIfNotExistAsync(client, pool).Wait();
 
