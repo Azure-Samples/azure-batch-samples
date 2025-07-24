@@ -3,7 +3,6 @@ import com.azure.compute.batch.BatchClientBuilder;
 import com.azure.compute.batch.models.ResourceFile;
 import com.azure.compute.batch.models.*;
 import com.azure.core.credential.TokenCredential;
-import com.azure.core.exception.HttpResponseException;
 import com.azure.core.http.rest.PagedIterable;
 import com.azure.core.management.AzureEnvironment;
 import com.azure.core.management.exception.ManagementException;
@@ -12,7 +11,6 @@ import com.azure.core.util.Configuration;
 import com.azure.identity.DefaultAzureCredentialBuilder;
 import com.azure.resourcemanager.batch.BatchManager;
 import com.azure.resourcemanager.batch.models.AllocationState;
-import com.azure.resourcemanager.batch.models.ImageReference;
 import com.azure.resourcemanager.batch.models.VirtualMachineConfiguration;
 import com.azure.resourcemanager.batch.models.*;
 import com.azure.storage.blob.BlobClient;
@@ -120,10 +118,8 @@ public class PoolAndResourceFile {
 
                 logger.info("Task {} output ({}):\n{}", task.getId(), outputFileName, fileContent);
             }
-
-            // TODO: How do we replace BatchErrorException?
-            // } catch (BatchErrorException err) {
-            //     printBatchException(err);
+        } catch (BatchErrorException e) {
+            logBatchException(e);
         } catch (Exception e) {
             logger.error("Unexpected error", e);
         } finally {
@@ -131,16 +127,16 @@ public class PoolAndResourceFile {
             if (CLEANUP_JOB) {
                 try {
                     logger.info("Deleting job {}", jobId);
-                    batchClient.deleteJob(jobId);
-                } catch (HttpResponseException e) {
+                    batchClient.beginDeleteJob(jobId);
+                } catch (BatchErrorException e) {
                     logBatchException(e);
                 }
             }
             if (CLEANUP_POOL) {
                 try {
                     logger.info("Deleting pool {}", poolName);
-                    batchClient.deletePool(poolName);
-                } catch (HttpResponseException e) {
+                    batchClient.beginDeletePool(poolName);
+                } catch (BatchErrorException e) {
                     logBatchException(e);
                 }
             }
@@ -230,7 +226,7 @@ public class PoolAndResourceFile {
         // Wait for at least 1 node to reach the idle state
         logger.info("Waiting for nodes to start.");
         while (elapsedTime < nodeReadyTimeout.toMillis()) {
-            PagedIterable<BatchNode> nodes = batchClient.listNodes(poolName, new ListBatchNodesOptions()
+            PagedIterable<BatchNode> nodes = batchClient.listNodes(poolName, new BatchNodesListOptions()
                     .setSelect(Arrays.asList("id", "state"))
                     .setFilter("state eq 'idle'"));
             if (nodes.stream().findAny().isPresent()) {
@@ -260,7 +256,7 @@ public class PoolAndResourceFile {
         // Create job
         BatchPoolInfo poolInfo = new BatchPoolInfo();
         poolInfo.setPoolId(poolId);
-        batchClient.createJob(new BatchJobCreateContent(jobId, poolInfo));
+        batchClient.createJob(new BatchJobCreateParameters(jobId, poolInfo));
 
         // Upload a resource file and make it available in a "resources" subdirectory on nodes
         String fileName = "test.txt";
@@ -273,9 +269,9 @@ public class PoolAndResourceFile {
                 .setFilePath(remotePath));
 
         // Create tasks
-        List<BatchTaskCreateContent> tasks = new ArrayList<>();
+        List<BatchTaskCreateParameters> tasks = new ArrayList<>();
         for (int i = 0; i < TASK_COUNT; i++) {
-            tasks.add(new BatchTaskCreateContent("mytask" + i, "cat " + remotePath).setResourceFiles(files));
+            tasks.add(new BatchTaskCreateParameters("mytask" + i, "cat " + remotePath).setResourceFiles(files));
         }
 
         // Add the tasks to the job
@@ -319,7 +315,7 @@ public class PoolAndResourceFile {
 
         while (elapsedTime < timeout.toMillis()) {
             PagedIterable<BatchTask> taskCollection = batchClient.listTasks(jobId,
-                    new ListBatchTasksOptions().setSelect(Arrays.asList("id", "state")));
+                    new BatchTasksListOptions().setSelect(Arrays.asList("id", "state")));
             boolean allComplete = true;
             for (BatchTask task : taskCollection) {
                 if (task.getState() != BatchTaskState.COMPLETED) {
@@ -339,18 +335,20 @@ public class PoolAndResourceFile {
         throw new TimeoutException("Task did not complete within the specified timeout");
     }
 
-    private void logBatchException(HttpResponseException e) {
-        // TODO: How do we get error details?
-        logger.error("HTTP Response error", e);
-//         if (err.body() != null) {
-//             logger.error("BatchError code = {}, message = {}", err.body().code(),
-//                     err.body().message().value());
-//             if (err.body().values() != null) {
-//                 for (BatchErrorDetail detail : err.body().values()) {
-//                     logger.error("Detail {}={}", detail.key(), detail.value());
-//                 }
-//             }
-//         }
-    }
+    private void logBatchException(BatchErrorException err) {
+        logger.error("BatchErrorException occurred", err);
 
+        BatchError error = err.getValue();
+        if (error != null) {
+            logger.error("BatchError code = {}, message = {}", error.getCode(),
+                error.getMessage() != null ? error.getMessage().getValue() : "(no message)");
+            if (error.getValues() != null) {
+                for (BatchErrorDetail detail : error.getValues()) {
+                    logger.error("Detail {} = {}", detail.getKey(), detail.getValue());
+                }
+            }
+        } else {
+            logger.warn("No BatchError information found in exception.");
+        }
+    }
 }
