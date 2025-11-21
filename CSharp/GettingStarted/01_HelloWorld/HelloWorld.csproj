@@ -7,8 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Compute.Batch" Version="1.0.0-beta.3" />
-    <PackageReference Include="Azure.Identity" Version="1.14.1" />
+    <PackageReference Include="Azure.Compute.Batch" Version="1.0.0-beta.4" />
+    <PackageReference Include="Azure.Identity" Version="1.17.1" />
     <PackageReference Include="Azure.ResourceManager.Batch" Version="1.5.0" />
   </ItemGroup>
 
