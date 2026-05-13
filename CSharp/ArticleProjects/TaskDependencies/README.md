@@ -8,26 +8,27 @@ This C# console application demonstrates the use of task dependencies in Azure B
 
 ### Requirements
 
-* Task dependencies require a job with [CloudJob][net_cloudjob].[UsesTaskDependencies][net_cloudjob_usestdp] set to `true` (the default is `false`). You **must** set this property value to `true` to use task dependencies.
+* Task dependencies require a job with [BatchJobCreateOptions][net_jobcreateoptions].`UsesTaskDependencies` set to `true` (the default is `false`). You **must** set this property value to `true` to use task dependencies.
 
-   ```
-   CloudJob myJob = batchClient.JobOperations.CreateJob(
+   ```csharp
+   var jobOptions = new BatchJobCreateOptions(
        "MyJob",
-       new PoolInformation { PoolId = "MyPool" });
-
-   myJob.UsesTaskDependencies = true;
-   ```
-
-* When using **task ranges** for your dependencies, your task IDs must be string reprepresentations of integer values.
-
-   ```
-   List<CloudTask> tasks = new List<CloudTask>
+       new BatchPoolInfo { PoolId = "MyPool" })
    {
-       new CloudTask("1", "cmd.exe /c MyTaskExecutable.exe -process data1")
-       new CloudTask("2", "cmd.exe /c MyTaskExecutable.exe -process data2")
+       UsesTaskDependencies = true,
+   };
+   await batchClient.CreateJobAsync(jobOptions);
+   ```
+
+* When using **task ranges** for your dependencies, your task IDs must be string representations of integer values.
+
+   ```csharp
+   var tasks = new List<BatchTaskCreateOptions>
+   {
+       new BatchTaskCreateOptions("1", "cmd.exe /c MyTaskExecutable.exe -process data1"),
+       new BatchTaskCreateOptions("2", "cmd.exe /c MyTaskExecutable.exe -process data2"),
    };
    ```
 
 
-[net_cloudjob]: https://msdn.microsoft.com/library/azure/microsoft.azure.batch.cloudjob.aspx
-[net_cloudjob_usestdp]: https://msdn.microsoft.com/library/azure/microsoft.azure.batch.cloudjob.usestaskdependencies.aspx
+[net_jobcreateoptions]: https://learn.microsoft.com/dotnet/api/azure.compute.batch.batchjobcreateoptions
