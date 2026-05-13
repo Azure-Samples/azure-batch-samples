@@ -20,9 +20,9 @@ namespace Microsoft.Azure.Batch.Samples.Common
     public static class SampleHelpers
     {
         /// <summary>
-        /// Constructs a container shared access signature URL.
+        /// Constructs a container shared access signature URL using a user-delegation key.
         /// </summary>
-        public static string ConstructContainerSas(
+        public static async Task<string> ConstructContainerSasAsync(
             BlobServiceClient blobServiceClient,
             string containerName,
             BlobContainerSasPermissions permissions = BlobContainerSasPermissions.Read)
@@ -30,7 +30,8 @@ namespace Microsoft.Azure.Batch.Samples.Common
             // Container names must always be lower case.
             containerName = containerName.ToLowerInvariant();
             BlobContainerClient container = blobServiceClient.GetBlobContainerClient(containerName);
-            return FileStager.GenerateContainerSasUrl(container, permissions);
+            Uri sasUri = await FileStager.GenerateContainerSasUriAsync(blobServiceClient, container, permissions).ConfigureAwait(false);
+            return sasUri.ToString();
         }
 
         /// <summary>
@@ -104,10 +105,10 @@ namespace Microsoft.Azure.Batch.Samples.Common
         {
             await UploadResourcesAsync(blobServiceClient, blobContainerName, filePaths).ConfigureAwait(false);
 
-            string containerSas = ConstructContainerSas(
+            string containerSas = await ConstructContainerSasAsync(
                 blobServiceClient,
                 blobContainerName,
-                permissions: BlobContainerSasPermissions.Read | BlobContainerSasPermissions.List);
+                permissions: BlobContainerSasPermissions.Read | BlobContainerSasPermissions.List).ConfigureAwait(false);
 
             List<ResourceFile> resourceFiles = new List<ResourceFile>
             {

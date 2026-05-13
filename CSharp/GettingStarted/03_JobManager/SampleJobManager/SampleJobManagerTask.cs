@@ -32,10 +32,8 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
 
             this.configurationSettings = new JobManagerSettings(
                 this.accountName,
-                Environment.GetEnvironmentVariable("SAMPLE_BATCH_KEY"),
                 Environment.GetEnvironmentVariable("SAMPLE_BATCH_URL"),
                 Environment.GetEnvironmentVariable("SAMPLE_STORAGE_ACCOUNT"),
-                Environment.GetEnvironmentVariable("SAMPLE_STORAGE_KEY"),
                 Environment.GetEnvironmentVariable("SAMPLE_STORAGE_URL"));
         }
 
@@ -50,10 +48,8 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
             var accountSettings = new AccountSettings
             {
                 BatchAccountName = this.configurationSettings.BatchAccountName,
-                BatchAccountKey = this.configurationSettings.BatchAccountKey,
                 BatchServiceUrl = this.configurationSettings.BatchAccountUrl,
                 StorageAccountName = this.configurationSettings.StorageAccountName,
-                StorageAccountKey = this.configurationSettings.StorageAccountKey,
                 StorageServiceUrl = this.configurationSettings.StorageAccountUrl,
             };
 

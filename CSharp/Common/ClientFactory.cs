@@ -3,41 +3,38 @@
 namespace Microsoft.Azure.Batch.Samples.Common
 {
     using System;
-    using global::Azure;
     using global::Azure.Compute.Batch;
     using global::Azure.Core;
+    using global::Azure.Identity;
     using global::Azure.ResourceManager;
     using global::Azure.ResourceManager.Batch;
-    using global::Azure.Storage;
     using global::Azure.Storage.Blobs;
 
     /// <summary>
     /// Helpers for constructing Azure.Compute.Batch and Azure.Storage.Blobs clients
-    /// from <see cref="AccountSettings"/>.
+    /// from <see cref="AccountSettings"/>. All clients use <see cref="DefaultAzureCredential"/>
+    /// for AAD-based authentication (no shared keys).
     /// </summary>
     public static class ClientFactory
     {
+        private static TokenCredential CreateCredential() => new DefaultAzureCredential();
+
         /// <summary>
-        /// Creates a <see cref="BatchClient"/> using shared-key credentials.
+        /// Creates a <see cref="BatchClient"/> using <see cref="DefaultAzureCredential"/>.
         /// </summary>
         public static BatchClient CreateBatchClient(AccountSettings settings)
         {
             if (settings == null) throw new ArgumentNullException(nameof(settings));
-            var credential = new AzureNamedKeyCredential(settings.BatchAccountName, settings.BatchAccountKey);
-            return new BatchClient(new Uri(settings.BatchServiceUrl), credential);
+            return new BatchClient(new Uri(settings.BatchServiceUrl), CreateCredential());
         }
 
         /// <summary>
-        /// Creates a <see cref="BlobServiceClient"/> using a storage shared-key credential.
+        /// Creates a <see cref="BlobServiceClient"/> using <see cref="DefaultAzureCredential"/>.
         /// </summary>
         public static BlobServiceClient CreateBlobServiceClient(AccountSettings settings)
         {
             if (settings == null) throw new ArgumentNullException(nameof(settings));
-            var credential = new StorageSharedKeyCredential(settings.StorageAccountName, settings.StorageAccountKey);
-            // settings.StorageServiceUrl historically held a host suffix like "core.windows.net";
-            // use it to build the blob endpoint when present, otherwise default to the public cloud.
             string suffix = string.IsNullOrWhiteSpace(settings.StorageServiceUrl) ? "core.windows.net" : settings.StorageServiceUrl.Trim();
-            // Allow either a bare suffix ("core.windows.net") or a full URL ("https://...").
             Uri blobEndpoint;
             if (suffix.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
                 suffix.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
@@ -48,7 +45,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
             {
                 blobEndpoint = new Uri($"https://{settings.StorageAccountName}.blob.{suffix}");
             }
-            return new BlobServiceClient(blobEndpoint, credential);
+            return new BlobServiceClient(blobEndpoint, CreateCredential());
         }
 
         /// <summary>
@@ -57,7 +54,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
         public static ArmClient CreateArmClient(AccountSettings settings)
         {
             if (settings == null) throw new ArgumentNullException(nameof(settings));
-            return new ArmClient(new global::Azure.Identity.DefaultAzureCredential());
+            return new ArmClient(CreateCredential());
         }
 
         /// <summary>

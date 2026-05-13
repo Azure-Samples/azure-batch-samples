@@ -73,12 +73,12 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                     files);
             }
 
-            string inputContainerSasUrl = SampleHelpers.ConstructContainerSas(
+            string inputContainerSasUrl = await SampleHelpers.ConstructContainerSasAsync(
                 blobServiceClient,
                 this.textSearchSettings.InputBlobContainer,
                 permissions: BlobContainerSasPermissions.Read);
 
-            string outputContainerSasUrl = SampleHelpers.ConstructContainerSas(
+            string outputContainerSasUrl = await SampleHelpers.ConstructContainerSasAsync(
                 blobServiceClient,
                 this.textSearchSettings.OutputBlobContainer,
                 permissions: BlobContainerSasPermissions.Read | BlobContainerSasPermissions.Write);

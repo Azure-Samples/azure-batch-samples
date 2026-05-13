@@ -90,7 +90,7 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
         {
             string localSampleFilePath = GettingStartedCommon.GenerateTemporaryFile("StartTask.txt", "hello from Batch JobManager sample!");
             await SampleHelpers.UploadResourcesAsync(blobServiceClient, this.jobManagerSettings.BlobContainer, new[] { localSampleFilePath });
-            string containerSas = SampleHelpers.ConstructContainerSas(
+            string containerSas = await SampleHelpers.ConstructContainerSasAsync(
                 blobServiceClient,
                 this.jobManagerSettings.BlobContainer,
                 BlobContainerSasPermissions.Read | BlobContainerSasPermissions.List);
@@ -158,10 +158,8 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
 
             var envSettings = new[]
             {
-                new EnvironmentSetting("SAMPLE_BATCH_KEY") { Value = this.accountSettings.BatchAccountKey },
                 new EnvironmentSetting("SAMPLE_BATCH_URL") { Value = this.accountSettings.BatchServiceUrl },
                 new EnvironmentSetting("SAMPLE_STORAGE_ACCOUNT") { Value = this.accountSettings.StorageAccountName },
-                new EnvironmentSetting("SAMPLE_STORAGE_KEY") { Value = this.accountSettings.StorageAccountKey },
                 new EnvironmentSetting("SAMPLE_STORAGE_URL") { Value = this.accountSettings.StorageServiceUrl },
             };
             foreach (var es in envSettings)

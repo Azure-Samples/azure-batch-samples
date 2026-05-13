@@ -99,7 +99,7 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
             // Stage start-task resource files in storage and reference them via a container SAS.
             string localSampleFilePath = GettingStartedCommon.GenerateTemporaryFile("StartTask.txt", "hello from Batch PoolsAndResourceFiles sample!");
             await SampleHelpers.UploadResourcesAsync(blobServiceClient, this.poolsAndResourceFileSettings.BlobContainer, new[] { localSampleFilePath });
-            string containerSas = SampleHelpers.ConstructContainerSas(
+            string containerSas = await SampleHelpers.ConstructContainerSasAsync(
                 blobServiceClient,
                 this.poolsAndResourceFileSettings.BlobContainer,
                 BlobContainerSasPermissions.Read | BlobContainerSasPermissions.List);

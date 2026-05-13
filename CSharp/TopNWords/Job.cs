@@ -179,7 +179,10 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                 await blob.UploadAsync(fs, overwrite: true);
             }
 
-            Uri sasUri = blob.GenerateSasUri(BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddHours(24));
+            Uri sasUri = await Microsoft.Azure.Batch.Samples.Common.FileStager.GenerateBlobSasUriAsync(
+                blobServiceClient,
+                blob,
+                BlobSasPermissions.Read);
             return sasUri.ToString();
         }
 

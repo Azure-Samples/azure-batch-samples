@@ -8,25 +8,24 @@ namespace Microsoft.Azure.Batch.Samples.Common
     using System.Threading.Tasks;
     using global::Azure.Compute.Batch;
     using global::Azure.Storage.Blobs;
+    using global::Azure.Storage.Blobs.Models;
     using global::Azure.Storage.Sas;
 
     /// <summary>
     /// Replacement for the deprecated Microsoft.Azure.Batch.FileStaging functionality.
     /// Uploads local files to a single Azure Storage container and produces a list of
-    /// <see cref="ResourceFile"/> objects (using a container SAS) that can be passed to
-    /// Batch tasks.
+    /// <see cref="ResourceFile"/> objects (using a user-delegation container SAS) that
+    /// can be passed to Batch tasks.
+    ///
+    /// All SAS tokens are generated using user-delegation keys (Azure AD) so that this
+    /// helper works with <see cref="global::Azure.Identity.DefaultAzureCredential"/>.
     /// </summary>
     public static class FileStager
     {
         /// <summary>
         /// Uploads the specified local files to the given container (creating it if needed),
         /// and returns a single <see cref="ResourceFile"/> that references the container by SAS.
-        /// All blobs in the container are downloaded onto the node.
         /// </summary>
-        /// <param name="blobServiceClient">Blob service client.</param>
-        /// <param name="containerName">Container name (will be lowercased).</param>
-        /// <param name="filePaths">Local file paths to upload.</param>
-        /// <returns>A list with a single <see cref="ResourceFile"/> referencing the container SAS.</returns>
         public static async Task<List<ResourceFile>> StageFilesAsContainerAsync(
             BlobServiceClient blobServiceClient,
             string containerName,
@@ -46,10 +45,14 @@ namespace Microsoft.Azure.Batch.Samples.Common
                 }
             }
 
-            string containerSasUrl = GenerateContainerSasUrl(container, BlobContainerSasPermissions.Read | BlobContainerSasPermissions.List);
+            Uri sasUri = await GenerateContainerSasUriAsync(
+                blobServiceClient,
+                container,
+                BlobContainerSasPermissions.Read | BlobContainerSasPermissions.List).ConfigureAwait(false);
+
             return new List<ResourceFile>
             {
-                new ResourceFile { StorageContainerUri = new Uri(containerSasUrl) }
+                new ResourceFile { StorageContainerUri = sasUri }
             };
         }
 
@@ -66,6 +69,12 @@ namespace Microsoft.Azure.Batch.Samples.Common
             BlobContainerClient container = blobServiceClient.GetBlobContainerClient(containerName);
             await container.CreateIfNotExistsAsync().ConfigureAwait(false);
 
+            // Fetch a single user-delegation key and reuse it for every blob SAS in this batch.
+            DateTimeOffset expiresOn = DateTimeOffset.UtcNow.AddHours(2);
+            UserDelegationKey udk = (await blobServiceClient.GetUserDelegationKeyAsync(
+                DateTimeOffset.UtcNow.AddMinutes(-5),
+                expiresOn).ConfigureAwait(false)).Value;
+
             var resourceFiles = new List<ResourceFile>();
             foreach (string path in filePaths)
             {
@@ -77,7 +86,7 @@ namespace Microsoft.Azure.Batch.Samples.Common
                     await blob.UploadAsync(fs, overwrite: true).ConfigureAwait(false);
                 }
 
-                Uri blobSasUri = blob.GenerateSasUri(BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddHours(2));
+                Uri blobSasUri = BuildUserDelegationBlobSasUri(blob, udk, BlobSasPermissions.Read, expiresOn);
                 resourceFiles.Add(new ResourceFile { HttpUri = blobSasUri, FilePath = blobName });
             }
 
@@ -85,12 +94,58 @@ namespace Microsoft.Azure.Batch.Samples.Common
         }
 
         /// <summary>
-        /// Generates a container-level SAS URL.
+        /// Generates a container-level user-delegation SAS URL.
         /// </summary>
-        public static string GenerateContainerSasUrl(BlobContainerClient container, BlobContainerSasPermissions permissions)
+        public static async Task<Uri> GenerateContainerSasUriAsync(
+            BlobServiceClient blobServiceClient,
+            BlobContainerClient container,
+            BlobContainerSasPermissions permissions)
         {
-            Uri sasUri = container.GenerateSasUri(permissions, DateTimeOffset.UtcNow.AddHours(2));
-            return sasUri.ToString();
+            DateTimeOffset expiresOn = DateTimeOffset.UtcNow.AddHours(2);
+            UserDelegationKey udk = (await blobServiceClient.GetUserDelegationKeyAsync(
+                DateTimeOffset.UtcNow.AddMinutes(-5),
+                expiresOn).ConfigureAwait(false)).Value;
+
+            var sasBuilder = new BlobSasBuilder(permissions, expiresOn)
+            {
+                BlobContainerName = container.Name,
+                Resource = "c",
+            };
+            string sasToken = sasBuilder.ToSasQueryParameters(udk, container.AccountName).ToString();
+            var ub = new UriBuilder(container.Uri) { Query = sasToken };
+            return ub.Uri;
+        }
+
+        /// <summary>
+        /// Generates a blob-level user-delegation SAS URL.
+        /// </summary>
+        public static async Task<Uri> GenerateBlobSasUriAsync(
+            BlobServiceClient blobServiceClient,
+            BlobClient blob,
+            BlobSasPermissions permissions)
+        {
+            DateTimeOffset expiresOn = DateTimeOffset.UtcNow.AddHours(24);
+            UserDelegationKey udk = (await blobServiceClient.GetUserDelegationKeyAsync(
+                DateTimeOffset.UtcNow.AddMinutes(-5),
+                expiresOn).ConfigureAwait(false)).Value;
+            return BuildUserDelegationBlobSasUri(blob, udk, permissions, expiresOn);
+        }
+
+        private static Uri BuildUserDelegationBlobSasUri(
+            BlobClient blob,
+            UserDelegationKey udk,
+            BlobSasPermissions permissions,
+            DateTimeOffset expiresOn)
+        {
+            var sasBuilder = new BlobSasBuilder(permissions, expiresOn)
+            {
+                BlobContainerName = blob.BlobContainerName,
+                BlobName = blob.Name,
+                Resource = "b",
+            };
+            string sasToken = sasBuilder.ToSasQueryParameters(udk, blob.AccountName).ToString();
+            var ub = new UriBuilder(blob.Uri) { Query = sasToken };
+            return ub.Uri;
         }
     }
 }
