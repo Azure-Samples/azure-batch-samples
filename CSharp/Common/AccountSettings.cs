@@ -10,6 +10,10 @@ namespace Microsoft.Azure.Batch.Samples.Common
         public string BatchAccountName { get; set; }
         public string BatchAccountKey { get; set; }
 
+        // Required for control-plane (ARM) pool operations via Azure.ResourceManager.Batch.
+        public string SubscriptionId { get; set; }
+        public string ResourceGroupName { get; set; }
+
         public string StorageServiceUrl { get; set; }
         public string StorageAccountName { get; set; }
         public string StorageAccountKey { get; set; }
@@ -21,6 +25,8 @@ namespace Microsoft.Azure.Batch.Samples.Common
             AddSetting(stringBuilder, "BatchAccountName", this.BatchAccountName);
             AddSetting(stringBuilder, "BatchAccountKey", this.BatchAccountKey);
             AddSetting(stringBuilder, "BatchServiceUrl", this.BatchServiceUrl);
+            AddSetting(stringBuilder, "SubscriptionId", this.SubscriptionId);
+            AddSetting(stringBuilder, "ResourceGroupName", this.ResourceGroupName);
 
             AddSetting(stringBuilder, "StorageAccountName", this.StorageAccountName);
             AddSetting(stringBuilder, "StorageAccountKey", this.StorageAccountKey);

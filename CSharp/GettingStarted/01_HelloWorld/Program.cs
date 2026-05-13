@@ -4,11 +4,10 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
 {
     using System;
     using System.IO;
-    using System.Collections.Generic;
     using System.Threading.Tasks;
-    using Auth;
-    using Batch.Common;
-    using Common;
+    using global::Azure;
+    using global::Azure.Compute.Batch;
+    using Microsoft.Azure.Batch.Samples.Common;
     using Microsoft.Extensions.Configuration;
 
     /// <summary>
@@ -31,7 +30,6 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
             }
             catch (AggregateException aggregateException)
             {
-                // Go through all exceptions and dump useful information
                 foreach (Exception exception in aggregateException.InnerExceptions)
                 {
                     Console.WriteLine(exception.ToString());
@@ -46,10 +44,10 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
         }
 
         /// <summary>
-        /// Submits a job to the Azure Batch service, and waits for it to complete
+        /// Submits a job to the Azure Batch service, and waits for it to complete.
         /// </summary>
         private static async Task HelloWorldAsync(
-            AccountSettings accountSettings, 
+            AccountSettings accountSettings,
             Settings helloWorldConfigurationSettings)
         {
             Console.WriteLine("Running with the following settings: ");
@@ -57,120 +55,58 @@ namespace Microsoft.Azure.Batch.Samples.HelloWorld
             Console.WriteLine(helloWorldConfigurationSettings.ToString());
             Console.WriteLine(accountSettings.ToString());
 
-            // Set up the Batch Service credentials used to authenticate with the Batch Service.
-            BatchSharedKeyCredentials credentials = new BatchSharedKeyCredentials(
-                accountSettings.BatchServiceUrl,
-                accountSettings.BatchAccountName,
-                accountSettings.BatchAccountKey);
+            BatchClient batchClient = ClientFactory.CreateBatchClient(accountSettings);
 
-            // Get an instance of the BatchClient for a given Azure Batch account.
-            using (BatchClient batchClient = BatchClient.Open(credentials))
+            string jobId = GettingStartedCommon.CreateJobId("HelloWorldJob");
+
+            try
             {
-                // add a retry policy. The built-in policies are No Retry (default), Linear Retry, and Exponential Retry
-                batchClient.CustomBehaviors.Add(RetryPolicyProvider.ExponentialRetryProvider(TimeSpan.FromSeconds(5), 3));
-
-                string jobId = GettingStartedCommon.CreateJobId("HelloWorldJob");
-
-                try
+                await SubmitJobAsync(batchClient, helloWorldConfigurationSettings, jobId);
+                await GettingStartedCommon.WaitForTasksAndPrintOutputAsync(batchClient, jobId, new[] { "task1" }, TimeSpan.FromMinutes(10));
+            }
+            finally
+            {
+                if (!string.IsNullOrEmpty(jobId) && helloWorldConfigurationSettings.ShouldDeleteJob)
                 {
-                    // Submit the job
-                    await SubmitJobAsync(batchClient, helloWorldConfigurationSettings, jobId);
-
-                    // Wait for the job to complete
-                    await WaitForJobAndPrintOutputAsync(batchClient, jobId);
-                }
-                finally
-                {
-                    // Delete the job to ensure the tasks are cleaned up
-                    if (!string.IsNullOrEmpty(jobId) && helloWorldConfigurationSettings.ShouldDeleteJob)
-                    {
-                        Console.WriteLine("Deleting job: {0}", jobId);
-                        await batchClient.JobOperations.DeleteJobAsync(jobId);
-                    }
+                    Console.WriteLine("Deleting job: {0}", jobId);
+                    await batchClient.DeleteJobAsync(WaitUntil.Started, jobId);
                 }
             }
         }
 
         /// <summary>
-        /// Creates a job and adds a task to it.
+        /// Creates a job with an auto-pool and adds a task to it.
         /// </summary>
-        /// <param name="batchClient">The BatchClient to use when interacting with the Batch service.</param>
-        /// <param name="configurationSettings">The configuration settings</param>
-        /// <param name="jobId">The ID of the job.</param>
-        /// <returns>An asynchronous <see cref="Task"/> representing the operation.</returns>
         private static async Task SubmitJobAsync(
-            BatchClient batchClient, 
+            BatchClient batchClient,
             Settings configurationSettings,
             string jobId)
         {
-            // create an empty unbound Job
-            CloudJob unboundJob = batchClient.JobOperations.CreateJob();
-            unboundJob.Id = jobId;
-
-            // For this job, ask the Batch service to automatically create a pool of VMs when the job is submitted.
-            unboundJob.PoolInformation = new PoolInformation()
+            var imageReference = new BatchVmImageReference
             {
-                AutoPoolSpecification = new AutoPoolSpecification()
-                {
-                    AutoPoolIdPrefix = "HelloWorld",
-                    PoolSpecification = new PoolSpecification()
-                    {
-                        TargetDedicatedComputeNodes = configurationSettings.PoolTargetNodeCount,
-                        VirtualMachineSize = configurationSettings.PoolNodeVirtualMachineSize,
-                        VirtualMachineConfiguration = new VirtualMachineConfiguration(
-                        imageReference: new ImageReference(
-                                publisher: configurationSettings.ImagePublisher,
-                                offer: configurationSettings.ImageOffer,
-                                sku: configurationSettings.ImageSku,
-                                version: configurationSettings.ImageVersion
-                            ),
-                        nodeAgentSkuId: configurationSettings.NodeAgentSkuId),
-                    },
-                    KeepAlive = false,
-                    PoolLifetimeOption = PoolLifetimeOption.Job
-                }
+                Publisher = configurationSettings.ImagePublisher,
+                Offer = configurationSettings.ImageOffer,
+                Sku = configurationSettings.ImageSku,
+                Version = configurationSettings.ImageVersion,
             };
 
-            // Commit Job to create it in the service
-            await unboundJob.CommitAsync();
-
-            // create a simple task. Each task within a job must have a unique ID
-            await batchClient.JobOperations.AddTaskAsync(jobId, new CloudTask("task1", "cmd /c echo Hello world from the Batch Hello world sample!"));
-        }
-
-        /// <summary>
-        /// Waits for all tasks under the specified job to complete and then prints each task's output to the console.
-        /// </summary>
-        /// <param name="batchClient">The BatchClient to use when interacting with the Batch service.</param>
-        /// <param name="jobId">The ID of the job.</param>
-        /// <returns>An asynchronous <see cref="Task"/> representing the operation.</returns>
-        private static async Task WaitForJobAndPrintOutputAsync(BatchClient batchClient, string jobId)
-        {
-            Console.WriteLine("Waiting for all tasks to complete on job: {0} ...", jobId);
-
-            // We use the task state monitor to monitor the state of our tasks -- in this case we will wait for them all to complete.
-            TaskStateMonitor taskStateMonitor = batchClient.Utilities.CreateTaskStateMonitor();
-
-            List<CloudTask> ourTasks = await batchClient.JobOperations.ListTasks(jobId).ToListAsync();
-
-            // Wait for all tasks to reach the completed state.
-            // If the pool is being resized then enough time is needed for the nodes to reach the idle state in order
-            // for tasks to run on them.
-            await taskStateMonitor.WhenAll(ourTasks, TaskState.Completed, TimeSpan.FromMinutes(10));
-
-            // dump task output
-            foreach (CloudTask t in ourTasks)
+            var poolSpec = new BatchPoolSpecification(configurationSettings.PoolNodeVirtualMachineSize)
             {
-                Console.WriteLine("Task {0}", t.Id);
+                TargetDedicatedNodes = configurationSettings.PoolTargetNodeCount,
+                VirtualMachineConfiguration = new VirtualMachineConfiguration(imageReference, configurationSettings.NodeAgentSkuId),
+            };
 
-                //Read the standard out of the task
-                NodeFile standardOutFile = await t.GetNodeFileAsync(Constants.StandardOutFileName);
-                string standardOutText = await standardOutFile.ReadAsStringAsync();
-                Console.WriteLine("Standard out:");
-                Console.WriteLine(standardOutText);
+            var autoPool = new BatchAutoPoolSpecification(BatchPoolLifetimeOption.JobOption)
+            {
+                AutoPoolIdPrefix = "HelloWorld",
+                KeepAlive = false,
+                Pool = poolSpec,
+            };
 
-                Console.WriteLine();
-            }
+            var jobOptions = new BatchJobCreateOptions(jobId, new BatchPoolInfo { AutoPoolSpecification = autoPool });
+            await batchClient.CreateJobAsync(jobOptions);
+
+            await batchClient.CreateTaskAsync(jobId, new BatchTaskCreateOptions("task1", "cmd /c echo Hello world from the Batch Hello world sample!"));
         }
     }
 }

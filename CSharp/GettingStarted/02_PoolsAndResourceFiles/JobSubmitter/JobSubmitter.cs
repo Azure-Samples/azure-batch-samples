@@ -1,30 +1,30 @@
-﻿//Copyright (c) Microsoft Corporation
+//Copyright (c) Microsoft Corporation
 
 namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
 {
     using System;
-    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.IO;
     using System.Threading.Tasks;
-    using Common;
-    using Microsoft.Azure.Batch;
-    using Microsoft.Azure.Batch.Auth;
-    using Microsoft.Azure.Batch.FileStaging;
+    using global::Azure.Compute.Batch;
+    using global::Azure.ResourceManager.Batch;
+    using global::Azure.ResourceManager.Batch.Models;
+    using global::Azure.Storage.Blobs;
+    using global::Azure.Storage.Sas;
+    using Microsoft.Azure.Batch.Samples.Common;
     using Microsoft.Extensions.Configuration;
-    using WindowsAzure.Storage;
-    using WindowsAzure.Storage.Auth;
 
     /// <summary>
     /// Manages submission and lifetime of the Azure Batch job and pool.
+    /// Pool operations use the Azure.ResourceManager.Batch (ARM) SDK.
     /// </summary>
     public class JobSubmitter
     {
         private readonly Settings poolsAndResourceFileSettings;
         private readonly AccountSettings accountSettings;
 
-        // The SimpleTask project is included via project-depedency, so the 
-        // executable produced by that project will be in the same working 
+        // The SimpleTask project is included via project-dependency, so the
+        // executable produced by that project will be in the same working
         // directory as JobSubmitter at runtime.
         private const string SimpleTaskExe = "SimpleTask.exe";
 
@@ -44,10 +44,6 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
             this.accountSettings = accountSettings;
         }
 
-        /// <summary>
-        /// Populates Azure Storage with the required files, and 
-        /// submits the job to the Azure Batch service.
-        /// </summary>
         public async Task RunAsync()
         {
             Console.WriteLine("Running with the following settings: ");
@@ -55,173 +51,121 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
             Console.WriteLine(this.poolsAndResourceFileSettings.ToString());
             Console.WriteLine(this.accountSettings.ToString());
 
-            // Set up the Batch Service credentials used to authenticate with the Batch Service.
-            BatchSharedKeyCredentials credentials = new BatchSharedKeyCredentials(
-                this.accountSettings.BatchServiceUrl,
-                this.accountSettings.BatchAccountName,
-                this.accountSettings.BatchAccountKey);
+            BatchClient batchClient = ClientFactory.CreateBatchClient(this.accountSettings);
+            BlobServiceClient blobServiceClient = ClientFactory.CreateBlobServiceClient(this.accountSettings);
+            BatchAccountResource batchAccount = ClientFactory.CreateBatchAccountResource(this.accountSettings);
 
-            // Delete the blob containers which contain the task input files since we no longer need them
-            CloudStorageAccount cloudStorageAccount = new CloudStorageAccount(
-                new StorageCredentials(this.accountSettings.StorageAccountName,
-                    this.accountSettings.StorageAccountKey),
-                    this.accountSettings.StorageServiceUrl,
-                    useHttps: true);
+            string jobId = null;
+            HashSet<string> blobContainerNames = new HashSet<string>();
 
-            // Get an instance of the BatchClient for a given Azure Batch account.
-            using (BatchClient batchClient = BatchClient.Open(credentials))
+            try
             {
-                string jobId = null;
+                await this.CreatePoolIfNotExistAsync(batchAccount, blobServiceClient);
 
-                // Track the containers which are created as part of job submission so that we can clean them up later.
-                HashSet<string> blobContainerNames = new HashSet<string>();
+                jobId = GettingStartedCommon.CreateJobId("SimpleJob");
+                var taskIds = await this.SubmitJobAsync(batchClient, blobServiceClient, jobId, blobContainerNames);
 
-                try
+                await GettingStartedCommon.PrintJobsAsync(batchClient);
+                await GettingStartedCommon.PrintPoolsAsync(batchAccount);
+
+                await GettingStartedCommon.WaitForTasksAndPrintOutputAsync(batchClient, jobId, taskIds, TimeSpan.FromMinutes(10));
+            }
+            finally
+            {
+                await SampleHelpers.DeleteContainersAsync(blobServiceClient, blobContainerNames);
+
+                List<string> jobIdsToDelete = new List<string>();
+                List<string> poolIdsToDelete = new List<string>();
+
+                if (this.poolsAndResourceFileSettings.ShouldDeleteJob && !string.IsNullOrEmpty(jobId))
                 {
-                    // Allocate a pool
-                    await this.CreatePoolIfNotExistAsync(batchClient, cloudStorageAccount);
-
-                    // Submit the job
-                    jobId = GettingStartedCommon.CreateJobId("SimpleJob");
-                    blobContainerNames = await this.SubmitJobAsync(batchClient, cloudStorageAccount, jobId);
-
-                    // Print out the status of the pools/jobs under this account
-                    await GettingStartedCommon.PrintJobsAsync(batchClient);
-                    await GettingStartedCommon.PrintPoolsAsync(batchClient);
-
-                    // Wait for the job to complete
-                    List<CloudTask> tasks = await batchClient.JobOperations.ListTasks(jobId).ToListAsync();
-                    await GettingStartedCommon.WaitForTasksAndPrintOutputAsync(batchClient, tasks, TimeSpan.FromMinutes(10));
+                    jobIdsToDelete.Add(jobId);
                 }
-                finally
+
+                if (this.poolsAndResourceFileSettings.ShouldDeletePool)
                 {
-                    // Delete the pool (if configured) and job
-
-                    // Delete Azure Storage container data
-                    await SampleHelpers.DeleteContainersAsync(cloudStorageAccount, blobContainerNames);
-
-                    // Delete Azure Batch resources
-                    List<string> jobIdsToDelete = new List<string>();
-                    List<string> poolIdsToDelete = new List<string>();
-
-                    if (this.poolsAndResourceFileSettings.ShouldDeleteJob)
-                    {
-                        jobIdsToDelete.Add(jobId);
-                    }
-
-                    if (this.poolsAndResourceFileSettings.ShouldDeletePool)
-                    {
-                        poolIdsToDelete.Add(this.poolsAndResourceFileSettings.PoolId);
-                    }
-
-                    await SampleHelpers.DeleteBatchResourcesAsync(batchClient, jobIdsToDelete, poolIdsToDelete);
+                    poolIdsToDelete.Add(this.poolsAndResourceFileSettings.PoolId);
                 }
+
+                await SampleHelpers.DeleteBatchResourcesAsync(batchClient, batchAccount, jobIdsToDelete, poolIdsToDelete);
             }
         }
 
         /// <summary>
-        /// Creates a pool if it doesn't already exist.  If the pool already exists, this method resizes it to meet the expected
-        /// targets specified in settings.
+        /// Creates a pool via the ARM SDK if it doesn't already exist.
         /// </summary>
-        /// <param name="batchClient">The BatchClient to use when interacting with the Batch service.</param>
-        /// <param name="cloudStorageAccount">The CloudStorageAccount to upload start task required files to.</param>
-        /// <returns>An asynchronous <see cref="Task"/> representing the operation.</returns>
-        private async Task CreatePoolIfNotExistAsync(BatchClient batchClient, CloudStorageAccount cloudStorageAccount)
+        private async Task CreatePoolIfNotExistAsync(BatchAccountResource batchAccount, BlobServiceClient blobServiceClient)
         {
-
-            // You can learn more about os families and versions at:
-            // https://azure.microsoft.com/en-us/documentation/articles/cloud-services-guestos-update-matrix/
-            CloudPool pool = batchClient.PoolOperations.CreatePool(
-                poolId: this.poolsAndResourceFileSettings.PoolId,
-                targetDedicatedComputeNodes: this.poolsAndResourceFileSettings.PoolTargetNodeCount,
-                virtualMachineSize: this.poolsAndResourceFileSettings.PoolNodeVirtualMachineSize,
-                virtualMachineConfiguration: new VirtualMachineConfiguration(
-                        imageReference: new ImageReference(
-                                publisher: poolsAndResourceFileSettings.ImagePublisher,
-                                offer: poolsAndResourceFileSettings.ImageOffer,
-                                sku: poolsAndResourceFileSettings.ImageSku,
-                                version: poolsAndResourceFileSettings.ImageVersion
-                            ),
-                        nodeAgentSkuId: poolsAndResourceFileSettings.NodeAgentSkuId));
-
-            // Create a new start task to facilitate pool-wide file management or installation.
-            // In this case, we just add a single dummy data file to the StartTask.
+            // Stage start-task resource files in storage and reference them via a container SAS.
             string localSampleFilePath = GettingStartedCommon.GenerateTemporaryFile("StartTask.txt", "hello from Batch PoolsAndResourceFiles sample!");
-            List<string> files = new List<string> { localSampleFilePath };
-
-            List<ResourceFile> resourceFiles = await SampleHelpers.UploadResourcesAndCreateResourceFileReferencesAsync(
-                cloudStorageAccount,
+            await SampleHelpers.UploadResourcesAsync(blobServiceClient, this.poolsAndResourceFileSettings.BlobContainer, new[] { localSampleFilePath });
+            string containerSas = SampleHelpers.ConstructContainerSas(
+                blobServiceClient,
                 this.poolsAndResourceFileSettings.BlobContainer,
-                files);
+                BlobContainerSasPermissions.Read | BlobContainerSasPermissions.List);
 
-            pool.StartTask = new StartTask()
+            var startTask = new BatchAccountPoolStartTask { CommandLine = "cmd /c dir" };
+            startTask.ResourceFiles.Add(new BatchResourceFile { BlobContainerUri = new Uri(containerSas) });
+
+            var poolData = new BatchAccountPoolData
             {
-                CommandLine = "cmd /c dir",
-                ResourceFiles = resourceFiles
+                VmSize = this.poolsAndResourceFileSettings.PoolNodeVirtualMachineSize,
+                DeploymentConfiguration = new BatchDeploymentConfiguration
+                {
+                    VmConfiguration = new BatchVmConfiguration(
+                        new BatchImageReference
+                        {
+                            Publisher = this.poolsAndResourceFileSettings.ImagePublisher,
+                            Offer = this.poolsAndResourceFileSettings.ImageOffer,
+                            Sku = this.poolsAndResourceFileSettings.ImageSku,
+                            Version = this.poolsAndResourceFileSettings.ImageVersion,
+                        },
+                        this.poolsAndResourceFileSettings.NodeAgentSkuId),
+                },
+                ScaleSettings = new BatchAccountPoolScaleSettings
+                {
+                    FixedScale = new BatchAccountFixedScaleSettings
+                    {
+                        TargetDedicatedNodes = this.poolsAndResourceFileSettings.PoolTargetNodeCount,
+                    },
+                },
+                StartTask = startTask,
             };
 
-            await GettingStartedCommon.CreatePoolIfNotExistAsync(batchClient, pool);
+            await GettingStartedCommon.CreatePoolIfNotExistAsync(batchAccount, this.poolsAndResourceFileSettings.PoolId, poolData);
         }
 
         /// <summary>
-        /// Creates a job and adds a task to it. The task is a 
-        /// custom executable which has a resource file associated with it.
+        /// Creates a job and adds a task to it. The task is a custom executable which has resource
+        /// files associated with it.
         /// </summary>
-        /// <param name="batchClient">The BatchClient to use when interacting with the Batch service.</param>
-        /// <param name="cloudStorageAccount">The storage account to upload the files to.</param>
-        /// <param name="jobId">The ID of the job.</param>
-        /// <returns>The set of container names containing the jobs input files.</returns>
-        private async Task<HashSet<string>> SubmitJobAsync(BatchClient batchClient, CloudStorageAccount cloudStorageAccount, string jobId)
+        private async Task<List<string>> SubmitJobAsync(BatchClient batchClient, BlobServiceClient blobServiceClient, string jobId, HashSet<string> blobContainerNames)
         {
-            // create an empty unbound Job
-            CloudJob unboundJob = batchClient.JobOperations.CreateJob();
-            unboundJob.Id = jobId;
-            unboundJob.PoolInformation = new PoolInformation() { PoolId = this.poolsAndResourceFileSettings.PoolId };
+            await batchClient.CreateJobAsync(new BatchJobCreateOptions(jobId, new BatchPoolInfo { PoolId = this.poolsAndResourceFileSettings.PoolId }));
 
-            // Commit Job to create it in the service
-            await unboundJob.CommitAsync();
-
-            List<CloudTask> tasksToRun = new List<CloudTask>();
-
-            // Create a task which requires some resource files
-            CloudTask taskWithFiles = new CloudTask("task_with_file1", SimpleTaskExe);
-
-            // Set up a collection of files to be staged -- these files will be uploaded to Azure Storage
-            // when the tasks are submitted to the Azure Batch service.
-            taskWithFiles.FilesToStage = new List<IFileStagingProvider>();
-            
-            // generate a local file in temp directory
-            string localSampleFile = Path.Combine(Environment.GetEnvironmentVariable("TEMP"), "HelloWorld.txt");
+            string localSampleFile = Path.Combine(Path.GetTempPath(), "HelloWorld.txt");
             File.WriteAllText(localSampleFile, "hello from Batch PoolsAndResourceFiles sample!");
 
-            StagingStorageAccount fileStagingStorageAccount = new StagingStorageAccount(
-                storageAccount: this.accountSettings.StorageAccountName,
-                storageAccountKey: this.accountSettings.StorageAccountKey,
-                blobEndpoint: cloudStorageAccount.BlobEndpoint.ToString());
+            string jobInputContainerName = ("job-input-" + jobId).ToLowerInvariant();
+            blobContainerNames.Add(jobInputContainerName);
 
-            // add the files as a task dependency so they will be uploaded to storage before the task 
-            // is submitted and downloaded to the node before the task starts execution.
-            FileToStage helloWorldFile = new FileToStage(localSampleFile, fileStagingStorageAccount);
-            FileToStage simpleTaskFile = new FileToStage(SimpleTaskExe, fileStagingStorageAccount);
+            var filesToStage = new List<string>
+            {
+                localSampleFile,
+                SimpleTaskExe,
+            };
 
-            // When this task is added via JobOperations.AddTaskAsync below, the FilesToStage are uploaded to storage once.
-            // The Batch service does not automatically delete content from your storage account, so files added in this 
-            // way must be manually removed when they are no longer used.
-            taskWithFiles.FilesToStage.Add(helloWorldFile);
-            taskWithFiles.FilesToStage.Add(simpleTaskFile);
+            List<ResourceFile> resourceFiles = await FileStager.StageFilesAsBlobsAsync(blobServiceClient, jobInputContainerName, filesToStage);
 
-            tasksToRun.Add(taskWithFiles);
+            var taskOptions = new BatchTaskCreateOptions("task_with_file1", SimpleTaskExe);
+            foreach (var rf in resourceFiles)
+            {
+                taskOptions.ResourceFiles.Add(rf);
+            }
 
-            var fileStagingArtifacts = new ConcurrentBag<ConcurrentDictionary<Type, IFileStagingArtifact>>();
-            
-            // Use the AddTask method which takes an enumerable of tasks for best performance, as it submits up to 100
-            // tasks at once in a single request.  If the list of tasks is N where N > 100, this will correctly parallelize 
-            // the requests and return when all N tasks have been added.
-            await batchClient.JobOperations.AddTaskAsync(jobId, tasksToRun, fileStagingArtifacts: fileStagingArtifacts);
+            await batchClient.CreateTaskAsync(jobId, taskOptions);
 
-            // Extract the names of the blob containers from the file staging artifacts
-            HashSet<string> blobContainerNames = GettingStartedCommon.ExtractBlobContainerNames(fileStagingArtifacts);
-            return blobContainerNames;
+            return new List<string> { taskOptions.Id };
         }
     }
 }

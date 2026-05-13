@@ -2,6 +2,8 @@
   "batchAccountName": "",
   "batchAccountKey": "",
   "batchServiceUrl": "",
+  "subscriptionId": "",
+  "resourceGroupName": "",
   "storageAccountName": "",
   "storageAccountKey": "",
   "storageServiceUrl": "core.windows.net"
