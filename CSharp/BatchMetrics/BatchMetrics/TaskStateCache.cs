@@ -2,19 +2,15 @@
 
 namespace Microsoft.Azure.Batch.Samples.BatchMetrics
 {
-    using Microsoft.Azure.Batch.Common;
-    using System;
+    using global::Azure.Compute.Batch;
     using System.Collections.Generic;
-    using System.Linq;
-    using System.Text;
-    using System.Threading.Tasks;
 
     internal sealed class TaskStateCache
     {
         // The key is the task id
-        private readonly Dictionary<string, TaskState> taskStateMap = new Dictionary<string, TaskState>();
+        private readonly Dictionary<string, BatchTaskState> taskStateMap = new Dictionary<string, BatchTaskState>();
 
-        public void UpdateTaskState(string taskId, TaskState taskState)
+        public void UpdateTaskState(string taskId, BatchTaskState taskState)
         {
             this.taskStateMap[taskId] = taskState;
         }
