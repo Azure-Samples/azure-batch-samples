@@ -1,37 +1,37 @@
-﻿//Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 
 namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
 {
     using System;
     using System.Collections.Generic;
-    using System.Collections.Concurrent;
     using System.IO;
-    using Microsoft.Azure.Batch.Auth;
-    using Microsoft.Azure.Batch.Common;
-    using Microsoft.Azure.Batch.FileStaging;
-    using Microsoft.WindowsAzure.Storage;
-    using Microsoft.WindowsAzure.Storage.Auth;
-    using Microsoft.WindowsAzure.Storage.Blob;
+    using System.Linq;
+    using System.Threading.Tasks;
+    using global::Azure;
+    using global::Azure.Compute.Batch;
+    using global::Azure.ResourceManager.Batch;
+    using global::Azure.ResourceManager.Batch.Models;
+    using global::Azure.Storage.Blobs;
+    using global::Azure.Storage.Sas;
+    using Microsoft.Azure.Batch.Samples.Common;
     using Microsoft.Extensions.Configuration;
-    using Common;
 
     /// <summary>
-    /// In this sample, the Batch Service is used to process a set of input blobs in parallel on multiple 
-    /// compute nodes. Each task finds out the TopNWords for its corresponding blob.
-    /// 
-    /// The sample creates a run-once job followed by multiple tasks which each task assigned to process a
-    /// specific blob. It then waits for each of the tasks to complete where it prints out the topNWords for
-    /// each input blob.
+    /// In this sample the Batch service is used to process an input blob in parallel on multiple
+    /// compute nodes. Each task computes the top-N words for the input blob.
     /// </summary>
     public static class Job
     {
-        // files that are required on the compute nodes that run the tasks
         private const string TopNWordsExeName = "TopNWords.exe";
-        private const string StorageClientDllName = "Microsoft.WindowsAzure.Storage.dll";
+        private const string BooksContainerName = "books";
 
         public static void JobMain(string[] args)
         {
-            //Load the configuration
+            JobMainAsync(args).GetAwaiter().GetResult();
+        }
+
+        private static async Task JobMainAsync(string[] args)
+        {
             Settings topNWordsConfiguration = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("settings.json")
@@ -39,212 +39,195 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
                 .Get<Settings>();
             AccountSettings accountSettings = SampleHelpers.LoadAccountSettings();
 
-            CloudStorageAccount cloudStorageAccount = new CloudStorageAccount(
-                new StorageCredentials(
-                    accountSettings.StorageAccountName,
-                    accountSettings.StorageAccountKey), 
-                accountSettings.StorageServiceUrl,
-                useHttps: true);
+            BatchClient batchClient = ClientFactory.CreateBatchClient(accountSettings);
+            BatchAccountResource batchAccount = ClientFactory.CreateBatchAccountResource(accountSettings);
+            BlobServiceClient blobServiceClient = ClientFactory.CreateBlobServiceClient(accountSettings);
 
-            StagingStorageAccount stagingStorageAccount = new StagingStorageAccount(
-                accountSettings.StorageAccountName,
-                accountSettings.StorageAccountKey,
-                cloudStorageAccount.BlobEndpoint.ToString());
+            string stagingContainer = $"topnwords-staging-{Guid.NewGuid():N}";
 
-            using (BatchClient client = BatchClient.Open(new BatchSharedKeyCredentials(accountSettings.BatchServiceUrl, accountSettings.BatchAccountName, accountSettings.BatchAccountKey)))
+            try
             {
-                string stagingContainer = null;
-
-                //OSFamily 5 == Windows 2016. You can learn more about os families and versions at:
-                //http://msdn.microsoft.com/en-us/library/azure/ee924680.aspx
-                CloudPool pool = client.PoolOperations.CreatePool(
-                    topNWordsConfiguration.PoolId, 
-                    targetDedicatedComputeNodes: topNWordsConfiguration.PoolNodeCount,
-                    virtualMachineSize: topNWordsConfiguration.PoolNodeVirtualMachineSize,
-                    virtualMachineConfiguration: new VirtualMachineConfiguration(
-                    imageReference: new ImageReference(
-                            publisher: topNWordsConfiguration.ImagePublisher,
-                            offer: topNWordsConfiguration.ImageOffer,
-                            sku: topNWordsConfiguration.ImageSku,
-                            version: topNWordsConfiguration.ImageVersion
-                        ),
-                    nodeAgentSkuId: topNWordsConfiguration.NodeAgentSkuId));
+                // Create the pool via ARM.
                 Console.WriteLine("Adding pool {0}", topNWordsConfiguration.PoolId);
-                GettingStartedCommon.CreatePoolIfNotExistAsync(client, pool).Wait();
+                BatchAccountPoolData poolData = new BatchAccountPoolData
+                {
+                    VmSize = topNWordsConfiguration.PoolNodeVirtualMachineSize,
+                    DeploymentVmConfiguration = new BatchVmConfiguration(
+                        new BatchImageReference
+                        {
+                            Publisher = topNWordsConfiguration.ImagePublisher,
+                            Offer = topNWordsConfiguration.ImageOffer,
+                            Sku = topNWordsConfiguration.ImageSku,
+                            Version = topNWordsConfiguration.ImageVersion,
+                        },
+                        topNWordsConfiguration.NodeAgentSkuId),
+                    ScaleSettings = new BatchAccountPoolScaleSettings
+                    {
+                        FixedScale = new BatchAccountFixedScaleSettings
+                        {
+                            TargetDedicatedNodes = topNWordsConfiguration.PoolNodeCount,
+                        },
+                    },
+                };
+                await GettingStartedCommon.CreatePoolIfNotExistAsync(batchAccount, topNWordsConfiguration.PoolId, poolData);
 
+                // Create the job.
+                Console.WriteLine("Creating job: " + topNWordsConfiguration.JobId);
                 try
                 {
-                    Console.WriteLine("Creating job: " + topNWordsConfiguration.JobId);
-                    // get an empty unbound Job
-                    CloudJob unboundJob = client.JobOperations.CreateJob();
-                    unboundJob.Id = topNWordsConfiguration.JobId;
-                    unboundJob.PoolInformation = new PoolInformation() { PoolId = topNWordsConfiguration.PoolId };
-
-                    // Commit Job to create it in the service
-                    unboundJob.Commit();
-
-                    // create file staging objects that represent the executable and its dependent assembly to run as the task.
-                    // These files are copied to every node before the corresponding task is scheduled to run on that node.
-                    FileToStage topNWordExe = new FileToStage(TopNWordsExeName, stagingStorageAccount);
-                    FileToStage storageDll = new FileToStage(StorageClientDllName, stagingStorageAccount);
-
-                    // In this sample, the input data is copied separately to Storage and its URI is passed to the task as an argument.
-                    // This approach is appropriate when the amount of input data is large such that copying it to every node via FileStaging
-                    // is not desired and the number of tasks is small since a large number of readers of the blob might get throttled
-                    // by Storage which will lengthen the overall processing time.
-                    //
-                    // You'll need to observe the behavior and use published techniques for finding the right balance of performance versus
-                    // complexity.
-                    string bookFileUri = UploadBookFileToCloudBlob(accountSettings, topNWordsConfiguration.FileName);
-                    Console.WriteLine("{0} uploaded to cloud", topNWordsConfiguration.FileName);
-
-                    // initialize a collection to hold the tasks that will be submitted in their entirety
-                    List<CloudTask> tasksToRun = new List<CloudTask>(topNWordsConfiguration.NumberOfTasks);
-
-                    for (int i = 1; i <= topNWordsConfiguration.NumberOfTasks; i++)
-                    {
-                        CloudTask task = new CloudTask(
-                            id: $"task_no_{i}",
-                            commandline: $"{TopNWordsExeName} --Task {bookFileUri} {topNWordsConfiguration.TopWordCount} {accountSettings.StorageAccountName} {accountSettings.StorageAccountKey}");
-
-                        //This is the list of files to stage to a container -- for each job, one container is created and 
-                        //files all resolve to Azure Blobs by their name (so two tasks with the same named file will create just 1 blob in
-                        //the container).
-                        task.FilesToStage = new List<IFileStagingProvider>
-                        {
-                            topNWordExe,
-                            storageDll
-                        };
-
-                        tasksToRun.Add(task);
-                    }
-
-                    // Commit all the tasks to the Batch Service. Ask AddTask to return information about the files that were staged.
-                    // The container information is used later on to remove these files from Storage.
-                    ConcurrentBag<ConcurrentDictionary<Type, IFileStagingArtifact>> fsArtifactBag = new ConcurrentBag<ConcurrentDictionary<Type, IFileStagingArtifact>>();
-                    client.JobOperations.AddTask(topNWordsConfiguration.JobId, tasksToRun, fileStagingArtifacts: fsArtifactBag);
-
-                    // loop through the bag of artifacts, looking for the one that matches our staged files. Once there,
-                    // capture the name of the container holding the files so they can be deleted later on if that option
-                    // was configured in the settings.
-                    foreach (var fsBagItem in fsArtifactBag)
-                    {
-                        IFileStagingArtifact fsValue;
-                        if (fsBagItem.TryGetValue(typeof(FileToStage), out fsValue))
-                        {
-                            SequentialFileStagingArtifact stagingArtifact = fsValue as SequentialFileStagingArtifact;
-                            if (stagingArtifact != null)
-                            {
-                                stagingContainer = stagingArtifact.BlobContainerCreated;
-                                Console.WriteLine(
-                                    "Uploaded files to container: {0} -- you will be charged for their storage unless you delete them.",
-                                    stagingArtifact.BlobContainerCreated);
-                            }
-                        }
-                    }
-
-                    //Get the job to monitor status.
-                    CloudJob job = client.JobOperations.GetJob(topNWordsConfiguration.JobId);
-
-                    Console.Write("Waiting for tasks to complete ...   ");
-                    // Wait 20 minutes for all tasks to reach the completed state. The long timeout is necessary for the first
-                    // time a pool is created in order to allow nodes to be added to the pool and initialized to run tasks.
-                    IPagedEnumerable<CloudTask> ourTasks = job.ListTasks(new ODATADetailLevel(selectClause: "id"));
-                    client.Utilities.CreateTaskStateMonitor().WaitAll(ourTasks, TaskState.Completed, TimeSpan.FromMinutes(20));
-                    Console.WriteLine("tasks are done.");
-
-                    foreach (CloudTask t in ourTasks)
-                    {
-                        Console.WriteLine("Task " + t.Id);
-                        Console.WriteLine("stdout:" + Environment.NewLine + t.GetNodeFile(Batch.Constants.StandardOutFileName).ReadAsString());
-                        Console.WriteLine();
-                        Console.WriteLine("stderr:" + Environment.NewLine + t.GetNodeFile(Batch.Constants.StandardErrorFileName).ReadAsString());
-                    }
+                    await batchClient.CreateJobAsync(new BatchJobCreateOptions(
+                        topNWordsConfiguration.JobId,
+                        new BatchPoolInfo { PoolId = topNWordsConfiguration.PoolId }));
                 }
-                finally
+                catch (RequestFailedException ex) when (ex.ErrorCode == BatchErrorCode.JobExists.ToString())
                 {
-                    //Delete the pool that we created
-                    if (topNWordsConfiguration.ShouldDeletePool)
-                    {
-                        Console.WriteLine("Deleting pool: {0}", topNWordsConfiguration.PoolId);
-                        client.PoolOperations.DeletePool(topNWordsConfiguration.PoolId);
-                    }
+                    Console.WriteLine("Job {0} already exists.", topNWordsConfiguration.JobId);
+                }
 
-                    //Delete the job that we created
-                    if (topNWordsConfiguration.ShouldDeleteJob)
-                    {
-                        Console.WriteLine("Deleting job: {0}", topNWordsConfiguration.JobId);
-                        client.JobOperations.DeleteJob(topNWordsConfiguration.JobId);
-                    }
+                // Upload the book to a blob and get a read-only SAS URL.
+                string bookSasUri = await UploadBookFileToCloudBlobAsync(blobServiceClient, topNWordsConfiguration.FileName);
+                Console.WriteLine("{0} uploaded to cloud", topNWordsConfiguration.FileName);
 
-                    //Delete the containers we created
-                    if (topNWordsConfiguration.ShouldDeleteContainer)
+                // Stage the executable + its dependencies (every .exe / .dll next to TopNWords.exe).
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                List<string> filesToStage = Directory.EnumerateFiles(baseDir, "*.dll")
+                    .Concat(Directory.EnumerateFiles(baseDir, "*.exe"))
+                    .Concat(Directory.EnumerateFiles(baseDir, "*.config"))
+                    .ToList();
+                List<ResourceFile> stagedFiles = await FileStager.StageFilesAsContainerAsync(
+                    blobServiceClient,
+                    stagingContainer,
+                    filesToStage);
+
+                // Build the task collection.
+                var tasksToRun = new List<BatchTaskCreateOptions>(topNWordsConfiguration.NumberOfTasks);
+                for (int i = 1; i <= topNWordsConfiguration.NumberOfTasks; i++)
+                {
+                    var task = new BatchTaskCreateOptions(
+                        $"task_no_{i}",
+                        $"{TopNWordsExeName} --Task {bookSasUri} {topNWordsConfiguration.TopWordCount}");
+                    foreach (ResourceFile rf in stagedFiles)
                     {
-                        DeleteContainers(accountSettings, stagingContainer);
+                        task.ResourceFiles.Add(rf);
                     }
+                    tasksToRun.Add(task);
+                }
+
+                // Bulk submit.
+                const int batchSize = 100;
+                for (int offset = 0; offset < tasksToRun.Count; offset += batchSize)
+                {
+                    int count = Math.Min(batchSize, tasksToRun.Count - offset);
+                    var slice = tasksToRun.GetRange(offset, count);
+                    await batchClient.CreateTaskCollectionAsync(topNWordsConfiguration.JobId, new BatchTaskGroup(slice));
+                }
+
+                Console.Write("Waiting for tasks to complete ...   ");
+                await WaitForAllTasksCompletedAsync(batchClient, topNWordsConfiguration.JobId, TimeSpan.FromMinutes(20));
+                Console.WriteLine("tasks are done.");
+
+                await foreach (BatchTask t in batchClient.GetTasksAsync(topNWordsConfiguration.JobId, select: new[] { "id" }))
+                {
+                    Console.WriteLine("Task " + t.Id);
+                    Console.WriteLine("stdout:" + Environment.NewLine + await ReadNodeFileAsync(batchClient, topNWordsConfiguration.JobId, t.Id, "stdout.txt"));
+                    Console.WriteLine();
+                    Console.WriteLine("stderr:" + Environment.NewLine + await ReadNodeFileAsync(batchClient, topNWordsConfiguration.JobId, t.Id, "stderr.txt"));
+                }
+            }
+            finally
+            {
+                if (topNWordsConfiguration.ShouldDeletePool)
+                {
+                    Console.WriteLine("Deleting pool: {0}", topNWordsConfiguration.PoolId);
+                    BatchAccountPoolResource pool = await batchAccount.GetBatchAccountPools().GetAsync(topNWordsConfiguration.PoolId);
+                    await pool.DeleteAsync(WaitUntil.Started);
+                }
+
+                if (topNWordsConfiguration.ShouldDeleteJob)
+                {
+                    Console.WriteLine("Deleting job: {0}", topNWordsConfiguration.JobId);
+                    await batchClient.DeleteJobAsync(WaitUntil.Started, topNWordsConfiguration.JobId);
+                }
+
+                if (topNWordsConfiguration.ShouldDeleteContainer)
+                {
+                    await DeleteContainersAsync(blobServiceClient, stagingContainer);
                 }
             }
         }
 
-        /// <summary>
-        /// create a client for accessing blob storage
-        /// </summary>
-        private static CloudBlobClient GetCloudBlobClient(string accountName, string accountKey, string accountUrl)
+        private static async Task DeleteContainersAsync(BlobServiceClient blobServiceClient, string fileStagingContainer)
         {
-            StorageCredentials cred = new StorageCredentials(accountName, accountKey);
-            CloudStorageAccount storageAccount = new CloudStorageAccount(cred, accountUrl, useHttps: true);
-            CloudBlobClient client = storageAccount.CreateCloudBlobClient();
+            Console.WriteLine("Deleting container: " + BooksContainerName);
+            await blobServiceClient.GetBlobContainerClient(BooksContainerName).DeleteIfExistsAsync();
 
-            return client;
-        }
-
-        private static string booksContainerName = "books";
-
-        /// <summary>
-        /// Delete the containers in Azure Storage which are created by this sample.
-        /// </summary>
-        private static void DeleteContainers(AccountSettings accountSettings, string fileStagingContainer)
-        {
-            CloudBlobClient client = GetCloudBlobClient(
-                accountSettings.StorageAccountName, 
-                accountSettings.StorageAccountKey,
-                accountSettings.StorageServiceUrl);
-
-            //Delete the books container
-            CloudBlobContainer container = client.GetContainerReference(booksContainerName);
-            Console.WriteLine("Deleting container: " + booksContainerName);
-            container.DeleteIfExists();
-
-            //Delete the file staging container
             if (!string.IsNullOrEmpty(fileStagingContainer))
             {
-                container = client.GetContainerReference(fileStagingContainer);
                 Console.WriteLine("Deleting container: {0}", fileStagingContainer);
-                container.DeleteIfExists();
+                await blobServiceClient.GetBlobContainerClient(fileStagingContainer).DeleteIfExistsAsync();
             }
         }
 
-        /// <summary>
-        /// Upload a text file to a cloud blob.
-        /// </summary>
-        /// <param name="accountSettings">The account settings.</param>
-        /// <param name="fileName">The name of the file to upload</param>
-        /// <returns>The URI of the blob.</returns>
-        private static string UploadBookFileToCloudBlob(AccountSettings accountSettings, string fileName)
+        private static async Task<string> UploadBookFileToCloudBlobAsync(BlobServiceClient blobServiceClient, string fileName)
         {
-            CloudBlobClient client = GetCloudBlobClient(
-                accountSettings.StorageAccountName, 
-                accountSettings.StorageAccountKey,
-                accountSettings.StorageServiceUrl);
+            BlobContainerClient container = blobServiceClient.GetBlobContainerClient(BooksContainerName);
+            await container.CreateIfNotExistsAsync();
 
-            //Create the "books" container if it doesn't exist.
-            CloudBlobContainer container = client.GetContainerReference(booksContainerName);
-            container.CreateIfNotExists();
+            BlobClient blob = container.GetBlobClient(fileName);
+            using (FileStream fs = File.OpenRead(fileName))
+            {
+                await blob.UploadAsync(fs, overwrite: true);
+            }
 
-            //Upload the blob.
-            CloudBlockBlob blob = container.GetBlockBlobReference(fileName);
-            blob.UploadFromFile(fileName);
-            return blob.Uri.ToString();
+            Uri sasUri = blob.GenerateSasUri(BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddHours(24));
+            return sasUri.ToString();
+        }
+
+        private static async Task<string> ReadNodeFileAsync(BatchClient batchClient, string jobId, string taskId, string fileName)
+        {
+            try
+            {
+                BinaryData data = await batchClient.GetTaskFileAsync(jobId, taskId, fileName);
+                return data.ToString();
+            }
+            catch (RequestFailedException ex)
+            {
+                return $"<unable to read {fileName}: {ex.Message}>";
+            }
+        }
+
+        private static async Task WaitForAllTasksCompletedAsync(BatchClient batchClient, string jobId, TimeSpan timeout)
+        {
+            DateTime timeoutAt = DateTime.UtcNow.Add(timeout);
+            string[] select = new[] { "id", "state" };
+
+            while (true)
+            {
+                bool allCompleted = true;
+                bool anyTasks = false;
+
+                await foreach (BatchTask task in batchClient.GetTasksAsync(jobId, select: select))
+                {
+                    anyTasks = true;
+                    if (task.State != BatchTaskState.Completed)
+                    {
+                        allCompleted = false;
+                        break;
+                    }
+                }
+
+                if (anyTasks && allCompleted)
+                {
+                    return;
+                }
+
+                if (DateTime.UtcNow > timeoutAt)
+                {
+                    throw new TimeoutException($"Timed out waiting for tasks in job {jobId} to complete.");
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(15));
+            }
         }
     }
 }
