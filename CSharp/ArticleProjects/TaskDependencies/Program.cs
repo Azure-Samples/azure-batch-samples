@@ -5,9 +5,9 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
     using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
-    using Microsoft.Azure.Batch;
-    using Microsoft.Azure.Batch.Auth;
-    using Microsoft.Azure.Batch.Common;
+    using global::Azure;
+    using global::Azure.Compute.Batch;
+    using global::Azure.ResourceManager.Batch;
     using Microsoft.Azure.Batch.Samples.Common;
 
     public class Program
@@ -16,8 +16,6 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
         {
             try
             {
-                // Call the asynchronous version of the Main() method. This is done so that we can await various
-                // calls to async methods within the "Main" method of this console application.
                 MainAsync(args).Wait();
             }
             catch (Exception e)
@@ -37,127 +35,97 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
 
         private static async Task MainAsync(string[] args)
         {
-            // You may adjust these values to experiment with different compute resource scenarios.
             const string nodeSize = "standard_d2_v3";
-            const string osFamily = "5";
             const int nodeCount = 1;
 
             const string poolId = "TaskDependenciesSamplePool";
             const string jobId = "TaskDependenciesSampleJob";
 
-            // Amount of time to wait before timing out long-running tasks.
             TimeSpan timeLimit = TimeSpan.FromMinutes(30);
 
-            // Set up access to your Batch account with a BatchClient. Configure your AccountSettings in the
-            // Microsoft.Azure.Batch.Samples.Common project within this solution.
             AccountSettings accountSettings = SampleHelpers.LoadAccountSettings();
 
-            BatchSharedKeyCredentials cred = new BatchSharedKeyCredentials(
-                accountSettings.BatchServiceUrl,
-                accountSettings.BatchAccountName,
-                accountSettings.BatchAccountKey);
+            BatchClient batchClient = ClientFactory.CreateBatchClient(accountSettings);
+            BatchAccountResource batchAccount = ClientFactory.CreateBatchAccountResource(accountSettings);
 
             try
             {
-                using (BatchClient batchClient = BatchClient.Open(cred))
+                // Create the pool via ARM (or get the existing one).
+                Console.WriteLine("Creating pool [{0}]...", poolId);
+                await ArticleHelpers.CreatePoolIfNotExistAsync(
+                    batchAccount,
+                    poolId,
+                    nodeSize,
+                    nodeCount,
+                    taskSlotsPerNode: 1);
+
+                // Create the job and enable task dependencies.
+                Console.WriteLine("Creating job [{0}]...", jobId);
+                var jobOptions = new BatchJobCreateOptions(jobId, new BatchPoolInfo { PoolId = poolId })
                 {
-                    // Create the pool.
-                    Console.WriteLine("Creating pool [{0}]...", poolId);
-                    CloudPool unboundPool =
-                        batchClient.PoolOperations.CreatePool(
-                            poolId: poolId,
-                            virtualMachineSize: "standard_d2_v3",
-                            virtualMachineConfiguration: new VirtualMachineConfiguration(
-                            imageReference: new ImageReference(
-                                    publisher: "MicrosoftWindowsServer",
-                                    offer: "WindowsServer",
-                                    sku: "2016-Datacenter-smalldisk",
-                                    version: "latest"
-                                ),
-                            nodeAgentSkuId: "batch.node.windows amd64"),
-                            targetDedicatedComputeNodes: nodeCount);
-                    await unboundPool.CommitAsync();
+                    UsesTaskDependencies = true,
+                };
+                await batchClient.CreateJobAsync(jobOptions);
 
-                    // Create the job and specify that it uses tasks dependencies.
-                    Console.WriteLine("Creating job [{0}]...", jobId);
-                    CloudJob unboundJob = batchClient.JobOperations.CreateJob(jobId,
-                        new PoolInformation { PoolId = poolId });
+                // Build the dependency graph.
+                var tasks = new List<BatchTaskCreateOptions>
+                {
+                    // 'Rain' and 'Sun' don't depend on any other tasks.
+                    new BatchTaskCreateOptions("Rain", "cmd.exe /c echo Rain"),
+                    new BatchTaskCreateOptions("Sun", "cmd.exe /c echo Sun"),
 
-                    // IMPORTANT: This is REQUIRED for using task dependencies.
-                    unboundJob.UsesTaskDependencies = true;
-
-                    await unboundJob.CommitAsync();
-
-                    // Create the collection of tasks that will be added to the job.
-                    List<CloudTask> tasks = new List<CloudTask>
+                    // 'Flowers' depends on completion of both 'Rain' and 'Sun'.
+                    new BatchTaskCreateOptions("Flowers", "cmd.exe /c echo Flowers")
                     {
-                        // 'Rain' and 'Sun' don't depend on any other tasks
-                        new CloudTask("Rain", "cmd.exe /c echo Rain"),
-                        new CloudTask("Sun", "cmd.exe /c echo Sun"),
- 
-                        // Task 'Flowers' depends on completion of both 'Rain' and 'Sun'
-                        // before it is run.
-                        new CloudTask("Flowers", "cmd.exe /c echo Flowers")
+                        DependsOn = new BatchTaskDependencies
                         {
-                            DependsOn = TaskDependencies.OnIds("Rain", "Sun")
+                            TaskIds = { "Rain", "Sun" },
                         },
- 
-                        // Tasks 1, 2, and 3 don't depend on any other tasks. Because
-                        // we will be using them for a task range dependency, we must
-                        // specify string representations of integers as their ids.
-                        new CloudTask("1", "cmd.exe /c echo 1"),
-                        new CloudTask("2", "cmd.exe /c echo 2"),
-                        new CloudTask("3", "cmd.exe /c echo 3"),
+                    },
 
-                        // Task A is the parent task.
-                        new CloudTask("A", "cmd.exe /c echo A")
+                    // Tasks 1, 2 and 3 are referenced by a task range elsewhere.
+                    new BatchTaskCreateOptions("1", "cmd.exe /c echo 1"),
+                    new BatchTaskCreateOptions("2", "cmd.exe /c echo 2"),
+                    new BatchTaskCreateOptions("3", "cmd.exe /c echo 3"),
+
+                    // Task A is the parent task; B depends on A.
+                    new BatchTaskCreateOptions("A", "cmd.exe /c echo A")
+                    {
+                        ExitConditions = new ExitConditions
                         {
-                            // Specify exit conditions for task A and their dependency actions.
-                            ExitConditions = new ExitConditions
+                            PreProcessingError = new ExitOptions
                             {
-                                // If task A exits with a pre-processing error, block any downstream tasks (in this example, task B).
-                                PreProcessingError = new ExitOptions
-                                {
-                                    DependencyAction = DependencyAction.Block
-                                },
-                                // If task A exits with the specified error codes, block any downstream tasks (in this example, task B).
-                                ExitCodes = new List<ExitCodeMapping>
-                                {
-                                    new ExitCodeMapping(10, new ExitOptions() { DependencyAction = DependencyAction.Block }),
-                                    new ExitCodeMapping(20, new ExitOptions() { DependencyAction = DependencyAction.Block })
-                                },
-                                // If task A succeeds or fails with any other error, any downstream tasks become eligible to run 
-                                // (in this example, task B).
-                                Default = new ExitOptions
-                                {
-                                    DependencyAction = DependencyAction.Satisfy
-                                }
-                            }
+                                DependencyAction = DependencyAction.Block,
+                            },
+                            DefaultExitOptions = new ExitOptions
+                            {
+                                DependencyAction = DependencyAction.Satisfy,
+                            },
                         },
-                        // Task B depends on task A. Whether it becomes eligible to run depends on how task A exits.
-                        new CloudTask("B", "cmd.exe /c echo B")
+                    },
+                    new BatchTaskCreateOptions("B", "cmd.exe /c echo B")
+                    {
+                        DependsOn = new BatchTaskDependencies
                         {
-                            DependsOn = TaskDependencies.OnId("A")
+                            TaskIds = { "A" },
                         },
-                    };
+                    },
+                };
 
-                    // Add the tasks to the job.
-                    await batchClient.JobOperations.AddTaskAsync(jobId, tasks);
+                // Add per-exit-code dependency mappings to task A.
+                tasks[5].ExitConditions.ExitCodes.Add(new ExitCodeMapping(10, new ExitOptions { DependencyAction = DependencyAction.Block }));
+                tasks[5].ExitConditions.ExitCodes.Add(new ExitCodeMapping(20, new ExitOptions { DependencyAction = DependencyAction.Block }));
 
-                    // Pause execution while we wait for the tasks to complete, and notify
-                    // whether the tasks completed successfully.
-                    Console.WriteLine("Waiting for task completion...");
-                    Console.WriteLine();
-                    CloudJob job = await batchClient.JobOperations.GetJobAsync(jobId);
+                // Bulk-add the tasks.
+                await batchClient.CreateTaskCollectionAsync(jobId, new BatchTaskGroup(tasks));
 
-                    await batchClient.Utilities.CreateTaskStateMonitor().WhenAll(
-                        job.ListTasks(),
-                        TaskState.Completed,
-                        timeLimit);
+                Console.WriteLine("Waiting for task completion...");
+                Console.WriteLine();
 
-                    Console.WriteLine("All tasks completed successfully.");
-                    Console.WriteLine();
-                }
+                await WaitForAllTasksCompletedAsync(batchClient, jobId, timeLimit);
+
+                Console.WriteLine("All tasks completed successfully.");
+                Console.WriteLine();
             }
             catch (Exception e)
             {
@@ -168,25 +136,54 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
             }
             finally
             {
-                using (BatchClient batchClient = BatchClient.Open(cred))
+                Console.Write("Delete job? [yes] no: ");
+                string response = Console.ReadLine().ToLower();
+                if (response != "n" && response != "no")
                 {
-                    CloudJob job = await batchClient.JobOperations.GetJobAsync(jobId);
+                    await batchClient.DeleteJobAsync(WaitUntil.Started, jobId);
+                }
 
-                    // Clean up the resources we've created in the Batch account
-                    Console.Write("Delete job? [yes] no: ");
-                    string response = Console.ReadLine().ToLower();
-                    if (response != "n" && response != "no")
-                    {
-                        await batchClient.JobOperations.DeleteJobAsync(job.Id);
-                    }
+                Console.Write("Delete pool? [yes] no: ");
+                response = Console.ReadLine().ToLower();
+                if (response != "n" && response != "no")
+                {
+                    BatchAccountPoolResource pool = await batchAccount.GetBatchAccountPools().GetAsync(poolId);
+                    await pool.DeleteAsync(WaitUntil.Started);
+                }
+            }
+        }
 
-                    Console.Write("Delete pool? [yes] no: ");
-                    response = Console.ReadLine().ToLower();
-                    if (response != "n" && response != "no")
+        private static async Task WaitForAllTasksCompletedAsync(BatchClient batchClient, string jobId, TimeSpan timeout)
+        {
+            DateTime timeoutAt = DateTime.UtcNow.Add(timeout);
+            string[] select = new[] { "id", "state" };
+
+            while (true)
+            {
+                bool allCompleted = true;
+                bool anyTasks = false;
+
+                await foreach (BatchTask task in batchClient.GetTasksAsync(jobId, select: select))
+                {
+                    anyTasks = true;
+                    if (task.State != BatchTaskState.Completed)
                     {
-                        await batchClient.PoolOperations.DeletePoolAsync(poolId);
+                        allCompleted = false;
+                        break;
                     }
                 }
+
+                if (anyTasks && allCompleted)
+                {
+                    return;
+                }
+
+                if (DateTime.UtcNow > timeoutAt)
+                {
+                    throw new TimeoutException($"Timed out waiting for tasks in job {jobId} to complete.");
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(15));
             }
         }
     }
