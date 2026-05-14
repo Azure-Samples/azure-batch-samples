@@ -106,10 +106,14 @@ namespace Microsoft.Azure.Batch.Samples.Articles.JobPrepRelease
                 }
             }
 
-            // Terminate the job (this triggers the job release task on each node that ran job tasks).
+            // Terminate the job to mark it as Completed; this triggers the job release task on every
+            // node that ran job tasks. Note that the job release task is also executed when a job is
+            // deleted, so you do not need to call Terminate if you typically delete your jobs upon task
+            // completion.
             await batchClient.TerminateJobAsync(WaitUntil.Started, job.Id);
 
-            // Wait for the job to reach Completed.
+            // Wait for the job to reach Completed. This wait is not typically necessary in production
+            // code, but is done here to enable the checking of the release task exit codes below.
             await ArticleHelpers.WaitForJobToReachStateAsync(batchClient, job.Id, BatchJobState.Completed, TimeSpan.FromMinutes(2));
 
             // Print prep / release task exit codes per node.

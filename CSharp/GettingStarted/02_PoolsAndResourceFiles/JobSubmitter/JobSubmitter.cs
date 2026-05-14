@@ -155,6 +155,10 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
                 SimpleTaskExe,
             };
 
+            // Stage the task input files to Azure Storage so they can be downloaded as resource files
+            // when the task runs on a compute node. Note: the Batch service does not automatically
+            // delete content from your storage account, so files added in this way must be removed
+            // manually when they are no longer needed (the sample cleans them up at the end of the run).
             List<ResourceFile> resourceFiles = await FileStager.StageFilesAsBlobsAsync(blobServiceClient, jobInputContainerName, filesToStage);
 
             var taskOptions = new BatchTaskCreateOptions("task_with_file1", SimpleTaskExe);

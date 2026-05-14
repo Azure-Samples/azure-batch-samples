@@ -83,6 +83,9 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
             string containerName = ("jobmgr-" + this.jobId).ToLowerInvariant();
             blobContainerNames.Add(containerName);
 
+            // Stage the task input files to Azure Storage. Note: the Batch service does not automatically
+            // delete content from your storage account, so files added in this way must be removed manually
+            // when they are no longer needed (this sample deletes the container in the finally block of RunAsync).
             List<ResourceFile> resourceFiles = await FileStager.StageFilesAsBlobsAsync(
                 blobServiceClient,
                 containerName,

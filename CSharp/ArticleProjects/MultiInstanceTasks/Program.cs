@@ -46,6 +46,11 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
 
             const int numberOfNodes = 3;
 
+            // Before running this sample you must upload an application package to your Batch account containing:
+            //   * The MPIHelloWorld sample MS-MPI program (see https://blogs.technet.microsoft.com/windowshpc/2015/02/02/how-to-compile-and-run-a-simple-ms-mpi-program/).
+            //   * The MSMpiSetup.exe installer (see https://www.microsoft.com/download/details.aspx?id=52981).
+            // For instructions on uploading an application package, see
+            // https://azure.microsoft.com/documentation/articles/batch-application-packages/.
             // The application package and version to deploy to the compute nodes.
             const string appPackageId = "MPIHelloWorld";
             const string appPackageVersion = "1.0";

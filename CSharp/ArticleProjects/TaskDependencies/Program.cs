@@ -60,6 +60,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
                     taskSlotsPerNode: 1);
 
                 // Create the job and enable task dependencies.
+                // IMPORTANT: UsesTaskDependencies must be set to true on the job (default is false) in order to use task dependencies.
                 Console.WriteLine("Creating job [{0}]...", jobId);
                 var jobOptions = new BatchJobCreateOptions(jobId, new BatchPoolInfo { PoolId = poolId })
                 {
