@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 //
 // Companion project to the following article:
 // https://azure.microsoft.com/documentation/articles/batch-mpi/
@@ -16,19 +16,18 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
 
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             try
             {
-                MainAsync().Wait();
+                await RunAsync();
             }
-            catch (AggregateException ae)
+            catch (Exception ex)
             {
                 Console.WriteLine();
-                Console.WriteLine("One or more exceptions occurred.");
+                Console.WriteLine("An exception occurred:");
                 Console.WriteLine();
-
-                SampleHelpers.PrintAggregateException(ae);
+                Console.WriteLine(ex);
             }
             finally
             {
@@ -38,7 +37,7 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
             }
         }
 
-        public static async Task MainAsync()
+        public static async Task RunAsync()
         {
             const string poolId = "MultiInstanceSamplePool";
             const string jobId  = "MultiInstanceSampleJob";
@@ -60,7 +59,7 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
             AccountSettings accountSettings = SampleHelpers.LoadAccountSettings();
 
             BatchClient batchClient = ClientFactory.CreateBatchClient(accountSettings);
-            BatchAccountResource batchAccount = ClientFactory.CreateBatchAccountResource(accountSettings);
+            BatchAccountResource batchAccount = SampleHelpers.GetBatchAccountResource(accountSettings);
 
             // Create the pool of compute nodes and the job to which we add the multi-instance task.
             await CreatePoolAsync(batchAccount, accountSettings, poolId, numberOfNodes, appPackageId, appPackageVersion);

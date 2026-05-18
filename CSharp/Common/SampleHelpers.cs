@@ -10,6 +10,9 @@ namespace Microsoft.Azure.Batch.Samples.Common
     using System.Threading.Tasks;
     using global::Azure;
     using global::Azure.Compute.Batch;
+    using global::Azure.Core;
+    using global::Azure.ResourceManager;
+    using global::Azure.ResourceManager.Batch;
     using global::Azure.Storage.Blobs;
     using global::Azure.Storage.Sas;
     using Microsoft.Extensions.Configuration;
@@ -19,6 +22,26 @@ namespace Microsoft.Azure.Batch.Samples.Common
     /// </summary>
     public static class SampleHelpers
     {
+        /// <summary>
+        /// Returns the <see cref="BatchAccountResource"/> for the configured Batch account.
+        /// All ARM-based pool operations should hang off this resource.
+        /// </summary>
+        public static BatchAccountResource GetBatchAccountResource(AccountSettings settings)
+        {
+            if (settings == null) throw new ArgumentNullException(nameof(settings));
+            if (string.IsNullOrWhiteSpace(settings.SubscriptionId))
+                throw new InvalidOperationException("AccountSettings.SubscriptionId is required for ARM pool operations.");
+            if (string.IsNullOrWhiteSpace(settings.ResourceGroupName))
+                throw new InvalidOperationException("AccountSettings.ResourceGroupName is required for ARM pool operations.");
+
+            ArmClient arm = ClientFactory.CreateArmClient();
+            ResourceIdentifier id = BatchAccountResource.CreateResourceIdentifier(
+                settings.SubscriptionId,
+                settings.ResourceGroupName,
+                settings.BatchAccountName);
+            return arm.GetBatchAccountResource(id);
+        }
+
         /// <summary>
         /// Constructs a container shared access signature URL using a user-delegation key.
         /// </summary>

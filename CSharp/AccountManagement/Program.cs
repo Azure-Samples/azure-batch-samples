@@ -23,19 +23,18 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
         // The name of the Resource Group that will be created and deleted.
         private const string ResourceGroupName = "AccountMgmtSampleGroup";
 
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             try
             {
-                MainAsync().Wait();
+                await MainAsyncInternal();
             }
-            catch (AggregateException ae)
+            catch (Exception ex)
             {
                 Console.WriteLine();
-                Console.WriteLine("One or more exceptions occurred.");
+                Console.WriteLine("An exception occurred:");
                 Console.WriteLine();
-
-                SampleHelpers.PrintAggregateException(ae.Flatten());
+                Console.WriteLine(ex);
             }
             finally
             {
@@ -45,7 +44,7 @@ namespace Microsoft.Azure.Batch.Samples.AccountManagement
             }
         }
 
-        private static async Task MainAsync()
+        private static async Task MainAsyncInternal()
         {
             // Authenticate with the user's default credentials (Azure CLI, Visual Studio,
             // managed identity, environment variables, etc.). Run `az login` before running

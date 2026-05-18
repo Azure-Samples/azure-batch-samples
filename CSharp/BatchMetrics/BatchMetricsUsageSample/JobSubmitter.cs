@@ -1,4 +1,4 @@
-﻿//Copyright (c) Microsoft Corporation
+//Copyright (c) Microsoft Corporation
 
 namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
 {
@@ -37,7 +37,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
         {
             this.accountSettings = accountSettings;
             this.batchClient = ClientFactory.CreateBatchClient(accountSettings);
-            this.batchAccount = ClientFactory.CreateBatchAccountResource(accountSettings);
+            this.batchAccount = SampleHelpers.GetBatchAccountResource(accountSettings);
         }
 
         // Creates a pool so that the sample jobs have somewhere to run, so that they can

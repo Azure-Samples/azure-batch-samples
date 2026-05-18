@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 
 namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
 {
@@ -12,11 +12,11 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
 
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             try
             {
-                MainAsync(args).Wait();
+                await RunAsync(args);
             }
             catch (Exception e)
             {
@@ -33,7 +33,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
             }
         }
 
-        private static async Task MainAsync(string[] args)
+        private static async Task RunAsync(string[] args)
         {
             const string nodeSize = "standard_d2_v3";
             const int nodeCount = 1;
@@ -46,7 +46,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.TaskDependencies
             AccountSettings accountSettings = SampleHelpers.LoadAccountSettings();
 
             BatchClient batchClient = ClientFactory.CreateBatchClient(accountSettings);
-            BatchAccountResource batchAccount = ClientFactory.CreateBatchAccountResource(accountSettings);
+            BatchAccountResource batchAccount = SampleHelpers.GetBatchAccountResource(accountSettings);
 
             try
             {

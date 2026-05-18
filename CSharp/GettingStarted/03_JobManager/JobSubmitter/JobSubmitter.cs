@@ -1,4 +1,4 @@
-﻿//Copyright (c) Microsoft Corporation
+//Copyright (c) Microsoft Corporation
 
 namespace Microsoft.Azure.Batch.Samples.JobManager
 {
@@ -51,7 +51,7 @@ namespace Microsoft.Azure.Batch.Samples.JobManager
 
             BatchClient batchClient = ClientFactory.CreateBatchClient(this.accountSettings);
             BlobServiceClient blobServiceClient = ClientFactory.CreateBlobServiceClient(this.accountSettings);
-            BatchAccountResource batchAccount = ClientFactory.CreateBatchAccountResource(this.accountSettings);
+            BatchAccountResource batchAccount = SampleHelpers.GetBatchAccountResource(this.accountSettings);
 
             string jobId = null;
 

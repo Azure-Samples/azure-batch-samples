@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 //
 // Companion project to the following article:
 // https://azure.microsoft.com/documentation/articles/batch-efficient-list-queries/
@@ -17,19 +17,18 @@ namespace Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             try
             {
-                MainAsync(args).Wait();
+                await RunAsync(args);
             }
-            catch (AggregateException ae)
+            catch (Exception ex)
             {
                 Console.WriteLine();
-                Console.WriteLine("One or more exceptions occurred.");
+                Console.WriteLine("An exception occurred:");
                 Console.WriteLine();
-
-                SampleHelpers.PrintAggregateException(ae.Flatten());
+                Console.WriteLine(ex);
             }
             finally
             {
@@ -39,7 +38,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries
             }
         }
 
-        private static async Task MainAsync(string[] args)
+        private static async Task RunAsync(string[] args)
         {
             const string nodeSize     = "standard_d1_v2";
             const int nodeCount       = 1;
@@ -53,7 +52,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.EfficientListQueries
             var accountSettings = SampleHelpers.LoadAccountSettings();
 
             BatchClient batchClient = ClientFactory.CreateBatchClient(accountSettings);
-            BatchAccountResource batchAccount = ClientFactory.CreateBatchAccountResource(accountSettings);
+            BatchAccountResource batchAccount = SampleHelpers.GetBatchAccountResource(accountSettings);
 
             // Create the pool via the ARM SDK (or get the existing one).
             BatchAccountPoolResource pool = await ArticleHelpers.CreatePoolIfNotExistAsync(

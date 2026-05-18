@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 //
 // Companion project to the following article:
 // https://azure.microsoft.com/documentation/articles/batch-job-prep-release/
@@ -16,19 +16,18 @@ namespace Microsoft.Azure.Batch.Samples.Articles.JobPrepRelease
 
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             try
             {
-                MainAsync(args).Wait();
+                await RunAsync(args);
             }
-            catch (AggregateException ae)
+            catch (Exception ex)
             {
                 Console.WriteLine();
-                Console.WriteLine("One or more exceptions occurred.");
+                Console.WriteLine("An exception occurred:");
                 Console.WriteLine();
-
-                SampleHelpers.PrintAggregateException(ae.Flatten());
+                Console.WriteLine(ex);
             }
             finally
             {
@@ -38,7 +37,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.JobPrepRelease
             }
         }
 
-        private static async Task MainAsync(string[] args)
+        private static async Task RunAsync(string[] args)
         {
             const string poolId = "JobPrepReleaseSamplePool";
             const string jobId  = "JobPrepReleaseSampleJob";
@@ -51,7 +50,7 @@ namespace Microsoft.Azure.Batch.Samples.Articles.JobPrepRelease
             var accountSettings = SampleHelpers.LoadAccountSettings();
 
             BatchClient batchClient = ClientFactory.CreateBatchClient(accountSettings);
-            BatchAccountResource batchAccount = ClientFactory.CreateBatchAccountResource(accountSettings);
+            BatchAccountResource batchAccount = SampleHelpers.GetBatchAccountResource(accountSettings);
 
             // Create (or get) the pool via ARM.
             BatchAccountPoolResource pool = await ArticleHelpers.CreatePoolIfNotExistAsync(

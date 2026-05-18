@@ -53,7 +53,7 @@ namespace Microsoft.Azure.Batch.Samples.PoolsAndResourceFiles
 
             BatchClient batchClient = ClientFactory.CreateBatchClient(this.accountSettings);
             BlobServiceClient blobServiceClient = ClientFactory.CreateBlobServiceClient(this.accountSettings);
-            BatchAccountResource batchAccount = ClientFactory.CreateBatchAccountResource(this.accountSettings);
+            BatchAccountResource batchAccount = SampleHelpers.GetBatchAccountResource(this.accountSettings);
 
             string jobId = null;
             HashSet<string> blobContainerNames = new HashSet<string>();

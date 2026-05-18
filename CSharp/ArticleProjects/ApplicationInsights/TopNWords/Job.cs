@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 
 namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
 {
@@ -37,7 +37,7 @@ namespace Microsoft.Azure.Batch.Samples.TopNWordsSample
             AccountSettings accountSettings = SampleHelpers.LoadAccountSettings();
 
             BatchClient batchClient = ClientFactory.CreateBatchClient(accountSettings);
-            BatchAccountResource batchAccount = ClientFactory.CreateBatchAccountResource(accountSettings);
+            BatchAccountResource batchAccount = SampleHelpers.GetBatchAccountResource(accountSettings);
             BlobServiceClient blobServiceClient = ClientFactory.CreateBlobServiceClient(accountSettings);
 
             string stagingContainer = $"topnwords-staging-{Guid.NewGuid():N}";
