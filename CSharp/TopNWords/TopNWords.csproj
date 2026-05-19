@@ -4,6 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net462</TargetFramework>
     <RootNamespace>Microsoft.Azure.Batch.Samples.TopNWordsSample</RootNamespace>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,11 +12,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.Batch" Version="14.0.0" />
-    <PackageReference Include="Microsoft.Azure.Batch.FileStaging" Version="8.3.0" />
+    <PackageReference Include="Azure.Compute.Batch" Version="1.0.0" />
+    <PackageReference Include="Azure.ResourceManager.Batch" Version="1.6.0" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.24.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="2.1.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.1.0" />
-    <PackageReference Include="WindowsAzure.Storage" Version="9.3.3" />
   </ItemGroup>
 
   <ItemGroup>

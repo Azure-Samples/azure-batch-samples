@@ -56,26 +56,25 @@ exceptions for us and significantly improves the debugging experience. The
 following sample illustrates how to use these methods.
 
 ```csharp
-public void CountWords(string blobName, int numTopN, string storageAccountName, string storageAccountKey)
+public void CountWords(string blobUrl, int numTopN)
 {
     // simulate exception for some  set of tasks
     Random rand = new Random();
     if (rand.Next(0, 10) % 10 == 0)
     {
-        blobName += ".badUrl";
+        blobUrl += ".badUrl";
     }
 
     // log the url we are downloading the file from
-    insightsClient.TrackTrace(new TraceTelemetry(string.Format("Task {0}: Download file from: {1}", this.taskId, blobName), SeverityLevel.Verbose));
+    insightsClient.TrackTrace(new TraceTelemetry(string.Format("Task {0}: Download file from: {1}", this.taskId, blobUrl), SeverityLevel.Verbose));
 
-    // open the cloud blob that contains the book
-    var storageCred = new StorageCredentials(storageAccountName, storageAccountKey);
-    CloudBlockBlob blob = new CloudBlockBlob(new Uri(blobName), storageCred);
+    // open the blob that contains the book using DefaultAzureCredential
+    BlobClient blob = new BlobClient(new Uri(blobUrl), new DefaultAzureCredential());
     using (Stream memoryStream = new MemoryStream())
     {
         // calculate blob download time
         DateTime start = DateTime.Now;
-        blob.DownloadToStream(memoryStream);
+        blob.DownloadTo(memoryStream);
         TimeSpan downloadTime = DateTime.Now.Subtract(start);
 
         // track how long the blob takes to download on this node
@@ -191,62 +190,52 @@ private const string AIServerTelemetryName = "Microsoft.AI.ServerTelemetryChanne
 private const string AIWindowsServerName = "Microsoft.AI.WindowsServer.dll";
 ```
 
-Next, create the staging files that are used by the task.
+Next, upload the binaries to a single staging container in Blob Storage and obtain `ResourceFile` references for them.
 ```csharp
-// create file staging objects that represent the executable and its dependent assembly to run as the task.
-// These files are copied to every node before the corresponding task is scheduled to run on that node.
-FileToStage topNWordExe = new FileToStage(TopNWordsExeName, stagingStorageAccount);
-FileToStage storageDll = new FileToStage(StorageClientDllName, stagingStorageAccount);
+// Collect the executable, its dependencies, and the Application Insights config + assemblies.
+List<string> binaries = new List<string>
+{
+    TopNWordsExeName,
+    AIConfig,
+    AIDllName,
+    AIDependencyCollectorName,
+    AIInterceptDllAgentName,
+    AIPerfCounterCollectorName,
+    AIServerTelemetryName,
+    AIWindowsServerName,
+};
 
-// Upload application insights assemblies
-FileToStage applicationInsightsConfig = new FileToStage(AIConfig, stagingStorageAccount);
-FileToStage applicationInsightsDll = new FileToStage(AIDllName, stagingStorageAccount);
-FileToStage applicationInsightsCollectorDll = new FileToStage(AIDependencyCollectorName, stagingStorageAccount);
-FileToStage applicationInsightsInterceptorDll = new FileToStage(AIInterceptDllAgentName, stagingStorageAccount);
-FileToStage applicationInsightsPerfCounterCollectorDll = new FileToStage(AIPerfCounterCollectorName, stagingStorageAccount);
-FileToStage applicationInsightsServerTelemetryDll = new FileToStage(AIServerTelemetryName, stagingStorageAccount);
-FileToStage applicationInsightsWindowsServerDll = new FileToStage(AIWindowsServerName, stagingStorageAccount);
+// Upload the files to a single container; each task will reference the entire container as a ResourceFile.
+List<ResourceFile> binaryResources = await FileStager.StageFilesAsContainerAsync(
+    blobServiceClient,
+    stagingContainerName,
+    binaries.Select(name => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, name)).ToList());
 ```
 
-> The FileToStage method is a helper function in the code 
-> sample that allows you to easily upload a file from local disk to an 
-> Azure Storage blob. This is later referenced downloaded to a Compute Node 
-> and referenced by a task.
+> `FileStager.StageFilesAsContainerAsync` is a helper in the sample's `Common` project that uploads files to an
+> Azure Storage container and returns container-scoped `ResourceFile` references using a user-delegation SAS
+> issued via `DefaultAzureCredential`.
 
 Finally add the tasks to the job and include the necessary Application Insights binaries.
 ```csharp
 // initialize a collection to hold the tasks that will be submitted in their entirety
-List<CloudTask> tasksToRun = new List<CloudTask>(topNWordsConfiguration.NumberOfTasks);
+var tasksToRun = new List<BatchTaskCreateOptions>(topNWordsConfiguration.NumberOfTasks);
 for (int i = 1; i <= topNWordsConfiguration.NumberOfTasks; i++)
 {
-    CloudTask task = new CloudTask("task_no_" + i, String.Format("{0} --Task {1} {2} {3} {4}",
-        TopNWordsExeName,
-        bookFileUri,
-        topNWordsConfiguration.TopWordCount,
-        accountSettings.StorageAccountName,
-        accountSettings.StorageAccountKey));
+    string commandLine = $"{TopNWordsExeName} --Task {bookBlobUrl} {topNWordsConfiguration.TopWordCount}";
+    var task = new BatchTaskCreateOptions("task_no_" + i, commandLine);
 
-    //This is the list of files to stage to a container -- for each job, one container is created and 
-    //files all resolve to Azure Blobs by their name (so two tasks with the same named file will create just 1 blob in
-    //the container).
-    task.FilesToStage = new List<IFileStagingProvider>
-                        {
-                            // required application binaries
-                            topNWordExe,
-                            storageDll,
-                            // Application Insights config file an binaries
-                            applicationInsightsConfig,
-                            applicationInsightsDll,
-                            applicationInsightsCollectorDll,
-                            applicationInsightsInterceptorDll,
-                            applicationInsightsPerfCounterCollectorDll,
-                            applicationInsightsServerTelemetryDll,
-                            applicationInsightsWindowsServerDll
-                        };
+    // Reference the staging container so all of the staged binaries are downloaded to the node.
+    foreach (ResourceFile rf in binaryResources)
+    {
+        task.ResourceFiles.Add(rf);
+    }
 
-    task.RunElevated = false;
     tasksToRun.Add(task);
 }
+
+// Submit the tasks in a single bulk add.
+await batchClient.CreateTaskCollectionAsync(topNWordsConfiguration.JobId, new BatchTaskGroup(tasksToRun));
 ```
 
 ## Viewing data in the Azure portal
@@ -307,23 +296,27 @@ as performance counters. In the samples we use the start task to load the
 binaries on the machine and keep a process running indefinitely.
 
 ```csharp
-CloudPool pool = client.PoolOperations.CreatePool(
-    topNWordsConfiguration.PoolId,
-    targetDedicated: topNWordsConfiguration.PoolNodeCount,
-    virtualMachineSize: "standard_d2_v3",
-    virtualMachineConfiguration: new VirtualMachineConfiguration(
-    imageReference: new ImageReference(
-            publisher: topNWordsConfiguration.ImagePublisher,
-            offer: topNWordsConfiguration.ImageOffer,
-            sku: topNWordsConfiguration.ImageSku,
-            version: topNWordsConfiguration.ImageVersion
-        ),
-    nodeAgentSkuId: topNWordsConfiguration.NodeAgentSkuId));
-    
-// Create file staging objects that represent the executable and its dependent assembly to run as the task.
-// These files are copied to every node before the corresponding task is scheduled to run on that node.
-FileToStage applicationMonitoringExe = new FileToStage(BatchApplicationInsightsAssemblyExeName, stagingStorageAccount);
-FileToStage applicationMonitoringConfig = new FileToStage(ApplicationInsightsConfigName, stagingStorageAccount);
+// Build a pool definition via the Azure Resource Manager (control plane) Batch SDK.
+BatchAccountPoolData poolData = new BatchAccountPoolData
+{
+    VmSize = "standard_d2_v3",
+    DeploymentVmConfiguration = new BatchVmConfiguration(
+        new BatchImageReference
+        {
+            Publisher = topNWordsConfiguration.ImagePublisher,
+            Offer = topNWordsConfiguration.ImageOffer,
+            Sku = topNWordsConfiguration.ImageSku,
+            Version = topNWordsConfiguration.ImageVersion,
+        },
+        topNWordsConfiguration.NodeAgentSkuId),
+    ScaleSettings = new BatchAccountPoolScaleSettings
+    {
+        FixedScale = new BatchAccountFixedScaleSettings
+        {
+            TargetDedicatedNodes = topNWordsConfiguration.PoolNodeCount,
+        },
+    },
+};
 
 // List of files required to run the start task.
 List<string> files = new List<string>
@@ -335,26 +328,34 @@ List<string> files = new List<string>
     AIInterceptDllAgentName,
     AIPerfCounterCollectorName,
     AIServerTelemetryName,
-    AIWindowsServerName
-
+    AIWindowsServerName,
 };
 
-var resourceHelperTask = SampleHelpers.UploadResourcesAndCreateResourceFileReferencesAsync(
-    cloudStorageAccount,
+// Upload the start-task assets to Blob Storage and produce ResourceFile references
+// (uses DefaultAzureCredential + a user-delegation SAS under the covers).
+List<ResourceFile> resourceFiles = await SampleHelpers.UploadResourcesAndCreateResourceFileReferencesAsync(
+    blobServiceClient,
     "monitoringdemo",
     files);
 
-List<ResourceFile> resourceFiles = resourceHelperTask.Result;
-
-// Create a start task which will run a dummy exe in background that simply emit performance
-// counter data as defined in the relevant ApplicationInsights.config.
-// Note that the waitForSuccess on the start task was not set so the Compute Node will be
-// available immediately after this command is run.
-pool.StartTask = new StartTask()
+// Configure a start task that runs a small exe in the background to emit performance counter data
+// as defined in the relevant ApplicationInsights.config. waitForSuccess is left unset so the compute
+// node becomes available immediately after the command is launched.
+poolData.StartTask = new BatchAccountPoolStartTask
 {
     CommandLine = "cmd /c BatchApplicationInsightsAssembly.exe",
-    ResourceFiles = resourceFiles
 };
+foreach (ResourceFile rf in resourceFiles)
+{
+    poolData.StartTask.ResourceFiles.Add(new BatchResourceFile
+    {
+        BlobContainerUri = rf.StorageContainerUri,
+        HttpUri = rf.HttpUri,
+        FilePath = rf.FilePath,
+    });
+}
+
+await GettingStartedCommon.CreatePoolIfNotExistAsync(batchAccount, topNWordsConfiguration.PoolId, poolData);
 ```
 
 > Tip: To increase the manageability of your solution, you can bundle this up 

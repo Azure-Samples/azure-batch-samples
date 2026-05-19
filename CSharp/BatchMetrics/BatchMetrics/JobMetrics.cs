@@ -2,7 +2,7 @@
 
 namespace Microsoft.Azure.Batch.Samples.BatchMetrics
 {
-    using Microsoft.Azure.Batch.Common;
+    using global::Azure.Compute.Batch;
     using System;
     using System.Collections.Generic;
     using System.Linq;
@@ -24,7 +24,7 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetrics
         }
 
         /// <summary>
-        /// Gets the number of tasks in each <see cref="TaskState"/> in the job.
+        /// Gets the number of tasks in each <see cref="BatchTaskState"/> in the job.
         /// </summary>
         public TaskStateCounts TaskStateCounts
         {

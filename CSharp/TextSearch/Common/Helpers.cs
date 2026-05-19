@@ -1,69 +1,56 @@
-﻿//Copyright (c) Microsoft Corporation
+﻿// Copyright (c) Microsoft Corporation
 
 namespace Microsoft.Azure.Batch.Samples.TextSearch
 {
     using System;
     using System.Threading.Tasks;
-    using Microsoft.Azure.Batch.Common;
+    using global::Azure;
+    using global::Azure.Compute.Batch;
 
     /// <summary>
     /// Class containing helpers for the TextSearch sample.
     /// </summary>
     public static class Helpers
     {
-        /// <summary>
-        /// Gets the mapper task id corresponding to the specified task number.
-        /// </summary>
-        /// <param name="taskNumber">The mapper task number.</param>
-        /// <returns>The mapper task id corresponding to the specified task number.</returns>
         public static string GetMapperTaskId(int taskNumber)
         {
             return $"{Constants.MapperTaskPrefix}_{taskNumber}";
         }
 
-        /// <summary>
-        /// Gets the file name corresponding to the specified file number.
-        /// </summary>
-        /// <param name="fileNumber">The file number.</param>
-        /// <returns>The file name corresponding to the specified file number.</returns>
         public static string GetSplitFileName(int fileNumber)
         {
             return $"TextFile_{fileNumber}.txt";
         }
 
         /// <summary>
-        /// Checks for a task's success or failure, and optionally dumps the output of the task.  In the case that the task hit a scheduler or execution error,
-        /// dumps that information as well.
+        /// Checks for a task's success or failure, optionally dumping the standard out file.
         /// </summary>
-        /// <param name="boundTask">The task.</param>
-        /// <param name="dumpStandardOutOnTaskSuccess">True to log the standard output file of the task even if it succeeded.  False to not log anything if the task succeeded.</param>
-        public static async Task CheckForTaskSuccessAsync(CloudTask boundTask, bool dumpStandardOutOnTaskSuccess)
+        public static async Task CheckForTaskSuccessAsync(BatchClient batchClient, string jobId, BatchTask boundTask, bool dumpStandardOutOnTaskSuccess)
         {
-            if (boundTask.State == TaskState.Completed)
+            if (boundTask.State == BatchTaskState.Completed)
             {
-                //Dump the task failure info if there was one.
-                if (boundTask.ExecutionInformation.FailureInformation != null)
+                if (boundTask.ExecutionInfo?.FailureInfo != null)
                 {
-                    TaskFailureInformation failureInformation = boundTask.ExecutionInformation.FailureInformation;
+                    BatchTaskFailureInfo failureInformation = boundTask.ExecutionInfo.FailureInfo;
                     Console.WriteLine($"Task {boundTask.Id} had a failure.");
                     Console.WriteLine($"Failure Code: {failureInformation.Code}");
                     Console.WriteLine($"Failure Message: {failureInformation.Message}");
                     Console.WriteLine($"Failure Category: {failureInformation.Category}");
                     Console.WriteLine("Failure Details:");
 
-                    foreach (NameValuePair detail in failureInformation.Details)
+                    foreach (BatchNameValuePair detail in failureInformation.Details)
                     {
                         Console.WriteLine("{0} : {1}", detail.Name, detail.Value);
                     }
 
-                    if (boundTask.ExecutionInformation.ExitCode.HasValue)
+                    if (boundTask.ExecutionInfo.ExitCode.HasValue)
                     {
-                        Console.WriteLine($"Task {boundTask.Id} exit code: {boundTask.ExecutionInformation.ExitCode}");
+                        Console.WriteLine($"Task {boundTask.Id} exit code: {boundTask.ExecutionInfo.ExitCode}");
 
-                        if (boundTask.ExecutionInformation.ExitCode.Value != 0)
+                        if (boundTask.ExecutionInfo.ExitCode.Value != 0)
                         {
-                            await GetFileAsync(boundTask, Batch.Constants.StandardOutFileName);
-                            await GetFileAsync(boundTask, Batch.Constants.StandardErrorFileName);
+                            await GetFileAsync(batchClient, jobId, boundTask.Id, Constants.StandardOutFileName);
+                            await GetFileAsync(batchClient, jobId, boundTask.Id, Constants.StandardErrorFileName);
                         }
                     }
 
@@ -71,7 +58,7 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
                 }
                 else
                 {
-                    await GetFileAsync(boundTask, Batch.Constants.StandardOutFileName, dumpStandardOutOnTaskSuccess);
+                    await GetFileAsync(batchClient, jobId, boundTask.Id, Constants.StandardOutFileName, dumpStandardOutOnTaskSuccess);
                 }
             }
             else
@@ -80,15 +67,13 @@ namespace Microsoft.Azure.Batch.Samples.TextSearch
             }
         }
 
-        private static async Task<string> GetFileAsync(CloudTask boundTask, string fileName, bool dumpFile = true)
+        private static async Task<string> GetFileAsync(BatchClient batchClient, string jobId, string taskId, string fileName, bool dumpFile = true)
         {
-            //Dump the standard out file of the task.
-            NodeFile file = await boundTask.GetNodeFileAsync(Batch.Constants.StandardOutFileName);
-
-            string fileContent = await file.ReadAsStringAsync();
+            BinaryData data = await batchClient.GetTaskFileAsync(jobId, taskId, fileName);
+            string fileContent = data.ToString();
             if (dumpFile)
             {
-                Console.WriteLine($"Task {boundTask.Id} {fileName}:");
+                Console.WriteLine($"Task {taskId} {fileName}:");
                 Console.WriteLine("----------------------------------------");
                 Console.WriteLine(fileContent);
             }

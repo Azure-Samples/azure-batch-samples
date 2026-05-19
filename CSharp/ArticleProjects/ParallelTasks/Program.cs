@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 //
 // Companion project to the following article:
 // https://azure.microsoft.com/documentation/articles/batch-parallel-node-tasks/
@@ -9,30 +9,26 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
-    using System.Text;
     using System.Threading.Tasks;
-    using Microsoft.Azure.Batch;
-    using Microsoft.Azure.Batch.Auth;
-    using Microsoft.Azure.Batch.Common;
+    using global::Azure;
+    using global::Azure.Compute.Batch;
+    using global::Azure.ResourceManager.Batch;
     using Microsoft.Azure.Batch.Samples.Common;
 
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             try
             {
-                // Call the asynchronous version of the Main() method. This is done so that we can await various
-                // calls to async methods within the "Main" method of this console application.
-                MainAsync(args).Wait();
+                await RunAsync(args);
             }
-            catch (AggregateException ae)
+            catch (Exception ex)
             {
                 Console.WriteLine();
-                Console.WriteLine("One or more exceptions occurred.");
+                Console.WriteLine("An exception occurred:");
                 Console.WriteLine();
-
-                SampleHelpers.PrintAggregateException(ae.Flatten());
+                Console.WriteLine(ex);
             }
             finally
             {
@@ -42,221 +38,222 @@ namespace Microsoft.Azure.Batch.Samples.Articles.ParallelTasks
             }
         }
 
-        private static async Task MainAsync(string[] args)
+        private static async Task RunAsync(string[] args)
         {
-            // You may adjust these values to experiment with different compute resource scenarios.
             const string nodeSize      = "standard_d2_v3";
             const int nodeCount        = 4;
             const int taskSlotsPerNode = 4;
             const int taskCount        = 32;
 
-            // Ensure there are enough tasks to help avoid hitting some timeout conditions below
             int minimumTaskCount = nodeCount * taskSlotsPerNode * 2;
             if (taskCount < minimumTaskCount)
             {
                 Console.WriteLine("You must specify at least two tasks per node core for this sample ({0} tasks in this configuration).", minimumTaskCount);
-                Console.WriteLine();
-
-                // Not enough tasks, exit the application
                 return;
             }
-  
-            // In this sample, each task is assigned with random required slots; adjust these values
-            // to simulate variable task slots together with allowed task slots per compute node
+
             const int maxTaskSlots     = 2;
             if (maxTaskSlots > taskSlotsPerNode)
             {
                 Console.WriteLine("Invalid task slot configuration: maxTaskSlots for task should not be greater than pool's TaskSlotsPerNode");
-                Console.WriteLine();
-
-                // Invalid task slot configuration, exit the application
                 return;
             }
 
-            // In this sample, the tasks simply ping localhost on the compute nodes; adjust these
-            // values to simulate variable task duration
             const int minPings = 30;
             const int maxPings = 60;
 
             const string poolId = "ParallelTasksSamplePool";
             const string jobId  = "ParallelTasksSampleJob";
 
-            // Amount of time to wait before timing out (potentially) long-running tasks
             TimeSpan longTaskDurationLimit = TimeSpan.FromMinutes(30);
 
-            // Set up access to your Batch account with a BatchClient. Configure your AccountSettings in the
-            // Microsoft.Azure.Batch.Samples.Common project within this solution.
             AccountSettings accountSettings = SampleHelpers.LoadAccountSettings();
 
-            BatchSharedKeyCredentials cred = new BatchSharedKeyCredentials(
-                accountSettings.BatchServiceUrl,
-                accountSettings.BatchAccountName,
-                accountSettings.BatchAccountKey);
+            BatchClient batchClient = ClientFactory.CreateBatchClient(accountSettings);
+            BatchAccountResource batchAccount = SampleHelpers.GetBatchAccountResource(accountSettings);
 
-            using (BatchClient batchClient = BatchClient.Open(cred))
+            // Create the pool via ARM (or get the existing one).
+            BatchAccountPoolResource pool = await ArticleHelpers.CreatePoolIfNotExistAsync(
+                batchAccount,
+                poolId,
+                nodeSize,
+                nodeCount,
+                taskSlotsPerNode);
+
+            // Create a job (or get the existing one) via the data-plane SDK.
+            BatchJob job = await ArticleHelpers.CreateJobIfNotExistAsync(batchClient, poolId, jobId);
+
+            // Tasks ping localhost a random number of times between minPings and maxPings.
+            Random rand = new Random();
+            var tasks = new List<BatchTaskCreateOptions>();
+            for (int i = 1; i <= taskCount; i++)
             {
-                // Create a CloudPool, or obtain an existing pool with the specified ID
-                CloudPool pool = await ArticleHelpers.CreatePoolIfNotExistAsync(
-                    batchClient,
-                    poolId,
-                    nodeSize,
-                    nodeCount,
-                    taskSlotsPerNode);
-
-                // Create a CloudJob, or obtain an existing pool with the specified ID
-                CloudJob job = await ArticleHelpers.CreateJobIfNotExistAsync(batchClient, poolId, jobId);
-                
-                // The job's tasks ping localhost a random number of times between minPings and maxPings.
-                // Adjust the minPings/maxPings values above to experiment with different task durations.
-                Random rand = new Random();
-                List<CloudTask> tasks = new List<CloudTask>();
-                for (int i = 1; i <= taskCount; i++)
+                string taskId = "task" + i.ToString().PadLeft(3, '0');
+                string taskCommandLine = "ping -n " + rand.Next(minPings, maxPings + 1).ToString() + " localhost";
+                tasks.Add(new BatchTaskCreateOptions(taskId, taskCommandLine)
                 {
-                    string taskId = "task" + i.ToString().PadLeft(3, '0');
-                    string taskCommandLine = "ping -n " + rand.Next(minPings, maxPings + 1).ToString() + " localhost";
-                    CloudTask task = new CloudTask(taskId, taskCommandLine)
+                    RequiredSlots = rand.Next(1, maxTaskSlots + 1),
+                });
+            }
+
+            // Wait for the pool to reach Steady allocation state and for nodes to be Idle.
+            await ArticleHelpers.WaitForPoolToReachStateAsync(batchClient, poolId, AllocationState.Steady, longTaskDurationLimit);
+            await ArticleHelpers.WaitForNodesToReachStateAsync(batchClient, poolId, BatchNodeState.Idle, longTaskDurationLimit);
+
+            // Bulk task submission.
+            const int batchSize = 100;
+            for (int offset = 0; offset < tasks.Count; offset += batchSize)
+            {
+                int count = Math.Min(batchSize, tasks.Count - offset);
+                var slice = tasks.GetRange(offset, count);
+                await batchClient.CreateTaskCollectionAsync(job.Id, new BatchTaskGroup(slice));
+            }
+
+            // Pause again to wait until *all* nodes are running tasks
+            await ArticleHelpers.WaitForNodesToReachStateAsync(batchClient, poolId, BatchNodeState.Running, TimeSpan.FromMinutes(2));
+
+            Stopwatch stopwatch = Stopwatch.StartNew();
+
+            Console.WriteLine();
+            await GettingStartedCommon.PrintNodeTasksAsync(batchClient, poolId);
+            Console.WriteLine();
+
+            Console.WriteLine();
+            await GettingStartedCommon.PrintNodeTaskCountsAsync(batchClient, poolId);
+            Console.WriteLine();
+
+            await Task.Delay(TimeSpan.FromSeconds(5));
+            Console.WriteLine();
+            await GettingStartedCommon.PrintJobTaskCountsAsync(batchClient, jobId);
+            Console.WriteLine();
+
+            Console.WriteLine("Waiting for task completion...");
+            Console.WriteLine();
+
+            try
+            {
+                await WaitForAllTasksCompletedAsync(batchClient, job.Id, longTaskDurationLimit);
+            }
+            catch (TimeoutException e)
+            {
+                Console.WriteLine(e.ToString());
+            }
+
+            stopwatch.Stop();
+
+            await Task.Delay(TimeSpan.FromSeconds(5));
+            Console.WriteLine();
+            await GettingStartedCommon.PrintJobTaskCountsAsync(batchClient, jobId);
+            Console.WriteLine();
+
+            // Pull the tasks back, selecting only the properties we need.
+            var allTasks = new List<BatchTask>();
+            await foreach (BatchTask t in batchClient.GetTasksAsync(
+                job.Id,
+                select: new[] { "id", "commandLine", "nodeInfo", "state", "requiredSlots" }))
+            {
+                allTasks.Add(t);
+            }
+
+            List<BatchTask> completedTasks = allTasks
+                .Where(t => t.State == BatchTaskState.Completed)
+                .OrderBy(t => t.NodeInfo?.NodeId)
+                .ToList();
+
+            Console.WriteLine();
+            Console.WriteLine("Completed tasks:");
+            string lastNodeId = string.Empty;
+            foreach (BatchTask task in completedTasks)
+            {
+                string nodeId = task.NodeInfo?.NodeId;
+                if (!string.Equals(lastNodeId, nodeId))
+                {
+                    Console.WriteLine();
+                    Console.WriteLine(nodeId);
+                }
+
+                lastNodeId = nodeId;
+
+                Console.WriteLine($"\t{task.Id} (slots={task.RequiredSlots}): {task.CommandLine}");
+            }
+
+            List<BatchTask> uncompletedTasks = allTasks
+                .Where(t => t.State != BatchTaskState.Completed)
+                .OrderBy(t => t.Id)
+                .ToList();
+
+            Console.WriteLine();
+            Console.WriteLine("Uncompleted tasks:");
+            Console.WriteLine();
+            if (uncompletedTasks.Any())
+            {
+                foreach (BatchTask task in uncompletedTasks)
+                {
+                    Console.WriteLine("\t{0}: {1}", task.Id, task.CommandLine);
+                }
+            }
+            else
+            {
+                Console.WriteLine("\t<none>");
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("              Nodes: " + nodeCount);
+            Console.WriteLine("          Node size: " + nodeSize);
+            Console.WriteLine("Task slots per node: " + (pool.Data.TaskSlotsPerNode?.ToString() ?? taskSlotsPerNode.ToString()));
+            Console.WriteLine(" Max slots per task: " + maxTaskSlots);
+            Console.WriteLine("              Tasks: " + tasks.Count);
+            Console.WriteLine("           Duration: " + stopwatch.Elapsed);
+            Console.WriteLine();
+            Console.WriteLine("Done!");
+            Console.WriteLine();
+
+            Console.WriteLine("Delete job? [yes] no");
+            string response = Console.ReadLine().ToLower();
+            if (response != "n" && response != "no")
+            {
+                await batchClient.DeleteJobAsync(WaitUntil.Started, job.Id);
+            }
+
+            Console.WriteLine("Delete pool? [yes] no");
+            response = Console.ReadLine();
+            if (response != "n" && response != "no")
+            {
+                await pool.DeleteAsync(WaitUntil.Started);
+            }
+        }
+
+        private static async Task WaitForAllTasksCompletedAsync(BatchClient batchClient, string jobId, TimeSpan timeout)
+        {
+            DateTime timeoutAt = DateTime.UtcNow.Add(timeout);
+            string[] select = new[] { "id", "state" };
+
+            while (true)
+            {
+                bool allCompleted = true;
+                bool anyTasks = false;
+
+                await foreach (BatchTask task in batchClient.GetTasksAsync(jobId, select: select))
+                {
+                    anyTasks = true;
+                    if (task.State != BatchTaskState.Completed)
                     {
-                        RequiredSlots = rand.Next(1, maxTaskSlots + 1)
-                    };
-                    tasks.Add(task);
-                }
-
-                // Pause execution until the pool is steady and its compute nodes are ready to accept jobs.
-                // NOTE: Such a pause is not necessary within your own code. Tasks can be added to a job at any point and will be 
-                // scheduled to execute on a compute node as soon any node has reached Idle state. Because the focus of this sample 
-                // is the demonstration of running tasks in parallel on multiple compute nodes, we wait for all compute nodes to 
-                // complete initialization and reach the Idle state in order to maximize the number of compute nodes available for 
-                // parallelization.
-                await ArticleHelpers.WaitForPoolToReachStateAsync(batchClient, pool.Id, AllocationState.Steady, longTaskDurationLimit);
-                await ArticleHelpers.WaitForNodesToReachStateAsync(batchClient, pool.Id, ComputeNodeState.Idle, longTaskDurationLimit);
-
-                // Add the tasks in one API call as opposed to a separate AddTask call for each. Bulk task submission
-                // helps to ensure efficient underlying API calls to the Batch service.
-                await batchClient.JobOperations.AddTaskAsync(job.Id, tasks);
-
-                // Pause again to wait until *all* nodes are running tasks
-                await ArticleHelpers.WaitForNodesToReachStateAsync(batchClient, pool.Id, ComputeNodeState.Running, TimeSpan.FromMinutes(2));
-
-                Stopwatch stopwatch = Stopwatch.StartNew();
-
-                // Print out task assignment information.
-                Console.WriteLine();
-                await GettingStartedCommon.PrintNodeTasksAsync(batchClient, pool.Id);
-                Console.WriteLine();
-
-                // Print out running task and task slot counts on all nodes.
-                Console.WriteLine();
-                await GettingStartedCommon.PrintNodeTaskCountsAsync(batchClient, pool.Id);
-                Console.WriteLine();
-
-                // Print out task and task slot counts of the job.
-                // Note: it may have delay as Batch service is aggregating task counts for the job.
-                await Task.Delay(TimeSpan.FromSeconds(5));
-                Console.WriteLine();
-                await GettingStartedCommon.PrintJobTaskCountsAsync(batchClient, jobId);
-                Console.WriteLine();
-
-                // Pause execution while we wait for all of the tasks to complete
-                Console.WriteLine("Waiting for task completion...");
-                Console.WriteLine();
-
-                try
-                {
-                    await batchClient.Utilities.CreateTaskStateMonitor().WhenAll(
-                        job.ListTasks(),
-                        TaskState.Completed,
-                        longTaskDurationLimit);
-                }
-                catch (TimeoutException e)
-                {
-                    Console.WriteLine(e.ToString());
-                }
-
-                stopwatch.Stop();
-
-                // Print out job task counts again.
-                await Task.Delay(TimeSpan.FromSeconds(5));
-                Console.WriteLine();
-                await GettingStartedCommon.PrintJobTaskCountsAsync(batchClient, jobId);
-                Console.WriteLine();
-
-                // Obtain the tasks, specifying a detail level to limit the number of properties returned for each task.
-                // If you have a large number of tasks, specifying a DetailLevel is extremely important in reducing the
-                // amount of data transferred, lowering your query response times in increasing performance.
-                ODATADetailLevel detail = new ODATADetailLevel(selectClause: "id,commandLine,nodeInfo,state,requiredSlots");
-                IPagedEnumerable<CloudTask> allTasks = batchClient.JobOperations.ListTasks(job.Id, detail);
-
-                // Get a collection of the completed tasks sorted by the compute nodes on which they executed
-                List<CloudTask> completedTasks = allTasks
-                    .Where(t => t.State == TaskState.Completed)
-                    .OrderBy(t => t.ComputeNodeInformation.ComputeNodeId)
-                    .ToList();
-
-                // Print the completed task information
-                Console.WriteLine();
-                Console.WriteLine("Completed tasks:");
-                string lastNodeId = string.Empty;
-                foreach (CloudTask task in completedTasks)
-                {
-                    if (!string.Equals(lastNodeId, task.ComputeNodeInformation.ComputeNodeId))
-                    {
-                        Console.WriteLine();
-                        Console.WriteLine(task.ComputeNodeInformation.ComputeNodeId);
+                        allCompleted = false;
+                        break;
                     }
-
-                    lastNodeId = task.ComputeNodeInformation.ComputeNodeId;
-
-                    Console.WriteLine($"\t{task.Id} (slots={task.RequiredSlots}): {task.CommandLine}");
                 }
 
-                // Get a collection of the uncompleted tasks which may exist if the TaskMonitor timeout was hit
-                List<CloudTask> uncompletedTasks = allTasks
-                    .Where(t => t.State != TaskState.Completed)
-                    .OrderBy(t => t.Id)
-                    .ToList();
-
-                // Print a list of uncompleted tasks, if any
-                Console.WriteLine();
-                Console.WriteLine("Uncompleted tasks:");
-                Console.WriteLine();
-                if (uncompletedTasks.Any())
+                if (anyTasks && allCompleted)
                 {
-                    foreach (CloudTask task in uncompletedTasks)
-                    {
-                        Console.WriteLine("\t{0}: {1}", task.Id, task.CommandLine);
-                    }
-                }
-                else
-                {
-                    Console.WriteLine("\t<none>");
+                    return;
                 }
 
-                // Print some summary information
-                Console.WriteLine();
-                Console.WriteLine("              Nodes: " + nodeCount);
-                Console.WriteLine("          Node size: " + nodeSize);
-                Console.WriteLine("Task slots per node: " + pool.TaskSlotsPerNode);
-                Console.WriteLine(" Max slots per task: " + maxTaskSlots);
-                Console.WriteLine("              Tasks: " + tasks.Count);
-                Console.WriteLine("           Duration: " + stopwatch.Elapsed);
-                Console.WriteLine();
-                Console.WriteLine("Done!");
-                Console.WriteLine();
-
-                // Clean up the resources we've created in the Batch account
-                Console.WriteLine("Delete job? [yes] no");
-                string response = Console.ReadLine().ToLower();
-                if (response != "n" && response != "no")
+                if (DateTime.UtcNow > timeoutAt)
                 {
-                    await batchClient.JobOperations.DeleteJobAsync(job.Id);
+                    throw new TimeoutException($"Timed out waiting for tasks in job {jobId} to complete.");
                 }
 
-                Console.WriteLine("Delete pool? [yes] no");
-                response = Console.ReadLine();
-                if (response != "n" && response != "no")
-                {
-                    await batchClient.PoolOperations.DeletePoolAsync(pool.Id);
-                }
+                await Task.Delay(TimeSpan.FromSeconds(15));
             }
         }
     }

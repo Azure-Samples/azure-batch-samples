@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation
+// Copyright (c) Microsoft Corporation
 //
 // Companion project to the following article:
 // https://azure.microsoft.com/documentation/articles/batch-mpi/
@@ -6,31 +6,28 @@
 namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
 {
     using System;
-    using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Threading.Tasks;
-    using Microsoft.Azure.Batch;
-    using Microsoft.Azure.Batch.Common;
-    using Microsoft.Azure.Batch.Auth;
+    using global::Azure;
+    using global::Azure.Compute.Batch;
+    using global::Azure.Core;
+    using global::Azure.ResourceManager.Batch;
+    using global::Azure.ResourceManager.Batch.Models;
     using Microsoft.Azure.Batch.Samples.Common;
 
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             try
             {
-                // Call the asynchronous version of the Main() method. This is done so that we can await various
-                // calls to async methods within the "Main" method of this console application.
-                MainAsync().Wait();
+                await RunAsync();
             }
-            catch (AggregateException ae)
+            catch (Exception ex)
             {
                 Console.WriteLine();
-                Console.WriteLine("One or more exceptions occurred.");
+                Console.WriteLine("An exception occurred:");
                 Console.WriteLine();
-
-                SampleHelpers.PrintAggregateException(ae);
+                Console.WriteLine(ex);
             }
             finally
             {
@@ -40,7 +37,7 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
             }
         }
 
-        public static async Task MainAsync()
+        public static async Task RunAsync()
         {
             const string poolId = "MultiInstanceSamplePool";
             const string jobId  = "MultiInstanceSampleJob";
@@ -48,13 +45,12 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
 
             const int numberOfNodes = 3;
 
+            // Before running this sample you must upload an application package to your Batch account containing:
+            //   * The MPIHelloWorld sample MS-MPI program (see https://blogs.technet.microsoft.com/windowshpc/2015/02/02/how-to-compile-and-run-a-simple-ms-mpi-program/).
+            //   * The MSMpiSetup.exe installer (see https://www.microsoft.com/download/details.aspx?id=52981).
+            // For instructions on uploading an application package, see
+            // https://azure.microsoft.com/documentation/articles/batch-application-packages/.
             // The application package and version to deploy to the compute nodes.
-            // It should contain your MPIHelloWorld sample MS-MPI program:
-            // https://blogs.technet.microsoft.com/windowshpc/2015/02/02/how-to-compile-and-run-a-simple-ms-mpi-program/
-            // And the MSMpiSetup.exe installer:
-            // https://www.microsoft.com/download/details.aspx?id=52981
-            // Then upload it as an application package:
-            // https://azure.microsoft.com/documentation/articles/batch-application-packages/
             const string appPackageId = "MPIHelloWorld";
             const string appPackageVersion = "1.0";
 
@@ -62,196 +58,175 @@ namespace Microsoft.Azure.Batch.Samples.MultiInstanceTasks
 
             AccountSettings accountSettings = SampleHelpers.LoadAccountSettings();
 
-            // Configure your AccountSettings in the Microsoft.Azure.Batch.Samples.Common project within this solution
-            BatchSharedKeyCredentials cred = new BatchSharedKeyCredentials(
-                accountSettings.BatchServiceUrl,
-                accountSettings.BatchAccountName,
-                accountSettings.BatchAccountKey);
+            BatchClient batchClient = ClientFactory.CreateBatchClient(accountSettings);
+            BatchAccountResource batchAccount = SampleHelpers.GetBatchAccountResource(accountSettings);
 
-            using (BatchClient batchClient = BatchClient.Open(cred))
+            // Create the pool of compute nodes and the job to which we add the multi-instance task.
+            await CreatePoolAsync(batchAccount, accountSettings, poolId, numberOfNodes, appPackageId, appPackageVersion);
+            await CreateJobAsync(batchClient, jobId, poolId);
+
+            // The "application command" runs on the primary only, after the coordination
+            // command has run on the primary and all subtasks.
+            string commandLine = $"cmd /c mpiexec.exe -c 1 -wdir %AZ_BATCH_TASK_SHARED_DIR% %AZ_BATCH_APP_PACKAGE_{appPackageId.ToUpper()}#{appPackageVersion}%\\MPIHelloWorld.exe";
+            BatchTaskCreateOptions multiInstanceTask = new BatchTaskCreateOptions(taskId, commandLine)
             {
-                // Create the pool of compute nodes and the job to which we add the multi-instance task.
-                await CreatePoolAsync(batchClient, poolId, numberOfNodes, appPackageId, appPackageVersion);
-                await CreateJobAsync(batchClient, jobId, poolId);
-
-                // Create the multi-instance task. The MultiInstanceSettings property (configured
-                // below) tells Batch to create one primary and several subtasks, the total number
-                // of which matches the number of instances you specify in the MultiInstanceSettings.
-                // This main task's command line is the "application command," and is executed *only*
-                // by the primary, and only after the primary and all subtasks have executed the
-                // "coordination command" (the MultiInstanceSettings.CoordinationCommandLine).
-                CloudTask multiInstanceTask = new CloudTask(id: taskId,
-                    commandline: $"cmd /c mpiexec.exe -c 1 -wdir %AZ_BATCH_TASK_SHARED_DIR% %AZ_BATCH_APP_PACKAGE_{appPackageId.ToUpper()}#{appPackageVersion}%\\MPIHelloWorld.exe");
-
-                // Configure the task's MultiInstanceSettings. Specify the number of nodes
-                // to allocate to the multi-instance task, and the "coordination command".
-                // The CoordinationCommandLine is run by the primary and subtasks, and is
-                // used in this sample to start SMPD on the compute nodes.
-                multiInstanceTask.MultiInstanceSettings =
-                    new MultiInstanceSettings(@"cmd /c start cmd /c smpd.exe -d", numberOfNodes);
-
-                // Submit the task to the job. Batch will take care of creating one primary and
-                // enough subtasks to match the total number of nodes allocated to the task,
-                // and schedule them for execution on the nodes.
-                Console.WriteLine($"Adding task [{taskId}] to job [{jobId}]...");
-                await batchClient.JobOperations.AddTaskAsync(jobId, multiInstanceTask);
-
-                // Get the "bound" version of the multi-instance task.
-                CloudTask mainTask = await batchClient.JobOperations.GetTaskAsync(jobId, taskId);
-
-                // We use a TaskStateMonitor to monitor the state of our tasks. In this case,
-                // we will wait for the task to reach the Completed state.
-                Console.WriteLine($"Awaiting task completion, timeout in {timeout}...");
-                TaskStateMonitor taskStateMonitor = batchClient.Utilities.CreateTaskStateMonitor();
-                await taskStateMonitor.WhenAll(new List<CloudTask> { mainTask }, TaskState.Completed, timeout);
-
-                // Refresh the task to obtain up-to-date property values from Batch, such as
-                // its current state and information about the node on which it executed.
-                await mainTask.RefreshAsync();
-
-                string stdOut = mainTask.GetNodeFile(Constants.StandardOutFileName).ReadAsString();
-                string stdErr = mainTask.GetNodeFile(Constants.StandardErrorFileName).ReadAsString();
-
-                Console.WriteLine();
-                Console.WriteLine($"Main task [{mainTask.Id}] is in state [{mainTask.State}] and ran on compute node [{mainTask.ComputeNodeInformation.ComputeNodeId}]:");
-                Console.WriteLine("---- stdout.txt ----");
-                Console.WriteLine(stdOut);
-                Console.WriteLine("---- stderr.txt ----");
-                Console.WriteLine(stdErr);
-
-                // Need to delay a bit to allow the Batch service to mark the subtasks as Complete
-                TimeSpan subtaskTimeout = TimeSpan.FromSeconds(10);
-                Console.WriteLine($"Main task completed, waiting {subtaskTimeout} for subtasks to complete...");
-                System.Threading.Thread.Sleep(subtaskTimeout);
-
-                Console.WriteLine();
-                Console.WriteLine("---- Subtask information ----");
-
-                // Obtain the collection of subtasks for the multi-instance task, and print
-                // some information about each.
-                IPagedEnumerable<SubtaskInformation> subtasks = mainTask.ListSubtasks();
-                await subtasks.ForEachAsync(async (subtask) =>
+                MultiInstanceSettings = new MultiInstanceSettings(@"cmd /c start cmd /c smpd.exe -d")
                 {
-                    Console.WriteLine("subtask: " + subtask.Id);
-                    Console.WriteLine("\texit code: " + subtask.ExitCode);
+                    NumberOfInstances = numberOfNodes,
+                },
+            };
 
-                    if (subtask.State == SubtaskState.Completed)
-                    {
-                        // Obtain the file from the node on which the subtask executed. For normal CloudTasks,
-                        // we could simply call CloudTask.GetNodeFile(Constants.StandardOutFileName), but the
-                        // subtasks are not "normal" tasks in Batch, and thus must be handled differently.
-                        ComputeNode node =
-                            await batchClient.PoolOperations.GetComputeNodeAsync(subtask.ComputeNodeInformation.PoolId,
-                                                                                 subtask.ComputeNodeInformation.ComputeNodeId);
+            Console.WriteLine($"Adding task [{taskId}] to job [{jobId}]...");
+            await batchClient.CreateTaskAsync(jobId, multiInstanceTask);
 
-                        string outPath = subtask.ComputeNodeInformation.TaskRootDirectory + "\\" + Constants.StandardOutFileName;
-                        string errPath = subtask.ComputeNodeInformation.TaskRootDirectory + "\\" + Constants.StandardErrorFileName;
+            Console.WriteLine($"Awaiting task completion, timeout in {timeout}...");
+            await WaitForTaskCompletedAsync(batchClient, jobId, taskId, timeout);
 
-                        NodeFile stdOutFile = await node.GetNodeFileAsync(outPath.Trim('\\'));
-                        NodeFile stdErrFile = await node.GetNodeFileAsync(errPath.Trim('\\'));
+            BatchTask mainTask = await batchClient.GetTaskAsync(jobId, taskId);
 
-                        stdOut = await stdOutFile.ReadAsStringAsync();
-                        stdErr = await stdErrFile.ReadAsStringAsync();
+            string stdOut = (await batchClient.GetTaskFileAsync(jobId, taskId, "stdout.txt")).ToString();
+            string stdErr = (await batchClient.GetTaskFileAsync(jobId, taskId, "stderr.txt")).ToString();
 
-                        Console.WriteLine($"\tnode: " + node.Id);
-                        Console.WriteLine("\tstdout.txt: " + stdOut);
-                        Console.WriteLine("\tstderr.txt: " + stdErr);
-                    }
-                    else
-                    {
-                        Console.WriteLine($"\tSubtask {subtask.Id} is in state {subtask.State}");
-                    }
-                });
+            Console.WriteLine();
+            Console.WriteLine($"Main task [{mainTask.Id}] is in state [{mainTask.State}] and ran on compute node [{mainTask.NodeInfo?.NodeId}]:");
+            Console.WriteLine("---- stdout.txt ----");
+            Console.WriteLine(stdOut);
+            Console.WriteLine("---- stderr.txt ----");
+            Console.WriteLine(stdErr);
 
-                // Clean up the resources we've created in the Batch account
-                Console.WriteLine();
-                Console.Write("Delete job? [yes] no: ");
-                string response = Console.ReadLine().ToLower();
-                if (response != "n" && response != "no")
+            // Need to delay a bit to allow the Batch service to mark the subtasks as Complete
+            TimeSpan subtaskTimeout = TimeSpan.FromSeconds(10);
+            Console.WriteLine($"Main task completed, waiting {subtaskTimeout} for subtasks to complete...");
+            await Task.Delay(subtaskTimeout);
+
+            Console.WriteLine();
+            Console.WriteLine("---- Subtask information ----");
+
+            await foreach (BatchSubtask subtask in batchClient.GetSubTasksAsync(jobId, taskId))
+            {
+                Console.WriteLine("subtask: " + subtask.Id);
+                Console.WriteLine("\texit code: " + subtask.ExitCode);
+
+                if (subtask.State == BatchSubtaskState.Completed && subtask.NodeInfo != null)
                 {
-                    await batchClient.JobOperations.DeleteJobAsync(jobId);
+                    string outPath = subtask.NodeInfo.TaskRootDirectory + "\\stdout.txt";
+                    string errPath = subtask.NodeInfo.TaskRootDirectory + "\\stderr.txt";
+
+                    BinaryData outData = await batchClient.GetNodeFileAsync(subtask.NodeInfo.PoolId, subtask.NodeInfo.NodeId, outPath.Trim('\\'));
+                    BinaryData errData = await batchClient.GetNodeFileAsync(subtask.NodeInfo.PoolId, subtask.NodeInfo.NodeId, errPath.Trim('\\'));
+
+                    Console.WriteLine("\tnode: " + subtask.NodeInfo.NodeId);
+                    Console.WriteLine("\tstdout.txt: " + outData);
+                    Console.WriteLine("\tstderr.txt: " + errData);
                 }
-
-                Console.Write("Delete pool? [yes] no: ");
-                response = Console.ReadLine().ToLower();
-                if (response != "n" && response != "no")
+                else
                 {
-                    await batchClient.PoolOperations.DeletePoolAsync(poolId);
+                    Console.WriteLine($"\tSubtask {subtask.Id} is in state {subtask.State}");
                 }
+            }
+
+            // Clean up
+            Console.WriteLine();
+            Console.Write("Delete job? [yes] no: ");
+            string response = Console.ReadLine().ToLower();
+            if (response != "n" && response != "no")
+            {
+                await batchClient.DeleteJobAsync(WaitUntil.Started, jobId);
+            }
+
+            Console.Write("Delete pool? [yes] no: ");
+            response = Console.ReadLine().ToLower();
+            if (response != "n" && response != "no")
+            {
+                BatchAccountPoolResource pool = await batchAccount.GetBatchAccountPools().GetAsync(poolId);
+                await pool.DeleteAsync(WaitUntil.Started);
             }
         }
 
-        /// <summary>
-        /// Creates a pool of "small" Windows Server 2012 R2 compute nodes in the Batch service with the specified configuration.
-        /// </summary>
-        /// <param name="batchClient">The client to use for creating the pool.</param>
-        /// <param name="poolId">The id of the pool to create.</param>
-        /// <param name="numberOfNodes">The target number of compute nodes for the pool.</param>
-        /// <param name="appPackageId">The id of the application package to install on the compute nodes.</param>
-        /// <param name="appPackageVersion">The application package version to install on the compute nodes.</param>
-        private static async Task CreatePoolAsync(BatchClient batchClient, string poolId, int numberOfNodes, string appPackageId, string appPackageVersion)
+        private static async Task CreatePoolAsync(
+            BatchAccountResource batchAccount,
+            AccountSettings accountSettings,
+            string poolId,
+            int numberOfNodes,
+            string appPackageId,
+            string appPackageVersion)
         {
-            // Create the unbound pool. Until we call CloudPool.Commit() or CommitAsync(),
-            // the pool isn't actually created in the Batch service. This CloudPool instance
-            // is therefore considered "unbound," and we can modify its properties.
             Console.WriteLine($"Creating pool [{poolId}]...");
-            CloudPool unboundPool =
-                batchClient.PoolOperations.CreatePool(
-                    poolId: poolId,
-                    virtualMachineSize: "standard_d2_v3",
-                    targetDedicatedComputeNodes: numberOfNodes,
-                    virtualMachineConfiguration: new VirtualMachineConfiguration(
-                    imageReference: new ImageReference(
-                            publisher: "MicrosoftWindowsServer",
-                            offer: "WindowsServer",
-                            sku: "2016-Datacenter-smalldisk",
-                            version: "latest"
-                        ),
-                    nodeAgentSkuId: "batch.node.windows amd64"));
-                    
-            // REQUIRED for communication between the MS-MPI processes (in this
-            // sample, MPIHelloWorld.exe) running on the different nodes
-            unboundPool.InterComputeNodeCommunicationEnabled = true;
-            // REQUIRED for multi-instance tasks
-            unboundPool.TaskSlotsPerNode = 1;
 
-            // Specify the application and version to deploy to the compute nodes.
-            unboundPool.ApplicationPackageReferences = new List<ApplicationPackageReference>
+            string applicationResourceId =
+                $"/subscriptions/{accountSettings.SubscriptionId}" +
+                $"/resourceGroups/{accountSettings.ResourceGroupName}" +
+                $"/providers/Microsoft.Batch/batchAccounts/{accountSettings.BatchAccountName}" +
+                $"/applications/{appPackageId}/versions/{appPackageVersion}";
+
+            BatchAccountPoolData poolData = new BatchAccountPoolData
             {
-                new ApplicationPackageReference
+                VmSize = "standard_d2_v3",
+                DeploymentVmConfiguration = new BatchVmConfiguration(
+                    new BatchImageReference
+                    {
+                        Publisher = "MicrosoftWindowsServer",
+                        Offer = "WindowsServer",
+                        Sku = "2016-Datacenter-smalldisk",
+                        Version = "latest",
+                    },
+                    "batch.node.windows amd64"),
+                ScaleSettings = new BatchAccountPoolScaleSettings
                 {
-                    ApplicationId = appPackageId,
-                    Version = appPackageVersion
-                }
+                    FixedScale = new BatchAccountFixedScaleSettings
+                    {
+                        TargetDedicatedNodes = numberOfNodes,
+                    },
+                },
+                InterNodeCommunication = InterNodeCommunicationState.Enabled,
+                TaskSlotsPerNode = 1,
+                StartTask = new BatchAccountPoolStartTask
+                {
+                    CommandLine = $"cmd /c %AZ_BATCH_APP_PACKAGE_{appPackageId.ToUpper()}#{appPackageVersion}%\\MSMpiSetup.exe -unattend -force",
+                    UserIdentity = new BatchUserIdentity
+                    {
+                        AutoUser = new BatchAutoUserSpecification
+                        {
+                            ElevationLevel = BatchUserAccountElevationLevel.Admin,
+                        },
+                    },
+                    WaitForSuccess = true,
+                },
             };
+            poolData.ApplicationPackages.Add(new global::Azure.ResourceManager.Batch.Models.BatchApplicationPackageReference(new ResourceIdentifier(applicationResourceId)));
 
-            // Create a StartTask for the pool that we use to install MS-MPI on the nodes
-            // as they join the pool.
-            StartTask startTask = new StartTask
-            {
-                CommandLine = $"cmd /c %AZ_BATCH_APP_PACKAGE_{appPackageId.ToUpper()}#{appPackageVersion}%\\MSMpiSetup.exe -unattend -force",
-                UserIdentity = new UserIdentity(new AutoUserSpecification(elevationLevel: ElevationLevel.Admin)),
-                WaitForSuccess = true
-            };
-            unboundPool.StartTask = startTask;
-
-            // Commit the fully configured pool to the Batch service to actually create
-            // the pool and its compute nodes.
-            await unboundPool.CommitAsync();
+            await GettingStartedCommon.CreatePoolIfNotExistAsync(batchAccount, poolId, poolData);
         }
 
-        /// <summary>
-        /// Creates a job in Batch service with the specified id and associated with the specified pool.
-        /// </summary>
-        /// <param name="batchClient"></param>
-        /// <param name="jobId"></param>
-        /// <param name="poolId"></param>
         private static async Task CreateJobAsync(BatchClient batchClient, string jobId, string poolId)
         {
-            // Create the job to which the multi-instance task will be added.
             Console.WriteLine($"Creating job [{jobId}]...");
-            CloudJob unboundJob = batchClient.JobOperations.CreateJob(jobId, new PoolInformation() { PoolId = poolId });
-            await unboundJob.CommitAsync();
+            try
+            {
+                await batchClient.CreateJobAsync(new BatchJobCreateOptions(jobId, new BatchPoolInfo { PoolId = poolId }));
+            }
+            catch (RequestFailedException ex) when (ex.ErrorCode == BatchErrorCode.JobExists.ToString())
+            {
+                Console.WriteLine("Job {0} already exists.", jobId);
+            }
+        }
+
+        private static async Task WaitForTaskCompletedAsync(BatchClient batchClient, string jobId, string taskId, TimeSpan timeout)
+        {
+            DateTime timeoutAt = DateTime.UtcNow.Add(timeout);
+            while (true)
+            {
+                BatchTask task = await batchClient.GetTaskAsync(jobId, taskId);
+                if (task.State == BatchTaskState.Completed)
+                {
+                    return;
+                }
+                if (DateTime.UtcNow > timeoutAt)
+                {
+                    throw new TimeoutException($"Task {taskId} did not complete within {timeout}.");
+                }
+                await Task.Delay(TimeSpan.FromSeconds(15));
+            }
         }
     }
 }

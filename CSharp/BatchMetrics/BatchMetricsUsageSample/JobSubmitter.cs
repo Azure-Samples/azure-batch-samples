@@ -1,28 +1,29 @@
-﻿//Copyright (c) Microsoft Corporation
+//Copyright (c) Microsoft Corporation
 
 namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
 {
-    using Microsoft.Azure.Batch;
-    using Microsoft.Azure.Batch.Common;
+    using global::Azure;
+    using global::Azure.Compute.Batch;
+    using global::Azure.ResourceManager.Batch;
+    using global::Azure.ResourceManager.Batch.Models;
     using Microsoft.Azure.Batch.Samples.Common;
     using System;
     using System.Collections.Generic;
-    using System.Linq;
-    using System.Text;
     using System.Threading.Tasks;
 
     // This class is responsible for submitting and running sample jobs, just so that the
     // MetricMonitor in the Program class has something to monitor.
     public class JobSubmitter
     {
+        private readonly AccountSettings accountSettings;
         private readonly BatchClient batchClient;
+        private readonly BatchAccountResource batchAccount;
         private readonly List<string> createdJobIds = new List<string>();
         private bool createdNewPool;
 
         private const string PoolId = "batchmetrics-testpool";
         private const int PoolNodeCount = 5;
         private const string PoolNodeSize = "standard_d2_v3";
-        private const string PoolOSFamily = "4";
 
         private const int TestJobCount = 10;
 
@@ -32,83 +33,77 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
         private const string JobTaskIdPrefix = "testtask-";
         private static readonly TimeSpan JobInterval = TimeSpan.FromMinutes(2);
 
-        public JobSubmitter(BatchClient batchClient)
+        public JobSubmitter(AccountSettings accountSettings)
         {
-            this.batchClient = batchClient;
-            this.batchClient.CustomBehaviors.Add(RetryPolicyProvider.ExponentialRetryProvider(TimeSpan.FromSeconds(5), 3));
+            this.accountSettings = accountSettings;
+            this.batchClient = ClientFactory.CreateBatchClient(accountSettings);
+            this.batchAccount = SampleHelpers.GetBatchAccountResource(accountSettings);
         }
 
         // Creates a pool so that the sample jobs have somewhere to run, so that they can
         // make progress and you can see their progress being tracked by the MetricMonitor.
         private async Task CreatePoolAsync()
         {
-            var pool = this.batchClient.PoolOperations.CreatePool(
-                poolId: PoolId,
-                targetDedicatedComputeNodes: PoolNodeCount,
-                virtualMachineSize: PoolNodeSize,
-                virtualMachineConfiguration: new VirtualMachineConfiguration(
-                imageReference: new ImageReference(
-                        publisher: "MicrosoftWindowsServer",
-                        offer: "WindowsServer",
-                        sku: "2016-Datacenter-smalldisk",
-                        version: "latest"
-                    ),
-                nodeAgentSkuId: "batch.node.windows amd64"));
-            pool.TaskSlotsPerNode = 2;
+            var poolData = new BatchAccountPoolData
+            {
+                VmSize = PoolNodeSize,
+                TaskSlotsPerNode = 2,
+                DeploymentConfiguration = new BatchDeploymentConfiguration
+                {
+                    VmConfiguration = new BatchVmConfiguration(
+                        new BatchImageReference
+                        {
+                            Publisher = "MicrosoftWindowsServer",
+                            Offer = "WindowsServer",
+                            Sku = "2016-Datacenter-smalldisk",
+                            Version = "latest",
+                        },
+                        "batch.node.windows amd64"),
+                },
+                ScaleSettings = new BatchAccountPoolScaleSettings
+                {
+                    FixedScale = new BatchAccountFixedScaleSettings
+                    {
+                        TargetDedicatedNodes = PoolNodeCount,
+                    },
+                },
+            };
 
-            var createPoolResult = await GettingStartedCommon.CreatePoolIfNotExistAsync(this.batchClient, pool);
-
+            var createPoolResult = await GettingStartedCommon.CreatePoolIfNotExistAsync(this.batchAccount, PoolId, poolData);
             this.createdNewPool = (createPoolResult == CreatePoolResult.CreatedNew);
         }
 
-        // Adds a sample job with a few sample tasks to the Batch account.  The tasks
-        // take varying amounts of time to run so you can see the numbers of tasks in
-        // the active, running, and completed states changing over time in each job.
+        // Adds a sample job with a few sample tasks to the Batch account.
         private async Task SubmitJobAsync(string jobId)
         {
-            var job = this.batchClient.JobOperations.CreateJob();
-            job.Id = jobId;
-            job.PoolInformation = new PoolInformation() { PoolId = PoolId };
-
             try
             {
-                await job.CommitAsync();
+                await this.batchClient.CreateJobAsync(new BatchJobCreateOptions(jobId, new BatchPoolInfo { PoolId = PoolId }));
                 this.createdJobIds.Add(jobId);
             }
-            catch (BatchException ex)
+            catch (RequestFailedException ex) when (ex.ErrorCode == BatchErrorCode.JobExists.ToString())
             {
-                if (ex.IsBatchErrorCode(BatchErrorCodeStrings.JobExists))
-                {
-                    Console.WriteLine("The job already existed when we tried to create it");
-                    return;  // no point trying to add tasks, as the task IDs probably exist already from a previous run
-                }
-                else
-                {
-                    throw; // Any other exception is unexpected
-                }
+                Console.WriteLine("The job already existed when we tried to create it");
+                return;
             }
 
-            var tasksToRun = CreateTasks(jobId);
-
-            await this.batchClient.JobOperations.AddTaskAsync(jobId, tasksToRun);
+            foreach (var taskOptions in CreateTasks(jobId))
+            {
+                await this.batchClient.CreateTaskAsync(jobId, taskOptions);
+            }
         }
 
-        // Creates a set of sample tasks to allow you to see the MetricMonitor showing
-        // the job progressing.  Each task in the job takes progressively longer than the
-        // previous one.
-        private static IEnumerable<CloudTask> CreateTasks(string jobId)
+        private static IEnumerable<BatchTaskCreateOptions> CreateTasks(string jobId)
         {
             for (int taskIndex = 0; taskIndex < JobTaskCount; taskIndex++)
             {
                 var taskId = string.Format("{0}-{1}{2}", jobId, JobTaskIdPrefix, taskIndex);
                 var taskCommandTimeout = (int)((taskIndex + 1) * JobTaskTimeoutIncrement.TotalSeconds);
                 var taskCommandLine = string.Format("cmd /c ping -n {0} 127.0.0.100", taskCommandTimeout);
-                yield return new CloudTask(taskId, taskCommandLine);
+                yield return new BatchTaskCreateOptions(taskId, taskCommandLine);
             }
         }
 
-        // Adds sample jobs to the Batch account.  Jobs are added periodically so that you
-        // can see how each job progresses over time.
         public async Task SubmitJobsAsync()
         {
             try
@@ -123,48 +118,22 @@ namespace Microsoft.Azure.Batch.Samples.BatchMetricsUsageSample
                     await Task.Delay(JobInterval);
                 }
             }
-            catch (BatchException ex)
-            {
-                Console.WriteLine("Batch service exception: {0}" + ex.ToString());
-            }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception: {0}", ex.ToString());
+                Console.WriteLine("Exception: {0}", ex);
             }
         }
 
-        // Deletes any jobs that were created specifically for the MetricMonitor
-        // to report on.
-        public async Task CleanUpJobsAsync()
+        // Cleans up jobs and (if we created it) the pool.
+        public async Task CleanUpAsync()
         {
-            foreach (var jobId in this.createdJobIds)
-            {
-                try
-                {
-                    await this.batchClient.JobOperations.DeleteJobAsync(jobId);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("Failed to delete job {0}: {1}", jobId, ex.Message);
-                }
-            }
-        }
-
-        // Deletes the pool that was created specifically for the MetricMonitor
-        // to report on, if a new pool was created.
-        public async Task CleanUpPoolIfRequiredAsync()
-        {
+            var poolIdsToDelete = new List<string>();
             if (this.createdNewPool)
             {
-                try
-                {
-                    await this.batchClient.PoolOperations.DeletePoolAsync(PoolId);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("Failed to delete pool {0}: {1}", PoolId, ex.Message);
-                }
+                poolIdsToDelete.Add(PoolId);
             }
+
+            await SampleHelpers.DeleteBatchResourcesAsync(this.batchClient, this.batchAccount, this.createdJobIds, poolIdsToDelete);
         }
     }
 }

@@ -20,8 +20,8 @@ for /R %f in (*.sln) do (dotnet build "%f")
 
 If you want to write the output of the build to a file you can tack on ` >> mybuild.tmp` to the end of the command.
 
-#### Update the Azure.Batch NuGet project reference
-The Azure Batch samples should be kept up to date with the latest Azure.Batch NuGet package.
+#### Update the Azure.Compute.Batch NuGet project reference
+The Azure Batch samples should be kept up to date with the latest [Azure.Compute.Batch](https://www.nuget.org/packages/Azure.Compute.Batch) NuGet package.
 
 ##### Using a text replace
-The following commands can be used to perform the textual replace: `rep.exe -find:"<PackageReference Include=\"Microsoft.Azure.Batch\" Version=\"10.0.0\" />" -replace:"<PackageReference Include=\"Microsoft.Azure.Batch\" Version=\"12.0.0\" />" -r *.csproj`
+The following commands can be used to perform the textual replace: `rep.exe -find:"<PackageReference Include=\"Azure.Compute.Batch\" Version=\"1.0.0\" />" -replace:"<PackageReference Include=\"Azure.Compute.Batch\" Version=\"1.1.0\" />" -r *.csproj`

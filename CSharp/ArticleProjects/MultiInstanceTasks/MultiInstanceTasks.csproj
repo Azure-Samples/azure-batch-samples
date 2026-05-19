@@ -4,6 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net462</TargetFramework>
     <RootNamespace>Microsoft.Azure.Batch.Samples.MultiInstanceTasks</RootNamespace>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,8 +24,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.Batch" Version="14.0.0" />
-    <PackageReference Include="WindowsAzure.Storage" Version="9.3.3" />
+    <PackageReference Include="Azure.Compute.Batch" Version="1.0.0" />
+    <PackageReference Include="Azure.ResourceManager.Batch" Version="1.6.0" />
   </ItemGroup>
 
 </Project>
