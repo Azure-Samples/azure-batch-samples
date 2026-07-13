@@ -1,0 +1,3 @@
+# Sample input media is generated locally with generate_input_files.py and is
+# intentionally not committed to the repository (no binary media in the repo).
+*.mp4
