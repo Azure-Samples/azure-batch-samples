@@ -60,10 +60,10 @@ def create_pool(
     :param vm_size: vm size (sku)
     :param vm_count: number of vms to allocate
     """
-    # pick the latest supported 16.04 sku for UbuntuServer
+    # pick the latest supported Ubuntu 24.04 sku for Canonical
     sku_to_use, image_ref_to_use = \
         common.helpers.select_latest_verified_vm_image_with_node_agent_sku(
-            batch_client, 'canonical', 'ubuntuserver', '18.04')
+            batch_client, 'canonical', 'ubuntu-24_04-lts', 'server-gen1')
 
     try:
         blob_service_client.create_container(_CONTAINER_NAME)

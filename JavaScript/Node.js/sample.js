@@ -24,15 +24,15 @@ const jobId = "processcsvjob";
 
 // Pool VM Image Reference
 const imgRef = {
-    publisher: "Canonical",
-    offer: "UbuntuServer",
-    sku: "18.04-LTS",
+    publisher: "canonical",
+    offer: "ubuntu-24_04-lts",
+    sku: "server-gen1",
     version: "latest"
 }
 // Pool VM configuraion object
 const vmConfig = {
     imageReference: imgRef,
-    nodeAgentSKUId: "batch.node.ubuntu 18.04"
+    nodeAgentSKUId: "batch.node.ubuntu 24.04"
 };
 // Number of VMs to create in a pool
 const numVms = 4;

@@ -56,10 +56,10 @@ def submit_job_and_add_task(
     vm_config = batchmodels.VirtualMachineConfiguration(
         image_reference=batchmodels.ImageReference(
             publisher="canonical",
-            offer="ubuntuserver",
-            sku="18.04-lts"
+            offer="ubuntu-24_04-lts",
+            sku="server-gen1"
         ),
-        node_agent_sku_id="batch.node.ubuntu 18.04"
+        node_agent_sku_id="batch.node.ubuntu 24.04"
     )
     pool_info = batchmodels.PoolInformation(
         auto_pool_specification=batchmodels.AutoPoolSpecification(

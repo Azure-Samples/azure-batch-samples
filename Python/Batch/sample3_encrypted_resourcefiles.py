@@ -197,10 +197,10 @@ def create_pool_and_wait_for_node(
         virtual_machine_configuration=batchmodels.VirtualMachineConfiguration(
             image_reference=batchmodels.ImageReference(
                 publisher="canonical",
-                offer="0001-com-ubuntu-server-focal",
-                sku="20_04-lts"
+                offer="ubuntu-24_04-lts",
+                sku="server-gen1"
             ),
-            node_agent_sku_id="batch.node.ubuntu 20.04"),
+            node_agent_sku_id="batch.node.ubuntu 24.04"),
         vm_size=vm_size,
         target_dedicated_nodes=vm_count,
         start_task=batchmodels.StartTask(
