@@ -1,3 +1,4 @@
+[![Board Status](https://dev.azure.com/praniths/1f416640-040a-422b-b50f-07e864b3bdd2/0ed4bae9-4aba-49e6-b04d-ab4e4d794ebe/_apis/work/boardbadge/f239fdf8-050b-48a9-95fa-1e3fe754be3d)](https://dev.azure.com/praniths/1f416640-040a-422b-b50f-07e864b3bdd2/_boards/board/t/0ed4bae9-4aba-49e6-b04d-ab4e4d794ebe/Microsoft.RequirementCategory)
 ---
 page_type: sample
 languages:
