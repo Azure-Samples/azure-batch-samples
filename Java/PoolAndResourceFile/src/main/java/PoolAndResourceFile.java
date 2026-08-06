@@ -1,155 +1,199 @@
-import java.io.*;
-import java.net.URISyntaxException;
-import java.security.InvalidKeyException;
+import com.azure.compute.batch.BatchClient;
+import com.azure.compute.batch.BatchClientBuilder;
+import com.azure.compute.batch.models.ResourceFile;
+import com.azure.compute.batch.models.*;
+import com.azure.core.credential.TokenCredential;
+import com.azure.core.http.rest.PagedIterable;
+import com.azure.core.management.AzureEnvironment;
+import com.azure.core.management.exception.ManagementException;
+import com.azure.core.management.profile.AzureProfile;
+import com.azure.core.util.Configuration;
+import com.azure.identity.DefaultAzureCredentialBuilder;
+import com.azure.resourcemanager.batch.BatchManager;
+import com.azure.resourcemanager.batch.models.AllocationState;
+import com.azure.resourcemanager.batch.models.VirtualMachineConfiguration;
+import com.azure.resourcemanager.batch.models.*;
+import com.azure.storage.blob.BlobClient;
+import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.BlobServiceClient;
+import com.azure.storage.blob.BlobServiceClientBuilder;
+import com.azure.storage.blob.sas.BlobSasPermission;
+import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
 import java.time.Duration;
-import java.util.*;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import com.microsoft.azure.storage.*;
-import com.microsoft.azure.storage.blob.*;
-
-import com.microsoft.azure.batch.*;
-import com.microsoft.azure.batch.auth.*;
-import com.microsoft.azure.batch.protocol.models.*;
-
 public class PoolAndResourceFile {
 
-    // Get Batch and storage account information from environment
-    static String BATCH_ACCOUNT = System.getenv("AZURE_BATCH_ACCOUNT");
-    static String BATCH_ACCESS_KEY = System.getenv("AZURE_BATCH_ACCESS_KEY");
-    static String BATCH_URI = System.getenv("AZURE_BATCH_ENDPOINT");
-    static String STORAGE_ACCOUNT_NAME = System.getenv("STORAGE_ACCOUNT_NAME");
-    static String STORAGE_ACCOUNT_KEY = System.getenv("STORAGE_ACCOUNT_KEY");
-    static String STORAGE_CONTAINER_NAME = "poolandresourcefile";
+    // Get Batch and Storage account information from environment
+    static final String AZURE_RESOURCE_GROUP_NAME = Configuration.getGlobalConfiguration().get("AZURE_RESOURCE_GROUP_NAME");
+    static final String AZURE_BATCH_ACCOUNT_NAME = Configuration.getGlobalConfiguration().get("AZURE_BATCH_ACCOUNT_NAME");
+    static final String AZURE_BLOB_SERVICE_URL = Configuration.getGlobalConfiguration().get("AZURE_BLOB_SERVICE_URL");
 
     // How many tasks to run across how many nodes
-    static int TASK_COUNT = 5;
-    static int NODE_COUNT = 1;
+    static final int TASK_COUNT = 5;
+    static final int NODE_COUNT = 1;
 
     // Modify these values to change which resources are deleted after the job finishes.
     // Skipping pool deletion will greatly speed up subsequent runs
-    static boolean CLEANUP_STORAGE_CONTAINER = true;
-    static boolean CLEANUP_JOB = true;
-    static boolean CLEANUP_POOL = true;
+    static final boolean CLEANUP_STORAGE_CONTAINER = true;
+    static final boolean CLEANUP_JOB = true;
+    static final boolean CLEANUP_POOL = true;
 
-    public static void main(String[] argv) throws Exception {
-        BatchClient client = BatchClient.open(new BatchSharedKeyCredentials(BATCH_URI, BATCH_ACCOUNT, BATCH_ACCESS_KEY));
-        CloudBlobContainer container = createBlobContainerIfNotExists(STORAGE_ACCOUNT_NAME, STORAGE_ACCOUNT_KEY, STORAGE_CONTAINER_NAME);
+    final Logger logger = LoggerFactory.getLogger(PoolAndResourceFile.class);
+    final BatchManager batchManager;
+    final BatchClient batchClient;
+    final BlobServiceClient blobServiceClient;
+    final BlobContainerClient blobContainerClient;
+
+    public static void main(String[] argv) {
+        new PoolAndResourceFile().runSample();
+        System.exit(0);
+    }
+
+    public PoolAndResourceFile() {
+        AzureProfile profile = new AzureProfile(AzureEnvironment.AZURE);
+        TokenCredential credential = new DefaultAzureCredentialBuilder()
+                .authorityHost(profile.getEnvironment().getActiveDirectoryEndpoint())
+                .build();
+
+        batchManager = BatchManager
+                .authenticate(credential, profile);
+
+        BatchAccount batchAccount = batchManager.batchAccounts()
+                .getByResourceGroup(AZURE_RESOURCE_GROUP_NAME, AZURE_BATCH_ACCOUNT_NAME);
+
+        batchClient = new BatchClientBuilder()
+                .endpoint(String.format("https://%s", batchAccount.accountEndpoint()))
+                .credential(credential)
+                .buildClient();
+
+        blobServiceClient = new BlobServiceClientBuilder()
+                .endpoint(AZURE_BLOB_SERVICE_URL)
+                .credential(credential)
+                .buildClient();
+
+        blobContainerClient = blobServiceClient.getBlobContainerClient("poolandresourcefile");
+    }
+
+    /**
+     * Runs a job which prints out the contents of a file in Azure Storage.
+     * Will create a pool if one doesn't already exist. If a pool exists it will be resized.
+     */
+    public void runSample() {
+        logger.info("Creating storage container {} if it does not exist", blobContainerClient.getBlobContainerName());
+        blobContainerClient.createIfNotExists();
 
         String userName = System.getProperty("user.name");
-        String poolId = userName + "-pooltest";
+        String poolName = userName + "-pooltest";
         String jobId = "PoolAndResourceFileJob-" + userName + "-" +
                 new Date().toString().replaceAll("(\\.|:|\\s)", "-");
 
         try {
-            CloudPool sharedPool = createPoolIfNotExists(client, poolId);
+            Pool pool = createPoolIfNotExists(poolName);
 
             // Submit a job and wait for completion
-            submitJob(client, container, sharedPool.id(), jobId, TASK_COUNT);
-            waitForTasksToComplete(client, jobId, Duration.ofMinutes(5));
+            submitJob(pool.name(), jobId);
+            waitForTasksToComplete(jobId, Duration.ofMinutes(5));
 
-            System.out.println("\nTask Results");
-            System.out.println("------------------------------------------------------");
+            PagedIterable<BatchTask> tasks = batchClient.listTasks(jobId);
+            for (BatchTask task : tasks) {
+                BatchTaskExecutionInfo execution = task.getExecutionInfo();
 
-            List<CloudTask> tasks = client.taskOperations().listTasks(jobId);
-            for (CloudTask task : tasks) {
-                if (task.executionInfo().failureInfo() != null) {
-                    System.out.println("Task " + task.id() + " failed: " + task.executionInfo().failureInfo().message());
+                if (execution.getFailureInfo() != null) {
+                    logger.error("Task {} failed: {}", task.getId(), execution.getFailureInfo().getMessage());
                 }
 
-                String outputFileName = task.executionInfo().exitCode() == 0 ? "stdout.txt" : "stderr.txt";
-                ByteArrayOutputStream stream = new ByteArrayOutputStream();
-                client.fileOperations().getFileFromTask(jobId, task.id(), outputFileName, stream);
-                String fileContent = stream.toString("UTF-8");
+                String outputFileName = execution.getExitCode() == 0 ? "stdout.txt" : "stderr.txt";
+                String fileContent = batchClient.getTaskFile(jobId, task.getId(), outputFileName).toString();
 
-                System.out.println("\nTask " + task.id() + " output (" + outputFileName + "):");
-                System.out.println(fileContent);
+                logger.info("Task {} output ({}):\n{}", task.getId(), outputFileName, fileContent);
             }
-
-            System.out.println("------------------------------------------------------\n");
-        } catch (BatchErrorException err) {
-            printBatchException(err);
-        } catch (Exception ex) {
-            ex.printStackTrace();
+        } catch (BatchErrorException e) {
+            logBatchException(e);
+        } catch (Exception e) {
+            logger.error("Unexpected error", e);
         } finally {
             // Clean up resources
             if (CLEANUP_JOB) {
                 try {
-                    System.out.println("Deleting job " + jobId);
-                    client.jobOperations().deleteJob(jobId);
-                } catch (BatchErrorException err) {
-                    printBatchException(err);
+                    logger.info("Deleting job {}", jobId);
+                    batchClient.beginDeleteJob(jobId);
+                } catch (BatchErrorException e) {
+                    logBatchException(e);
                 }
             }
             if (CLEANUP_POOL) {
                 try {
-                    System.out.println("Deleting pool " + poolId);
-                    client.poolOperations().deletePool(poolId);
-                } catch (BatchErrorException err) {
-                    printBatchException(err);
+                    logger.info("Deleting pool {}", poolName);
+                    batchClient.beginDeletePool(poolName);
+                } catch (BatchErrorException e) {
+                    logBatchException(e);
                 }
             }
             if (CLEANUP_STORAGE_CONTAINER) {
-                System.out.println("Deleting storage container " + container.getName());
-                container.deleteIfExists();
+                logger.info("Deleting storage container {}", blobContainerClient.getBlobContainerName());
+                blobContainerClient.deleteIfExists();
             }
         }
 
-        System.out.println("\nFinished");
-        System.exit(0);
+        logger.info("Finished");
     }
 
     /**
-     * Create a pool if one doesn't already exist with the given ID
+     * Create a pool if one doesn't already exist and waits until it reaches the steady state.
      *
-     * @param client  The Batch client
-     * @param poolId  The ID of the pool to create or look up
-     *
-     * @return  A newly created or existing pool
+     * @param poolName The ID of the pool to create or look up
+     * @return A newly created or existing pool
      */
-    private static CloudPool createPoolIfNotExists(BatchClient client, String poolId)
-            throws BatchErrorException, IllegalArgumentException, IOException, InterruptedException, TimeoutException {
-        // Create a pool with 1 A1 VM
-        String osPublisher = "OpenLogic";
-        String osOffer = "CentOS";
-        String poolVMSize = "STANDARD_A1";
-        int poolVMCount = 1;
+    protected Pool createPoolIfNotExists(String poolName) throws InterruptedException, TimeoutException {
+        // Create a pool with a single node
         Duration poolSteadyTimeout = Duration.ofMinutes(5);
-        Duration vmReadyTimeout = Duration.ofMinutes(20);
+        Duration nodeReadyTimeout = Duration.ofMinutes(20);
 
-        // If the pool exists and is active (not being deleted), resize it
-        if (client.poolOperations().existsPool(poolId) && client.poolOperations().getPool(poolId).state().equals(PoolState.ACTIVE)) {
-            System.out.println("Pool " + poolId + " already exists: Resizing to " + poolVMCount + " dedicated node(s)");
-            client.poolOperations().resizePool(poolId, NODE_COUNT, 0);
-        } else {
-            System.out.println("Creating pool " + poolId + " with " + poolVMCount + " dedicated node(s)");
-
-            // See detail of creating IaaS pool at
-            // https://blogs.technet.microsoft.com/windowshpc/2016/03/29/introducing-linux-support-on-azure-batch/
-            // Get the sku image reference
-            List<ImageInformation> skus = client.accountOperations().listSupportedImages();
-            String skuId = null;
-            ImageReference imageRef = null;
-
-            for (ImageInformation sku : skus) {
-                if (sku.osType() == OSType.LINUX) {
-                    if (sku.verificationType() == VerificationType.VERIFIED) {
-                        if (sku.imageReference().publisher().equalsIgnoreCase(osPublisher)
-                                && sku.imageReference().offer().equalsIgnoreCase(osOffer)) {
-                            imageRef = sku.imageReference();
-                            skuId = sku.nodeAgentSKUId();
-                            break;
-                        }
-                    }
-                }
+        Pool pool = null;
+        try {
+            pool = batchManager.pools().get(AZURE_RESOURCE_GROUP_NAME, AZURE_BATCH_ACCOUNT_NAME, poolName);
+        } catch (ManagementException e) {
+            if (e.getResponse().getStatusCode() != 404) {
+                throw new RuntimeException(e);
             }
+        }
 
-            // Use IaaS VM with Linux
-            VirtualMachineConfiguration configuration = new VirtualMachineConfiguration();
-            configuration.withNodeAgentSKUId(skuId).withImageReference(imageRef);
+        if (pool != null && pool.provisioningState().equals(PoolProvisioningState.SUCCEEDED)) {
+            logger.info("Pool {} already exists: Resizing to {} dedicated node(s)", poolName, NODE_COUNT);
+            pool.update()
+                    .withScaleSettings(new ScaleSettings().withFixedScale(
+                            new FixedScaleSettings().withTargetDedicatedNodes(NODE_COUNT)))
+                    .apply();
+        } else {
+            logger.info("Creating pool {} with {} dedicated node(s)", poolName, NODE_COUNT);
 
-            client.poolOperations().createPool(poolId, poolVMSize, configuration, poolVMCount);
+            pool = batchManager.pools()
+                    .define(poolName)
+                    .withExistingBatchAccount(AZURE_RESOURCE_GROUP_NAME, AZURE_BATCH_ACCOUNT_NAME)
+                    .withVmSize("Standard_DS1_v2")
+                    .withDeploymentConfiguration(new DeploymentConfiguration().withVirtualMachineConfiguration(
+                            new VirtualMachineConfiguration()
+                                    .withImageReference(
+                                            new ImageReference()
+                                                    .withPublisher("canonical")
+                                                    .withOffer("0001-com-ubuntu-server-jammy")
+                                                    .withSku("22_04-lts")
+                                                    .withVersion("latest"))
+                                    .withNodeAgentSkuId("batch.node.ubuntu 22.04")))
+                    .withScaleSettings(new ScaleSettings().withFixedScale(new FixedScaleSettings()
+                            .withTargetDedicatedNodes(NODE_COUNT)))
+                    .create();
         }
 
         long startTime = System.currentTimeMillis();
@@ -157,18 +201,16 @@ public class PoolAndResourceFile {
         boolean steady = false;
 
         // Wait for the VM to be allocated
-        System.out.print("Waiting for pool to resize.");
+        logger.info("Waiting for pool to resize.");
         while (elapsedTime < poolSteadyTimeout.toMillis()) {
-            CloudPool pool = client.poolOperations().getPool(poolId);
-            if (pool.allocationState() == AllocationState.STEADY) {
+            pool.refresh();
+            if (pool.allocationState().equals(AllocationState.STEADY)) {
                 steady = true;
                 break;
             }
-            System.out.print(".");
             TimeUnit.SECONDS.sleep(10);
             elapsedTime = (new Date()).getTime() - startTime;
         }
-        System.out.println();
 
         if (!steady) {
             throw new TimeoutException("The pool did not reach a steady state in the allotted time");
@@ -179,176 +221,134 @@ public class PoolAndResourceFile {
         // The following code is just an example of how to poll for the VM state
         startTime = System.currentTimeMillis();
         elapsedTime = 0L;
-        boolean hasIdleVM = false;
+        boolean hasIdleNode = false;
 
-        // Wait for at least 1 VM to reach the IDLE state
-        System.out.print("Waiting for VMs to start.");
-        while (elapsedTime < vmReadyTimeout.toMillis()) {
-            List<ComputeNode> nodeCollection = client.computeNodeOperations().listComputeNodes(poolId,
-                    new DetailLevel.Builder().withSelectClause("id, state").withFilterClause("state eq 'idle'")
-                            .build());
-            if (!nodeCollection.isEmpty()) {
-                hasIdleVM = true;
+        // Wait for at least 1 node to reach the idle state
+        logger.info("Waiting for nodes to start.");
+        while (elapsedTime < nodeReadyTimeout.toMillis()) {
+            PagedIterable<BatchNode> nodes = batchClient.listNodes(poolName, new BatchNodesListOptions()
+                    .setSelect(Arrays.asList("id", "state"))
+                    .setFilter("state eq 'idle'"));
+            if (nodes.stream().findAny().isPresent()) {
+                hasIdleNode = true;
                 break;
             }
-
-            System.out.print(".");
             TimeUnit.SECONDS.sleep(10);
             elapsedTime = (new Date()).getTime() - startTime;
         }
-        System.out.println();
 
-        if (!hasIdleVM) {
+        if (!hasIdleNode) {
             throw new TimeoutException("The node did not reach an IDLE state in the allotted time");
         }
 
-        return client.poolOperations().getPool(poolId);
-    }
-
-    /**
-     * Create blob container in order to upload file
-     * 
-     * @param storageAccountName  The name of the storage account to create or look up
-     * @param storageAccountKey   An SAS key for accessing the storage account
-     *
-     * @return  A newly created or existing storage container
-     */
-    private static CloudBlobContainer createBlobContainerIfNotExists(String storageAccountName, String storageAccountKey, String containerName)
-            throws URISyntaxException, StorageException {
-        System.out.println("Creating storage container " + containerName);
-
-        StorageCredentials credentials = new StorageCredentialsAccountAndKey(storageAccountName, storageAccountKey);
-        CloudBlobClient blobClient = new CloudStorageAccount(credentials, true).createCloudBlobClient();
-        CloudBlobContainer container = blobClient.getContainerReference(containerName);
-        container.createIfNotExists();
-
-        return container;
-    }
-
-    /**
-     * Upload a file to a blob container and return an SAS key
-     *
-     * @param container  The container to upload to
-     * @param source     The local file to upload
-     *
-     * @return An SAS key for the uploaded file
-     */
-    private static String uploadFileToCloud(CloudBlobContainer container, File source)
-            throws URISyntaxException, IOException, InvalidKeyException, StorageException {
-        CloudBlockBlob blob = container.getBlockBlobReference(source.getName());
-        blob.upload(new FileInputStream(source), source.length());
-
-        // Set SAS expiry time to 1 day from now
-        SharedAccessBlobPolicy policy = new SharedAccessBlobPolicy();
-        EnumSet<SharedAccessBlobPermissions> perEnumSet = EnumSet.of(SharedAccessBlobPermissions.READ);
-        policy.setPermissions(perEnumSet);
-        Calendar cal = Calendar.getInstance();
-        cal.setTime(new Date());
-        cal.add(Calendar.DATE, 1);
-        policy.setSharedAccessExpiryTime(cal.getTime());
-
-        // Create SAS key
-        String sas = blob.generateSharedAccessSignature(policy, null);
-
-        return blob.getUri() + "?" + sas;
+        return pool.refresh();
     }
 
     /**
      * Create a job and add some tasks
-     * 
-     * @param client     The Batch client
-     * @param container  A blob container to upload resource files
-     * @param poolId     The ID of the pool to submit a job
-     * @param jobId      A unique ID for the new job
-     * @param taskCount  How many tasks to add
+     *
+     * @param poolId            The ID of the pool to submit a job
+     * @param jobId             A unique ID for the new job
      */
-    private static void submitJob(BatchClient client, CloudBlobContainer container, String poolId,
-            String jobId, int taskCount)
-            throws BatchErrorException, IOException, StorageException, InvalidKeyException, InterruptedException, URISyntaxException {
-        System.out.println("Submitting job " + jobId + " with " + taskCount + " tasks");
+    protected void submitJob(String poolId, String jobId) {
+        logger.info("Submitting job {} with {} tasks", jobId, TASK_COUNT);
 
         // Create job
-        PoolInformation poolInfo = new PoolInformation();
-        poolInfo.withPoolId(poolId);
-        client.jobOperations().createJob(jobId, poolInfo);
+        BatchPoolInfo poolInfo = new BatchPoolInfo();
+        poolInfo.setPoolId(poolId);
+        batchClient.createJob(new BatchJobCreateParameters(jobId, poolInfo));
 
         // Upload a resource file and make it available in a "resources" subdirectory on nodes
         String fileName = "test.txt";
         String localPath = "./" + fileName;
         String remotePath = "resources/" + fileName;
-        String signedUrl = uploadFileToCloud(container, new File(localPath));
+        String signedUrl = uploadFileToStorage(new File(localPath));
         List<ResourceFile> files = new ArrayList<>();
         files.add(new ResourceFile()
-                .withHttpUrl(signedUrl)
-                .withFilePath(remotePath));
+                .setHttpUrl(signedUrl)
+                .setFilePath(remotePath));
 
         // Create tasks
-        List<TaskAddParameter> tasks = new ArrayList<>();
-        for (int i = 0; i < taskCount; i++) {
-            tasks.add(new TaskAddParameter()
-                    .withId("mytask" + i)
-                    .withCommandLine("cat " + remotePath)
-                    .withResourceFiles(files));
+        List<BatchTaskCreateParameters> tasks = new ArrayList<>();
+        for (int i = 0; i < TASK_COUNT; i++) {
+            tasks.add(new BatchTaskCreateParameters("mytask" + i, "cat " + remotePath).setResourceFiles(files));
         }
 
         // Add the tasks to the job
-        client.taskOperations().createTasks(jobId, tasks);
+        batchClient.createTasks(jobId, tasks);
+    }
+
+    /**
+     * Upload a file to a blob container and return an SAS key
+     *
+     * @param source            The local file to upload
+     * @return An SAS key for the uploaded file
+     */
+    protected String uploadFileToStorage(File source) {
+        BlobClient blobClient = blobContainerClient.getBlobClient(source.getName());
+        if (!blobClient.exists()) {
+            blobClient.uploadFromFile(source.getPath());
+        }
+
+        OffsetDateTime start = OffsetDateTime.now().minusMinutes(5);
+        OffsetDateTime expiry = OffsetDateTime.now().plusHours(1);
+        BlobSasPermission permissions = new BlobSasPermission().setReadPermission(true);
+
+        String sas = blobClient.generateUserDelegationSas(
+                new BlobServiceSasSignatureValues(expiry, permissions),
+                blobServiceClient.getUserDelegationKey(start, expiry));
+
+        return blobClient.getBlobUrl() + "?" + sas;
     }
 
     /**
      * Wait for all tasks in a given job to be completed, or throw an exception on timeout
-     * 
-     * @param client   The Batch client
-     * @param jobId    The ID of the job to poll for completion.
-     * @param timeout  How long to wait for the job to complete before giving up
+     *
+     * @param jobId   The ID of the job to poll for completion.
+     * @param timeout How long to wait for the job to complete before giving up
      */
-    private static void waitForTasksToComplete(BatchClient client, String jobId, Duration timeout)
-            throws BatchErrorException, IOException, InterruptedException, TimeoutException {
+    private void waitForTasksToComplete(String jobId, Duration timeout) throws InterruptedException, TimeoutException {
         long startTime = System.currentTimeMillis();
         long elapsedTime = 0L;
 
-        System.out.print("Waiting for tasks to complete (Timeout: " + timeout.getSeconds() / 60 + "m)");
+        logger.info("Waiting for tasks to complete (Timeout: {}m)", timeout.getSeconds() / 60);
 
         while (elapsedTime < timeout.toMillis()) {
-            List<CloudTask> taskCollection = client.taskOperations().listTasks(jobId,
-                    new DetailLevel.Builder().withSelectClause("id, state").build());
-
+            PagedIterable<BatchTask> taskCollection = batchClient.listTasks(jobId,
+                    new BatchTasksListOptions().setSelect(Arrays.asList("id", "state")));
             boolean allComplete = true;
-            for (CloudTask task : taskCollection) {
-                if (task.state() != TaskState.COMPLETED) {
+            for (BatchTask task : taskCollection) {
+                if (task.getState() != BatchTaskState.COMPLETED) {
                     allComplete = false;
                     break;
                 }
             }
-
             if (allComplete) {
-                System.out.println("\nAll tasks completed");
+                logger.info("All tasks completed");
                 // All tasks completed
                 return;
             }
-
-            System.out.print(".");
-
             TimeUnit.SECONDS.sleep(10);
             elapsedTime = (new Date()).getTime() - startTime;
         }
 
-        System.out.println();
-
         throw new TimeoutException("Task did not complete within the specified timeout");
     }
 
-    private static void printBatchException(BatchErrorException err) {
-        System.out.printf("BatchError %s%n", err.toString());
-        if (err.body() != null) {
-            System.out.printf("BatchError code = %s, message = %s%n", err.body().code(),
-                    err.body().message().value());
-            if (err.body().values() != null) {
-                for (BatchErrorDetail detail : err.body().values()) {
-                    System.out.printf("Detail %s=%s%n", detail.key(), detail.value());
+    private void logBatchException(BatchErrorException err) {
+        logger.error("BatchErrorException occurred", err);
+
+        BatchError error = err.getValue();
+        if (error != null) {
+            logger.error("BatchError code = {}, message = {}", error.getCode(),
+                error.getMessage() != null ? error.getMessage().getValue() : "(no message)");
+            if (error.getValues() != null) {
+                for (BatchErrorDetail detail : error.getValues()) {
+                    logger.error("Detail {} = {}", detail.getKey(), detail.getValue());
                 }
             }
+        } else {
+            logger.warn("No BatchError information found in exception.");
         }
     }
-
 }

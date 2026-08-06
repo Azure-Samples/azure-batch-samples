@@ -7,26 +7,36 @@ platforms: java
 When run, this sample will:
 
 - Create an Azure Batch pool with a single dedicated node
-- Wait for the nodes to be ready
+- Wait for the node to be ready
 - Create a storage container and upload a resource file to it
 - Submit a job with 5 tasks associated with the resource file
 - Wait for all tasks to finish
 - Delete the job, the pool and the storage container
 
-## Running this Sample
-To run this sample:
+## Prerequisites
 
-Set the following environment variables:
-- `AZURE_BATCH_ACCOUNT` -- The Batch account name.
-- `AZURE_BATCH_ACCESS_KEY` -- The Batch account key.
-- `AZURE_BATCH_ENDPOINT` -- The Batch account endpoint.
-- `STORAGE_ACCOUNT_NAME` -- The storage account to hold resource files.
-- `STORAGE_ACCOUNT_KEY` -- The storage account key.
+- Configure both an Azure Batch account and an Azure Storage account in the same region.
 
-Clone repo and compile the code:
+- Set the following environment variables:
+  - `AZURE_RESOURCE_GROUP_NAME` -- The resource group of the Batch account.
+  - `AZURE_BATCH_ACCOUNT_NAME` -- The name of the Batch account.
+  - `AZURE_BLOB_SERVICE_URL` -- The blob service URL of the Storage account.
 
-    git clone https://github.com/Azure/azure-batch-samples.git
+- Ensure you have the [Azure CLI](https://learn.microsoft.com/cli/azure/) installed and run the following commands, 
+  replacing `<subscription_id>` with your Azure subscription ID. When running the `az login` command, make sure
+  you are authenticating as a user with appropriate permissions to both the Batch account and Storage account.
+    ```shell
+    az login 
+    az account set -s <subscription_id> 
+    ```
 
-    cd azure-batch-samples/Java/PoolAndResourceFile
+**Note:** The sample code uses [DefaultAzureCredential](https://github.com/Azure/azure-sdk-for-java/wiki/Azure-Identity-Examples#authenticating-with-defaultazurecredential),
+which supports a wide variety of authentication methods, not just the Azure CLI. Any of these other methods should work
+as long as the user or service principal has the appropriate permissions.
 
-    mvn clean compile exec:java
+## Running the sample
+Run the following command from the same directory as this README to compile and run the sample:
+
+```shell
+mvn clean compile exec:java
+```
